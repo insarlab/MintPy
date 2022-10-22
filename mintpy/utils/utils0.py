@@ -7,6 +7,8 @@
 # Contents
 #   InSAR
 #   File Operation
+#   Coordinate
+#   Orbit
 #   Geometry
 #   Image Processing
 #   User Interaction
@@ -15,13 +17,11 @@
 #   from mintpy.utils import utils as ut
 
 
-import os
 import math
+import os
+
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy import ndimage
-from pyproj import CRS, Proj, Transformer
 
 # global variables
 SPEED_OF_LIGHT = 299792458 # m/s
@@ -30,6 +30,31 @@ K = 40.31                  # m^3/s^2, constant
 
 
 #################################### InSAR ##########################################
+def misregistration2coherence(mu):
+    """Calculate the resulting coherence due to mis-registration (coregistration error).
+
+    Reference:
+      Equation (30) in Just and Bamler (1994); Equation (4.4.27) in Hanssen (2001).
+
+    Parameters: mu  - float / np.ndarray, mis-registration in the unit of resolution cell
+                      NOTE: the unit is resolution cell, NOT pixel size/spacing.
+                      Applicable to both SAR range and azimuth directions.
+    Returns:    coh - float / np.ndarray, coherence.
+    """
+
+    # https://numpy.org/doc/stable/reference/generated/numpy.sinc.html
+    coh = np.sinc(mu)
+
+    # for coregistration errors >1, set coherence to zero
+    if isinstance(mu, np.ndarray):
+        coh[mu > 1] = 0
+    else:
+        if mu > 1:
+            coh = 0
+
+    return coh
+
+
 def range_distance(atr, dimension=2, print_msg=True):
     """Calculate slant range distance from input attribute dict
     Parameters: atr : dict, including the following ROI_PAC attributes:
@@ -110,9 +135,9 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
     inc_angle_f = (np.pi - np.arccos((r**2 + range_f**2 - (r+H)**2)/(2*r*range_f))) * 180.0/np.pi
     inc_angle_c = (inc_angle_n + inc_angle_f) / 2.0
     if print_msg:
-        print('near   incidence angle : {:.4f} degree'.format(inc_angle_n))
-        print('center incidence angle : {:.4f} degree'.format(inc_angle_c))
-        print('far    incidence angle : {:.4f} degree'.format(inc_angle_f))
+        print(f'near   incidence angle : {inc_angle_n:.4f} degree')
+        print(f'center incidence angle : {inc_angle_c:.4f} degree')
+        print(f'far    incidence angle : {inc_angle_f:.4f} degree')
 
     if dimension == 0:
         inc_angle = inc_angle_c
@@ -127,13 +152,13 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
         # consider the local variable due to topography
         if dem is not None:
             range_dist = range_distance(atr, dimension=2, print_msg=False)
-            inc_angle = (np.pi - np.arccos(((r+dem)**2 + range_dist**2 - (r+H)**2) / 
+            inc_angle = (np.pi - np.arccos(((r+dem)**2 + range_dist**2 - (r+H)**2) /
                                            (2*(r+dem)*range_dist))) * 180.0/np.pi
         else:
             inc_angle = np.tile(np.linspace(inc_angle_n, inc_angle_f, num=width,
                                             endpoint='FALSE', dtype=np.float32), (length, 1))
     else:
-        raise Exception('un-supported dimension input: {}'.format(dimension))
+        raise Exception(f'un-supported dimension input: {dimension}')
     return inc_angle
 
 
@@ -191,24 +216,23 @@ def azimuth_ground_resolution(atr):
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no azimuth resolution info.')
         return
-    try:
-        proc = atr['PROCESSOR']
-    except:
-        proc = 'isce'
+
+    proc = atr.get('PROCESSOR', 'isce')
     if proc in ['roipac', 'isce']:
         Re = float(atr['EARTH_RADIUS'])
         height = float(atr['HEIGHT'])
         az_step = float(atr['AZIMUTH_PIXEL_SIZE']) * Re / (Re + height)
     elif proc == 'gamma':
         az_step = float(atr['AZIMUTH_PIXEL_SIZE'])
+
     return az_step
 
 
 def auto_lat_lon_step_size(atr, lat_c=None):
     """Get the default lat/lon step size for geocoding.
 
-    Treat the pixel in radar coordinates as an rotated rectangle. Use the bounding box 
-    of the rotated rectangle for the ratio between lat and lon steps. Then scale the 
+    Treat the pixel in radar coordinates as an rotated rectangle. Use the bounding box
+    of the rotated rectangle for the ratio between lat and lon steps. Then scale the
     lat and lon step size to ensure the same area between the pixels in radar and geo
     coordinates.
 
@@ -273,13 +297,14 @@ def touch(fname_list, times=None):
 
 
 
-#################################### Geometry ##########################################
+################################## Coordinate ##########################################
 def utm_zone2epsg_code(utm_zone):
     """Convert UTM Zone string to EPSG code.
     Parameters: utm_zone - str, atr['UTM_ZONE']
     Returns:    epsg     - str, EPSG code
     Examples:   epsg = utm_zone2epsg_code('11N')
     """
+    from pyproj import CRS
     crs = CRS.from_dict({'proj': 'utm',
                          'zone': int(utm_zone[:-1]),
                          'south': utm_zone[-1] == 'S',
@@ -299,6 +324,7 @@ def to_latlon(infile, x, y):
     Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
     """
     from osgeo import gdal
+    from pyproj import Proj, Transformer
 
     # read projection info using gdal
     ds = gdal.Open(infile)
@@ -317,6 +343,141 @@ def to_latlon(infile, x, y):
     return y, x
 
 
+
+
+def snwe_to_wkt_polygon(snwe):
+    """Convert the input bounding box in SNWE into WKT format POLYGON.
+
+    Parameters: snwe    - list of 4 float, south, north, west and east in degrees/meters
+    Returns:    polygon - str, WKT format POLYGON
+    """
+    S, N, W, E = snwe
+    lats = [N, N, S, S, N]
+    lons = [W, E, E, W, W]
+    polygon = "POLYGON((" + ",".join([f"{lon} {lat}" for lon, lat in zip(lons, lats)])  + "))"
+    return polygon
+
+
+def get_lat_lon(meta, geom_file=None, box=None, dimension=2, ystep=1, xstep=1):
+    """Extract precise pixel-wise lat/lon.
+
+    For meta dict in geo-coordinates OR geom_file with latitude/longitude dataset
+
+    Returned lat/lon are corresponds to the pixel center
+
+    Parameters: meta      - dict, including LENGTH, WIDTH and Y/X_FIRST/STEP
+                box       - 4-tuple of int for (x0, y0, x1, y1)
+                dimension - int, output lat/lon matrix dimension, 1 or 2
+                y/xstep   - int, number of pixels to skip for each output pixel
+    Returns:    lats      - 1/2D np.array for latitude  in size of (length, _width_)
+                lons      - 1/2D np.array for longitude in size of (_length_, width)
+    """
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    if box is None:
+        box = (0, 0, width, length)
+
+    ds_list = []
+    if geom_file is not None:
+        with h5py.File(geom_file, 'r') as f:
+            ds_list = list(f.keys())
+
+    if 'latitude' in ds_list:
+        # read 2D matrices from geometry file
+        with h5py.File(geom_file, 'r') as f:
+            lats = f['latitude'][box[1]:box[3], box[0]:box[2]]
+            lons = f['longitude'][box[1]:box[3], box[0]:box[2]]
+
+    elif 'Y_FIRST' in meta.keys():
+        # get lat/lon0/1
+        lat_step = float(meta['Y_STEP'])
+        lon_step = float(meta['X_STEP'])
+        lat0 = float(meta['Y_FIRST']) + lat_step * (box[1] + 0.5)
+        lon0 = float(meta['X_FIRST']) + lon_step * (box[0] + 0.5)
+
+        lat_num = box[3] - box[1]
+        lon_num = box[2] - box[0]
+
+        lat1 = lat0 + lat_step * (lat_num - 1)
+        lon1 = lon0 + lon_step * (lon_num - 1)
+
+        # get matrix of lat/lon
+        if dimension == 2:
+            lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
+                                  lon0:lon1:lon_num*1j]
+
+        elif dimension == 1:
+            lats = np.linspace(lat0, lat1, num=lat_num, endpoint=True)
+            lons = np.linspace(lon0, lon1, num=lon_num, endpoint=True)
+
+        else:
+            raise ValueError(f'un-supported dimension = {dimension}')
+
+    else:
+        msg = 'Can not get pixel-wise lat/lon!'
+        msg += '\nmeta dict is not geocoded and/or geometry file does not contains latitude/longitude dataset.'
+        raise ValueError(msg)
+
+    lats = np.array(lats, dtype=np.float32)
+    lons = np.array(lons, dtype=np.float32)
+
+    # y/xstep
+    if ystep * xstep > 1:
+        if lats.ndim == 1:
+            lats = lats[::ystep]
+            lons = lons[::xstep]
+        elif lats.ndim == 2:
+            lats = lats[::ystep, ::xstep]
+            lons = lons[::ystep, ::xstep]
+
+    return lats, lons
+
+
+def get_lat_lon_rdc(meta):
+    """Get 2D array of lat and lon for metadata dict in radar-coord.
+
+    WARNING: This is a rough lat/lon value, NOT accurate!
+
+    Parameters: meta : dict, including LENGTH, WIDTH and LAT/LON_REF1/2/3/4
+    Returns:    lats : 2D np.array for latitude  in size of (length, width)
+                lons : 2D np.array for longitude in size of (length, width)
+    """
+    if 'Y_FIRST' in meta.keys():
+        raise Exception('Input file is in geo-coordinates, use more accurate get_lat_lon() instead.')
+
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    lats = [float(meta[f'LAT_REF{i}']) for i in [1,2,3,4]]
+    lons = [float(meta[f'LON_REF{i}']) for i in [1,2,3,4]]
+
+    lat = np.zeros((length,width),dtype = np.float32)
+    lon = np.zeros((length,width),dtype = np.float32)
+
+    for i in range(length):
+        for j in range(width):
+            lat[i,j] = lats[0] + j*(lats[1] - lats[0])/width + i*(lats[2] - lats[0])/length
+            lon[i,j] = lons[0] + j*(lons[1] - lons[0])/width + i*(lons[2] - lons[0])/length
+    return lat, lon
+
+
+def four_corners(atr):
+    """Get the 4 corners coordinates from metadata dict in geo-coordinates.
+    Parameters: atr - dict
+    Returns:    south, north, west, east - float, in degrees or meters
+    Examples:   S, N, W, E = ut.four_corners(atr)
+                SNWE = ut.four_corners(atr)
+    """
+    width  = int(atr['WIDTH'])
+    length = int(atr['LENGTH'])
+    lon_step = float(atr['X_STEP'])
+    lat_step = float(atr['Y_STEP'])
+    west  = float(atr['X_FIRST'])
+    north = float(atr['Y_FIRST'])
+    south = north + lat_step * length
+    east  = west  + lon_step * width
+    return south, north, west, east
+
+
+
+###################################### Orbit ###########################################
 def xyz_to_local_radius(xyz):
     """Calculate satellite height and ellpsoid local radius from orbital state vector.
 
@@ -366,95 +527,42 @@ def xyz_to_local_radius(xyz):
     return height, radius
 
 
-def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
-    """Extract precise pixel-wise lat/lon.
 
-    For meta dict in geo-coordinates OR geom_file with latitude/longitude dataset
+#################################### Geometry ##########################################
+# Definition of angles:
+# (los_)inc_angle - the incidence angle of the LOS vector (from the ground to the SAR platform)
+#                   measured from vertical. Used in isce2.
+# (los_)az_angle  - the azimuth   angle of the LOS vecotr (from the ground to the SAR platform)
+#                   measured from the north, with anti-clockwise as positive. Used in isce2.
+# orb_az_angle    - the azimuth   angle of the SAR platform's orbit (along-track direction)
+#                   measured from the north, with anti-clockwise as positive
+# head_angle      - the azimuth   angle of the SAR platform's orbit (along-track direction)
+#                   measured from the north, with      clockwise as positive. Used in roipac.
+#
+# Typical values in deg for satellites with near-polar orbit:
+#     AlosA: los_inc_angle = 34, los_az_angle =  102, orb_az_angle =  12, head_angle =  -12
+#     AlosD: los_inc_angle = 34, los_az_angle = -102, orb_az_angle = 168, head_angle = -168
+#     SenA : los_inc_angle = 40, los_az_angle =  102, orb_az_angle =  12, head_angle =  -12
+#     SenD : los_inc_angle = 40, los_az_angle = -102, orb_az_angle = 168, head_angle = -168
+#     NiA  : los_inc_angle = 42, los_az_angle =  -78, orb_az_angle =  12, head_angle =  -12
+#     NiD  : los_inc_angle = 42, los_az_angle =   78, orb_az_angle = 168, head_angle = -168
 
-    Returned lat/lon are corresponds to the pixel center
-
-    Parameters: meta : dict, including LENGTH, WIDTH and Y/X_FIRST/STEP
-                box  : 4-tuple of int for (x0, y0, x1, y1)
-    Returns:    lats : 2D np.array for latitude  in size of (length, width)
-                lons : 2D np.array for longitude in size of (length, width)
+def los2orbit_azimuth_angle(los_az_angle, look_direction='right'):
+    """Convert the azimuth angle of the LOS vector to the one of the orbit flight vector.
+    Parameters: los_az_angle - np.ndarray or float, azimuth angle of the LOS vector from the ground to the SAR platform
+                               measured from the north with anti-clockwise direction as positive, in the unit of degrees
+    Returns:    orb_az_angle - np.ndarray or float, azimuth angle of the SAR platform along track/orbit direction
+                               measured from the north with anti-clockwise direction as positive, in the unit of degrees
     """
-    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
-    if box is None:
-        box = (0, 0, width, length)
-
-    ds_list = []
-    if geom_file is not None:
-        with h5py.File(geom_file, 'r') as f:
-            ds_list = list(f.keys())
-
-    if 'latitude' in ds_list:
-        # read 2D matrices from geometry file
-        with h5py.File(geom_file, 'r') as f:
-            lats = f['latitude'][box[1]:box[3], box[0]:box[2]]
-            lons = f['longitude'][box[1]:box[3], box[0]:box[2]]
-
-    elif 'Y_FIRST' in meta.keys():
-        # get lat/lon0/1
-        lat_step = float(meta['Y_STEP'])
-        lon_step = float(meta['X_STEP'])
-        lat0 = float(meta['Y_FIRST']) + lat_step * (box[1] + 0.5)
-        lon0 = float(meta['X_FIRST']) + lon_step * (box[0] + 0.5)
-
-        lat_num = box[3] - box[1]
-        lon_num = box[2] - box[0]
-
-        lat1 = lat0 + lat_step * (lat_num - 1)
-        lon1 = lon0 + lon_step * (lon_num - 1)
-
-        # get matrix of lat/lon
-        if dimension == 2:
-            lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
-                                  lon0:lon1:lon_num*1j]
-
-        elif dimension == 1:
-            lats = np.linspace(lat0, lat1, num=lat_num, endpoint=True)
-            lons = np.linspace(lon0, lon1, num=lon_num, endpoint=True)
-
-        else:
-            raise ValueError('un-supported dimension = {}'.format(dimension))
-
+    if look_direction == 'right':
+        orb_az_angle = los_az_angle - 90
     else:
-        msg = 'Can not get pixel-wise lat/lon!'
-        msg += '\nmeta dict is not geocoded and/or geometry file does not contains latitude/longitude dataset.'
-        raise ValueError(msg)
-
-    lats = np.array(lats, dtype=np.float32)
-    lons = np.array(lons, dtype=np.float32)
-    return lats, lons
+        orb_az_angle = los_az_angle + 90
+    orb_az_angle -= np.round(orb_az_angle / 360.) * 360.
+    return orb_az_angle
 
 
-def get_lat_lon_rdc(meta):
-    """Get 2D array of lat and lon for metadata dict in radar-coord.
-
-    WARNING: This is a rough lat/lon value, NOT accurate!
-
-    Parameters: meta : dict, including LENGTH, WIDTH and LAT/LON_REF1/2/3/4
-    Returns:    lats : 2D np.array for latitude  in size of (length, width)
-                lons : 2D np.array for longitude in size of (length, width)
-    """
-    if 'Y_FIRST' in meta.keys():
-        raise Exception('Input file is in geo-coordinates, use more accurate get_lat_lon() instead.')
-
-    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
-    lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
-    lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
-
-    lat = np.zeros((length,width),dtype = np.float32)
-    lon = np.zeros((length,width),dtype = np.float32)
-
-    for i in range(length):
-        for j in range(width):
-            lat[i,j] = lats[0] + j*(lats[1] - lats[0])/width + i*(lats[2] - lats[0])/length
-            lon[i,j] = lons[0] + j*(lons[1] - lons[0])/width + i*(lons[2] - lons[0])/length
-    return lat, lon
-
-
-def azimuth2heading_angle(az_angle):
+def azimuth2heading_angle(az_angle, look_direction='right'):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
 
     ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite
@@ -464,134 +572,135 @@ def azimuth2heading_angle(az_angle):
         ascending  orbit: heading angle of -12  and azimuth angle of 102
         descending orbit: heading angle of -168 and azimuth angle of -102
     """
-    head_angle = 90 - az_angle
+    if look_direction == 'right':
+        head_angle = (az_angle - 90) * -1
+    else:
+        head_angle = (az_angle + 90) * -1
     head_angle -= np.round(head_angle / 360.) * 360.
     return head_angle
 
 
-def heading2azimuth_angle(head_angle):
+def heading2azimuth_angle(head_angle, look_direction='right'):
     """Convert satellite orbit heading angle into azimuth angle as defined in ISCE-2."""
-    az_angle = 90 - head_angle
+    if look_direction == 'right':
+        az_angle = (head_angle - 90) * -1
+    else:
+        az_angle = (head_angle + 90) * -1
     az_angle -= np.round(az_angle / 360.) * 360.
     return az_angle
 
 
-def enu2los(e, n, u, inc_angle, head_angle=None, az_angle=None):
-    """
-    Parameters: e          - np.ndarray or float, displacement in east-west direction, east as positive
-                n          - np.ndarray or float, displacement in north-south direction, north as positive
-                u          - np.ndarray or float, displacement in vertical direction, up as positive
-                inc_angle  - np.ndarray or float, local incidence angle from vertical
+def enu2los(v_e, v_n, v_u, inc_angle, head_angle=None, az_angle=None):
+    """Project east/north/up motion into the line-of-sight (LOS) direction defined by incidence/azimuth angle.
+    Parameters: v_e        - np.ndarray or float, displacement in east-west   direction, east  as positive
+                v_n        - np.ndarray or float, displacement in north-south direction, north as positive
+                v_u        - np.ndarray or float, displacement in vertical    direction, up    as positive
+                inc_angle  - np.ndarray or float, incidence angle from vertical, in the unit of degrees
                 head_angle - np.ndarray or float, azimuth angle of the SAR platform along track direction
-                             measured from the north with clockwise direction as positive in the unit of degrees
+                             measured from the north with clockwise direction as positive, in the unit of degrees
                 az_angle   - np.ndarray or float, azimuth angle of the LOS vector from the ground to the SAR platform
-                             measured from the north with anti-clockwise direction as positive in the unit of degrees
+                             measured from the north with anti-clockwise direction as positive, in the unit of degrees
                              head_angle = 90 - az_angle
-    Returns:    v_los      - np.ndarray or float, displacement in line-of-sight direction, moving toward satellite as positive
-
-    Typical values in deg for satellites with near-polar orbit:
-        For AlosA: inc_angle = 34, head_angle = -12.9,  az_angle = 102.9
-        For AlosD: inc_angle = 34, head_angle = -167.2, az_angle = -102.8
-        For  SenD: inc_angle = 34, head_angle = -168.0, az_angle = -102.0
+    Returns:    v_los      - np.ndarray or float, displacement in LOS direction, motion toward satellite as positive
     """
-    ## if input angle is azimuth angle
-    #if np.abs(np.abs(head_angle) - 90) < 30:
-    #    head_angle = azimuth2heading_angle(head_angle)
+    # unite (los_)head/az_angle into (los_)az_angle
     if az_angle is None:
-        # head_angle -> az_angle
         if head_angle is not None:
             az_angle = heading2azimuth_angle(head_angle)
-    if az_angle is None:
-        raise ValueError('az_angle can not be None!')
+        else:
+            raise ValueError(f'invalid az_angle: {az_angle}!')
 
-    inc_angle *= np.pi/180.
-    az_angle *= np.pi/180.
-    v_los = (  e * np.sin(inc_angle) * np.sin(az_angle) * -1
-             + n * np.sin(inc_angle) * np.cos(az_angle)
-             + u * np.cos(inc_angle))
+    # project ENU onto LOS
+    v_los = (  v_e * np.sin(np.deg2rad(inc_angle)) * np.sin(np.deg2rad(az_angle)) * -1
+             + v_n * np.sin(np.deg2rad(inc_angle)) * np.cos(np.deg2rad(az_angle))
+             + v_u * np.cos(np.deg2rad(inc_angle)))
 
     return v_los
 
 
-def four_corners(atr):
-    """Get the 4 corners coordinates from metadata dict in geo-coordinates.
-    Parameters: atr - dict
-    Returns:    south, north, west, east - float, in degrees or meters
-    Examples:   S, N, W, E = ut.four_corners(atr)
-                SNWE = ut.four_corners(atr)
+def en2az(v_e, v_n, orb_az_angle):
+    """Project east/north motion into the radar azimuth direction.
+    Parameters: v_e          - np.ndarray or float, displacement in east-west   direction, east  as positive
+                v_n          - np.ndarray or float, displacement in north-south direction, north as positive
+                orb_az_angle - np.ndarray or float, azimuth angle of the SAR platform along track/orbit direction
+                               measured from the north with anti-clockwise direction as positive, in the unit of degrees
+                               orb_az_angle = los_az_angle + 90 for right-looking radar.
+    Returns:    v_az         - np.ndarray or float, displacement in azimuth direction,
+                               motion along flight direction as positive
     """
-    width  = int(atr['WIDTH'])
-    length = int(atr['LENGTH'])
-    lon_step = float(atr['X_STEP'])
-    lat_step = float(atr['Y_STEP'])
-    west  = float(atr['X_FIRST'])
-    north = float(atr['Y_FIRST'])
-    south = north + lat_step * length
-    east  = west  + lon_step * width
-    return south, north, west, east
+    # project EN onto azimuth
+    v_az = (  v_e * np.sin(np.deg2rad(orb_az_angle)) * -1
+            + v_n * np.cos(np.deg2rad(orb_az_angle)))
+    return v_az
 
 
-def get_circular_mask(x, y, radius, shape):
-    """Get mask of pixels within circle defined by (x, y, r)"""
-    length, width = shape
-    yy, xx = np.ogrid[-y:length-y,
-                      -x:width-x]
-    cmask = (xx**2 + yy**2 <= radius**2)
-    return cmask
-
-
-def circle_index(atr, circle_par):
-    """Return Index of Elements within a Circle centered at input pixel
-    Parameters: atr : dictionary
-                    containging the following attributes:
-                    WIDT
-                    LENGTH
-                circle_par : string in the format of 'y,x,radius'
-                    i.e. '200,300,20'          for radar coord
-                         '31.0214,130.5699,20' for geo   coord
-    Returns:    idx : 2D np.array in bool type
-                    mask matrix for those pixel falling into the circle
-                    defined by circle_par
-    Examples:   idx_mat = ut.circle_index(atr, '200,300,20')
-                idx_mat = ut.circle_index(atr, '31.0214,130.5699,20')
+def get_unit_vector4component_of_interest(los_inc_angle, los_az_angle, comp='enu2los', horz_az_angle=None):
+    """Get the unit vector for the component of interest.
+    Parameters: los_inc_angle - np.ndarray or float, incidence angle from vertical, in the unit of degrees
+                los_az_angle  - np.ndarray or float, azimuth angle of the LOS vector from the ground to the SAR platform
+                                measured from the north with anti-clockwise direction as positive, in the unit of degrees
+                comp          - str, component of interest, choose among the following values:
+                                enu2los, en2los, hz2los, u2los, up2los, orb(it)_az, vert, horz
+                horz_az_angle - np.ndarray or float, azimuth angle of the horizontal direction of interest
+                                measured from the north with anti-clockwise direction as positive, in the unit of degrees
+    Returns:    unit_vec      - list(np.ndarray/float), unit vector of the ENU component for the component of interest
     """
+    # check input arguments
+    comps = [
+        'enu2los', 'en2los', 'hz2los', 'horz2los', 'u2los', 'vert2los',   # radar LOS / cross-track
+        'en2az', 'hz2az', 'orb_az', 'orbit_az',                           # radar azimuth / along-track
+        'vert', 'vertical', 'horz', 'horizontal',                         # vertical / arbitraty horizontal
+    ]
 
-    width = int(atr['WIDTH'])
-    length = int(atr['LENGTH'])
+    if comp not in comps:
+        raise ValueError(f'un-recognized comp input: {comp}.\nchoose from: {comps}')
 
-    if isinstance(circle_par, tuple):
-        cir_par = circle_par
-    elif isinstance(circle_par, list):
-        cir_par = circle_par
-    else:
-        cir_par = circle_par.replace(',', ' ').split()
-    cir_par = [str(i) for i in cir_par]
+    if comp == 'horz' and horz_az_angle is None:
+        raise ValueError('comp=horz requires horz_az_angle input!')
 
-    try:
-        c_y = int(cir_par[0])
-        c_x = int(cir_par[1])
-        radius = int(float(cir_par[2]))
-        print('Input circle index in y/x coord: %d, %d, %d' % (c_y, c_x, radius))
-    except:
-        try:
-            c_lat = float(cir_par[0])
-            c_lon = float(cir_par[1])
-            radius = int(float(cir_par[2]))
-            c_y = np.rint((c_lat-float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
-            c_x = np.rint((c_lon-float(atr['X_FIRST'])) / float(atr['X_STEP']))
-            print(('Input circle index in lat/lon coord: '
-                   '{:.4f}, {:.4f}, {}'.format(c_lat, c_lon, radius)))
-        except:
-            print('\nERROR: Unrecognized circle index format: '+circle_par)
-            print('Supported format:')
-            print('--circle 200,300,20            for radar coord input')
-            print('--circle 31.0214,130.5699,20   for geo   coord input\n')
-            return 0
+    # initiate output
+    unit_vec = None
 
-    y, x = np.ogrid[-c_y:length-c_y, -c_x:width-c_x]
-    idx = x**2 + y**2 <= radius**2
+    if comp in ['enu2los']:
+        unit_vec = [
+            np.sin(np.deg2rad(los_inc_angle)) * np.sin(np.deg2rad(los_az_angle)) * -1,
+            np.sin(np.deg2rad(los_inc_angle)) * np.cos(np.deg2rad(los_az_angle)),
+            np.cos(np.deg2rad(los_inc_angle)),
+        ]
 
-    return idx
+    elif comp in ['en2los', 'hz2los', 'horz2los']:
+        unit_vec = [
+            np.sin(np.deg2rad(los_inc_angle)) * np.sin(np.deg2rad(los_az_angle)) * -1,
+            np.sin(np.deg2rad(los_inc_angle)) * np.cos(np.deg2rad(los_az_angle)),
+            np.zeros_like(los_inc_angle),
+        ]
+
+    elif comp in ['u2los', 'vert2los']:
+        unit_vec = [
+            np.zeros_like(los_inc_angle),
+            np.zeros_like(los_inc_angle),
+            np.cos(np.deg2rad(los_inc_angle)),
+        ]
+
+    elif comp in ['en2az', 'hz2az', 'orb_az', 'orbit_az']:
+        orb_az_angle = los2orbit_azimuth_angle(los_az_angle)
+        unit_vec = [
+            np.sin(np.deg2rad(orb_az_angle)) * -1,
+            np.cos(np.deg2rad(orb_az_angle)),
+            np.zeros_like(orb_az_angle),
+        ]
+
+    elif comp in ['vert', 'vertical']:
+        unit_vec = [0, 0, 1]
+
+    elif comp in ['horz', 'horizontal']:
+        unit_vec = [
+            np.sin(np.deg2rad(horz_az_angle)) * -1,
+            np.cos(np.deg2rad(horz_az_angle)),
+            np.zeros_like(horz_az_angle),
+        ]
+
+    return unit_vec
 
 
 
@@ -632,6 +741,9 @@ def get_largest_conn_component(mask_in, min_num_pixel=1e4, display=False):
                 display : bool, display the result or not.
     Returns:    mask_out : 2D np.array in np.bool_ format
     """
+    import matplotlib.pyplot as plt
+    from scipy import ndimage
+
     mask_out = np.zeros(mask_in.shape, np.bool_)
     labels = ndimage.label(mask_in)[0]
     num_pixel = np.max(np.bincount(labels.flatten())[1:])
@@ -656,7 +768,9 @@ def min_region_distance(mask1, mask2, display=False):
                 pts2 : tuple of 2 int, bridge point in mask2, in (x, y)
                 min_dist : float, min euclidean distance
     """
+    import matplotlib.pyplot as plt
     from scipy.spatial import cKDTree
+
     y, x = np.where(mask1 != 0)
     pts1 = np.hstack((x.reshape(-1, 1), y.reshape(-1, 1)))
     tree = cKDTree(pts1)
@@ -716,6 +830,69 @@ def polygon2mask(polygon, shape):
     return mask
 
 
+def get_circular_mask(x, y, radius, shape):
+    """Get mask of pixels within circle defined by (x, y, r)"""
+    length, width = shape
+    yy, xx = np.ogrid[-y:length-y,
+                      -x:width-x]
+    cmask = (xx**2 + yy**2 <= radius**2)
+    return cmask
+
+
+def circle_index(atr, circle_par):
+    """Return Index of Elements within a Circle centered at input pixel
+    Parameters: atr : dictionary
+                    containging the following attributes:
+                    WIDT
+                    LENGTH
+                circle_par : string in the format of 'y,x,radius'
+                    i.e. '200,300,20'          for radar coord
+                         '31.0214,130.5699,20' for geo   coord
+    Returns:    idx : 2D np.array in bool type
+                    mask matrix for those pixel falling into the circle
+                    defined by circle_par
+    Examples:   idx_mat = ut.circle_index(atr, '200,300,20')
+                idx_mat = ut.circle_index(atr, '31.0214,130.5699,20')
+    """
+
+    width = int(atr['WIDTH'])
+    length = int(atr['LENGTH'])
+
+    if isinstance(circle_par, tuple):
+        cir_par = circle_par
+    elif isinstance(circle_par, list):
+        cir_par = circle_par
+    else:
+        cir_par = circle_par.replace(',', ' ').split()
+    cir_par = [str(i) for i in cir_par]
+
+    try:
+        c_y = int(cir_par[0])
+        c_x = int(cir_par[1])
+        radius = int(float(cir_par[2]))
+        print('Input circle index in y/x coord: %d, %d, %d' % (c_y, c_x, radius))
+    except:
+        try:
+            c_lat = float(cir_par[0])
+            c_lon = float(cir_par[1])
+            radius = int(float(cir_par[2]))
+            c_y = np.rint((c_lat-float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
+            c_x = np.rint((c_lon-float(atr['X_FIRST'])) / float(atr['X_STEP']))
+            print('Input circle index in lat/lon coord: '
+                  '{:.4f}, {:.4f}, {}'.format(c_lat, c_lon, radius))
+        except:
+            print('\nERROR: Unrecognized circle index format: '+circle_par)
+            print('Supported format:')
+            print('--circle 200,300,20            for radar coord input')
+            print('--circle 31.0214,130.5699,20   for geo   coord input\n')
+            return 0
+
+    y, x = np.ogrid[-c_y:length-c_y, -c_x:width-c_x]
+    idx = x**2 + y**2 <= radius**2
+
+    return idx
+
+
 
 #################################### User Interaction #####################################
 def yes_or_no(question):
@@ -728,7 +905,7 @@ def yes_or_no(question):
     else:
         return yes_or_no("Uhhhh... please enter ")
 
-    
+
 def update_attribute_or_not(atr_new, atr_orig):
     """Compare new attributes with exsiting ones"""
     update = False
@@ -772,7 +949,7 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
     if file_num <= 1:
         enable_parallel = False
         if print_msg:
-            print('parallel processing is diabled for one input file')
+            print('parallel processing is disabled for one input file')
         return 1, enable_parallel, None, None
 
     # Check required python module
@@ -789,7 +966,7 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
     if num_cores <= 1:
         enable_parallel = False
         print('parallel processing is disabled because min of the following two numbers <= 1:')
-        print('available cpu number of the computer: {}'.format(os.cpu_count()))
+        print(f'available cpu number of the computer: {os.cpu_count()}')
     elif print_msg:
         print('parallel processing using %d cores ...' % (num_cores))
 
@@ -798,6 +975,24 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
     except:
         return num_cores, enable_parallel, None, None
 
+
+def print_command_line(script_name, args):
+    """print the command line with "" for arguments containing *.
+
+    Parameters: script_name - str, e.g. prep_isce.py
+                args        - list(str), list of input arguments
+    """
+    cmd = script_name
+    for arg in args:
+        # for option values containing *, add "" in the print out msg
+        # so that it can be copied and pasted to run directly.
+        if not arg.startswith('-') and '*' in arg:
+            cmd += f' "{arg}"'
+        else:
+            cmd += f' {arg}'
+
+    print(cmd)
+    return
 
 
 #################################### Math / Statistics ###################################
@@ -859,7 +1054,7 @@ def root_mean_sq_error(x, y=None):
     if y is not None:
         y = np.array(y).flatten()
         if x.size != y.size:
-            raise ValueError('Input x & y have different size: {} vs. {}!'.format(x.size, y.size))
+            raise ValueError(f'Input x & y have different size: {x.size} vs. {y.size}!')
         x -= y
 
     # omit NaN values
@@ -928,5 +1123,3 @@ def is_number(string):
         return True
     except ValueError:
         return False
-
-

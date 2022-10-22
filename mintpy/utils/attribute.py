@@ -9,10 +9,47 @@
 
 
 import warnings
+
 import numpy as np
+
 from mintpy.objects.coord import coordinate
 from mintpy.utils import readfile
 
+
+def update_attribute4resize(atr_in, resize2shape, print_msg=True):
+    """update input dictionary of attributes due to resizing
+
+    Parameters: atr_in       - dict, input dictionary of attributes
+                resize2shape - tuple of 2 int, for the resized shape
+    Returns:    atr          - dict, updated dictionary of attributes
+    """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+    # make a copy of original meta dict
+    atr = {**atr_in}
+
+    yscale = int(atr['LENGTH']) / resize2shape[0]
+    xscale = int(atr['WIDTH']) / resize2shape[1]
+    vprint(f'output data in size: {resize2shape[0]}, {resize2shape[1]}')
+
+    atr['LENGTH'] = resize2shape[0]
+    atr['WIDTH'] = resize2shape[1]
+    atr['ALOOKS'] = np.rint(int(atr.get('ALOOKS', 1)) * yscale).astype(int)
+    atr['RLOOKS'] = np.rint(int(atr.get('RLOOKS', 1)) * xscale).astype(int)
+    vprint('update LENGTH, WIDTH, Y/XMIN/MAX, A/RLOOKS')
+
+    if 'AZIMUTH_PIXEL_SIZE' in atr.keys():
+        atr['AZIMUTH_PIXEL_SIZE'] = float(atr['AZIMUTH_PIXEL_SIZE']) * yscale
+        vprint('update AZIMUTH_PIXEL_SIZE')
+
+    if 'RANGE_PIXEL_SIZE' in atr.keys():
+        atr['RANGE_PIXEL_SIZE'] = float(atr['RANGE_PIXEL_SIZE']) * xscale
+        vprint('update RANGE_PIXEL_SIZE')
+
+    if 'NCORRLOOKS' in atr.keys():
+        atr['NCORRLOOKS'] = float(atr['NCORRLOOKS']) * yscale * xscale
+        vprint('update NCORRLOOKS')
+
+    return atr
 
 
 def update_attribute4multilook(atr_in, lks_y, lks_x, box=None, print_msg=True):
@@ -25,11 +62,10 @@ def update_attribute4multilook(atr_in, lks_y, lks_x, box=None, print_msg=True):
                          if --margin option is used in multilook.py
     Returns:    atr    - dict, updated dictionary of attributes
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
 
     # make a copy of original meta dict
-    atr = dict()
-    for key, value in iter(atr_in.items()):
-        atr[key] = str(value)
+    atr = {**atr_in}
 
     if box is None:
         box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
@@ -37,7 +73,7 @@ def update_attribute4multilook(atr_in, lks_y, lks_x, box=None, print_msg=True):
 
     length_mli = length // lks_y
     width_mli = width // lks_x
-    print('output data in size: {}, {}'.format(length_mli, width_mli))
+    vprint(f'output data in size: {length_mli}, {width_mli}')
 
     # Update attributes
     atr['LENGTH'] = str(length_mli)
@@ -48,38 +84,32 @@ def update_attribute4multilook(atr_in, lks_y, lks_x, box=None, print_msg=True):
     atr['YMAX'] = str(length_mli - 1 + box[1])
     atr['RLOOKS'] = str(int(atr.get('RLOOKS', '1')) * lks_x)
     atr['ALOOKS'] = str(int(atr.get('ALOOKS', '1')) * lks_y)
-    if print_msg:
-        print('update LENGTH, WIDTH, Y/XMIN/MAX, A/RLOOKS')
+    vprint('update LENGTH, WIDTH, Y/XMIN/MAX, A/RLOOKS')
 
     if 'Y_STEP' in atr.keys():
         atr['Y_STEP'] = str(lks_y * float(atr['Y_STEP']))
         atr['X_STEP'] = str(lks_x * float(atr['X_STEP']))
-        if print_msg:
-            print('update Y/X_STEP')
+        vprint('update Y/X_STEP')
 
     if 'AZIMUTH_PIXEL_SIZE' in atr.keys():
         atr['AZIMUTH_PIXEL_SIZE'] = str(lks_y * float(atr['AZIMUTH_PIXEL_SIZE']))
-        if print_msg:
-            print('update AZIMUTH_PIXEL_SIZE')
+        vprint('update AZIMUTH_PIXEL_SIZE')
 
     if 'RANGE_PIXEL_SIZE' in atr.keys():
         atr['RANGE_PIXEL_SIZE'] = str(lks_x * float(atr['RANGE_PIXEL_SIZE']))
-        if print_msg:
-            print('update RANGE_PIXEL_SIZE')
+        vprint('update RANGE_PIXEL_SIZE')
 
     if 'REF_Y' in atr.keys():
         atr['REF_Y'] = str( (int(atr['REF_Y']) - box[1]) // lks_y )
         atr['REF_X'] = str( (int(atr['REF_X']) - box[0]) // lks_x )
-        if print_msg:
-            print('update REF_Y/X')
+        vprint('update REF_Y/X')
 
     if 'SUBSET_XMIN' in atr.keys():
         atr['SUBSET_YMIN'] = str( (int(atr['SUBSET_YMIN']) - box[1]) // lks_y )
         atr['SUBSET_YMAX'] = str( (int(atr['SUBSET_YMAX']) - box[1]) // lks_y )
         atr['SUBSET_XMIN'] = str( (int(atr['SUBSET_XMIN']) - box[0]) // lks_x )
         atr['SUBSET_XMAX'] = str( (int(atr['SUBSET_XMAX']) - box[0]) // lks_x )
-        if print_msg:
-            print('update SUBSET_XMIN/XMAX/YMIN/YMAX')
+        vprint('update SUBSET_XMIN/XMAX/YMIN/YMAX')
     return atr
 
 
@@ -94,7 +124,7 @@ def update_attribute4geo2radar(atr_in, shape2d=None, res_obj=None, print_msg=Tru
     Returns:    atr     - dict, updated dictionary of attributes
     """
     # make a copy of original meta dict
-    atr = dict(atr_in)
+    atr = {**atr_in}
 
     # grab info from res_obj
     if res_obj is not None:
@@ -128,7 +158,7 @@ def update_attribute4radar2geo(atr_in, shape2d=None, lalo_step=None, SNWE=None, 
     Returns:    atr     - dict, updated dictionary of attributes
     """
     # make a copy of original meta dict
-    atr = dict(atr_in)
+    atr = {**atr_in}
 
     # grab info from res_obj
     if res_obj is not None:
@@ -185,6 +215,8 @@ def update_attribute4subset(atr_in, subset_box, print_msg=True):
                 subset_box - 4-tuple of int, subset box defined in (x0, y0, x1, y1)
     Returns:    atr        - dict, updated data attributes
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
     if subset_box is None:
         return atr_in
 
@@ -192,49 +224,43 @@ def update_attribute4subset(atr_in, subset_box, print_msg=True):
     sub_y = [subset_box[1], subset_box[3]]
 
     # Update attribute variable
-    atr = dict(atr_in)
+    atr = {**atr_in}
     atr['LENGTH'] = str(sub_y[1]-sub_y[0])
     atr['WIDTH'] = str(sub_x[1]-sub_x[0])
     atr['YMAX'] = str(sub_y[1]-sub_y[0] - 1)
     atr['XMAX'] = str(sub_x[1]-sub_x[0] - 1)
-    if print_msg:
-        print('update LENGTH, WIDTH, Y/XMAX')
+    vprint('update LENGTH, WIDTH, Y/XMAX')
 
     # Subset atribute
     atr['SUBSET_YMAX'] = str(sub_y[1] + int(atr_in.get('SUBSET_YMIN', '0')))
     atr['SUBSET_YMIN'] = str(sub_y[0] + int(atr_in.get('SUBSET_YMIN', '0')))
     atr['SUBSET_XMAX'] = str(sub_x[1] + int(atr_in.get('SUBSET_XMIN', '0')))
     atr['SUBSET_XMIN'] = str(sub_x[0] + int(atr_in.get('SUBSET_XMIN', '0')))
-    if print_msg:
-        print(('update/add SUBSET_XMIN/YMIN/XMAX/YMAX: '
-               '{x0}/{y0}/{x1}/{y1}').format(x0=atr['SUBSET_XMIN'],
-                                             y0=atr['SUBSET_YMIN'],
-                                             x1=atr['SUBSET_XMAX'],
-                                             y1=atr['SUBSET_YMAX']))
+    vprint(('update/add SUBSET_XMIN/YMIN/XMAX/YMAX: '
+            '{x0}/{y0}/{x1}/{y1}').format(x0=atr['SUBSET_XMIN'],
+                                          y0=atr['SUBSET_YMIN'],
+                                          x1=atr['SUBSET_XMAX'],
+                                          y1=atr['SUBSET_YMAX']))
 
     # Geo coord
     if 'Y_FIRST' in atr.keys():
         atr['Y_FIRST'] = str(float(atr['Y_FIRST']) + sub_y[0]*float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST']) + sub_x[0]*float(atr['X_STEP']))
-        if print_msg:
-            print('update Y/X_FIRST')
+        vprint('update Y/X_FIRST')
 
     # Reference in space
     if 'REF_Y' in atr.keys():
         atr['REF_Y'] = str(int(atr['REF_Y']) - sub_y[0])
         atr['REF_X'] = str(int(atr['REF_X']) - sub_x[0])
-        if print_msg:
-            print('update REF_Y/X')
+        vprint('update REF_Y/X')
 
     # Starting Range for file in radar coord
     if 'Y_FIRST' not in atr_in.keys():
         try:
             atr['STARTING_RANGE'] = float(atr['STARTING_RANGE'])
             atr['STARTING_RANGE'] += float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
-            if print_msg:
-                print('update STARTING_RANGE')
+            vprint('update STARTING_RANGE')
         except:
             pass
 
     return atr
-

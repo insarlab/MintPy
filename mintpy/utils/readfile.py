@@ -7,34 +7,33 @@
 #   from mintpy.utils import readfile
 
 
-import os
-import sys
-import re
-import glob
 import datetime as dt
+import glob
+import os
+import re
+import sys
 import warnings
-import defusedxml.ElementTree as ET
 
+import defusedxml.ElementTree as ET
 import h5py
-import json
 import numpy as np
 
 from mintpy.objects import (
-    datasetUnitDict,
+    DSET_UNIT_DICT,
+    HDFEOS,
     geometry,
     giantIfgramStack,
     giantTimeseries,
     ifgramStack,
+    sensor,
     timeseries,
-    HDFEOS
 )
-from mintpy.objects import sensor
-from mintpy.utils import utils0 as ut
+from mintpy.utils import ptime, utils0 as ut
 
 SPEED_OF_LIGHT = 299792458  # meters per second
 
 
-standardMetadataKeys = {
+STD_METADATA_KEYS = {
     # ROI_PAC/MintPy attributes
     'ALOOKS'             : ['azimuth_looks'],
     'RLOOKS'             : ['range_looks'],
@@ -128,6 +127,8 @@ DATA_TYPE_GDAL2NUMPY = {
     5 : 'int32',
     6 : 'float32',
     7 : 'float64',
+    8 : 'cint16',       # for translation purpose only, as numpy does not support complex int
+    9 : 'cint32',       # for translation purpose only, as numpy does not support complex int
     10: 'complex64',
     11: 'complex128',
 }
@@ -141,6 +142,8 @@ DATA_TYPE_NUMPY2GDAL = {
     "int32"     : 5,
     "float32"   : 6,
     "float64"   : 7,
+    "cint16"    : 8,    # for translation purpose only, as numpy does not support complex int
+    "cint32"    : 9,    # for translation purpose only, as numpy does not support complex int
     "complex64" : 10,
     "complex128": 11,
 }
@@ -166,7 +169,7 @@ DATA_TYPE_NUMPY2ISCE = {
 
 
 # single file (data + attributes) supported by GDAL
-GDAL_FILE_EXTS = ['.tif', '.grd']
+GDAL_FILE_EXTS = ['.tiff', '.tif', '.grd']
 
 ENVI_BAND_INTERLEAVE = {
     'BAND' : 'BSQ',
@@ -243,15 +246,18 @@ SPECIAL_STR2NUM = {
 
 
 #########################################################################
-def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, data_type=None):
+def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, data_type=None,
+         no_data_values=None):
     """Read one dataset and its attributes from input file.
-    Parameters: fname       : str, path of file to read
-                datasetName : str or list of str, slice names
-                box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
-                x/ystep     : int, number of pixels to pick/multilook for each output pixel
-                data_type   : numpy data type, e.g. np.float32, np.bool_, etc.
-    Returns:    data        : 2/3/4D matrix in numpy.array format, return None if failed
-                atr         : dictionary, attributes of data, return None if failed
+
+    Parameters: fname          - str, path of file to read
+                datasetName    - str or list of str, slice names
+                box            - 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
+                x/ystep        - int, number of pixels to pick/multilook for each output pixel
+                data_type      - numpy data type, e.g. np.float32, np.bool_, etc. Change the output data type
+                no_data_values - list of 2 numbers, change the no-data-value in the output
+    Returns:    data           - 2/3/4D matrix in numpy.array format, return None if failed
+                atr            - dictionary, attributes of data, return None if failed
     Examples:
         from mintpy.utils import readfile
         data, atr = readfile.read('velocity.h5')
@@ -277,26 +283,32 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
     if not box:
         box = (0, 0, width, length)
 
-    # Read Data
+    # read data
+    kwargs = dict(
+        datasetName=datasetName,
+        box=box,
+        xstep=xstep,
+        ystep=ystep,
+    )
+
     fext = os.path.splitext(os.path.basename(fname))[1].lower()
     if fext in ['.h5', '.he5']:
-        data = read_hdf5_file(fname,
-                              datasetName=datasetName,
-                              box=box,
-                              xstep=xstep,
-                              ystep=ystep,
-                              print_msg=print_msg)
+        data = read_hdf5_file(fname, print_msg=print_msg, **kwargs)
 
     else:
-        data, atr = read_binary_file(fname,
-                                     datasetName=datasetName,
-                                     box=box,
-                                     xstep=xstep,
-                                     ystep=ystep)
+        data, atr = read_binary_file(fname, **kwargs)
 
     # customized output data type
-    if data_type:
+    if data_type is not None and data_type != data.dtype:
+        if print_msg:
+            print(f'convert numpy array from {data.dtype} to {data_type}')
         data = np.array(data, dtype=data_type)
+
+    # convert no-data-value
+    if isinstance(no_data_values, list):
+        if print_msg:
+            print(f'convert no-data-value from {no_data_values[0]} to {no_data_values[1]}')
+        data[data == no_data_values[0]] = no_data_values[1]
 
     return data, atr
 
@@ -342,7 +354,7 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
     # a) if all digit, e.g. YYYYMMDD
     # b) if in isoformat(), YYYY-MM-DDTHH:MM, etc.
     if all(x.isdigit() or x[:4].isdigit() for x in datasetName):
-        datasetName = ['{}-{}'.format(ds_3d_list[0], x) for x in datasetName]
+        datasetName = [f'{ds_3d_list[0]}-{x}' for x in datasetName]
 
     # Input Argument: decompose slice list into dsFamily and inputDateList
     dsFamily = datasetName[0].split('-')[0]
@@ -354,13 +366,13 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
         # get dataset object
         dsNames = [i for i in [datasetName[0], dsFamily] if i in f.keys()]
         # support for old mintpy-v0.x files
-        dsNamesOld = [i for i in slice_list if '/{}'.format(datasetName[0]) in i]
+        dsNamesOld = [i for i in slice_list if f'/{datasetName[0]}' in i]
         if len(dsNames) > 0:
             ds = f[dsNames[0]]
         elif len(dsNamesOld) > 0:
             ds = f[dsNamesOld[0]]
         else:
-            raise ValueError('input dataset {} not found in file {}'.format(datasetName, fname))
+            raise ValueError(f'input dataset {datasetName} not found in file {fname}')
 
         # output size for >=2D dataset if x/ystep > 1
         xsize = int((box[2] - box[0]) / xstep)
@@ -391,26 +403,35 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
                     slice_flag[date_list.index(d)] = True
 
             # read data
+            num_slice = np.sum(slice_flag)
+            inds = np.where(slice_flag)[0].tolist()
+
             if xstep * ystep == 1:
-                data = ds[:,
-                          box[1]:box[3],
-                          box[0]:box[2]][slice_flag]
+                if num_slice / slice_flag.size < 0.05:
+                    # single indexing if only a small fraction is read
+                    data = np.zeros((num_slice, ysize, xsize), dtype=ds.dtype)
+                    for i, ind in enumerate(inds):
+                        data[i] = ds[ind,
+                                     box[1]:box[3],
+                                     box[0]:box[2]]
+                else:
+                    data = ds[:,
+                              box[1]:box[3],
+                              box[0]:box[2]][slice_flag]
 
             else:
                 # sampling / nearest interplation in y/xstep
                 # use for loop to save memory
-                num_slice = np.sum(slice_flag)
                 data = np.zeros((num_slice, ysize, xsize), ds.dtype)
 
-                inds = np.where(slice_flag)[0]
-                for i in range(num_slice):
+                for i, ind in enumerate(inds):
                     # print out msg
                     if print_msg:
                         sys.stdout.write('\r' + f'reading 2D slices {i+1}/{num_slice}...')
                         sys.stdout.flush()
 
                     # read and index
-                    d2 = ds[inds[i],
+                    d2 = ds[ind,
                             box[1]:box[3],
                             box[0]:box[2]]
                     d2 = d2[int(ystep/2)::ystep,
@@ -480,8 +501,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     processor = atr['PROCESSOR']
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
-    if not box:
-        box = (0, 0, width, length)
+    box = box if box else (0, 0, width, length)
 
     # default data structure
     data_type = atr.get('DATA_TYPE', 'float32').lower()
@@ -496,22 +516,22 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # ISCE
     if processor in ['isce']:
         # convert default short name for data type from ISCE
-        dataTypeDict = {
+        data_type_dict = {
             'byte': 'int8',
             'float': 'float32',
             'double': 'float64',
             'cfloat': 'complex64',
         }
-        if data_type in dataTypeDict.keys():
-            data_type = dataTypeDict[data_type]
+        if data_type in data_type_dict.keys():
+            data_type = data_type_dict[data_type]
 
-        k = atr['FILE_TYPE'].lower().replace('.', '')
-        if k in ['unw', 'cor']:
+        ftype = atr['FILE_TYPE'].lower().replace('.', '')
+        if ftype in ['unw', 'cor', 'ion']:
             band = min(2, num_band)
             if datasetName and datasetName in ['band1','intensity','magnitude']:
                 band = 1
 
-        elif k in ['slc']:
+        elif ftype in ['slc']:
             if datasetName:
                 if datasetName in ['amplitude','magnitude','intensity']:
                     cpx_band = 'magnitude'
@@ -522,10 +542,10 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             else:
                 cpx_band = 'complex'
 
-        elif k.startswith('los') and datasetName and datasetName.startswith(('band2','az','head')):
+        elif ftype.startswith('los') and datasetName and datasetName.startswith(('band2','az','head')):
             band = min(2, num_band)
 
-        elif k in ['incLocal']:
+        elif ftype in ['incLocal']:
             band = min(2, num_band)
             if datasetName and 'local' not in datasetName.lower():
                 band = 1
@@ -635,88 +655,93 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                 band = slice_list.index(datasetName) + 1
 
     else:
-        print('Unknown InSAR processor: {}'.format(processor))
+        print(f'Unknown InSAR processor: {processor}')
 
     # reading
+    kwargs = dict(
+        box=box,
+        band=band,
+        cpx_band=cpx_band,
+        xstep=xstep,
+        ystep=ystep,
+    )
     if processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
-        data = read_gdal(
-            fname,
-            box=box,
-            band=band,
-            cpx_band=cpx_band,
-            xstep=xstep,
-            ystep=ystep,
-        )
+        data = read_gdal(fname, **kwargs)
+
     else:
         data = read_binary(
             fname,
             shape=(length, width),
-            box=box,
             data_type=data_type,
             byte_order=byte_order,
             num_band=num_band,
             interleave=interleave,
-            band=band,
-            cpx_band=cpx_band,
-            xstep=xstep,
-            ystep=ystep,
+            **kwargs
         )
 
     if 'DATA_TYPE' not in atr:
         atr['DATA_TYPE'] = data_type
+
     return data, atr
 
 
 #########################################################################
 def get_slice_list(fname, no_complex=False):
-    """Get list of 2D slice existed in file (for display)"""
+    """Get list of 2D slice existed in file (for display).
+
+    Parameters: fname      - str, path to the data file
+                no_complex - bool, convert complex into real/imag parts
+    Returns:    slice_list - list(str), list of names for 2D matrices
+    """
+
+    # grab fbase/fext
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
     # ignore certain meaningless file extensions
     while fext in ['.geo', '.rdr', '.full', '.wgs84', '.grd']:
         fbase, fext = os.path.splitext(fbase)
-    if not fext:
-        fext = fbase
+    fext = fext if fext else fbase
 
     atr = read_attribute(fname)
-    k = atr['FILE_TYPE']
+    ftype = atr['FILE_TYPE']
 
     global slice_list
     # HDF5 Files
     if fext in ['.h5', '.he5']:
         with h5py.File(fname, 'r') as f:
             d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset)]
-        if k == 'timeseries' and k in d1_list:
+
+        if ftype == 'timeseries' and ftype in d1_list:
             obj = timeseries(fname)
             obj.open(print_msg=False)
             slice_list = obj.sliceList
 
-        elif k in ['geometry'] and k not in d1_list:
+        elif ftype in ['geometry'] and ftype not in d1_list:
             obj = geometry(fname)
             obj.open(print_msg=False)
             slice_list = obj.sliceList
 
-        elif k in ['ifgramStack']:
+        elif ftype in ['ifgramStack']:
             obj = ifgramStack(fname)
             obj.open(print_msg=False)
             slice_list = obj.sliceList
 
-        elif k in ['HDFEOS']:
+        elif ftype in ['HDFEOS']:
             obj = HDFEOS(fname)
             obj.open(print_msg=False)
             slice_list = obj.sliceList
 
-        elif k in ['giantTimeseries']:
+        elif ftype in ['giantTimeseries']:
             obj = giantTimeseries(fname)
             obj.open(print_msg=False)
             slice_list = obj.sliceList
 
-        elif k in ['giantIfgramStack']:
+        elif ftype in ['giantIfgramStack']:
             obj = giantIfgramStack(fname)
             obj.open(print_msg=False)
             slice_list = obj.sliceList
 
-        elif k == 'timeseries' and 'slc' in d1_list:
+        elif ftype == 'timeseries' and 'slc' in d1_list:
             with h5py.File(fname, 'r') as f:
                 dates = f['date'][:]
             slice_list = ['slc-{}'.format(i.decode('UTF-8')) for i in dates]
@@ -724,18 +749,25 @@ def get_slice_list(fname, no_complex=False):
         else:
             ## Find slice by walking through the file structure
             length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+
             def get_hdf5_2d_dataset(name, obj):
                 global slice_list
                 if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
                     if obj.ndim == 2:
                         slice_list.append(name)
                     elif obj.ndim == 3:
-                        slice_list += ['{}-{}'.format(name, i+1) for i in range(obj.shape[0])]
+                        slice_list += [f'{name}-{i+1}' for i in range(obj.shape[0])]
                     else:
-                        warnings.warn('file has un-defined {}D dataset: {}'.format(obj.ndim, name))
+                        warnings.warn(f'file has un-defined {obj.ndim}D dataset: {name}')
+
+            # get slice_list
             slice_list = []
             with h5py.File(fname, 'r') as f:
                 f.visititems(get_hdf5_2d_dataset)
+
+            # special order for velocity / time func file
+            if ftype == 'velocity':
+                slice_list = sort_dataset_list4velocity(slice_list)
 
     # Binary Files
     else:
@@ -748,7 +780,7 @@ def get_slice_list(fname, no_complex=False):
             # isce los file
             slice_list = ['incidenceAngle', 'azimuthAngle']
 
-        elif fext in ['.unw']:
+        elif fext in ['.unw', '.ion']:
             slice_list = ['magnitude', 'phase']
 
         elif fext in ['.int', '.slc']:
@@ -772,20 +804,25 @@ def get_slice_list(fname, no_complex=False):
             slice_list = ['latitude', 'longitude', 'height']
 
         else:
-            slice_list = ['band{}'.format(i+1) for i in range(num_band)]
+            slice_list = [f'band{i+1}' for i in range(num_band)]
 
     return slice_list
 
 
 def get_dataset_list(fname, datasetName=None):
-    """Get list of 2D and 3D dataset to facilitate systematic file reading"""
+    """Get list of 2D and 3D dataset to facilitate systematic file reading.
+
+    Parameters: fname       - str, path to the data file
+                datasetName - str, dataset of interest
+    Returns:    ds_list     - list(str), list of names for 2D/3D datasets
+    """
     if datasetName:
         return [datasetName]
 
-    fext = os.path.splitext(fname)[1].lower()
-
     global ds_list
+    fext = os.path.splitext(fname)[1].lower()
     if fext in ['.h5', '.he5']:
+        # get length/width
         atr = read_attribute(fname)
         length, width = int(atr['LENGTH']), int(atr['WIDTH'])
 
@@ -793,12 +830,43 @@ def get_dataset_list(fname, datasetName=None):
             global ds_list
             if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
                 ds_list.append(name)
+
+        # get dataset list
         ds_list = []
         with h5py.File(fname, 'r') as f:
             f.visititems(get_hdf5_dataset)
 
+        # special order for velocity / time func file
+        if atr['FILE_TYPE'] == 'velocity':
+            ds_list = sort_dataset_list4velocity(ds_list)
+
     else:
         ds_list = get_slice_list(fname)
+
+    return ds_list
+
+
+def sort_dataset_list4velocity(ds_list_in):
+    """Sort the dataset list for velocity file type.
+
+    1. time func datasets [required]: velocity
+    2. time func datasets [optional]: alphabetic order
+    3. time func STD datasets [optional]: velocityStd
+    4. time func STD datasets [optional]: alphabetic order
+    5. residue
+
+    Parameters: ds_list - list(str), list of names for 2D/3D datasets
+    Returns:    ds_list - list(str), list of names for 2D/3D datasets
+    """
+
+    ds_list1 = ['velocity']
+    ds_list3 = [x for x in ['velocityStd'] if x in ds_list_in]
+    ds_list5 = [x for x in ['intercept', 'interceptStd', 'residue'] if x in ds_list_in]
+
+    ds_list4 = sorted([x for x in ds_list_in if x.endswith('Std') and x not in ds_list1 + ds_list3 + ds_list5])
+    ds_list2 = sorted([x for x in ds_list_in if x not in ds_list1 + ds_list3 + ds_list4 + ds_list5])
+
+    ds_list = ds_list1 + ds_list2 + ds_list3 + ds_list4 + ds_list5
 
     return ds_list
 
@@ -846,7 +914,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
     if not os.path.isfile(fname):
-        msg = 'input file not existed: {}\n'.format(fname)
+        msg = f'input file not existed: {fname}\n'
         msg += 'current directory: '+os.getcwd()
         raise Exception(msg)
 
@@ -861,38 +929,38 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             g1_list = [i for i in f.keys() if isinstance(f[i], h5py.Group)]
             d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
 
-        # FILE_TYPE - k
+        # FILE_TYPE
         # pre-defined/known dataset/group names > existing FILE_TYPE > exsiting dataset/group names
         py2_mintpy_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete mintpy format
         if any(i in d1_list for i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']):
-            k = 'ifgramStack'
+            ftype = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
-            k = 'geometry'
+            ftype = 'geometry'
         elif any(i in g1_list+d1_list for i in ['timeseries']):
-            k = 'timeseries'
+            ftype = 'timeseries'
         elif any(i in d1_list for i in ['velocity']):
-            k = 'velocity'
+            ftype = 'velocity'
         elif 'HDFEOS' in g1_list:
-            k = 'HDFEOS'
+            ftype = 'HDFEOS'
         elif 'recons' in d1_list:
-            k = 'giantTimeseries'
+            ftype = 'giantTimeseries'
         elif any(i in d1_list for i in ['igram', 'figram']):
-            k = 'giantIfgramStack'
+            ftype = 'giantIfgramStack'
         elif any(i in g1_list for i in py2_mintpy_stack_files):
-            k = list(set(g1_list) & set(py2_mintpy_stack_files))[0]
+            ftype = list(set(g1_list) & set(py2_mintpy_stack_files))[0]
         elif 'FILE_TYPE' in atr:
-            k = atr['FILE_TYPE']
+            ftype = atr['FILE_TYPE']
         elif len(d1_list) > 0:
-            k = d1_list[0]
+            ftype = d1_list[0]
         elif len(g1_list) > 0:
-            k = g1_list[0]
+            ftype = g1_list[0]
         else:
             raise ValueError('unrecognized file type: '+fname)
 
         # metadata dict
-        if k == 'giantTimeseries':
+        if ftype == 'giantTimeseries':
             atr = giantTimeseries(fname).get_metadata()
-        elif k == 'giantIfgramStack':
+        elif ftype == 'giantIfgramStack':
             atr = giantIfgramStack(fname).get_metadata()
 
         elif len(atr) > 0 and 'WIDTH' in atr.keys():
@@ -907,6 +975,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             # otherwise, grab the list of attrs in HDF5 file
             # and use the attrs with most items
             global atr_list
+
             def get_hdf5_attrs(name, obj):
                 global atr_list
                 if len(obj.attrs) > 0 and 'WIDTH' in obj.attrs.keys():
@@ -932,7 +1001,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         # attribute identified by MintPy
         # 1. FILE_TYPE
-        atr['FILE_TYPE'] = str(k)
+        atr['FILE_TYPE'] = str(ftype)
 
         # 2. DATA_TYPE
         ds = None
@@ -943,10 +1012,12 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             else:
                 # get the 1st dataset in deeper levels
                 global ds_list
+
                 def get_hdf5_dataset(name, obj):
                     global ds_list
                     if isinstance(obj, h5py.Dataset) and obj.ndim >= 2:
                         ds_list.append(obj)
+
                 ds_list = []
                 f.visititems(get_hdf5_dataset)
                 if ds_list:
@@ -1036,7 +1107,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             fname + '.rsc',
             fname + '.xml',
             fname + '.par',
-            os.path.splitext(fname)[0] + '.hdr',
+            fname + '.hdr',                        # created with SUFFIX=ADD     in gdal envi driver
+            os.path.splitext(fname)[0] + '.hdr',   # created with SUFFIX=REPLACE in gdal envi driver
             fname + '.vrt',
             fname + '.aux.xml',
         ]
@@ -1051,7 +1123,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         if fext in GDAL_FILE_EXTS and not os.path.isfile(fname + '.rsc'):
             metafiles = [fname]
         elif len(metafiles) == 0:
-            raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
+            raise FileNotFoundError(f'No metadata file found for data file: {fname}')
 
         atr = {}
         # PROCESSOR
@@ -1126,37 +1198,37 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             atr['FILE_TYPE'] = fext
 
         # DATA_TYPE for ISCE products
-        dataTypeDict = {
+        data_type_dict = {
             'byte': 'int8',
             'float': 'float32',
             'double': 'float64',
             'cfloat': 'complex64',
         }
         data_type = atr.get('DATA_TYPE', 'none').lower()
-        if data_type != 'none' and data_type in dataTypeDict.keys():
-            atr['DATA_TYPE'] = dataTypeDict[data_type]
+        if data_type != 'none' and data_type in data_type_dict.keys():
+            atr['DATA_TYPE'] = data_type_dict[data_type]
 
     # UNIT
     if datasetName:
         # ignore Std because it shares the same unit as base parameter
         # e.g. velocityStd and velocity
         datasetName = datasetName.replace('Std','')
-    k = atr['FILE_TYPE'].replace('.', '')
-    if k == 'ifgramStack':
-        if datasetName and datasetName in datasetUnitDict.keys():
-            atr['UNIT'] = datasetUnitDict[datasetName]
+    ftype = atr['FILE_TYPE'].replace('.', '')
+    if ftype == 'ifgramStack':
+        if datasetName and datasetName in DSET_UNIT_DICT.keys():
+            atr['UNIT'] = DSET_UNIT_DICT[datasetName]
         else:
             atr['UNIT'] = 'radian'
 
-    elif datasetName and datasetName in datasetUnitDict.keys():
-        atr['UNIT'] = datasetUnitDict[datasetName]
+    elif datasetName and datasetName in DSET_UNIT_DICT.keys():
+        atr['UNIT'] = DSET_UNIT_DICT[datasetName]
         # SLC stack
         if datasetName == 'timeseries' and atr.get('DATA_TYPE', 'float32').startswith('complex'):
             atr['UNIT'] = '1'
 
     elif 'UNIT' not in atr.keys():
-        if k in datasetUnitDict.keys():
-            atr['UNIT'] = datasetUnitDict[k]
+        if ftype in DSET_UNIT_DICT.keys():
+            atr['UNIT'] = DSET_UNIT_DICT[ftype]
         else:
             atr['UNIT'] = '1'
 
@@ -1175,10 +1247,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
     return atr
 
 
-def standardize_metadata(metaDictIn, standardKeys=None):
+def standardize_metadata(metaDictIn, standardKeys=STD_METADATA_KEYS):
     """Convert metadata input ROI_PAC/MintPy format (for metadata with the same values)."""
-    if standardKeys is None:
-        standardKeys = standardMetadataKeys
 
     # make a copy
     metaDict = dict()
@@ -1200,91 +1270,50 @@ def standardize_metadata(metaDictIn, standardKeys=None):
 
 
 #########################################################################
-def read_template(fname, delimiter='=', print_msg=True):
-    """Reads the template file into a python dictionary structure.
-    Parameters: fname : str
-                    full path to the template file
-                delimiter : str
-                    string to separate the key and value
-                print_msg : bool
-                    print message or not
-    Returns:    template_dict : dict
-                    file content
-    Examples:
-        tmpl = read_template(KyushuT424F610_640AlosA.template)
-        tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
+def read_template(fname, delimiter='=', skip_chars=None):
+    """Read the template file into a dictionary structure.
+
+    Parameters: fname      - str, full path to the template file
+                delimiter  - str, string to separate the key and value
+                skip_chars - list of str, skip certain charaters in values
+    Returns:    template   - dict, file content
+    Examples:   template = read_template('KyushuAlosAT424.txt')
+                template = read_template('smallbaselineApp.cfg')
     """
-    template_dict = {}
 
-    # insarmaps: the below logic for plotattributes object can be made much more simple
-    # if we assume that any plot attribute coming after a > belongs to the
-    # same object. Must Ask Falk and Yunjun if we can assume this to eliminate
-    # all these conditionals
-    plotAttributeDict = {}
-    insidePlotObject = False
-    plotAttributes = []
+    if skip_chars and isinstance(skip_chars, str):
+        skip_chars = [skip_chars]
 
-    def is_plot_attribute(attribute):
-        tokens = attribute.split(".")
-        if tokens is None:
-            return False
-        return tokens[0] == "plot" and len(tokens) > 1
-
-    # read input text file or string
-    lines = None
+    # read input text file / string
     if os.path.isfile(fname):
-        with open(fname, 'r') as f:
+        with open(fname) as f:
             lines = f.readlines()
     elif isinstance(fname, str):
         lines = fname.split('\n')
+    lines = [x.strip() for x in lines]
 
-    # loop to parser/read each line
+    # parse line by line
+    template = {}
     for line in lines:
-        line = line.strip()
         # split on the 1st occurrence of delimiter
         c = [i.strip() for i in line.split(delimiter, 1)]
 
         # ignore commented lines or those without variables
-        if len(c) < 2 or line.startswith(('%', '#', '!')):
-            # next
-
-            # insarmaps:
-            if line.startswith(">"):
-                plotAttributeDict = {}
-                insidePlotObject = True
-            # otherwise, if previously inside attributes object, we are now outside
-            # unless the line is a comment
-            elif insidePlotObject and not line.startswith('%') and not line.startswith('#'):
-                # just came from being inside plot object, but now we are outside
-                insidePlotObject = False
-                plotAttributes.append(plotAttributeDict)
-
-        else:
+        if len(c) >= 2 and not line.startswith(('%', '#', '!')):
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
             value = os.path.expanduser(value)  # translate ~ symbol
             value = os.path.expandvars(value)  # translate env variables
 
+            # skip certain characters by replacing them with empty str
+            if skip_chars:
+                for skip_char in skip_chars:
+                    value = value.replace(skip_char, '')
+
             if value != '':
-                template_dict[key] = value
+                template[key] = value
 
-            # insarmaps:
-            if insidePlotObject:
-                if is_plot_attribute(key):
-                    plotAttributeDict[key] = value
-                else:
-                    # just came from being inside plot object, but now we are outside
-                    insidePlotObject = False
-                    plotAttributes.append(plotAttributeDict)
-                    template_dict[key] = value
-
-    # insarmaps: what if no \n at end of file? write out last plot attributes dict
-    if insidePlotObject:
-        plotAttributes.append(plotAttributeDict)
-    if len(plotAttributes) > 0:
-        template_dict["plotAttributes"] = json.dumps(plotAttributes)
-
-    return template_dict
+    return template
 
 
 def read_roipac_rsc(fname, delimiter=' '):
@@ -1298,7 +1327,7 @@ def read_roipac_rsc(fname, delimiter=' '):
         atr = readfile.read_roipac_rsc('filt_101120_110220_c10.unw.rsc')
     """
     # read .rsc file
-    with open(fname, 'r') as f:
+    with open(fname) as f:
         lines = f.readlines()
 
     # convert list of str into dict
@@ -1326,7 +1355,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3):
                     Attributes dictionary
     """
     # Read txt file
-    with open(fname, 'r') as f:
+    with open(fname) as f:
         lines = f.readlines()[skiprows:]
 
     # convert list of str into dict
@@ -1429,10 +1458,11 @@ def read_isce_xml(fname):
             e_first = root.find(f"./component[@name='{coord_name}']/property[@name='startingvalue']")
             v_step  = float(e_step.find('value').text)  if e_step  is not None else None
             v_first = float(e_first.find('value').text) if e_first is not None else None
-            if v_step and v_first and abs(v_step) < 1. and abs(v_step) > 1e-7:
-                xmlDict['{}_STEP'.format(prefix)] = v_step
-                xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
-                xmlDict['{}_UNIT'.format(prefix)] = 'degrees'
+            # check against None to better handle the valid v_first value of 0
+            if v_first is not None and v_step is not None and 1e-7 < abs(v_step) < 1.:
+                xmlDict[f'{prefix}_STEP'] = v_step
+                xmlDict[f'{prefix}_FIRST'] = v_first - v_step / 2.
+                xmlDict[f'{prefix}_UNIT'] = 'degrees'
 
         # data_type
         xmlDict['data_type'] = DATA_TYPE_ISCE2NUMPY[xmlDict['data_type'].lower()]
@@ -1495,7 +1525,9 @@ def read_gdal_vrt(fname):
         raise ImportError('Cannot import gdal and osr!')
 
     # read dataset using gdal
-    ds = gdal.Open(fname, gdal.GA_ReadOnly)
+    # Using os.fspath to convert Path objects to str, recommended by
+    # https://github.com/OSGeo/gdal/issues/1613#issuecomment-824703596
+    ds = gdal.Open(os.fspath(fname), gdal.GA_ReadOnly)
 
     atr = {}
     atr['WIDTH']  = ds.RasterXSize
@@ -1551,7 +1583,7 @@ def read_uavsar_ann(fname, comment=';', delimiter='='):
     """
     # read the entirer text file into list of strings
     lines = None
-    with open(fname, 'r') as f:
+    with open(fname) as f:
         lines = f.readlines()
 
     # convert the list of strings into a dict object
@@ -1575,7 +1607,7 @@ def read_gmtsar_prm(fname, delimiter='='):
                     Dictionary of keys and values in the PRM file.
     """
     # read .prm file
-    with open(fname, 'r') as f:
+    with open(fname) as f:
         lines = f.readlines()
 
     # convert list of str into dict
@@ -1687,9 +1719,10 @@ def read_snap_dim(fname):
     dim_dict['PLATFORM'] = sensor.standardize_sensor_name(dim_dict['PLATFORM'])
 
     # wavelength
-    dim_dict['WAVELENGTH'] = SPEED_OF_LIGHT / float(dim_dict['radar_frequency'])
+    # radar_frequency is in the unit of MHz
+    dim_dict['WAVELENGTH'] = SPEED_OF_LIGHT / (float(dim_dict['radar_frequency']) * 1e6)
 
-    # x/y_first/step_unit 
+    # x/y_first/step_unit
     transform = root.find("Geoposition/IMAGE_TO_MODEL_TRANSFORM").text.split(',')
     transform = [str(float(i)) for i in transform]     # Convert 3.333e-4 to 0.0003333
     dim_dict["X_STEP"]  = transform[0]
@@ -1711,7 +1744,7 @@ def read_snap_dim(fname):
 
     # date12
     dates = [x.get('name').split(':')[1].strip() for x in bases]
-    [date1, date2] = sorted([dt.datetime.strptime(x, '%d%b%Y').strftime('%Y%m%d') for x in dates])
+    [date1, date2] = sorted(dt.datetime.strptime(x, '%d%b%Y').strftime('%Y%m%d') for x in dates)
     dim_dict['DATE12'] = f'{date1[2:]}-{date2[2:]}'
 
     # p_baseline
@@ -1773,12 +1806,12 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
         box = (0, 0, width, length)
 
     if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
-        letter, digit = re.findall('(\d+|\D+)', data_type)
+        letter, digit = re.findall(r'(\d+|\D+)', data_type)
         # convert into short style: float32 --> c4
         if len(letter) > 1:
             letter = letter[0]
             digit = int(int(digit) / 8)
-        data_type = '>{}{}'.format(letter, digit)
+        data_type = f'>{letter}{digit}'
 
     # read data
     interleave = interleave.upper()
@@ -1844,7 +1877,9 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
         raise ImportError('Cannot import gdal!')
 
     # open data file
-    ds = gdal.Open(fname, gdal.GA_ReadOnly)
+    # Using os.fspath to convert Path objects to str, recommended by
+    # https://github.com/OSGeo/gdal/issues/1613#issuecomment-824703596
+    ds = gdal.Open(os.fspath(fname), gdal.GA_ReadOnly)
     bnd = ds.GetRasterBand(band)
 
     # box
@@ -1887,6 +1922,89 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
         data = data[:ysize, :xsize]
 
     return data
+
+
+
+############################  Read GMT Faults  ################################
+
+def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
+    """Read GMT lonlat file into list of 2D np.ndarray.
+
+    Parameters: ll_file  - str, path to the GMT lonlat file
+                SNWE     - tuple of 4 float, area of interest in lat/lon
+                min_dist - float, minimum distance in km of fault segments
+    Returns:    faults   - list of 2D np.ndarray in size of [num_point, 2] in float32
+                           with each row for one point in [lon, lat] in degrees
+    Examples:
+        # prepare GMT lonlat file
+        cd ~/data/aux/faults
+        gmt kml2gmt UCERF3_Fault.kml > UCERF3_Fault.lonlat
+
+        # read faults data
+        ll_file = os.path.expanduser('~/data/aux/faults/UCERF3_Fault.lonlat')
+        faults = read_gmt_lonlat_file(ll_file, SNWE=(31, 36, -118, -113), min_dist=0.1)
+
+        # add faults to the existing plot
+        fig, ax = plt.subplots(figsize=[7, 7], subplot_kw=dict(projection=ccrs.PlateCarree()))
+        data, atr, inps = view.prep_slice(cmd)
+        ax, inps, im, cbar = view.plot_slice(ax, data, atr, inps)
+
+        prog_bar = ptime.progressBar(maxValue=len(faults))
+        for i, fault in enumerate(faults):
+            ax.plot(fault[:,0], fault[:,1], 'k-', lw=0.2)
+            prog_bar.update(i+1, every=10)
+        prog_bar.close()
+        ax.set_xlim(inps.geo_box[0], inps.geo_box[2])
+        ax.set_ylim(inps.geo_box[3], inps.geo_box[1])
+
+    """
+    # read text file
+    lines = None
+    with open(ll_file) as f:
+        lines = f.readlines()
+    lines = [x for x in lines if not x.startswith('#')]
+
+    debug_mode = False
+    if debug_mode:
+        lines = lines[:1000]
+
+    # loop to extract/organize the data into list of arrays
+    num_line = len(lines)
+    faults = []
+    fault = []
+    prog_bar = ptime.progressBar(maxValue=num_line)
+    for i, line in enumerate(lines):
+        line = line.strip().replace('\n','').replace('\t', ' ')
+        if line.startswith('>'):
+            fault = []
+        else:
+            fault.append([float(x) for x in line.split()[:2]])
+
+        # save if 1) this is the last line OR 2) the next line starts a new fault
+        if i == num_line - 1 or lines[i+1].startswith('>'):
+            fault = np.array(fault, dtype=np.float32)
+            s = np.nanmin(fault[:,1]); n = np.nanmax(fault[:,1])
+            w = np.nanmin(fault[:,0]); e = np.nanmax(fault[:,0])
+
+            if fault is not None and SNWE:
+                S, N, W, E = SNWE
+                if e < W or w > E or s > N or n < S:
+                    # check overlap of two rectangles
+                    # link: https://stackoverflow.com/questions/40795709
+                    fault = None
+
+            if fault is not None and min_dist > 0:
+                dist = abs(n - s) * 108 * abs(e - w) * 108 * np.cos((n+s)/2 * np.pi/180)
+                if dist < min_dist:
+                    fault = None
+
+            if fault is not None:
+                faults.append(fault)
+
+        prog_bar.update(i+1, every=1000, suffix=f'line {i+1} / {num_line}')
+    prog_bar.close()
+    return faults
+
 
 
 ############################ Obsolete Functions ###############################
@@ -2150,6 +2268,5 @@ def read_GPS_USGS(fname):
     up = np.array(data[:, 3])
 
     return east, north, up, dates, YYYYMMDD
-
 
 #########################################################################

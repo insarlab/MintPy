@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,79 +6,15 @@
 
 
 import os
-import sys
-import argparse
+
 import numpy as np
-from mintpy.objects import timeseries, HDFEOS
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+
 from mintpy import view
+from mintpy.objects import HDFEOS
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 ##############################################################################
-EXAMPLE = """example:
-  #----- unwrapped phase
-  #for velocity: output an interferogram with temporal baseline in DATE12 metadata
-  save_roipac.py  velocity.h5
-  save_roipac.py  velocity.h5 -m maskTempCoh.h5 maskAoiShinmoe.h5
-
-  #for time-series: specify (date1_)date2
-  save_roipac.py  timeseries_ERA5_ramp_demErr.h5  #use the last date
-  save_roipac.py  timeseries_ERA5_ramp_demErr.h5  20050601
-  save_roipac.py  timeseries_ERA5_ramp_demErr.h5  20040728_20050601
-
-  #for HDF-EOS5: specify displacement-date1_date2
-  save_roipac.py  S1_IW12_128_0593_0597_20141213_20180619.he5  displacement-20170904_20170916
-  save_roipac.py  S1_IW12_128_0593_0597_20141213_20180619.he5  displacement-20170916
-
-  #for ifgramStack: specify date1_date2
-  save_roipac.py  inputs/ifgramStack.h5  unwrapPhase-20091225_20100723
-  save_roipac.py  inputs/ifgramStack.h5  unwrapPhase-20091225_20100723  --ref-yx 640 810
-
-  #----- coherence
-  save_roipac.py  inputs/ifgramStack.h5  coherence-20091225_20100723
-  save_roipac.py  temporalCoherence.h5
-  save_roipac.py  S1_IW12_128_0593_0597_20141213_20180619.he5 temporalCoherence -o 20170904_20170916.cor
-
-  #----- DEM
-  save_roipac.py  geo_geometryRadar.h5  height -o srtm1.dem
-  save_roipac.py  geo_geometryRadar.h5  height -o srtm1.hgt
-  save_roipac.py  S1_IW12_128_0593_0597_20141213_20180619.he5 height -o srtm1.dem
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Convert MintPy HDF5 file to ROI_PAC format.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', help='HDF5 file to be converted.')
-    parser.add_argument('dset', nargs='?', help='date/date12 of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
-    parser.add_argument('-m','--mask', dest='mask_file', nargs='+', help='mask file')
-    parser.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='custom reference pixel in y/x')
-    parser.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2, help='custom reference pixel in lat/lon')
-    parser.add_argument('--keep-all-metadata', dest='keepAllMetadata', action='store_true', help='Do not clean the metadata as ROIPAC format')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    # default dset
-    if not inps.dset:
-        atr = readfile.read_attribute(inps.file)
-        k = atr['FILE_TYPE']
-        if k in ['ifgramStack', 'HDFEOS']:
-            raise Exception("NO input dataset! It's required for {} file".format(k))
-
-        #for time-series
-        if k == 'timeseries':
-            inps.dset = timeseries(inps.file).get_date_list()[-1]
-            print('NO date specified >>> continue with the last date: {}'.format(inps.dset))
-    return inps
-
-
 def read_data(inps):
     # metadata
     atr = readfile.read_attribute(inps.file)
@@ -104,10 +39,10 @@ def read_data(inps):
             ref_lat, ref_lon = coord.radar2geo(inps.ref_yx[0], inps.ref_yx[1])[0:2]
             atr['REF_LAT'] = ref_lat
             atr['REF_LON'] = ref_lon
-        print('change reference point to y/x: {}'.format(inps.ref_yx))
+        print(f'change reference point to y/x: {inps.ref_yx}')
 
     # various file types
-    print('read {} from file {}'.format(inps.dset, inps.file))
+    print(f'read {inps.dset} from file {inps.file}')
     k = atr['FILE_TYPE']
     if k == 'velocity':
         # read/prepare data
@@ -152,13 +87,13 @@ def read_data(inps):
 
         # metadata
         atr['DATE'] = date1[2:8]
-        atr['DATE12'] = '{}-{}'.format(date1[2:8], date2[2:8])
+        atr['DATE12'] = f'{date1[2:8]}-{date2[2:8]}'
         atr['FILE_TYPE'] = '.unw'
         atr['UNIT'] = 'radian'
 
         # output filename
         if not inps.outfile:
-            inps.outfile = '{}_{}.unw'.format(date1, date2)
+            inps.outfile = f'{date1}_{date2}.unw'
             if inps.file.startswith('geo_'):
                 inps.outfile = 'geo_'+inps.outfile
 
@@ -175,19 +110,19 @@ def read_data(inps):
                     date1 = atr['REF_DATE']
                     date2 = ptime.yyyymmdd(suffix)
             else:
-                raise ValueError("No '-' in input dataset! It is required for {}".format(dname))
+                raise ValueError(f"No '-' in input dataset! It is required for {dname}")
         else:
             date_list = HDFEOS(inps.file).get_date_list()
             date1 = date_list[0]
             date2 = date_list[-1]
-        date12 = '{}_{}'.format(date1, date2)
+        date12 = f'{date1}_{date2}'
 
         # read / prepare data
         slice_list = readfile.get_slice_list(inps.file)
         if 'displacement' in inps.dset:
             # read/prepare data
-            slice_name1 = view.search_dataset_input(slice_list, '{}-{}'.format(dname, date1))[0][0]
-            slice_name2 = view.search_dataset_input(slice_list, '{}-{}'.format(dname, date2))[0][0]
+            slice_name1 = view.search_dataset_input(slice_list, f'{dname}-{date1}')[0][0]
+            slice_name2 = view.search_dataset_input(slice_list, f'{dname}-{date2}')[0][0]
             data = readfile.read(inps.file, datasetName=slice_name1)[0]
             data -= readfile.read(inps.file, datasetName=slice_name2)[0]
             print('converting range to phase')
@@ -200,7 +135,7 @@ def read_data(inps):
 
         # metadata
         atr['DATE'] = date1[2:8]
-        atr['DATE12'] = '{}-{}'.format(date1[2:8], date2[2:8])
+        atr['DATE12'] = f'{date1[2:8]}-{date2[2:8]}'
         if dname == 'displacement':
             atr['FILE_TYPE'] = '.unw'
             atr['UNIT'] = 'radian'
@@ -211,7 +146,7 @@ def read_data(inps):
             atr['FILE_TYPE'] = '.dem'
             atr['DATA_TYPE'] = 'int16'
         else:
-            raise ValueError('unrecognized input dataset type: {}'.format(inps.dset))
+            raise ValueError(f'unrecognized input dataset type: {inps.dset}')
 
         # output filename
         if not inps.outfile:
@@ -232,7 +167,7 @@ def read_data(inps):
 
         # metadata
         atr['DATE'] = date1[2:8]
-        atr['DATE12'] = '{}-{}'.format(date1[2:8], date2[2:8])
+        atr['DATE12'] = f'{date1[2:8]}-{date2[2:8]}'
         if dname.startswith('unwrapPhase'):
             atr['FILE_TYPE'] = '.unw'
             atr['UNIT'] = 'radian'
@@ -247,7 +182,7 @@ def read_data(inps):
             atr['UNIT'] = '1'
             atr['DATA_TYPE'] = 'byte'
         else:
-            raise ValueError('unrecognized dataset type: {}'.format(inps.dset))
+            raise ValueError(f'unrecognized dataset type: {inps.dset}')
 
         # output filename
         if not inps.outfile:
@@ -274,7 +209,7 @@ def read_data(inps):
             if 'coherence' in k.lower():
                 atr['FILE_TYPE'] = '.cor'
             elif k in ['mask']:
-                atr['FILE_TYPE'] = '.msk'    
+                atr['FILE_TYPE'] = '.msk'
             elif k in ['geometry'] and inps.dset == 'height':
                 if 'Y_FIRST' in atr.keys():
                     atr['FILE_TYPE'] = '.dem'
@@ -289,7 +224,7 @@ def read_data(inps):
     # mask
     if inps.mask_file:
         for m_file in inps.mask_file:
-            print('mask data based on input file: {}'.format(m_file))
+            print(f'mask data based on input file: {m_file}')
             mask = readfile.read(m_file)[0]
             mask *= ~np.isnan(data)
             data[mask==0] = np.nan
@@ -327,18 +262,16 @@ def clean_metadata4roipac(atr_in):
 
 
 ##############################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+def save_roipac(inps):
 
+    # read data and metadata
     data, atr, out_file = read_data(inps)
 
+    # remove non-roipac metadata
     if not inps.keepAllMetadata:
         atr = clean_metadata4roipac(atr)
 
+    # write
     writefile.write(data, out_file=out_file, metadata=atr)
-    return inps.outfile
 
-
-##########################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])
+    return

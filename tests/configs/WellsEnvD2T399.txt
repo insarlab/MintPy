@@ -16,9 +16,9 @@ mintpy.load.azAngleFile    = None
 mintpy.load.shadowMaskFile = None
 mintpy.load.waterMaskFile  = None
 
-mintpy.load.xstep          = 2
-mintpy.load.ystep          = 2
 mintpy.subset.lalo         = 41.02:41.32, -115.10:-114.65
+mintpy.multilook.xstep     = 2
+mintpy.multilook.ystep     = 2
 
 mintpy.reference.lalo             = 41.03, -114.70
 mintpy.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
@@ -38,5 +38,3 @@ first_frame         = 2781
 last_frame          = 2781
 beam_mode           = IS                   # S2,FB08,IW
 processing_software = GAMMA
-
-

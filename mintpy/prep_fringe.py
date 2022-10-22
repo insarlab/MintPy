@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -6,98 +5,27 @@
 ############################################################
 
 
-import os
-import sys
 import glob
-import argparse
+import os
+
+import defusedxml.ElementTree as ET
 import h5py
 import numpy as np
-import defusedxml.ElementTree as ET
 
 try:
     from osgeo import gdal
 except ImportError:
     raise ImportError("Can not import gdal!")
 
+from mintpy import subset
 from mintpy.utils import (
-    arg_group,
+    attribute as attr,
+    isce_utils,
     ptime,
     readfile,
-    writefile,
-    isce_utils,
     utils as ut,
-    attribute as attr,
+    writefile,
 )
-from mintpy import subset
-
-
-####################################################################################
-EXAMPLE = """example:
-  prep_fringe.py -u './PS_DS/unwrap/*.unw' -c ./PS_DS/tcorr_ds_ps.bin -g ./geometry -m '../reference/IW*.xml' -b ../baselines -o ./mintpy
-
-  cd ~/data/SanAndreasSenDT42/fringe
-  prep_fringe.py
-
-  ## example commands after prep_fringe.py
-  reference_point.py timeseries.h5 -y 500 -x 1150
-  generate_mask.py temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
-  tropo_pyaps3.py -f timeseries.h5 -g inputs/geometryRadar.h5
-  remove_ramp.py timeseries_ERA5.h5 -m maskTempCoh.h5 -s linear
-  dem_error.py timeseries_ERA5_ramp.h5 -g inputs/geometryRadar.h5
-  timeseries2velocity.py timeseries_ERA5_ramp_demErr.h5
-  geocode.py velocity.h5 -l inputs/geometryRadar.h5
-"""
-
-def create_parser():
-    """Command Line Parser"""
-    parser = argparse.ArgumentParser(description="Prepare FRInGE products for MintPy",
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('-u', '--unw-file', dest='unwFile', type=str, default='./PS_DS/unwrap/*.unw',
-                        help='path pattern of unwrapped interferograms (default: %(default)s).')
-    parser.add_argument('-c', '--coh-file', dest='cohFile', type=str, default='./PS_DS/tcorr_ds_ps.bin',
-                        help='temporal coherence file (default: %(default)s).')
-    parser.add_argument('--ps-mask', dest='psMaskFile', type=str, default='./ampDispersion/ps_pixels',
-                        help='PS pixels file (default: %(default)s).')
-    parser.add_argument('-g', '--geom-dir', dest='geomDir', type=str, default='./geometry',
-                        help='FRInGE geometry directory (default: %(default)s).\n'
-                             'This is used to grab 1) bounding box\n'
-                             '                 AND 2) geometry source directory where the binary files are.')
-
-    parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default='../reference/IW*.xml',
-                        help='metadata file (default: %(default)s).\n'
-                             'e.g.: ./reference/IW1.xml        for ISCE/topsStack OR\n'
-                             '      ./referenceShelve/data.dat for ISCE/stripmapStack')
-    parser.add_argument('-b', '--baseline-dir', dest='baselineDir', type=str, default='../baselines',
-                        help='baseline directory (default: %(default)s).')
-
-    parser.add_argument('-o', '--out-dir', dest='outDir', type=str, default='./mintpy',
-                        help='output directory (default: %(default)s).')
-
-    parser.add_argument('-r','--range', dest='lks_x', type=int, default=1,
-                        help='number of looks in range direction, for multilooking applied after fringe processing.\n'
-                             'Only impacts metadata. (default: %(default)s).')
-    parser.add_argument('-a','--azimuth', dest='lks_y', type=int, default=1,
-                        help='number of looks in azimuth direction, for multilooking applied after fringe processing.\n'
-                             'Only impacts metadata. (default: %(default)s).')
-
-    parser.add_argument('--geom-only', action='store_true',
-                        help='Only create the geometry file (useful for geocoding a watermask).')
-
-    parser = arg_group.add_subset_argument(parser, geo=False)
-
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    # in case meta_file is input as wildcard
-    inps.metaFile = sorted(glob.glob(inps.metaFile))[0]
-
-    return inps
 
 
 ####################################################################################
@@ -117,10 +45,10 @@ def read_vrt_info(vrt_file):
     if len(prefix_list) > 0:
         prefix = prefix_list[0]
     else:
-        msg = 'No pre-defined tag structure found in file: {}!'.format(vrt_file)
+        msg = f'No pre-defined tag structure found in file: {vrt_file}!'
         msg += '\nPre-defined tag structure candidates:'
         for prefix in prefix_cand:
-            msg += '\n    {}/SourceFilename'.format(prefix)
+            msg += f'\n    {prefix}/SourceFilename'
         raise ValueError(msg)
 
     # src_box
@@ -132,7 +60,7 @@ def read_vrt_info(vrt_file):
     xmax = xmin + xsize
     ymax = ymin + ysize
     src_box = (xmin, ymin, xmax, ymax)
-    print('read bounding box from VRT file: {} as (x0, y0, x1, y1): {}'.format(vrt_file, src_box))
+    print(f'read bounding box from VRT file: {vrt_file} as (x0, y0, x1, y1): {src_box}')
 
     # source dir
     type_tag = root.find(prefix + '/SourceFilename')
@@ -141,7 +69,7 @@ def read_vrt_info(vrt_file):
     # in case of a (usually multilooked) vrt file missing SourceFilename field
     if not src_dir:
         src_dir = os.path.dirname(vrt_file)
-    
+
     return src_box, src_dir
 
 
@@ -157,19 +85,12 @@ def prepare_metadata(meta_file, geom_src_dir, box=None, nlks_x=1, nlks_y=1):
         geom_ext = '.rdr.full'
 
     # add LAT/LON_REF1/2/3/4, HEADING, A/RLOOKS
-    meta = isce_utils.extract_geometry_metadata(geom_src_dir,
-                                                meta=meta,
-                                                box=box,
-                                                fext_list=[geom_ext])
-
-    # add LENGTH / WIDTH
-    atr = readfile.read_attribute(os.path.join(geom_src_dir, 'lat{}'.format(geom_ext)))
-    meta['LENGTH'] = atr['LENGTH']
-    meta['WIDTH'] = atr['WIDTH']
-
-    ## update metadata due to subset
-    print('update metadata due to subset with bounding box')
-    meta = attr.update_attribute4subset(meta, box)
+    meta = isce_utils.extract_geometry_metadata(
+        geom_src_dir,
+        meta=meta,
+        box=box,
+        fext_list=[geom_ext],
+    )
 
     # apply optional user multilooking
     if nlks_x > 1:
@@ -185,7 +106,7 @@ def prepare_metadata(meta_file, geom_src_dir, box=None, nlks_x=1, nlks_y=1):
 
 def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None, box=None):
     print('-'*50)
-    print('preparing timeseries file: {}'.format(outfile))
+    print(f'preparing timeseries file: {outfile}')
 
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
@@ -195,19 +116,22 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     unw_files = sorted(glob.glob(unw_file))
     date12_list = [os.path.splitext(os.path.basename(i))[0] for i in unw_files]
     num_file = len(unw_files)
-    print('number of unwrapped interferograms: {}'.format(num_file))
+    print(f'number of unwrapped interferograms: {num_file}')
 
     ref_date = date12_list[0].split('_')[0]
     date_list = [ref_date] + [date12.split('_')[1] for date12 in date12_list]
     num_date = len(date_list)
-    print('number of acquisitions: {}\n{}'.format(num_date, date_list))
+    print(f'number of acquisitions: {num_date}\n{date_list}')
 
     # baseline info
     if baseline_dir is not None:
         # read baseline data
-        baseline_dict = isce_utils.read_baseline_timeseries(baseline_dir,
-                                                            processor=processor,
-                                                            ref_date=ref_date)
+        baseline_dict = isce_utils.read_baseline_timeseries(
+            baseline_dir,
+            processor=processor,
+            ref_date=ref_date,
+        )
+
         # dict to array
         pbase = np.zeros(num_date, dtype=np.float32)
         for i in range(num_date):
@@ -216,10 +140,12 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
 
     # size info
     box = box if box else (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
-    kwargs = dict(xoff=box[0],
-                  yoff=box[1],
-                  win_xsize=box[2]-box[0],
-                  win_ysize=box[3]-box[1])
+    kwargs = dict(
+        xoff=box[0],
+        yoff=box[1],
+        win_xsize=box[2]-box[0],
+        win_ysize=box[3]-box[1],
+    )
 
     # define dataset structure
     dates = np.array(date_list, dtype=np.string_)
@@ -236,7 +162,7 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta)
 
     # writing data to HDF5 file
-    print('writing data to HDF5 file {} with a mode ...'.format(outfile))
+    print(f'writing data to HDF5 file {outfile} with a mode ...')
     with h5py.File(outfile, "a") as f:
         prog_bar = ptime.progressBar(maxValue=num_file)
         for i, unw_file in enumerate(unw_files):
@@ -251,13 +177,13 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
         print('set value at the first acquisition to ZERO.')
         f["timeseries"][0] = 0.
 
-    print('finished writing to HDF5 file: {}'.format(outfile))
+    print(f'finished writing to HDF5 file: {outfile}')
     return outfile
 
 
 def prepare_temporal_coherence(outfile, infile, metadata, box=None):
     print('-'*50)
-    print('preparing temporal coherence file: {}'.format(outfile))
+    print(f'preparing temporal coherence file: {outfile}')
 
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
@@ -266,10 +192,12 @@ def prepare_temporal_coherence(outfile, infile, metadata, box=None):
 
     # size info
     box = box if box else (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
-    kwargs = dict(xoff=box[0],
-                  yoff=box[1],
-                  win_xsize=box[2]-box[0],
-                  win_ysize=box[3]-box[1])
+    kwargs = dict(
+        xoff=box[0],
+        yoff=box[1],
+        win_xsize=box[2]-box[0],
+        win_ysize=box[3]-box[1],
+    )
 
     # read data using gdal
     ds = gdal.Open(infile, gdal.GA_ReadOnly)
@@ -285,7 +213,7 @@ def prepare_temporal_coherence(outfile, infile, metadata, box=None):
 
 def prepare_ps_mask(outfile, infile, metadata, box=None):
     print('-'*50)
-    print('preparing PS mask file: {}'.format(outfile))
+    print(f'preparing PS mask file: {outfile}')
 
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
@@ -294,10 +222,12 @@ def prepare_ps_mask(outfile, infile, metadata, box=None):
 
     # size info
     box = box if box else (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
-    kwargs = dict(xoff=box[0],
-                  yoff=box[1],
-                  win_xsize=box[2]-box[0],
-                  win_ysize=box[3]-box[1])
+    kwargs = dict(
+        xoff=box[0],
+        yoff=box[1],
+        win_xsize=box[2]-box[0],
+        win_ysize=box[3]-box[1],
+    )
 
     # read data using gdal
     ds = gdal.Open(infile, gdal.GA_ReadOnly)
@@ -310,7 +240,7 @@ def prepare_ps_mask(outfile, infile, metadata, box=None):
 
 def prepare_geometry(outfile, geom_dir, box, metadata):
     print('-'*50)
-    print('preparing geometry file: {}'.format(outfile))
+    print(f'preparing geometry file: {outfile}')
 
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
@@ -340,7 +270,7 @@ def prepare_geometry(outfile, geom_dir, box, metadata):
 
 def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box=None):
     print('-'*50)
-    print('preparing ifgramStack file: {}'.format(outfile))
+    print(f'preparing ifgramStack file: {outfile}')
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
 
@@ -360,7 +290,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
         return
 
     # get date info: date12_list
-    date12_list = [os.path.basename(x).split('.')[0] for x in unw_files]
+    date12_list = ptime.yyyymmdd_date12([os.path.basename(x).split('.')[0] for x in unw_files])
 
     # prepare baseline info
     if baseline_dir is not None:
@@ -376,10 +306,12 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
 
     # size info
     box = box if box else (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
-    kwargs = dict(xoff=box[0],
-                  yoff=box[1],
-                  win_xsize=box[2]-box[0],
-                  win_ysize=box[3]-box[1])
+    kwargs = dict(
+        xoff=box[0],
+        yoff=box[1],
+        win_xsize=box[2]-box[0],
+        win_ysize=box[3]-box[1],
+    )
 
     # define (and fill out some) dataset structure
     date12_arr = np.array([x.split('_') for x in date12_list], dtype=np.string_)
@@ -397,7 +329,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
     writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta)
 
     # writing data to HDF5 file
-    print('writing data to HDF5 file {} with a mode ...'.format(outfile))
+    print(f'writing data to HDF5 file {outfile} with a mode ...')
     with h5py.File(outfile, "a") as f:
         prog_bar = ptime.progressBar(maxValue=num_pair)
         for i, (unw_file, cc_file) in enumerate(zip(unw_files, cc_files)):
@@ -415,26 +347,31 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
             prog_bar.update(i+1, suffix=date12_list[i])
         prog_bar.close()
 
-    print('finished writing to HDF5 file: {}'.format(outfile))
+    print(f'finished writing to HDF5 file: {outfile}')
     return outfile
 
 
 ####################################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+def load_fringe(inps):
+    """Load FRInGE products into MintPy."""
 
     # translate input options
     processor = isce_utils.get_processor(inps.metaFile)
     src_box, geom_src_dir = read_vrt_info(os.path.join(inps.geomDir, 'lat.vrt'))
 
     # metadata
-    meta = prepare_metadata(inps.metaFile, geom_src_dir, src_box, nlks_x=inps.lks_x, nlks_y=inps.lks_y)
-
+    meta = prepare_metadata(
+        inps.metaFile,
+        geom_src_dir,
+        src_box,
+        nlks_x=inps.lks_x,
+        nlks_y=inps.lks_y,
+    )
 
     # subset - read pix_box for fringe file
     pix_box = subset.subset_input_dict2box(vars(inps), meta)[0]
     pix_box = ut.coordinate(meta).check_box_within_data_coverage(pix_box)
-    print('input subset in y/x: {}'.format(pix_box))
+    print(f'input subset in y/x: {pix_box}')
 
     # subset - update src_box for isce file and meta
     src_box = (pix_box[0] + src_box[0],
@@ -442,7 +379,7 @@ def main(iargs=None):
                pix_box[2] + src_box[0],
                pix_box[3] + src_box[1])
     meta = attr.update_attribute4subset(meta, pix_box)
-    print('input subset in y/x with respect to the VRT file: {}'.format(src_box))
+    print(f'input subset in y/x with respect to the VRT file: {src_box}')
 
 
     ## output directory
@@ -459,13 +396,13 @@ def main(iargs=None):
     else:
         geom_file = os.path.join(inps.outDir, 'inputs/geometryRadar.h5')
 
-
     ## 1 - geometry (from SLC stacks before fringe, e.g. ISCE2)
     prepare_geometry(
         outfile=geom_file,
         geom_dir=geom_src_dir,
         box=src_box,
-        metadata=meta)
+        metadata=meta,
+    )
 
     if inps.geom_only:
         return ts_file, tcoh_file, ps_mask_file, geom_file
@@ -477,34 +414,33 @@ def main(iargs=None):
         metadata=meta,
         processor=processor,
         baseline_dir=inps.baselineDir,
-        box=pix_box)
+        box=pix_box,
+    )
 
     ## 3 - temporal coherence and mask for PS (from fringe)
     prepare_temporal_coherence(
         outfile=tcoh_file,
         infile=inps.cohFile,
         metadata=meta,
-        box=pix_box)
+        box=pix_box,
+    )
 
     prepare_ps_mask(
         outfile=ps_mask_file,
         infile=inps.psMaskFile,
         metadata=meta,
-        box=pix_box)
+        box=pix_box,
+    )
 
-    ## 4 - prepare and ifgstack with connected components
+    ## 4 - ifgramStack for unwrapped phase and connected components
     prepare_stack(
         outfile=stack_file,
         unw_file=inps.unwFile,
         metadata=meta,
         processor=processor,
         baseline_dir=inps.baselineDir,
-        box=pix_box)
+        box=pix_box,
+    )
 
     print('Done.')
     return
-
-
-####################################################################################
-if __name__=="__main__":
-    main(sys.argv[1:])

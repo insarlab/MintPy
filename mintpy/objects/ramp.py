@@ -9,8 +9,9 @@
 
 import numpy as np
 
+# duplicated in mintpy.cli.remove_ramp
 RAMP_LIST = [
-    'linear', 
+    'linear',
     'linear_range',
     'linear_azimuth',
     'quadratic',
@@ -28,7 +29,7 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
                 mask_in    : 2D np.ndarray, mask of pixels used for ramp estimation
                 ramp_type  : str, name of ramp to be estimated.
                 metadata   : dict, containing reference pixel info, REF_Y/X
-                max_num_sample : float, max number of pixel sample, 
+                max_num_sample : float, max number of pixel sample,
                              above which the uniform sampling is applied to reduce sample size
                 coeff_file : str, path to the text file to save the estimated ramp coefficients
                 ignore_zero_value : bool, ignore pixels with zero values, default is True
@@ -92,7 +93,7 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
     elif ramp_type == 'quadratic_azimuth':
         G = np.hstack((yy**2, yy, ones))
     else:
-        raise ValueError('un-recognized ramp type: {}'.format(ramp_type))
+        raise ValueError(f'un-recognized ramp type: {ramp_type}')
 
     # estimate ramp
     X = np.dot(np.linalg.pinv(G[mask, :], rcond=1e-15), data[mask, :])
@@ -103,8 +104,8 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
     if coeff_file is not None:
         with open(coeff_file, 'a') as f:
             for i in range(X.T.shape[0]):
-                coeff_str = '    '.join(['{:16.6e}'.format(float(c)) for c in X.T[i,:]])
-                f.write('{}\n'.format(coeff_str))
+                coeff_str = '    '.join([f'{float(c):16.6e}' for c in X.T[i,:]])
+                f.write(f'{coeff_str}\n')
 
     # reference in space if metadata
     if metadata and all(key in metadata.keys() for key in ['REF_X','REF_Y']):
@@ -123,4 +124,3 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
     ramp = ramp.reshape(dshape)
     data_out = data_out.reshape(dshape)
     return data_out, ramp
-

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,20 +6,18 @@
 
 
 import os
-import sys
 import time
-import argparse
+
 import h5py
 import numpy as np
 from scipy import linalg
-from mintpy.objects import timeseries, geometry, cluster
-from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils as ut
 
+from mintpy.objects import cluster, geometry, timeseries
+from mintpy.utils import ptime, readfile, time_func, utils as ut, writefile
 
 # key configuration parameter name
 key_prefix = 'mintpy.topographicResidual.'
-configKeys = [
+config_keys = [
     'polyOrder',
     'phaseVelocity',
     'stepFuncDate',
@@ -29,96 +26,6 @@ configKeys = [
 
 
 ############################################################################
-TEMPLATE = get_template_content('correct_topography')
-
-EXAMPLE = """example:
-  # correct DEM error with pixel-wise geometry parameters [slow]
-  dem_error.py  timeseries_ERA5_ramp.h5 -g inputs/geometryRadar.h5 -t smallbaselineApp.cfg
-
-  # correct DEM error with mean geometry parameters [fast]
-  dem_error.py  timeseries_ERA5_ramp.h5 -t smallbaselineApp.cfg
-
-  # get updated/corrected DEM
-  save_roipac.py inputs/geometryGeo.h5 -o dem.h5   #for dataset in geo coordinates
-  mask.py demErr.h5 -m maskTempCoh.h5 -o demErr_msk.h5
-  add.py demErr_msk.h5 dem.h5 -o demNew.h5
-"""
-
-REFERENCE = """reference:
-  Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series,
-  IEEE TGRS, 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='DEM Error (Topographic Residual) Correction',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog='{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE))
-
-    parser.add_argument('timeseries_file',
-                        help='Timeseries file to be corrrected')
-    parser.add_argument('-g', '--geometry', dest='geom_file',
-                        help='geometry file including datasets:\n'+
-                             'incidence angle\n'+
-                             'slant range distance\n' +
-                             'and/or 3D perpendicular baseline')
-    parser.add_argument('-o', '--outfile',
-                        help='Output file name for corrected time-series')
-
-    defo_model = parser.add_argument_group('temporal deformation model')
-    defo_model.add_argument('-t', '--template', dest='template_file',
-                            help='template file with the options')
-    defo_model.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
-                            help='Exclude date(s) for DEM error estimation.\n' +
-                                 'All dates will be corrected for DEM residual phase still.')
-    defo_model.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
-                            help='polynomial order number of temporal deformation model (default: %(default)s).')
-    defo_model.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
-                            help='Date of step jump for temporal deformation model (default: %(default)s).'+
-                                 ' i.e. date of earthquake/volcanic eruption')
-    defo_model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
-                            help='periodic functinos of temporal deformation model (default: %(default)s).')
-
-    parser.add_argument('--phase-velocity', dest='phaseVelocity', action='store_true',
-                        help='Use phase velocity instead of phase for inversion constrain.')
-    parser.add_argument('--update', dest='update_mode', action='store_true',
-                        help='Enable update mode, and skip inversion if:\n'+
-                             '1) output timeseries file already exists, readable '+
-                             'and newer than input interferograms file\n' +
-                             '2) all configuration parameters are the same.')
-    # computing
-    parser = arg_group.add_memory_argument(parser)
-    parser = arg_group.add_parallel_argument(parser)
-
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    """Command line parser."""
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
-
-    # --cluster and --num-worker option
-    inps.numWorker = str(cluster.DaskCluster.format_num_worker(inps.cluster, inps.numWorker))
-    if inps.cluster and inps.numWorker == '1':
-        print('WARNING: number of workers is 1, turn OFF parallel processing and continue')
-        inps.cluster = None
-
-    # ignore non-existed exclude_date.txt
-    if inps.excludeDate == 'exclude_date.txt' and not os.path.isfile(inps.excludeDate):
-        inps.excludeDate = []
-
-    if inps.polyOrder < 1:
-        raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
-
-    if not inps.outfile:
-        inps.outfile = '{}_demErr.h5'.format(os.path.splitext(inps.timeseries_file)[0])
-    return inps
-
-
 def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
@@ -127,7 +34,7 @@ def run_or_skip(inps):
     # check output file
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('1) output file {} NOT found.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} NOT found.')
     else:
         # check if time-series file is partly written using file size
         # since time-series file is not compressed
@@ -136,10 +43,10 @@ def run_or_skip(inps):
         fsize = os.path.getsize(inps.outfile)
         if fsize <= fsize_ref:
             flag = 'run'
-            print('1) output file {} is NOT fully written.'.format(inps.outfile))
+            print(f'1) output file {inps.outfile} is NOT fully written.')
 
         else:
-            print('1) output file {} already exists.'.format(inps.outfile))
+            print(f'1) output file {inps.outfile} already exists.')
 
             # check modification time
             infiles = [inps.timeseries_file]
@@ -149,34 +56,32 @@ def run_or_skip(inps):
             to = os.path.getmtime(inps.outfile)
             if ti > to:
                 flag = 'run'
-                print('2) output file is NOT newer than input file: {}.'.format(infiles))
+                print(f'2) output file is NOT newer than input file: {infiles}.')
             else:
-                print('2) output file is newer than input file: {}.'.format(infiles))
+                print(f'2) output file is newer than input file: {infiles}.')
 
     # check configuration
     if flag == 'skip':
         date_list_all = timeseries(inps.timeseries_file).get_date_list()
         inps.excludeDate = read_exclude_date(inps.excludeDate, date_list_all, print_msg=False)[1]
         meta = readfile.read_attribute(inps.outfile)
-        if any(str(vars(inps)[key]) != meta.get(key_prefix+key, 'None') for key in configKeys):
+        if any(str(vars(inps)[key]) != meta.get(key_prefix+key, 'None') for key in config_keys):
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same:{}'.format(configKeys))
+            print(f'3) NOT all key configuration parameters are the same:{config_keys}')
         else:
-            print('3) all key configuration parameters are the same:{}'.format(configKeys))
+            print(f'3) all key configuration parameters are the same:{config_keys}')
 
     # result
-    print('run or skip: {}.'.format(flag))
+    print(f'run or skip: {flag}.')
     return flag
 
 
 ############################################################################
-def read_template2inps(template_file, inps=None):
+def read_template2inps(template_file, inps):
     """Read input template file into inps.excludeDate"""
-    if not inps:
-        inps = cmd_line_parse()
     iDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(template_file)
+    template = readfile.read_template(template_file, skip_chars=['[', ']'])
     template = ut.check_template_auto_value(template)
 
     # Read template option
@@ -189,8 +94,7 @@ def read_template2inps(template_file, inps=None):
             if key in ['polyOrder']:
                 iDict[key] = int(value)
             elif key in ['excludeDate','stepFuncDate']:
-                value = value.replace('[','').replace(']','').replace(',', ' ')
-                iDict[key] = ptime.yyyymmdd(value.split())
+                iDict[key] = ptime.yyyymmdd(value.split(','))
 
     # computing configurations
     dask_key_prefix = 'mintpy.compute.'
@@ -239,11 +143,11 @@ def get_design_matrix4defo(inps):
     msg += '\nordinal least squares (OLS) inversion with L2-norm minimization on: phase'
     if inps.phaseVelocity:
         msg += ' velocity'
-    msg += "\ntemporal deformation model: polynomial order = {}".format(inps.polyOrder)
+    msg += f"\ntemporal deformation model: polynomial order = {inps.polyOrder}"
     if inps.stepFuncDate:
-        msg += "\ntemporal deformation model: step functions at {}".format(inps.stepFuncDate)
+        msg += f"\ntemporal deformation model: step functions at {inps.stepFuncDate}"
     if inps.periodic:
-        msg += "\ntemporal deformation model: periodic functions of {} yr".format(inps.periodic)
+        msg += f"\ntemporal deformation model: periodic functions of {inps.periodic} yr"
     msg += '\n'+'-'*80
     print(msg)
 
@@ -293,17 +197,17 @@ def read_geometry(ts_file, geom_file=None, box=None):
 
         # 0/3D perp baseline
         if 'bperp' in geom_obj.datasetNames:
-            print('read 3D bperp from {} file: {} ...'.format(geom_obj.name, os.path.basename(geom_obj.file)))
-            dset_list = ['bperp-{}'.format(d) for d in ts_obj.dateList]
+            print(f'read 3D bperp from {geom_obj.name} file: {os.path.basename(geom_obj.file)} ...')
+            dset_list = [f'bperp-{d}' for d in ts_obj.dateList]
             pbase = geom_obj.read(datasetName=dset_list, box=box, print_msg=False).reshape((ts_obj.numDate, -1))
             pbase -= np.tile(pbase[ts_obj.refIndex, :].reshape(1, -1), (ts_obj.numDate, 1))
         else:
-            print('read mean bperp from {} file'.format(ts_obj.name))
+            print(f'read mean bperp from {ts_obj.name} file')
             pbase = ts_obj.pbase.reshape((-1, 1))
 
     # 0D geometry
     else:
-        print('read mean incidenceAngle, slantRangeDistance, bperp value from {} file'.format(ts_obj.name))
+        print(f'read mean incidenceAngle, slantRangeDistance, bperp value from {ts_obj.name} file')
         inc_angle = ut.incidence_angle(ts_obj.metadata, dimension=0)
         range_dist = ut.range_distance(ts_obj.metadata, dimension=0)
         pbase = ts_obj.pbase.reshape((-1, 1))
@@ -498,7 +402,7 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
             ts_cor[:, idx] = ts_cor_i.flatten()
             ts_res[:, idx] = ts_res_i.flatten()
 
-            prog_bar.update(i+1, every=2000, suffix='{}/{}'.format(i+1, num_pixel2inv))
+            prog_bar.update(i+1, every=2000, suffix=f'{i+1}/{num_pixel2inv}')
         prog_bar.close()
     del ts_data, pbase
 
@@ -543,8 +447,8 @@ def correct_dem_error(inps):
 
     # 2.1 metadata
     meta = dict(ts_obj.metadata)
-    print('add/update the following configuration metadata to file:\n{}'.format(configKeys))
-    for key in configKeys:
+    print(f'add/update the following configuration metadata to file:\n{config_keys}')
+    for key in config_keys:
         meta[key_prefix+key] = str(vars(inps)[key])
 
     # 2.2 instantiate est. DEM error
@@ -595,9 +499,9 @@ def correct_dem_error(inps):
         box_wid = box[2] - box[0]
         box_len = box[3] - box[1]
         if num_box > 1:
-            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width:  {}'.format(box_wid))
-            print('box length: {}'.format(box_len))
+            print(f'\n------- processing patch {i+1} out of {num_box} --------------')
+            print(f'box width:  {box_wid}')
+            print(f'box length: {box_len}')
 
         # update box argument in the input data
         data_kwargs['box'] = box
@@ -660,25 +564,6 @@ def correct_dem_error(inps):
 
     # time info
     m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
     return dem_err_file, ts_cor_file, ts_res_file
-
-
-############################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-
-    # --update option
-    if inps.update_mode and run_or_skip(inps) == 'skip':
-        return inps.outfile
-
-    # run
-    correct_dem_error(inps)
-
-    return inps.outfile
-
-
-################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

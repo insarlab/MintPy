@@ -13,24 +13,18 @@
 import os
 import time
 import warnings
+
 import h5py
 import numpy as np
-try:
-    from skimage.transform import resize
-except ImportError:
-    raise ImportError('Could not import skimage!')
+from skimage.transform import resize
 
+from mintpy.multilook import multilook_data
 from mintpy.objects import (
-    dataTypeDict,
-    geometryDatasetNames,
-    ifgramDatasetNames,
+    DATA_TYPE_DICT,
+    GEOMETRY_DSET_NAMES,
+    IFGRAM_DSET_NAMES,
 )
-from mintpy.utils import (
-    ptime,
-    readfile,
-    utils0 as ut,
-    attribute as attr,
-)
+from mintpy.utils import attribute as attr, ptime, readfile, utils0 as ut
 
 
 ########################################################################################
@@ -50,34 +44,41 @@ class ifgramStackDict:
         stackObj.write2hdf5(outputFile='ifgramStack.h5', box=(200,500,300,600))
     """
 
-    def __init__(self, name='ifgramStack', pairsDict=None, dsName0=ifgramDatasetNames[0]):
+    def __init__(self, name='ifgramStack', pairsDict=None, dsName0=IFGRAM_DSET_NAMES[0]):
         self.name = name
         self.pairsDict = pairsDict
         self.dsName0 = dsName0        #reference dataset name, unwrapPhase OR azimuthOffset OR rangeOffset
 
-    def get_size(self, box=None, xstep=1, ystep=1):
-        self.numIfgram = len(self.pairsDict)
+    def get_size(self, box=None, xstep=1, ystep=1, geom_obj=None):
+        """Get size in 3D"""
+        num_ifgram = len(self.pairsDict)
         ifgramObj = [v for v in self.pairsDict.values()][0]
-        self.length, ifgramObj.width = ifgramObj.get_size(family=self.dsName0)
+        length, width = ifgramObj.get_size(family=self.dsName0)
+
+        # use the reference geometry obj size
+        # for low-reso ionosphere from isce2/topsStack
+        if geom_obj:
+            length, width = geom_obj.get_size()
 
         # update due to subset
         if box:
-            self.length = box[3] - box[1]
-            self.width = box[2] - box[0]
-        else:
-            self.length = ifgramObj.length
-            self.width = ifgramObj.width
+            length, width = box[3] - box[1], box[2] - box[0]
 
         # update due to multilook
-        self.length = self.length // ystep
-        self.width = self.width // xstep
+        length = length // ystep
+        width = width // xstep
 
-        return self.numIfgram, self.length, self.width
+        return num_ifgram, length, width
 
     def get_date12_list(self):
         pairs = [pair for pair in self.pairsDict.keys()]
-        self.date12List = ['{}_{}'.format(i[0], i[1]) for i in pairs]
+        self.date12List = [f'{i[0]}_{i[1]}' for i in pairs]
         return self.date12List
+
+    def get_dataset_list(self):
+        ifgramObj = [x for x in self.pairsDict.values()][0]
+        dsetList = [x for x in ifgramObj.datasetDict.keys()]
+        return dsetList
 
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
@@ -90,43 +91,76 @@ class ifgramStackDict:
         ifgramObj = [v for v in self.pairsDict.values()][0]
         dsFile = ifgramObj.datasetDict[dsName]
         metadata = readfile.read_attribute(dsFile)
-        dataType = dataTypeDict[metadata.get('DATA_TYPE', 'float32').lower()]
+        dataType = DATA_TYPE_DICT[metadata.get('DATA_TYPE', 'float32').lower()]
         return dataType
 
-    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1,
-                   compression=None, extra_metadata=None):
+    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1, mli_method='nearest',
+                   compression=None, extra_metadata=None, geom_obj=None):
         """Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
 
         https://mintpy.readthedocs.io/en/latest/api/data_structure/#ifgramstack
 
-        Parameters: outputFile : str, Name of the HDF5 file for the InSAR stack
-                    access_mode : str, access mode of output File, e.g. w, r+
-                    box : tuple, subset range in (x0, y0, x1, y1)
-                    extra_metadata : dict, extra metadata to be added into output file
-        Returns:    outputFile
+        Parameters: outputFile     - str, Name of the HDF5 file for the InSAR stack
+                    access_mode    - str, access mode of output File, e.g. w, r+
+                    box            - tuple, subset range in (x0, y0, x1, y1)
+                    x/ystep        - int, multilook number in x/y direction
+                    mli_method     - str, multilook method, nearest, mean or median
+                    compression    - str, HDF5 dataset compression method, None, lzf or gzip
+                    extra_metadata - dict, extra metadata to be added into output file
+                    geom_obj       - geometryDict object, size reference to determine the resizing operation.
+        Returns:    outputFile     - str, Name of the HDF5 file for the InSAR stack
         """
+        print('-'*50)
 
-        self.pairs = sorted([pair for pair in self.pairsDict.keys()])
+        # output directory
+        output_dir = os.path.dirname(outputFile)
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+            print(f'create directory: {output_dir}')
+
+        self.pairs = sorted(pair for pair in self.pairsDict.keys())
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
-        self.dsNames = [i for i in ifgramDatasetNames if i in self.dsNames]
-        maxDigit = max([len(i) for i in self.dsNames])
-        self.get_size(box=box,
-                      xstep=xstep,
-                      ystep=ystep)
+        self.dsNames = [i for i in IFGRAM_DSET_NAMES if i in self.dsNames]
+        maxDigit = max(len(i) for i in self.dsNames)
+        numIfgram, length, width = self.get_size(
+            box=box,
+            xstep=xstep,
+            ystep=ystep)
 
-        self.outputFile = outputFile
-        with h5py.File(self.outputFile, access_mode) as f:
-            print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
+        # check if resize is needed for a lower resolution stack, e.g. ionosphere from isce2/topsStack
+        resize2shape = None
+        if geom_obj and os.path.basename(outputFile).startswith('ion'):
+            # compare the original data size between ionosphere and geometry w/o subset/multilook
+            ion_size = self.get_size()[1:]
+            geom_size = geom_obj.get_size()
+            if ion_size != geom_size:
+                msg = 'lower resolution ionosphere file detected'
+                msg += f' --> resize from {ion_size} to {geom_size} via skimage.transform.resize ...'
+                print(msg)
+
+                # matrix shape for the original geometry size w/o subset/multilook
+                resize2shape = geom_size
+                # data size of the output HDF5 file w/ resize/subset/multilook
+                length, width = self.get_size(
+                    box=box,
+                    xstep=xstep,
+                    ystep=ystep,
+                    geom_obj=geom_obj)[1:]
+
+        # write HDF5 file
+        with h5py.File(outputFile, access_mode) as f:
+            print(f'create HDF5 file {outputFile} with {access_mode} mode')
 
             ###############################
             # 3D datasets containing unwrapPhase, magnitude, coherence, connectComponent, wrapPhase, etc.
             for dsName in self.dsNames:
-                dsShape = (self.numIfgram, self.length, self.width)
+                dsShape = (numIfgram, length, width)
                 dsDataType = np.float32
                 dsCompression = compression
                 if dsName in ['connectComponent']:
                     dsDataType = np.int16
                     dsCompression = 'lzf'
+                    mli_method = 'nearest'
 
                 print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
                        ' with compression = {c}').format(d=dsName,
@@ -143,21 +177,29 @@ class ifgramStackDict:
 
                 # set no-data value - printout msg
                 if dsName.endswith('OffsetVar'):
-                    print('set no-data value for {} from 99 to NaN.'.format(dsName))
+                    print(f'set no-data value for {dsName} from 99 to NaN.')
                     dsFile = self.pairsDict[self.pairs[0]].datasetDict[dsName]
                     if dsFile.endswith('cov.bip'):
                         print('convert variance to standard deviation.')
 
-                prog_bar = ptime.progressBar(maxValue=self.numIfgram)
-                for i in range(self.numIfgram):
-                    # read
-                    ifgramObj = self.pairsDict[self.pairs[i]]
+                # msg
+                if xstep * ystep > 1:
+                    print(f'apply {xstep} x {ystep} multilooking/downsampling via {mli_method} ...')
+
+                prog_bar = ptime.progressBar(maxValue=numIfgram)
+                for i, pair in enumerate(self.pairs):
+                    prog_bar.update(i+1, suffix=f'{pair[0]}_{pair[1]}')
+
+                    # read and/or resize
+                    ifgramObj = self.pairsDict[pair]
                     data = ifgramObj.read(dsName,
                                           box=box,
                                           xstep=xstep,
-                                          ystep=ystep)[0]
+                                          ystep=ystep,
+                                          mli_method=mli_method,
+                                          resize2shape=resize2shape)[0]
 
-                    # special handling to offset covariance file
+                    # special handling for offset covariance file
                     if dsName.endswith('OffsetStd'):
                         # set no-data value to np.nan
                         data[data == 99.] = np.nan
@@ -169,16 +211,15 @@ class ifgramStackDict:
 
                     # write
                     ds[i, :, :] = data
-                    prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
-                                                               self.pairs[i][1]))
-                prog_bar.close()
+
                 ds.attrs['MODIFICATION_TIME'] = str(time.time())
+                prog_bar.close()
 
             ###############################
             # 2D dataset containing reference and secondary dates of all pairs
             dsName = 'date'
             dsDataType = np.string_
-            dsShape = (self.numIfgram, 2)
+            dsShape = (numIfgram, 2)
             print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
                                                                               w=maxDigit,
                                                                               t=str(dsDataType),
@@ -190,14 +231,14 @@ class ifgramStackDict:
             # 1D dataset containing perpendicular baseline of all pairs
             dsName = 'bperp'
             dsDataType = np.float32
-            dsShape = (self.numIfgram,)
+            dsShape = (numIfgram,)
             print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
                                                                               w=maxDigit,
                                                                               t=str(dsDataType),
                                                                               s=dsShape))
             # get bperp
-            data = np.zeros(self.numIfgram, dtype=dsDataType)
-            for i in range(self.numIfgram):
+            data = np.zeros(numIfgram, dtype=dsDataType)
+            for i in range(numIfgram):
                 ifgramObj = self.pairsDict[self.pairs[i]]
                 data[i] = ifgramObj.get_perp_baseline(family=self.dsName0)
             # write
@@ -207,7 +248,7 @@ class ifgramStackDict:
             # 1D dataset containing bool value of dropping the interferograms or not
             dsName = 'dropIfgram'
             dsDataType = np.bool_
-            dsShape = (self.numIfgram,)
+            dsShape = (numIfgram,)
             print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
                                                                               w=maxDigit,
                                                                               t=str(dsDataType),
@@ -217,30 +258,42 @@ class ifgramStackDict:
 
             ###############################
             # Attributes
-            self.get_metadata()
+            # read metadata from original data file w/o resize/subset/multilook
+            meta = self.get_metadata()
             if extra_metadata:
-                self.metadata.update(extra_metadata)
-                print('add extra metadata: {}'.format(extra_metadata))
+                meta.update(extra_metadata)
+                print(f'add extra metadata: {extra_metadata}')
+
+            # update metadata due to resize
+            # for low resolution ionosphere from isce2/topsStack
+            if resize2shape:
+                print('update metadata due to resize')
+                meta = attr.update_attribute4resize(meta, resize2shape)
 
             # update metadata due to subset
-            self.metadata = attr.update_attribute4subset(self.metadata, box)
+            if box:
+                print('update metadata due to subset')
+                meta = attr.update_attribute4subset(meta, box)
+
             # update metadata due to multilook
             if xstep * ystep > 1:
-                self.metadata = attr.update_attribute4multilook(self.metadata, ystep, xstep)
+                print('update metadata due to multilook')
+                meta = attr.update_attribute4multilook(meta, ystep, xstep)
 
-            self.metadata['FILE_TYPE'] = self.name
-            for key, value in self.metadata.items():
+            # write metadata to HDF5 file at the root level
+            meta['FILE_TYPE'] = self.name
+            for key, value in meta.items():
                 f.attrs[key] = value
 
-        print('Finished writing to {}'.format(self.outputFile))
-        return self.outputFile
+        print(f'Finished writing to {outputFile}')
+        return outputFile
 
 
 ########################################################################################
 class ifgramDict:
     """
     Ifgram object for a single InSAR pair of interferogram. It includes dataset name (family) of:
-        'unwrapPhase','coherence','connectComponent','wrapPhase','ionoPhase','rangeOffset','azimuthOffset', etc.
+        'unwrapPhase','coherence','connectComponent','wrapPhase','rangeOffset','azimuthOffset', etc.
 
     Example:
         from mintpy.objects.insarobj import ifgramDict
@@ -248,7 +301,6 @@ class ifgramDict:
                        'coherence'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
                        'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
-                       'ionoPhase'       :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
                        'magnitude'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw',
                        ...
                       }
@@ -268,23 +320,73 @@ class ifgramDict:
             for key, value in metadata.items():
                 setattr(self, key, value)
 
-    def read(self, family, box=None, xstep=1, ystep=1):
-        self.file = self.datasetDict[family]
-        data, metadata = readfile.read(self.file,
-                                       datasetName=family,
-                                       box=box,
-                                       xstep=xstep,
-                                       ystep=ystep)
-        return data, metadata
+    def read(self, family, box=None, xstep=1, ystep=1, mli_method='nearest', resize2shape=None):
+        """Read data for the given dataset name.
 
-    def get_size(self, family=ifgramDatasetNames[0]):
+        Parameters: self         - ifgramDict object
+                    family       - str, dataset name
+                    box          -  tuple of 4 int, in (x0, y0, x1, y1) with respect to the full resolution
+                    x/ystep      - int, number of pixels to skip, with respect to the full resolution
+                    mli_method   - str, interpolation method, nearest, mean, median
+                    resize2shape - tuple of 2 int, resize the native matrix to the given shape
+                                   Set to None for not resizing
+        Returns:    data         - 2D np.ndarray
+                    meta         - dict, metadata
+        """
+        self.file = self.datasetDict[family]
+        box2read = None if resize2shape else box
+
+        # 1. read input file
+        data, meta = readfile.read(self.file,
+                                   datasetName=family,
+                                   box=box2read,
+                                   xstep=1,
+                                   ystep=1)
+
+        # 2. resize
+        if resize2shape:
+            # link: https://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.resize
+            data = resize(data,
+                          output_shape=resize2shape,
+                          order=1,
+                          mode='constant',
+                          anti_aliasing=True,
+                          preserve_range=True)
+
+            # 3. subset by box
+            if box:
+                data = data[box[1]:box[3],
+                            box[0]:box[2]]
+
+        # 4. multilook
+        if xstep * ystep > 1:
+            if mli_method == 'nearest':
+                # multilook - nearest resampling
+                # output data size
+                xsize = int(data.shape[1] / xstep)
+                ysize = int(data.shape[0] / ystep)
+                # sampling
+                data = data[int(ystep/2)::ystep,
+                            int(xstep/2)::xstep]
+                data = data[:ysize, :xsize]
+
+            else:
+                # multilook - mean or median resampling
+                data = multilook_data(data,
+                                      lks_y=ystep,
+                                      lks_x=xstep,
+                                      method=mli_method)
+
+        return data, meta
+
+    def get_size(self, family=IFGRAM_DSET_NAMES[0]):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
-        self.length = int(metadata['LENGTH'])
-        self.width = int(metadata['WIDTH'])
-        return self.length, self.width
+        length = int(metadata['LENGTH'])
+        width = int(metadata['WIDTH'])
+        return length, width
 
-    def get_perp_baseline(self, family=ifgramDatasetNames[0]):
+    def get_perp_baseline(self, family=IFGRAM_DSET_NAMES[0]):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         self.bperp_top = float(metadata['P_BASELINE_TOP_HDR'])
@@ -292,28 +394,11 @@ class ifgramDict:
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
 
-    def get_metadata(self, family=ifgramDatasetNames[0]):
+    def get_metadata(self, family=IFGRAM_DSET_NAMES[0]):
         self.file = self.datasetDict[family]
         self.metadata = readfile.read_attribute(self.file)
         self.length = int(self.metadata['LENGTH'])
         self.width = int(self.metadata['WIDTH'])
-
-        # if self.processor is None:
-        #    ext = self.file.split('.')[-1]
-        #    if 'PROCESSOR' in self.metadata.keys():
-        #        self.processor = self.metadata['PROCESSOR']
-        #    elif os.path.exists(self.file+'.xml'):
-        #        self.processor = 'isce'
-        #    elif os.path.exists(self.file+'.rsc'):
-        #        self.processor = 'roipac'
-        #    elif os.path.exists(self.file+'.par'):
-        #        self.processor = 'gamma'
-        #    elif ext == 'grd':
-        #        self.processor = 'gmtsar'
-        #    #what for DORIS/SNAP
-        #    else:
-        #        self.processor = 'isce'
-        #self.metadata['PROCESSOR'] = self.processor
 
         if self.track:
             self.metadata['TRACK'] = self.track
@@ -393,17 +478,18 @@ class geometryDict:
             ds_name = 'incidenceAngle'
             key = 'SLANT_RANGE_DISTANCE'
             if ds_name in self.dsNames:
-                print('    geocoded input, use incidenceAngle from file: {}'.format(os.path.basename(self.datasetDict[ds_name])))
+                print(f'    geocoded input, use incidenceAngle from file: {os.path.basename(self.datasetDict[ds_name])}')
                 inc_angle = self.read(family=ds_name)[0].astype(np.float32)
                 atr = readfile.read_attribute(self.file)
                 if atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad'):
                     print('    convert incidence angle from Gamma to MintPy convention.')
-                    inc_angle = 90. - (inc_angle * 180. / np.pi)
+                    inc_angle[inc_angle == 0] = np.nan              # convert the no-data-value from 0 to nan
+                    inc_angle = 90. - (inc_angle * 180. / np.pi)    # hyp3/gamma to mintpy/isce2 convention
                 # inc angle -> slant range distance
                 data = ut.incidence_angle2slant_range_distance(self.extraMetadata, inc_angle)
 
             elif key in self.extraMetadata.keys():
-                print('geocoded input, use contant value from metadata {}'.format(key))
+                print(f'geocoded input, use contant value from metadata {key}')
                 length = int(self.extraMetadata['LENGTH'])
                 width = int(self.extraMetadata['WIDTH'])
                 range_dist = float(self.extraMetadata[key])
@@ -443,7 +529,7 @@ class geometryDict:
         if 'Y_FIRST' in self.extraMetadata.keys():
             # for dataset in geo-coordinates, use contant value from INCIDENCE_ANGLE.
             key = 'INCIDENCE_ANGLE'
-            print('geocoded input, use contant value from metadata {}'.format(key))
+            print(f'geocoded input, use contant value from metadata {key}')
             if key in self.extraMetadata.keys():
                 length = int(self.extraMetadata['LENGTH'])
                 width = int(self.extraMetadata['WIDTH'])
@@ -518,22 +604,6 @@ class geometryDict:
         if 'UNIT' in self.metadata.keys():
             self.metadata.pop('UNIT')
 
-        # if self.processor is None:
-        #    ext = self.file.split('.')[-1]
-        #    if 'PROCESSOR' in self.metadata.keys():
-        #        self.processor = self.metadata['PROCESSOR']
-        #    elif os.path.exists(self.file+'.xml'):
-        #        self.processor = 'isce'
-        #    elif os.path.exists(self.file+'.rsc'):
-        #        self.processor = 'roipac'
-        #    elif os.path.exists(self.file+'.par'):
-        #        self.processor = 'gamma'
-        #    elif ext == 'grd':
-        #        self.processor = 'gmtsar'
-        #    #what for DORIS/SNAP
-        #    else:
-        #        self.processor = 'isce'
-        #self.metadata['PROCESSOR'] = self.processor
         return self.metadata
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, xstep=1, ystep=1,
@@ -541,16 +611,23 @@ class geometryDict:
         """Save/write to HDF5 file with structure defined in:
             https://mintpy.readthedocs.io/en/latest/api/data_structure/#geometry
         """
+        print('-'*50)
         if len(self.datasetDict) == 0:
             print('No dataset file path in the object, skip HDF5 file writing.')
             return None
 
-        maxDigit = max([len(i) for i in geometryDatasetNames])
+        # output directory
+        output_dir = os.path.dirname(outputFile)
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+            print(f'create directory: {output_dir}')
+
+        maxDigit = max(len(i) for i in GEOMETRY_DSET_NAMES)
         length, width = self.get_size(box=box, xstep=xstep, ystep=ystep)
 
         self.outputFile = outputFile
         with h5py.File(self.outputFile, access_mode) as f:
-            print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
+            print(f'create HDF5 file {self.outputFile} with {access_mode} mode')
 
             ###############################
             for dsName in self.dsNames:
@@ -575,15 +652,19 @@ class geometryDict:
 
                     print('read coarse grid baseline files and linear interpolate into full resolution ...')
                     prog_bar = ptime.progressBar(maxValue=self.numDate)
-                    for i in range(self.numDate):
-                        fname = self.datasetDict[dsName][self.dateList[i]]
+                    for i, date_str in enumerate(self.dateList):
+                        prog_bar.update(i+1, suffix=date_str)
+
+                        # read and resize
+                        fname = self.datasetDict[dsName][date_str]
                         data = read_isce_bperp_file(fname=fname,
                                                     full_shape=self.get_size(),
                                                     box=box,
                                                     xstep=xstep,
                                                     ystep=ystep)
+                        # write
                         ds[i, :, :] = data
-                        prog_bar.update(i+1, suffix=self.dateList[i])
+
                     prog_bar.close()
 
                     # Write 1D dataset date accompnay the 3D bperp
@@ -622,31 +703,44 @@ class geometryDict:
                     fname = os.path.basename(self.datasetDict[dsName])
                     if fname.startswith('waterBody') or fname.endswith('.wbd'):
                         data = ~data
-                        print(('    input file "{}" is water body (True/False for water/land), '
-                               'convert to water mask (False/True for water/land).'.format(fname)))
+                        print('    input file "{}" is water body (True/False for water/land), '
+                              'convert to water mask (False/True for water/land).'.format(fname))
 
                     elif dsName == 'height':
                         noDataValueDEM = -32768
                         if np.any(data == noDataValueDEM):
                             data[data == noDataValueDEM] = np.nan
-                            print('    convert no-data value for DEM {} to NaN.'.format(noDataValueDEM))
+                            print(f'    convert no-data value for DEM {noDataValueDEM} to NaN.')
 
                     elif dsName == 'rangeCoord' and xstep != 1:
-                        print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, xstep))
+                        print(f'    scale value of {dsName:<15} by 1/{xstep} due to multilooking')
                         data /= xstep
 
                     elif dsName == 'azimuthCoord' and ystep != 1:
-                        print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, ystep))
+                        print(f'    scale value of {dsName:<15} by 1/{ystep} due to multilooking')
                         data /= ystep
 
-                    elif dsName == 'incidenceAngle':
-                        # HyP3 (Gamma) incidence angle file 'theta' is measure from horizontal in radians
+                    elif dsName in ['incidenceAngle', 'azimuthAngle']:
+                        # HyP3 (Gamma) angle of the line-of-sight vector (from ground to SAR platform)
+                        # incidence angle 'theta' is measured from horizontal in radians
+                        # azimuth   angle 'phi'   is measured from the east with anti-clockwise as positivve in radians
                         atr = readfile.read_attribute(self.file)
-                        if (atr.get('PROCESSOR', 'isce') == 'hyp3'
-                                and atr.get('UNIT', 'degrees').startswith('rad')):
-                            print(('    convert {:<15} from Gamma (from horizontal in radian) to '
-                                  'MintPy (from vertical in degree) convention.').format(dsName))
-                            data = 90. - (data * 180. / np.pi)
+                        if atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad'):
+
+                            if dsName == 'incidenceAngle':
+                                msg = f'    convert {dsName:<15} from Gamma (from horizontal in radian) '
+                                msg += ' to MintPy (from vertical in degree) convention.'
+                                print(msg)
+                                data[data == 0] = np.nan                        # convert no-data-value from 0 to nan
+                                data = 90. - (data * 180. / np.pi)              # hyp3/gamma to mintpy/isce2 convention
+
+                            elif dsName == 'azimuthAngle':
+                                msg = f'    convert {dsName:<15} from Gamma (from east in radian) '
+                                msg += ' to MintPy (from north in degree) convention.'
+                                print(msg)
+                                data[data == 0] = np.nan                        # convert no-data-value from 0 to nan
+                                data = data * 180. / np.pi - 90.                # hyp3/gamma to mintpy/isce2 convention
+                                data = ut.wrap(data, wrap_range=[-180, 180])    # rewrap within -180 to 180
 
                     # write
                     ds = f.create_dataset(dsName,
@@ -685,7 +779,7 @@ class geometryDict:
             self.get_metadata()
             if extra_metadata:
                 self.metadata.update(extra_metadata)
-                print('add extra metadata: {}'.format(extra_metadata))
+                print(f'add extra metadata: {extra_metadata}')
 
             # update due to subset
             self.metadata = attr.update_attribute4subset(self.metadata, box)
@@ -697,18 +791,18 @@ class geometryDict:
             for key, value in self.metadata.items():
                 f.attrs[key] = value
 
-        print('Finished writing to {}'.format(self.outputFile))
+        print(f'Finished writing to {self.outputFile}')
         return self.outputFile
 
 
 ########################################################################################
 def read_isce_bperp_file(fname, full_shape, box=None, xstep=1, ystep=1):
-    """Read ISCE coarse grid perpendicular baseline file, and project it to full size
-    Parameters: self : geometry object,
-                fname : str, bperp file name
-                outShape : tuple of 2int, shape of file in full resolution
-                box : tuple of 4 int, subset range in (x0, y0, x1, y1) with respect to full resolution
-    Returns:    data : 2D array of float32
+    """Read ISCE-2 coarse grid perpendicular baseline file, and project it to full size
+    Parameters: fname      - str, bperp file name
+                full_shape - tuple of 2 int, shape of file in full resolution
+                box        - tuple of 4 int, subset range in (x0, y0, x1, y1) with respect to full resolution
+                x/ystep    - int, number of pixels to pick/multilook for each output pixel
+    Returns:    data       - 2D array of float32
     Example:    fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
                 data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
     """
@@ -792,8 +886,8 @@ class platformTrack:
         for pair in pairs:
             length.append(self.pairs[pair].length)
             width.append(self.pairs[pair].width)
-        self.length = median(length)
-        self.width = median(width)
+        self.length = np.median(length)
+        self.width = np.median(width)
 
     def getDatasetNames(self):
         # extract the name of the datasets which are actually the keys of

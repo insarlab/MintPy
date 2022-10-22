@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,98 +6,30 @@
 
 
 import os
-import sys
-import argparse
+
 import h5py
 import numpy as np
 
-from mintpy.utils import readfile, ptime
 from mintpy.objects import (
+    HDFEOS,
     giantIfgramStack,
     giantTimeseries,
     ifgramStack,
     timeseries,
-    HDFEOS,
 )
-
-
-############################################################
-EXAMPLE = """example:
-  info.py timeseries.h5
-  info.py velocity.h5
-  info.py ifgramStack.h5
-
-  # Display dataset
-  info.py timeseries.py --dset date
-  info.py timeseries.py --dset bperp
-
-  # Time / Date Info
-  info.py ifgramStack.h5 --date                 #print date1_date2 info for all  interferograms
-  info.py timeseries.h5  --num                  #print date list of timeseries with its number
-  info.py ifgramStack.h5 --date --show kept     #print date1_date2 info for kept interferograms
-  info.py ifgramStack.h5 --date --show dropped  #print date1_date2 info for dropped/excluded interferograms
-  info.py LS-PARAMS.h5   --date > date_list.txt #print date list of timeseries and save it to txt file.
-  info.py S1_IW12_128_0593_0597_20141213_20180619.h5 --date
-
-  # save date1_date2 info of interferograms to a text file
-  info.py ifgramStack.h5 --date --show kept > date12_list.txt  
-
-  # Slice / Dataset Info
-  info.py timeseries.h5                              --slice
-  info.py inputs/ifgramStack.h5                      --slice
-  info.py S1_IW12_128_0593_0597_20141213_20180619.h5 --slice
-  info.py LS-PARAMS.h5                               --slice
-"""
-
-
-def create_parser():
-    """Create command line parser."""
-    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of ANY File',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-    parser.add_argument('file', type=str, help='File to check')
-    parser.add_argument('--compact', action='store_true',
-                        help='show compact info by displaying only the top 20 metadata')
-
-    parser.add_argument('--dset', type=str, help='Show dataset')
-
-    par_list = parser.add_argument_group('List','list date/slice info')
-    par_list.add_argument('--date', dest='disp_date', action='store_true',
-                          help='Show date/date12 info of input file')
-    par_list.add_argument('--num', dest='disp_num', action='store_true',
-                          help='Show date/date12 info with numbers')
-    par_list.add_argument('--slice', dest='disp_slice', action='store_true',
-                          help='Show slice list of the file')
-    par_list.add_argument('--show','--show-ifgram', dest='disp_ifgram',
-                          choices={'all','kept','dropped'}, default='all',
-                          help='Show all / kept / dropped interferograms only. Default: all.')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    """Command line parser."""
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    if not os.path.isfile(inps.file):
-        raise FileNotFoundError(inps.file)
-
-    inps.max_meta_num = 200
-    if inps.compact:
-        inps.max_meta_num = 20
-    return inps
+from mintpy.utils import ptime, readfile
 
 
 ############################################################
 def attributes2string(atr, sorting=True, max_meta_num=200):
     ## Get Dictionary of Attributes
     digits = max([len(key) for key in list(atr.keys())] + [0])
-    atr_string = ''
+    atr_str = ''
     i = 0
     for key, value in sorted(atr.items(), key=lambda x: x[0]):
         i += 1
         if i > max_meta_num:
-            atr_string += '  ...\n'
+            atr_str += '  ...\n'
             break
         else:
             # format metadata key/value
@@ -106,65 +37,63 @@ def attributes2string(atr, sorting=True, max_meta_num=200):
                 value = value.decode('utf8')
             except:
                 pass
-            atr_string += '  {k:<{d}}    {v}\n'.format(k=key,
-                                                       d=digits,
-                                                       v=value)
-    return atr_string
+            atr_str += f'  {key:<{digits}}    {value}\n'
+
+    return atr_str
 
 
 def print_attributes(atr, max_meta_num=200):
-    atr_string = attributes2string(atr, max_meta_num=max_meta_num)
-    print(atr_string)
+    atr_str = attributes2string(atr, max_meta_num=max_meta_num)
+    print(atr_str)
 
 
 def print_hdf5_structure(fname, max_meta_num=200):
     # generate string
-    global h5_string, maxDigit
-    h5_string = ''
+    global h5_str, maxDigit
+    h5_str = ''
 
     def hdf5_structure2string(name, obj):
-        global h5_string, maxDigit
+        global h5_str, maxDigit
         if isinstance(obj, h5py.Group):
-            h5_string += 'HDF5 group   "/{n}"\n'.format(n=name)
+            h5_str += f'HDF5 group   "/{name}"\n'
         elif isinstance(obj, h5py.Dataset):
-            h5_string += ('HDF5 dataset "/{n:<{w}}": shape {s:<20}, '
-                          'dtype <{t}>\n').format(n=name,
-                                                  w=maxDigit,
-                                                  s=str(obj.shape),
-                                                  t=obj.dtype)
+            h5_str += f'HDF5 dataset "/{name:<{maxDigit}}": shape={str(obj.shape):<20}, '
+            h5_str += f'dtype={str(obj.dtype):<10}, compression={obj.compression}\n'
+
         atr = dict(obj.attrs)
         if len(atr) > 0:
-            h5_string += attributes2string(atr, max_meta_num=max_meta_num)+"\n"
+            h5_str += attributes2string(atr, max_meta_num=max_meta_num)
 
-    f = h5py.File(fname, 'r')
-    # grab metadata in root level as it will be missed in hdf5_structure2string()
-    atr = dict(f.attrs)
-    if len(atr) > 0:
-        h5_string += 'Attributes in / level:\n'
-        h5_string += attributes2string(atr, max_meta_num=max_meta_num)+'\n'
+    with h5py.File(fname, 'r') as f:
 
-    # get maxDigit value 
-    maxDigit = max([len(i) for i in f.keys()])
-    maxDigit = max(20, maxDigit+1)
-    if atr.get('FILE_TYPE', 'timeseries') == 'HDFEOS':
-        maxDigit += 35
+        # grab metadata in root level as it will be missed in hdf5_structure2string()
+        atr = dict(f.attrs)
+        if len(atr) > 0:
+            h5_str += 'Attributes in / level:\n'
+            h5_str += attributes2string(atr, max_meta_num=max_meta_num)+'\n'
 
-    # get structure string
-    f.visititems(hdf5_structure2string)
-    f.close()
+        # get maxDigit value
+        maxDigit = max(len(i) for i in f.keys())
+        maxDigit = max(20, maxDigit+1)
+        if atr.get('FILE_TYPE', 'timeseries') == 'HDFEOS':
+            maxDigit += 35
+
+        # get structure string
+        f.visititems(hdf5_structure2string)
 
     # print string
-    print(h5_string)
-    return h5_string
+    print(h5_str)
+
+    return h5_str
 
 
 ############################################################
 def print_timseries_date_stat(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
-    print('Start Date: {}'.format(dateList[0]))
-    print('End   Date: {}'.format(dateList[-1]))
-    print('Number of dates  : {}'.format(len(dateList)))
-    print('STD of datetimes : {:.2f} years'.format(np.std(datevector)))
+    print(f'Start Date: {dateList[0]}')
+    print(f'End   Date: {dateList[-1]}')
+    print(f'Number of dates  : {len(dateList)}')
+    print(f'STD of datetimes : {np.std(datevector):.2f} years')
     #print('----------------------')
     #print('List of dates:\n{}'.format(dateList))
     #print('----------------------')
@@ -172,7 +101,7 @@ def print_timseries_date_stat(dateList):
     return
 
 
-def print_date_list(fname, disp_ifgram='all', disp_num=False, print_msg=False):
+def print_date_list(fname, disp_ifgram='all', disp_num=False, max_num=1e4, print_msg=False):
     """Print time/date info of file"""
     k = readfile.read_attribute(fname)['FILE_TYPE']
     dateList = None
@@ -204,20 +133,26 @@ def print_date_list(fname, disp_ifgram='all', disp_num=False, print_msg=False):
             dateList = sorted(list(set(dateListAll) - set(dateListKept)))
 
     else:
-        print('--date option can not be applied to {} file, ignore it.'.format(k))
+        print(f'--date option can not be applied to {k} file, ignore it.')
 
     # print list info
+    max_num = int(max_num)
     if print_msg and dateList is not None:
-        for d in dateList:
+        for d in dateList[:max_num]:
             if disp_num:
                 if k in ['ifgramStack']:
                     num = dateListAll.index(d)
                 else:
                     num = dateList.index(d)
-                msg = '{}\t{}'.format(d, num)
+                msg = f'{d}\t{num}'
             else:
                 msg = d
             print(msg)
+
+        # add ... at the end if --compact
+        if max_num < len(dateList):
+            print('...\n')
+
     return dateList
 
 
@@ -253,18 +188,20 @@ def print_aux_info(fname):
 def print_dataset(fname, dsName):
     # get available dataset list
     global dsNames
+
     def get_hdf5_dataset(name, obj):
         global dsNames
         if isinstance(obj, h5py.Dataset):
             dsNames.append(name)
+
     dsNames = []
     with h5py.File(fname, 'r') as f:
         f.visititems(get_hdf5_dataset)
 
     # check input dataset
     if dsName not in dsNames:
-        msg = 'input dataset {} not found!'.format(dsName)
-        msg += '\navailable datasets: {}'.format(dsNames)
+        msg = f'input dataset {dsName} not found!'
+        msg += f'\navailable datasets: {dsNames}'
         raise ValueError(msg)
 
     # print dataset values
@@ -273,23 +210,25 @@ def print_dataset(fname, dsName):
         print(data)
 
     # data stats
-    print('dataset size: {}'.format(data.shape))
-    print('dataset min / max: {} / {}'.format(np.nanmin(data), np.nanmax(data)))
-    print('number of pixels in NaN: {}'.format(np.sum(np.isnan(data))))
+    print(f'dataset size: {data.shape}')
+    print(f'dataset min / max: {np.nanmin(data)} / {np.nanmax(data)}')
+    print(f'number of pixels in NaN: {np.sum(np.isnan(data))}')
+
     return
 
 
-############################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    ext = os.path.splitext(inps.file)[1].lower()
+def print_info(inps):
+    """Extract and print the input file structure information."""
 
     # --date/--num option
     if inps.disp_date or inps.disp_num:
-        print_date_list(inps.file,
-                        disp_ifgram=inps.disp_ifgram,
-                        disp_num=inps.disp_num,
-                        print_msg=True)
+        print_date_list(
+            inps.file,
+            disp_ifgram=inps.disp_ifgram,
+            disp_num=inps.disp_num,
+            max_num=inps.max_meta_num,
+            print_msg=True,
+        )
         return
 
     # --slice option
@@ -308,17 +247,20 @@ def main(iargs=None):
     print_aux_info(inps.file)
 
     # Generic Attribute/Structure of all files
-    if ext in ['.h5', '.he5']:
+    fext = os.path.splitext(inps.file)[1].lower()
+    if fext in ['.h5', '.he5']:
         print('\n{} {:*<40}'.format('*'*20, 'HDF5 File Structure '))
-        print_hdf5_structure(inps.file, max_meta_num=inps.max_meta_num)
+        print_hdf5_structure(
+            inps.file,
+            max_meta_num=inps.max_meta_num,
+        )
+
     else:
         print('\n{} {:*<40}'.format('*'*20, 'Binary File Attributes '))
         atr = readfile.read_attribute(inps.file)
-        print_attributes(atr, max_meta_num=inps.max_meta_num)
+        print_attributes(
+            atr,
+            max_meta_num=inps.max_meta_num,
+        )
 
     return
-
-
-############################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

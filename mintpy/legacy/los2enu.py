@@ -6,17 +6,17 @@
 ############################################################
 
 
-import sys
-import os
 import getopt
-import numpy as np
-import h5py
+import os
+import sys
 
+import h5py
+import numpy as np
 
 ############################################################################
-USAGE = """     
+USAGE = """
 usage:
-      los2enu.py -f  LOS file  -c Components [ -i incidence angle file] 
+      los2enu.py -f  LOS file  -c Components [ -i incidence angle file]
                  [-F 'fault coordinates'] [-a azimuth] [-H heading]
 
       -c : [E, N, U, H, Fpar]
@@ -24,7 +24,7 @@ usage:
       N : Projecting LOS to N (North), assuming zero East and Up components
       U : Projecting LOS to U (Up), assuming zero East and North components
       H : Projecting LOS to H (Horizontal), assuming zero Up component
-      Fpar : Projecting LOS to Fault Parallel , assuming zero Up component 
+      Fpar : Projecting LOS to Fault Parallel , assuming zero Up component
              (This needs the azimuth of the fault or the  coordinates of two points on the fault )
 
       azimuth: azimuth angle of the fault from North (Clockwise in degrees)

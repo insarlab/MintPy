@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -8,9 +8,9 @@
 
 import os
 import sys
-from mintpy.utils import readfile, writefile, utils as ut
-from mintpy import info
 
+from mintpy import info
+from mintpy.utils import readfile, utils as ut, writefile
 
 ################################################################################
 USAGE = """
@@ -65,8 +65,8 @@ def update_file_attribute(fname, atr_new):
                 else:
                     atr[key] = value
 
-            rsc_file = '{}.rsc'.format(fname)
-            print('writing >>> {}'.format(rsc_file))
+            rsc_file = f'{fname}.rsc'
+            print(f'writing >>> {rsc_file}')
             writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return fname
 
@@ -91,7 +91,7 @@ def main(argv=None):
     # add attributes to file
     update_file_attribute(fname=infile, atr_new=atr_new)
 
-    return infile
+    return
 
 
 ################################################################################

@@ -5,6 +5,7 @@
 ############################################################
 # 2020-07: Talib Oliver-Cabrera, add UAVSAR support w/in stripmapStack
 # 2020-10: Cunren Liang, add alosStack support
+# 2022-06: Yujie Zheng, add standard processing from isce2
 # Group contents:
 #     metadata
 #     geometry
@@ -15,23 +16,29 @@
 #   from mintpy.utils import isce_utils
 
 
-import os
-import re
-import glob
-import shelve
 import datetime
+import glob
+import logging
+import os
+import shelve
+import time
+
 import numpy as np
+from scipy import ndimage
+
 from mintpy.objects import sensor
-from mintpy.utils import ptime, readfile, writefile, utils1 as ut
+from mintpy.objects.constants import EARTH_RADIUS, SPEED_OF_LIGHT
+from mintpy.utils import (
+    attribute as attr,
+    ptime,
+    readfile,
+    utils1 as ut,
+    writefile,
+)
 
 # suppress matplotlib DEBUG message
-import logging
 mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
-
-
-SPEED_OF_LIGHT = 299792458  # m/s
-EARTH_RADIUS = 6378122.65   # m
 
 
 
@@ -41,7 +48,7 @@ def get_processor(meta_file):
     """
     meta_dir = os.path.dirname(meta_file)
     tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
-    stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.dat', 'data']]
+    stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.db', 'data.dat', 'data']]
     alosStack_meta_frame_files = glob.glob(os.path.join(meta_dir, 'f1_*', '*.frame.xml'))
 
     processor = None
@@ -62,7 +69,7 @@ def get_processor(meta_file):
         processor = 'stripmap'
 
     else:
-        raise ValueError('Un-recognized ISCE processor for metadata file: {}'.format(meta_file))
+        raise ValueError(f'Un-recognized ISCE processor for metadata file: {meta_file}')
     return processor
 
 
@@ -86,7 +93,7 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
                 frame     : object, isceobj.Scene.Frame.Frame / isceobj.Scene.Burst.Burst
     """
     # check existing rsc_file
-    if update_mode and ut.run_or_skip(rsc_file, in_file=meta_file, check_readable=False) == 'skip':
+    if update_mode and ut.run_or_skip(rsc_file, in_file=meta_file, readable=False) == 'skip':
         return readfile.read_roipac_rsc(rsc_file), None
 
     # 1. read/extract metadata from XML / shelve file
@@ -221,7 +228,7 @@ def extract_stripmap_metadata(meta_file):
         frame = load_product(meta_file)
 
     else:
-        raise ValueError('un-recognized isce/stripmap metadata file: {}'.format(meta_file))
+        raise ValueError(f'un-recognized isce/stripmap metadata file: {meta_file}')
 
     meta = {}
     meta['prf']             = frame.PRF
@@ -354,25 +361,25 @@ def extract_alosStack_metadata(meta_file, geom_dir):
 
     # LAT/LON_REF1/2/3/4
     edge = 3
-    lat_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lat'.format(rlooks, alooks)))[0]
+    lat_file = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lat'))[0]
     img = isceobj.createImage()
     img.load(lat_file+'.xml')
     width = img.width
     length = img.length
     data = np.memmap(lat_file, dtype='float64', mode='r', shape=(length, width))
-    meta['LAT_REF1'] = str(data[0+edge, 0+edge])
-    meta['LAT_REF2'] = str(data[0+edge, -1-edge])
-    meta['LAT_REF3'] = str(data[-1-edge, 0+edge])
+    meta['LAT_REF1'] = str(data[ 0+edge,  0+edge])
+    meta['LAT_REF2'] = str(data[ 0+edge, -1-edge])
+    meta['LAT_REF3'] = str(data[-1-edge,  0+edge])
     meta['LAT_REF4'] = str(data[-1-edge, -1-edge])
 
-    lon_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lon'.format(rlooks, alooks)))[0]
+    lon_file = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lon'))[0]
     data = np.memmap(lon_file, dtype='float64', mode='r', shape=(length, width))
-    meta['LON_REF1'] = str(data[0+edge, 0+edge])
-    meta['LON_REF2'] = str(data[0+edge, -1-edge])
-    meta['LON_REF3'] = str(data[-1-edge, 0+edge])
+    meta['LON_REF1'] = str(data[ 0+edge,  0+edge])
+    meta['LON_REF2'] = str(data[ 0+edge, -1-edge])
+    meta['LON_REF3'] = str(data[-1-edge,  0+edge])
     meta['LON_REF4'] = str(data[-1-edge, -1-edge])
 
-    los_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.los'.format(rlooks, alooks)))[0]
+    los_file = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.los'))[0]
     data = np.memmap(los_file, dtype='float32', mode='r', shape=(length*2, width))[0:length*2:2, :]
     inc_angle = data[int(length/2), int(width/2)]
     meta['CENTER_INCIDENCE_ANGLE'] = str(inc_angle)
@@ -403,11 +410,11 @@ def extract_image_size_alosStack(geom_dir):
 
     # grab the number of looks in azimuth / range direction
     lats = glob.glob(os.path.join(geom_dir, '*_*rlks_*alks.lat'))
-    rlooks = max([int(os.path.splitext(os.path.basename(x))[0].split('_')[1].strip('rlks')) for x in lats])
-    alooks = max([int(os.path.splitext(os.path.basename(x))[0].split('_')[2].strip('alks')) for x in lats])
+    rlooks = max(int(os.path.splitext(os.path.basename(x))[0].split('_')[1].strip('rlks')) for x in lats)
+    alooks = max(int(os.path.splitext(os.path.basename(x))[0].split('_')[2].strip('alks')) for x in lats)
 
     # grab the number of rows / coluns
-    lat = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lat'.format(rlooks, alooks)))[0]
+    lat = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lat'))[0]
     img = isceobj.createImage()
     img.load(lat+'.xml')
     width = img.width
@@ -425,11 +432,11 @@ def load_track(trackDir, dateStr):
     '''
 
     # read *.track.xml file
-    track = load_product(os.path.join(trackDir, '{}.track.xml'.format(dateStr)))
+    track = load_product(os.path.join(trackDir, f'{dateStr}.track.xml'))
 
     # read *.frame.xml files
     track.frames = []
-    fnames = sorted(glob.glob(os.path.join(trackDir, 'f*_*/{}.frame.xml'.format(dateStr))))
+    fnames = sorted(glob.glob(os.path.join(trackDir, f'f*_*/{dateStr}.frame.xml')))
     for fname in fnames:
         track.frames.append(load_product(fname))
 
@@ -447,7 +454,7 @@ def extract_multilook_number(geom_dir, meta=dict(), fext_list=['.rdr','.geo','.r
                 break
 
         if len(fnames) > 0:
-            fullXmlFile = '{}.full.xml'.format(fnames[0])
+            fullXmlFile = f'{fnames[0]}.full.xml'
             if os.path.isfile(fullXmlFile):
                 fullXmlDict = readfile.read_isce_xml(fullXmlFile)
                 xmlDict = readfile.read_attribute(fnames[0])
@@ -477,6 +484,9 @@ def extract_geometry_metadata(geom_dir, meta=dict(), box=None, fbase_list=['hgt'
 
     extract A/RLOOKS by comparing hgt.xml and hgt.full.xml file
     update azimuthPixelSize / rangePixelSize based on A/RLOOKS
+
+    extract LENGTH/WIDTH from the first geom file
+    update corresponding metadata if box is not None
     """
 
     def get_nonzero_row_number(data, buffer=2):
@@ -502,12 +512,12 @@ def extract_geometry_metadata(geom_dir, meta=dict(), box=None, fbase_list=['hgt'
     # printout message
     if len(geom_files) == 0:
         msg = 'WARNING: No geometry files found with the following pattern!'
-        msg += '\n    file basenme: {}'.format(fbase_list)
-        msg += '\n    file extension: {}'.format(fext_list)
+        msg += f'\n    file basenme: {fbase_list}'
+        msg += f'\n    file extension: {fext_list}'
         print(msg)
         return meta
 
-    print('extract metadata from geometry files: {}'.format([os.path.basename(i) for i in geom_files]))
+    print(f'extract metadata from geometry files: {[os.path.basename(i) for i in geom_files]}')
 
     # get A/RLOOKS
     meta = extract_multilook_number(geom_dir, meta, fext_list=fext_list)
@@ -515,6 +525,15 @@ def extract_geometry_metadata(geom_dir, meta=dict(), box=None, fbase_list=['hgt'
     # update pixel_size for multilooked data
     meta['rangePixelSize'] *= meta['RLOOKS']
     meta['azimuthPixelSize'] *= meta['ALOOKS']
+
+    # get LENGTH/WIDTH
+    atr = readfile.read_attribute(geom_files[0])
+    meta['LENGTH'] = atr['LENGTH']
+    meta['WIDTH'] = atr['WIDTH']
+
+    # update due to subset
+    if box:
+        meta = attr.update_attribute4subset(meta, box)
 
     # get LAT/LON_REF1/2/3/4 into metadata
     for geom_file in geom_files:
@@ -557,11 +576,11 @@ def read_tops_baseline(baseline_file):
         Bpar (average): -34.56105358031081
     """
     bperps = []
-    with open(baseline_file, 'r') as f:
+    with open(baseline_file) as f:
         for line in f:
-            l = line.split(":")
-            if l[0] == "Bperp (average)":
-                bperps.append(float(l[1]))
+            c = line.split(":")
+            if c[0] == "Bperp (average)":
+                bperps.append(float(c[1]))
     bperp_top = np.mean(bperps)
     bperp_bottom = np.mean(bperps)
     return [bperp_top, bperp_bottom]
@@ -570,7 +589,7 @@ def read_tops_baseline(baseline_file):
 def read_stripmap_baseline(baseline_file):
     """Read baseline file generated by ISCE/stripmapStack processor.
 
-    Example: 
+    Example:
     baselines/20200111_20200125.txt
         PERP_BASELINE_BOTTOM 173.97914535263297
         PERP_BASELINE_TOP 174.05612879066618
@@ -585,7 +604,7 @@ def read_alosStack_baseline(baseline_file):
     '''read baseline file generated by alosStack
     '''
     bDict = {}
-    with open(baseline_file, 'r') as f:
+    with open(baseline_file) as f:
         lines = [line for line in f if line.strip() != '']
         for x in lines[2:]:
             blist = x.split()
@@ -612,7 +631,7 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
     """
 
     # grab all existed baseline files
-    print('read perp baseline time-series from {}'.format(baseline_dir))
+    print(f'read perp baseline time-series from {baseline_dir}')
     if processor == 'tops':
         bFiles = sorted(glob.glob(os.path.join(baseline_dir, '*/*.txt')))
     elif processor == 'stripmap':
@@ -621,10 +640,10 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
         # all baselines are in baseline_center.txt
         bFiles = glob.glob(os.path.join(baseline_dir, 'baseline_center.txt'))
     else:
-        raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
+        raise ValueError(f'Un-recognized ISCE stack processor: {processor}')
 
     if len(bFiles) == 0:
-        print('WARNING: no baseline text file found in dir {}'.format(os.path.abspath(baseline_dir)))
+        print(f'WARNING: no baseline text file found in dir {os.path.abspath(baseline_dir)}')
         return None
 
     if processor in ['tops', 'stripmap']:
@@ -652,12 +671,12 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
         bDict, ref_date0 = read_alosStack_baseline(bFiles[0])
 
     else:
-        raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
+        raise ValueError(f'Un-recognized ISCE stack processor: {processor}')
 
     # change reference date
     if ref_date is not None and ref_date != ref_date0:
         ref_date = ptime.yyyymmdd(ref_date)
-        print('change reference date to {}'.format(ref_date))
+        print(f'change reference date to {ref_date}')
         ref_bperp = bDict[ref_date]
 
         for key in bDict.keys():
@@ -675,13 +694,13 @@ def multilook_number2resolution(meta_file, az_looks, rg_looks):
     az_pixel_size, az_spacing, rg_pixel_size, rg_spacing = get_full_resolution(meta_file)
 
     # print out message
-    print('Azimuth     pixel size : {:.1f}'.format(az_pixel_size))
-    print('Azimuth ground spacing : {:.1f}'.format(az_spacing))
-    print('Azimuth ground spacing : {:.1f} after multilooking by {}'.format(az_spacing*az_looks, az_looks))
+    print(f'Azimuth     pixel size : {az_pixel_size:.1f}')
+    print(f'Azimuth ground spacing : {az_spacing:.1f}')
+    print(f'Azimuth ground spacing : {az_spacing*az_looks:.1f} after multilooking by {az_looks}')
 
-    print('Range       pixel size : {:.1f}'.format(rg_pixel_size))
-    print('Range   ground spacing : {:.1f}'.format(rg_spacing))
-    print('Range   ground spacing : {:.1f} after multilooking by {}'.format(rg_spacing*rg_looks, rg_looks))
+    print(f'Range       pixel size : {rg_pixel_size:.1f}')
+    print(f'Range   ground spacing : {rg_spacing:.1f}')
+    print(f'Range   ground spacing : {rg_spacing*rg_looks:.1f} after multilooking by {rg_looks}')
     return
 
 
@@ -712,13 +731,13 @@ def resolution2multilook_number(meta_file, resolution):
     rg_looks = np.rint(resolution / rg_spacing).astype(int)
 
     # print out message
-    print('Azimuth     pixel size : {:.1f}'.format(az_pixel_size))
-    print('Azimuth ground spacing : {:.1f}'.format(az_spacing))
-    print('Azimuth ground spacing : {:.1f} after multilooking by {}'.format(az_spacing*az_looks, az_looks))
+    print(f'Azimuth     pixel size : {az_pixel_size:.1f}')
+    print(f'Azimuth ground spacing : {az_spacing:.1f}')
+    print(f'Azimuth ground spacing : {az_spacing*az_looks:.1f} after multilooking by {az_looks}')
 
-    print('Range       pixel size : {:.1f}'.format(rg_pixel_size))
-    print('Range   ground spacing : {:.1f}'.format(rg_spacing))
-    print('Range   ground spacing : {:.1f} after multilooking by {}'.format(rg_spacing*rg_looks, rg_looks))
+    print(f'Range       pixel size : {rg_pixel_size:.1f}')
+    print(f'Range   ground spacing : {rg_spacing:.1f}')
+    print(f'Range   ground spacing : {rg_spacing*rg_looks:.1f} after multilooking by {rg_looks}')
 
     return az_looks, rg_looks
 
@@ -730,7 +749,7 @@ def get_full_resolution(meta_file):
     # check metadata file extension: only ISCE format is supported.
     fext = os.path.splitext(meta_file)[1]
     if fext not in ['.xml', '.dat']:
-        raise ValueError('input ISCE metadata file extension "{}" not in [.xml, .dat]'.format(fext))
+        raise ValueError(f'input ISCE metadata file extension "{fext}" not in [.xml, .dat]')
 
     # get middle sub-swath xml file for Sentinel-1 data
     if meta_file.endswith('.xml'):
@@ -792,63 +811,13 @@ def get_IPF(proj_dir, ts_file):
 
         # grab IPF version number
         for j, IPF_IW in enumerate([IPF_IW1, IPF_IW2, IPF_IW3]):
-            xml_file = os.path.join(xml_dir, 'IW{}.xml'.format(j+1))
+            xml_file = os.path.join(xml_dir, f'IW{j+1}.xml')
             IPFv = load_product(xml_file).processingSoftwareVersion
-            IPF_IW.append('{:.02f}'.format(float(IPFv)))
+            IPF_IW.append(f'{float(IPFv):.02f}')
 
-        prog_bar.update(i+1, suffix='{} IW1/2/3'.format(date_str))
+        prog_bar.update(i+1, suffix=f'{date_str} IW1/2/3')
     prog_bar.close()
     return date_list, IPF_IW1, IPF_IW2, IPF_IW3
-
-
-def safe_list_file2sensor_list(safe_list_file, date_list=None, print_msg=True):
-    """Get list of Sentinel-1 sensor names from txt file with SAFE file names.
-
-    Parameters: safe_list_file - str, path of the text file with Sentinel-1 SAFE file path
-                                 E.g. SAFE_files.txt
-                date_list      - list of str in YYYYMMDD format, reference list of dates
-    Returns:    sensor_list    - list of str in S1A or S1B
-                date_list      - list of str in YYYYMMDD format
-    Example:
-        date_list = timeseries('timeseries.h5').get_date_list()
-        sensor_list = safe_list_file2sensor_list('../SAFE_files.txt',
-                                                 date_list=date_list,
-                                                 print_msg=False)[0]
-        s1b_dates = [i for i, j in zip(date_list, sensor_list) if j == 'S1B']
-        np.savetxt('S1B_date.txt', np.array(s1b_dates).reshape(-1,1), fmt='%s')
-    """
-    # read txt file
-    fc = np.loadtxt(safe_list_file, dtype=str).astype(str).tolist()
-    safe_fnames = [os.path.basename(i) for i in fc]
-
-    # get date_list
-    date_list_out = [re.findall('_\d{8}T', i)[0][1:-1] for i in safe_fnames]
-    date_list_out = sorted(list(set(date_list_out)))
-
-    # get sensor_list
-    sensor_list = []
-    for d in date_list_out:
-        safe_fname = [i for i in safe_fnames if d in i][0]
-        sensor = safe_fname.split('_')[0]
-        sensor_list.append(sensor)
-
-    # update against date_list_ref
-    if date_list is not None:
-        # check possible missing dates
-        dates_missing = [i for i in date_list if i not in date_list_out]
-        if dates_missing:
-            raise ValueError('The following dates are missing:\n{}'.format(dates_missing))
-
-        # prune dates not-needed
-        flag = np.array([i in date_list for i in date_list_out], dtype=np.bool_)
-        if np.sum(flag) > 0:
-            sensor_list = np.array(sensor_list)[flag].tolist()
-            dates_removed = np.array(date_list_out)[~flag].tolist()
-            date_list_out = np.array(date_list_out)[flag].tolist()
-            if print_msg:
-                print('The following dates are not needed and removed:\n{}'.format(dates_removed))
-
-    return sensor_list, date_list
 
 
 def get_sensing_datetime_list(proj_dir, date_list=None):
@@ -880,7 +849,7 @@ def get_sensing_datetime_list(proj_dir, date_list=None):
     sensingStart = []
     sensingStop = []
     for i, fname in enumerate(fnames):
-        print('[{}/{}] read {}'.format(i+1, num_file, fname))
+        print(f'[{i+1}/{num_file}] read {fname}')
         obj = load_product(fname)
         sensingStart.append(obj.bursts[0].sensingStart)
         sensingStop.append(obj.bursts[-1].sensingStop)
@@ -904,7 +873,7 @@ def get_sensing_datetime_list(proj_dir, date_list=None):
         # check possible missing dates
         dates_missing = [i for i in date_list if i not in date_list_out]
         if dates_missing:
-            raise ValueError('The following dates are missing:\n{}'.format(dates_missing))
+            raise ValueError(f'The following dates are missing:\n{dates_missing}')
 
         # prune dates not-needed
         flag = np.array([i in date_list for i in date_list_out], dtype=np.bool_)
@@ -913,7 +882,216 @@ def get_sensing_datetime_list(proj_dir, date_list=None):
             sensingStart  = np.array(sensingStart)[flag].tolist()
             sensingStop   = np.array(sensingStop)[flag].tolist()
             dates_removed = np.array(date_list_out)[~flag].tolist()
-            print('The following dates are not needed and removed:\n{}'.format(dates_removed))
+            print(f'The following dates are not needed and removed:\n{dates_removed}')
 
     return sensingMid, sensingStart, sensingStop
 
+
+
+############################## Standard Processing ###########################################
+
+def gaussian_kernel(sx, sy, sig_x, sig_y):
+    '''Generate a guassian kernal (with all elements sum to 1).
+
+    Parameters: sx/y    - int, dimensions of kernal
+                sig_x/y - float, standard deviation of the guassian distribution
+    '''
+    # ensure sx/y are odd number
+    sx += 1 if np.mod(sx, 2) == 0 else 0
+    sy += 1 if np.mod(sy, 2) == 0 else 0
+
+    x, y = np.meshgrid(np.arange(sx), np.arange(sy))
+    x += 1
+    y += 1
+
+    xc = (sx + 1) / 2
+    yc = (sy + 1) / 2
+    fx = ((x-xc)**2.) / (2.*sig_x**2.)
+    fy = ((y-yc)**2.) / (2.*sig_y**2.)
+
+    k = np.exp(-1.0 * (fx+fy))
+    a = 1./np.sum(k)
+    k = a * k
+
+    return k
+
+
+def convolve(data, kernel):
+    '''Convolve / filter the complex data based on the given kernel.
+
+    Parameters: data   - 2D np.ndarray in complex
+                kernel - 2D np.ndarray in float, convolution kernel
+    '''
+    real = ndimage.convolve(data.real, kernel, mode='constant', cval=0.0)
+    imag = ndimage.convolve(data.imag, kernel, mode='constant', cval=0.0)
+    return real + 1J * imag
+
+
+def estimate_coherence(intfile, corfile):
+    '''Estimate the spatial coherence (phase sigma) of the wrapped interferogram.
+
+    Parameters: intfile - str, path to the *.int file
+                corfile - str, path to the output correlation file
+    '''
+    import isce
+    import isceobj
+    from mroipac.icu.Icu import Icu
+
+    # create filt interferogram file object
+    filtImage = isceobj.createIntImage()
+    filtImage.load(intfile + '.xml')
+    filtImage.setAccessMode('read')
+    filtImage.createImage()
+
+    # create phase sigma correlation file object
+    phsigImage = isceobj.createImage()
+    phsigImage.dataType='FLOAT'
+    phsigImage.bands = 1
+    phsigImage.setWidth(filtImage.getWidth())
+    phsigImage.setFilename(corfile)
+    phsigImage.setAccessMode('write')
+    phsigImage.createImage()
+
+    # setup Icu() object
+    icuObj = Icu(name='sentinel_filter_icu')
+    icuObj.configure()
+    icuObj.unwrappingFlag = False
+    icuObj.useAmplitudeFlag = False
+    #icuObj.correlationType = 'NOSLOPE'
+
+    # run
+    icuObj.icu(intImage=filtImage, phsigImage=phsigImage)
+    phsigImage.renderHdr()
+
+    # close
+    filtImage.finalizeImage()
+    phsigImage.finalizeImage()
+
+    return
+
+
+def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
+                  init_only=True, init_method='MCF', cost_mode='SMOOTH'):
+    '''Unwrap interferograms using SNAPHU via isce2.
+
+    Modified from ISCE-2/topsStack/unwrap.py
+    Notes from Piyush:
+        SNAPHU is an iterative solver, starting from the initial solution. It can get
+            stuck in an infinite loop.
+        The initial solution is created using MCF or MST method. The MST initial solution
+            typically require lots of iterations and may not be a good starting point.
+        DEFO cost mode requires geometry info for the program to interpret the coherence
+            correctly and setup costs based on that. DEFO always sounds more theoretical
+            to me, but I haven not fully explored it. TOPO cost mode requires spatial baseline.
+            SMOOTH cost mode is purely data driven.
+        Amplitude of zero is a mask in all cost modes. For TOPO mode, amplitude is used to find
+            layover; for SMOOTH mode, only non-zero amplitude matters.
+
+    Default configurations in ISCE-2/topsStack:
+        init_only = True
+        init_method = 'MCF'
+        cost_mode = 'SMOOTH'
+    Default configurations in FRInGE:
+        init_only = False
+        init_method = 'MST'
+        cost_mode = 'DEFO'
+
+    Parameters: int_file    - str, path to the wrapped interferogram file
+                cor_file    - str, path to the correlation file
+                unw_file    - str, path to the output unwrapped interferogram file
+                defo_max    - float, maximum number of cycles for the deformation phase
+                max_comp    - int, maximum number of connected components
+                init_only   - bool, initlize-only mode
+                init_method - str, algo used for initialization: MCF, MST
+                cost_mode   - str, statistical-cost mode: TOPO, DEFO, SMOOTH, NOSTATCOSTS
+    Returns:    unw_file    - str, path to the output unwrapped interferogram file
+    '''
+    import isce
+    from contrib.Snaphu.Snaphu import Snaphu
+
+    start_time = time.time()
+
+    # configurations - atr
+    atr = readfile.read_attribute(int_file)
+    width = int(atr['WIDTH'])
+    length = int(atr['LENGTH'])
+    altitude = float(atr['HEIGHT'])
+    earth_radius = float(atr['EARTH_RADIUS'])
+    wavelength = float(atr['WAVELENGTH'])
+    rg_looks = int(atr['RLOOKS'])
+    az_looks = int(atr['ALOOKS'])
+    corr_looks = float(atr.get('NCORRLOOKS', rg_looks * az_looks / 1.94))
+
+    ## setup SNAPHU
+    # https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full
+    # https://github.com/isce-framework/isce2/blob/main/contrib/Snaphu/Snaphu.py
+    print('phase unwrapping with SNAPHU ...')
+    print(f'SNAPHU cost mode: {cost_mode}')
+    print(f'SNAPHU init only: {init_only}')
+    print(f'SNAPHU init method: {init_method}')
+    print(f'SNAPHU max number of connected components: {max_comp}')
+
+    snp = Snaphu()
+
+    # file IO
+    snp.setInput(int_file)
+    snp.setOutput(unw_file)
+    snp.setCorrfile(cor_file)
+    snp.setCorFileFormat('FLOAT_DATA')
+    snp.setWidth(width)
+
+    # runtime options
+    snp.setCostMode(cost_mode)
+    snp.setInitOnly(init_only)
+    snp.setInitMethod(init_method)
+
+    # geometry parameters
+    # baseline info is not used in deformation mode, but is very important in topography mode
+    snp.setAltitude(altitude)
+    snp.setEarthRadius(earth_radius)
+    snp.setWavelength(wavelength)
+    snp.setRangeLooks(rg_looks)
+    snp.setAzimuthLooks(az_looks)
+    snp.setCorrLooks(corr_looks)
+
+    # deformation mode parameters
+    snp.setDefoMaxCycles(defo_max)
+
+    # connected component control
+    # grow connectedc components if init_only is True
+    # https://github.com/isce-framework/isce2/blob/main/contrib/Snaphu/Snaphu.py#L413
+    snp.setMaxComponents(max_comp)
+
+    ## run SNAPHU
+    snp.prepare()
+    snp.unwrap()
+    print('finished SNAPHU running')
+
+    # mask out wired values from SNAPHU
+    # based on https://github.com/isce-framework/isce2/pull/326
+    flag = np.fromfile(int_file, dtype=np.complex64).reshape(length, width)
+    data = np.memmap(unw_file, dtype='float32', mode='r+', shape=(length*2, width))
+    data[0:length*2:2, :][np.nonzero(flag == 0)] = 0
+    data[1:length*2:2, :][np.nonzero(flag == 0)] = 0
+
+    ## render metadata
+    print(f'write metadata file: {unw_file}.xml')
+    atr['FILE_TYPE'] = '.unw'
+    atr['DATA_TYPE'] = 'float32'
+    atr['INTERLEAVE'] = 'BIL'
+    atr['BANDS'] = '2'
+    writefile.write_isce_xml(atr, unw_file)
+
+    if snp.dumpConnectedComponents:
+        print(f'write metadata file: {unw_file}.conncomp.xml')
+        atr['FILE_TYPE'] = '.conncomp'
+        atr['DATA_TYPE'] = 'uint8'
+        atr['INTERLEAVE'] = 'BIP'
+        atr['BANDS'] = '1'
+        writefile.write_isce_xml(atr, f'{unw_file}.conncomp')
+
+    # time usage
+    m, s = divmod(time.time() - start_time, 60)
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
+
+    return unw_file

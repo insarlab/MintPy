@@ -7,18 +7,15 @@
 #   from mintpy.objects.conncomp import connectComponent
 
 
-try:
-    from skimage import measure, segmentation as seg, morphology as morph
-except ImportError:
-    raise ImportError('Could not import skimage!')
-
-import time
 import itertools
+import time
+
 import numpy as np
 from scipy.sparse import csgraph as csg
 from scipy.spatial import cKDTree
-from .ramp import deramp
+from skimage import measure, morphology as morph, segmentation as seg
 
+from mintpy.objects.ramp import deramp
 
 
 ######################################## utilities functions ##############################
@@ -29,7 +26,7 @@ def label_conn_comp(mask, min_area=2.5e3, erosion_size=5, print_msg=False):
                 min_area     - float, minimum region/area size
                 erosion_size - int (odd number), size of erosion structure
                                set to 0 to turn it off.
-    Returns:    label_img    - 2d np.ndarray of int, labeled array where all 
+    Returns:    label_img    - 2d np.ndarray of int, labeled array where all
                                connected regions are assigned the same value
                 num_label    - int, number of labeled regions
     """
@@ -40,7 +37,7 @@ def label_conn_comp(mask, min_area=2.5e3, erosion_size=5, print_msg=False):
     ## remove small regions
     min_area = min(min_area, label_img.size * 3e-3)
     if print_msg:
-        print('remove regions with area < {}'.format(int(min_area)))
+        print(f'remove regions with area < {int(min_area)}')
     mask = morph.remove_small_objects(label_img, min_size=min_area, connectivity=1)
     label_img[mask == 0] = 0
     # update label
@@ -139,7 +136,7 @@ class connectComponent:
                        metadata : dict, attributes
         """
         if type(conncomp).__module__ != np.__name__:
-            raise ValueError('Input conncomp is not np.ndarray: {}'.format(type(conncomp).__module__))
+            raise ValueError(f'Input conncomp is not np.ndarray: {type(conncomp).__module__}')
         self.conncomp = conncomp
         self.metadata = metadata
         if 'REF_Y' in metadata.keys():
@@ -174,7 +171,7 @@ class connectComponent:
         if self.refY is not None:
             self.labelRef = self.labelImg[self.refY, self.refX]
             if self.labelRef == 0:
-                 raise ValueError('input reference point is NOT included in the connectComponent.')
+                raise ValueError('input reference point is NOT included in the connectComponent.')
         else:
             regions = measure.regionprops(self.labelImg)
             idx = np.argmax([region.area for region in regions])
@@ -245,7 +242,7 @@ class connectComponent:
             conn[n0] = yxi
             conn[n1] = yxj
             conn['distance'] = dist_min
-            self.connDict['{}_{}'.format(n0, n1)] = conn
+            self.connDict[f'{n0}_{n1}'] = conn
             self.distMat[i,j] = self.distMat[j,i] = dist_min
         return self.connDict, self.distMat
 
@@ -276,7 +273,7 @@ class connectComponent:
             else:
                 nn = [str(n0), str(n1)]
 
-            conn = self.connDict['{}_{}'.format(nn[0], nn[1])]
+            conn = self.connDict[f'{nn[0]}_{nn[1]}']
             y0, x0 = conn[str(n0)]
             y1, x1 = conn[str(n1)]
             # save bdg
@@ -318,7 +315,7 @@ class connectComponent:
 
         if ramp_type is not None:
             if print_msg:
-                print('estimate a {} ramp'.format(ramp_type))
+                print(f'estimate a {ramp_type} ramp')
             ramp_mask = (self.labelImg == self.labelRef)
             unw, ramp = deramp(unw, ramp_mask, ramp_type, metadata=self.metadata)
 
@@ -352,7 +349,7 @@ class connectComponent:
         if ramp_type is not None:
             unw += ramp
         if print_msg:
-            print('time used: {:.2f} secs.'.format(time.time()-start_time))
+            print(f'time used: {time.time()-start_time:.2f} secs.')
         return unw
 
 

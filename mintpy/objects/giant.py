@@ -9,18 +9,20 @@
 
 import os
 from datetime import datetime as dt
+
 import h5py
 import numpy as np
 
-
-giantDatasetNames = ['recons',        #Reconstructed filtered time-series in mm
-                     'rawts',         #Raw time-series in mm
-                     'ifgcnt',        #Number of interferograms used for every pixel.
-                     'figram',        #Deramped + atmosphere corrected interferograms. in mm
-                     'igram',         #Unwrapped IFGs read straight from files in mm
-                     'cmask',         #Common mask for pixels
-                     'igram_aps',     #Atmosphere corrected interferogram stack in mm
-                     'sar_aps']       #Atmospheric phase screen for each of the SAR scenes in mm
+GIANT_DSET_NAMES = [
+    'recons',        #Reconstructed filtered time-series in mm
+    'rawts',         #Raw time-series in mm
+    'ifgcnt',        #Number of interferograms used for every pixel.
+    'figram',        #Deramped + atmosphere corrected interferograms. in mm
+    'igram',         #Unwrapped IFGs read straight from files in mm
+    'cmask',         #Common mask for pixels
+    'igram_aps',     #Atmosphere corrected interferogram stack in mm
+    'sar_aps',       #Atmospheric phase screen for each of the SAR scenes in mm
+]
 
 
 ########################################################################################
@@ -44,7 +46,7 @@ class giantTimeseries:
 
     def open(self, print_msg=True):
         if print_msg:
-            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+            print(f'open {self.name} file: {os.path.basename(self.file)}')
         self.get_size()
         self.get_metadata()
         self.numPixel = self.length * self.width
@@ -56,18 +58,18 @@ class giantTimeseries:
 
         # Dataset Info
         with h5py.File(self.file, 'r') as f:
-            # get existed datasetNames in the order of ifgramDatasetNames
+            # get existed datasetNames in the order of GIANT_DSET_NAMES
             dsNames = [i for i in f.keys()
                        if (isinstance(f[i], h5py.Dataset)
                            and f[i].shape[-2:] == (self.length, self.width))]
-            self.datasetNames = [i for i in giantDatasetNames if i in dsNames]
-            self.datasetNames += [i for i in dsNames if i not in giantDatasetNames]
+            self.datasetNames = [i for i in GIANT_DSET_NAMES if i in dsNames]
+            self.datasetNames += [i for i in dsNames if i not in GIANT_DSET_NAMES]
 
             self.sliceList = []
             for dsName in self.datasetNames:
                 ds = f[dsName]
                 if len(ds.shape) == 3:
-                    self.sliceList += ['{}-{}'.format(dsName, i) for i in self.dateList]
+                    self.sliceList += [f'{dsName}-{i}' for i in self.dateList]
                 elif len(ds.shape) == 2:
                     self.sliceList.append(dsName)
                 else:
@@ -131,7 +133,7 @@ class giantIfgramStack:
 
     def open(self, print_msg=True):
         if print_msg:
-            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+            print(f'open {self.name} file: {os.path.basename(self.file)}')
         self.get_size()
         self.get_date12_list()
         self.get_metadata()
@@ -140,21 +142,21 @@ class giantIfgramStack:
         # Dataset Info
         with h5py.File(self.file, 'r') as f:
             self.pbaseIfgram = f['bperp'][:]
-            # get existed datasetNames in the order of ifgramDatasetNames
+            # get existed datasetNames in the order of GIANT_DSET_NAMES
             dsNames = [i for i in f.keys()
                        if (isinstance(f[i], h5py.Dataset)
                            and f[i].shape[-2:] == (self.length, self.width))]
-            self.datasetNames = [i for i in giantDatasetNames if i in dsNames]
-            self.datasetNames += [i for i in dsNames if i not in giantDatasetNames]
+            self.datasetNames = [i for i in GIANT_DSET_NAMES if i in dsNames]
+            self.datasetNames += [i for i in dsNames if i not in GIANT_DSET_NAMES]
 
             self.sliceList = []
             for dsName in self.datasetNames:
                 ds = f[dsName]
                 if len(ds.shape) == 3:
                     if ds.shape[0] == self.numIfgram:
-                        self.sliceList += ['{}-{}'.format(dsName, i) for i in self.date12List]
+                        self.sliceList += [f'{dsName}-{i}' for i in self.date12List]
                     elif ds.shape[0] == self.numDate:
-                        self.sliceList += ['{}-{}'.format(dsName, i) for i in self.dateList]
+                        self.sliceList += [f'{dsName}-{i}' for i in self.dateList]
                 elif len(ds.shape) == 2:
                     self.sliceList.append(dsName)
                 else:
@@ -180,7 +182,7 @@ class giantIfgramStack:
             for i in range(Jmat.shape[0]):
                 mDates.append(dates[Jmat[i, :] ==  1][0])
                 sDates.append(dates[Jmat[i, :] == -1][0])
-            self.date12List = ['{}_{}'.format(m, s) for m, s in zip(mDates, sDates)]
+            self.date12List = [f'{m}_{s}' for m, s in zip(mDates, sDates)]
             self.mDates = mDates
             self.sDates = sDates
         return self.date12List
@@ -203,5 +205,3 @@ class giantIfgramStack:
         self.metadata['LENGTH'] = str(self.length)
         self.metadata['WIDTH'] = str(self.width)
         return self.metadata
-
-

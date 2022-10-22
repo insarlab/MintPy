@@ -9,14 +9,13 @@
 
 import os
 
-
 SENSOR_NAME_VARIATION = {
     'alos'  : ['alos', 'alos1', 'palsar', 'palsar1'],
     'alos2' : ['alos2', 'palsar2'],
     'csk'   : ['csk', 'csk1', 'csk2', 'csk3', 'csk4', 'cos', 'cosmo', 'cosmoskymed'],
     'env'   : ['env', 'envisat', 'asar'],
     'ers'   : ['ers', 'ers1', 'ers2', 'ers12'],
-    'gfen3' : ['gfen3', 'gaofen3', 'g3', 'gaofen'],
+    'gf3'   : ['gfen3', 'gaofen3', 'g3', 'gaofen'],
     'jers'  : ['jers', 'jers1'],
     'ksat5' : ['ksat5', 'kompsat5', 'kompsat', 'kmps5'],
     'ni'    : ['ni', 'nisar'],
@@ -28,6 +27,7 @@ SENSOR_NAME_VARIATION = {
     'uav'   : ['uav', 'uavsar'],
 }
 
+# duplicated in mintpy.cli.prep_gamma
 SENSOR_NAMES = list(SENSOR_NAME_VARIATION.keys())
 
 
@@ -80,7 +80,7 @@ def project_name2sensor_name(proj_names):
         if any(s in proj_path.lower() for s in SENSOR_NAMES) and proj_name is None:
             # exclude known words overlapping with sensor names
             # ers: users
-            proj_path_segs = [p for p in proj_path.split(os.sep) 
+            proj_path_segs = [p for p in proj_path.split(os.sep)
                               if p.lower() not in ['users']]
             for proj_path_seg in proj_path_segs:
                 if any(s.capitalize() in proj_path_seg for s in SENSOR_NAMES):
@@ -100,8 +100,8 @@ def project_name2sensor_name(proj_names):
             # if more than one, i.e. ['Alos','Alos2'], use the last one
             sensor = sorted(sensors)[-1]
         else:
-            msg = "No sensor name found in project_name: {}\n".format(proj_name)
-            msg += "Available sensor names: {}".format(SENSOR_NAMES)
+            msg = f"No sensor name found in project_name: {proj_name}\n"
+            msg += f"Available sensor names: {SENSOR_NAMES}"
             raise ValueError(msg)
 
     return sensor, proj_name
@@ -176,7 +176,7 @@ def get_unavco_mission_name(meta_dict):
 # Kim, Y., and R. L. Jordan (2006), Spaceborne SAR Antennas for Earth Science,
 #   in Spaceborne Antennas for Planetary Exploration, edited by W. A. Imbriale,
 #   pp. 305-340, doi:10.1002/0470052783.ch6.
-# Jung, H.-S., W.-J. Lee, and L. Zhang (2014), Theoretical accuracy of along-track 
+# Jung, H.-S., W.-J. Lee, and L. Zhang (2014), Theoretical accuracy of along-track
 #   displacement measurements from multiple-aperture interferometry (MAI), Sensors (Basel),
 #   14(9), 17703-17724, doi:10.3390/s140917703.
 # Zebker, H. A., C. L. Werner, P. A. Rosen, and S. Hensley (1994), Accuracy of topographic maps
@@ -283,22 +283,32 @@ RSAT2 = {
     'ground_range_pixel_size'    : 2.1,       # m
 }
 
+# GaoFen-3
+# Table 2 & 6 in https://directory.eoportal.org/web/eoportal/satellite-missions/g/gaofen-3
+GF3 = {
+    'carrier_frequency'          : 5.4e9,     # Hz
+    'altitude'                   : 755e3,     # m
+    'antenna_length'             : 15,        # m
+    'sampling_frequency'         : 533.33e6,  # Hz
+}
+
 # Sentinel-1 Interferometric Wide (IW / TOPS) swath mode
 # Typical value:
 # azfact = azResolution / azPixelSize = 1.46
 # rgfact = rgResolution / rgPixelSize = 1.33
 # reference:
-#   1. Table 2 and Fig. 5d in Jung et al. (2014)
-#   2. Table 7-5 in https://sentinel.esa.int/documents/247904/1877131/Sentinel-1-Product-Definition
+#   1. Table 2 & Fig. 5d in Jung et al. (2014)
+#   2. Table 3-1 & 7-5 in https://sentinel.esa.int/documents/247904/1877131/Sentinel-1-Product-Definition
 SEN = {
     'carrier_frequency'          : 5.405e9,   # Hz
     'altitude'                   : 705e3,     # m, mean value
-    'antenna_length'             : 45.0,      # m
+    'antenna_length'             : 12.3,      # m
+    'antenna_width'              : 0.82,      # m
     'doppler_bandwidth'          : 380,       # Hz
-    'pulse_repetition_frequency' : 522,       # Hz
+    'pulse_repetition_frequency' : 1717.13,   # Hz, based on real data; 1000-3000 (programmable)
     'chirp_bandwidth'            : 56.50e6,   # Hz
     'sampling_frequency'         : 64.35e6,   # Hz
-    'azimuth_pixel_size'         : 14.1,      # m
+    'azimuth_pixel_size'         : 14.1,      # m, this is the ground azimuth pixel spacing, NOT on orbits!
     'range_pixel_size'           : 2.3,       # m
     'ground_range_pixel_size'    : 4.1,       # m
     'IW1' : {'range_resolution' : 2.7, 'azimuth_resolution': 22.5},
@@ -413,4 +423,3 @@ SENSOR_DICT = {
     'alos2' : ALOS2,
     'ni'    : NISAR_L,
 }
-

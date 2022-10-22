@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,59 +6,9 @@
 
 
 import os
-import sys
 import shutil
-import argparse
-from mintpy.utils import readfile, writefile, utils as ut
 
-
-##################################################################################################
-EXAMPLE = """example:
-  prep_roipac.py  filt_100901-110117-sim_HDR_4rlks_c10.unw
-  prep_roipac.py  ./interferograms/*/filt_*.unw
-  prep_roipac.py  ./interferograms/*/filt_*rlks.cor
-  prep_roipac.py  ./interferograms/*/filt_*rlks.int
-  prep_roipac.py  ./interferograms/*/filt_*_snap_connect.byt
-"""
-
-DESCRIPTION = """
-  For each binary file (unwrapped/wrapped interferogram, spatial coherence file), there are 2 .rsc files:
-  1) basic metadata file and 2) baseline parameter file. This script find those two rsc files based on
-  input binary file name, and merge those two metadata files into one.
-
-  For example, if input binary file is filt_100901-110117-sim_HDR_4rlks_c10.unw, this script will find
-  1) filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc and 2) 100901-110117_baseline.rsc and merge 1) and 2) into
-  one file: filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for ROI_PAC products.\n' +
-                                     DESCRIPTION,
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', nargs='+', help='Gamma file(s)')
-    parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,
-                        help='Disable parallel processing. Diabled auto for 1 input file.')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    inps.file = ut.get_file_list(inps.file, abspath=True)
-
-    # Check input file type
-    ext_list = ['.unw', '.cor', '.int', '.byt', '.hgt', '.dem', '.trans']
-    ext = os.path.splitext(inps.file[0])[1]
-    if ext not in ext_list:
-        msg = 'unsupported input file extension: {}'.format(ext)
-        msg += '\nsupported file extensions: {}'.format(ext_list)
-        raise ValueError(msg)
-
-    return inps
+from mintpy.utils import readfile, utils1 as ut, writefile
 
 
 ######################################## Sub Functions ############################################
@@ -67,21 +16,21 @@ def extract_metadata(fname):
     """Read/extract attributes from ROI_PAC .unw, .int, .cor file.
 
     For each unwrapped interferogram or spatial coherence file, there are 2 .rsc files:
-        basic metadata file and baseline parameter file. 
+        basic metadata file and baseline parameter file.
         e.g. filt_100901-110117-sim_HDR_4rlks_c10.unw
              filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc
              100901-110117_baseline.rsc
-    Inputs:
-        fname : string, ROI_PAC interferogram filename or path,
-                i.e. /KujuT422F650AlosA/filt_100901-110117-sim_HDR_4rlks_c10.unw
-    Outputs:
-        atr : dict, Attributes dictionary
+
+    Parameters: fname          - str, ROI_PAC interferogram filename or path,
+                                 i.e. /KujuT422F650AlosA/filt_100901-110117-sim_HDR_4rlks_c10.unw
+    Returns:    basic_rsc_file - dict, Attributes dictionary
     """
+
     # 1. Read basic metadata file
     basic_rsc_file = fname+'.rsc'
     if not os.path.isfile(basic_rsc_file) and fname.endswith('_snap_connect.byt'):
         unw_rsc_file = '{}.unw.rsc'.format(fname.split('_snap_connect.byt')[0])
-        print('copy {} to {}'.format(unw_rsc_file, basic_rsc_file))
+        print(f'copy {unw_rsc_file} to {basic_rsc_file}')
         shutil.copy2(unw_rsc_file, basic_rsc_file)
     basic_dict = readfile.read_roipac_rsc(basic_rsc_file)
 
@@ -108,25 +57,31 @@ def extract_metadata(fname):
         atr_orig = readfile.read_roipac_rsc(basic_rsc_file)
     except:
         atr_orig = dict()
+
     if not set(atr.items()).issubset(set(atr_orig.items())):
         atr_out = {**atr_orig, **atr}
         print('merging {} into {} '.format(os.path.basename(baseline_rsc_file),
                                            os.path.basename(basic_rsc_file)))
         writefile.write_roipac_rsc(atr_out, out_file=basic_rsc_file)
+
     return basic_rsc_file
 
 
-##################################################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+def prep_roipac(inps):
 
-    ext = os.path.splitext(inps.file[0])[1]
-    if ext in ['.unw', '.cor', '.int', '.byt']:
+    inps.file = ut.get_file_list(inps.file, abspath=True)
+    fext = os.path.splitext(inps.file[0])[1]
+
+    # check: input file type
+    fext_list = ['.unw', '.cor', '.int', '.byt', '.hgt', '.dem', '.trans']
+    if fext not in fext_list:
+        msg = f'unsupported input file extension: {fext}'
+        msg += f'\nsupported file extensions: {fext_list}'
+        raise ValueError(msg)
+
+    # loop over interferogram files
+    if fext in ['.unw', '.cor', '.int', '.byt']:
         for fname in inps.file:
             extract_metadata(fname)
+
     return
-
-
-###################################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

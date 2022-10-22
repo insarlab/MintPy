@@ -6,11 +6,11 @@
 ############################################################
 
 
-import os
 import argparse
-from mintpy.objects import ifgramStack
-from mintpy.utils import readfile, ptime, utils as ut
+import os
 
+from mintpy.objects import ifgramStack
+from mintpy.utils import ptime, readfile, utils as ut
 
 ##################################################################################################
 EXAMPLE = """example:
@@ -127,10 +127,10 @@ def main(iargs=None):
     # Write to text file
     with open(inps.outfile, 'w') as f:
         for i in range(len(pbase_list)):
-            f.write('{0} {1}     {2:<10.2f}   {3}\n'.format(m_date_list[i],
-                                                            s_date_list[i],
-                                                            pbase_list[i],
-                                                            inps.sensor))
+            f.write('{} {}     {:<10.2f}   {}\n'.format(m_date_list[i],
+                                                        s_date_list[i],
+                                                        pbase_list[i],
+                                                        inps.sensor))
     print('write to %s' % (inps.outfile))
     return
 

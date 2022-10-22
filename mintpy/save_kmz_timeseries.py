@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,94 +6,22 @@
 
 
 import os
-import sys
-import argparse
-from lxml import etree
-from zipfile import ZipFile
 import shutil
-import numpy as np
-import matplotlib as mpl
-from matplotlib import pyplot as plt, patches
+from zipfile import ZipFile
 
-try:
-    from pykml.factory import KML_ElementMaker as KML
-except ImportError:
-    raise ImportError('Can not import pykml!')
+import matplotlib as mpl
+import numpy as np
+from lxml import etree
+from matplotlib import patches, pyplot as plt
+from pykml.factory import KML_ElementMaker as KML
 
 import mintpy
-from mintpy.objects import timeseries, deramp
-from mintpy.utils import readfile, plot, utils as ut
 from mintpy import save_kmz
+from mintpy.objects import deramp, timeseries
+from mintpy.utils import plot as pp, readfile, utils as ut
 
 
 ############################################################
-EXAMPLE = """example:
-  cd $PROJECT_NAME/mintpy/geo
-  save_kmz_timeseries.py geo_timeseries_ERA5_ramp_demErr.h5
-  save_kmz_timeseries.py geo_timeseries_ERA5_ramp_demErr.h5 -v -5 5 --wrap
-  save_kmz_timeseries.py timeseries_ERA5_demErr.h5 --vel velocity.h5 --tcoh temporalCoherence.h5 --mask maskTempCoh.h5
-"""
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generare Google Earth KMZ file for time-series file.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    args = parser.add_argument_group('Input files', 'File/Dataset to display')
-
-    args.add_argument('ts_file', metavar='timeseries_file', help='Timeseries file to generate KML for')
-    args.add_argument('--vel', dest='vel_file', metavar='FILE',
-                      help='Velocity file, used for the color of dot')
-    args.add_argument('--tcoh', dest='tcoh_file', metavar='FILE',
-                      help='temporal coherence file, used for stat info')
-    args.add_argument('--mask', dest='mask_file', metavar='FILE',
-                      help='Mask file')
-    args.add_argument('-o','--output', dest='outfile', help='Output KMZ file name.')
-
-    opts = parser.add_argument_group('Display options', 'configurations for the display')
-    opts.add_argument('--steps', type=int, nargs=3, default=[20, 5, 2],
-                      help='list of steps for output pixel (default: %(default)s).\n'
-                           'Set to [20, 5, 0] to skip the 3rd high-resolution level to reduce file size.')
-    opts.add_argument('--level-of-details','--lods', dest='lods', type=int, nargs=4, default=[0, 1500, 4000, -1],
-                      help='list of level of details to determine the visible range while browering. Default: 0, 1500, 4000, -1.\n'+
-                           'Ref: https://developers.google.com/kml/documentation/kml_21tutorial')
-    opts.add_argument('--vlim','-v', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
-                      help='min/max range in cm/yr for color coding.')
-    opts.add_argument('--wrap', dest='wrap', action='store_true',
-                      help='re-wrap data to [VMIN, VMAX) for color coding.')
-    opts.add_argument('--colormap','-c', dest='colormap', default='jet',
-                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
-                           'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
-                           'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
-
-    defo = parser.add_argument_group('HD for deforming areas', 'High resolution output for deforming areas')
-    defo.add_argument('--cutoff', dest='cutoff', type=int, default=3,
-                      help='choose points with velocity >= cutoff * MAD. Default: 3.')
-    defo.add_argument('--min-percentage','--min-perc', dest='min_percentage', type=float, default=0.2,
-                      help='choose boxes with >= min percentage of pixels are deforming. Default: 0.2.')
-
-    parser.add_argument('--kk','--keep-kml','--keep-kml-file', dest='keep_kml_file', action='store_true',
-                        help='Do not remove KML and data/resource files after compressing into KMZ file.')
-
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    # check if in geo coordinates
-    atr = readfile.read_attribute(inps.ts_file)
-    if "Y_FIRST" not in atr.keys():
-        raise ValueError("input file {} is NOT geocoded".format(inps.ts_file))
-
-    inps = get_aux_filename(inps)
-    for fname in [inps.vel_file, inps.tcoh_file, inps.mask_file]:
-        if not os.path.isfile(fname):
-            raise FileNotFoundError('auxliary file {} not found.'.format(fname))
-    return inps
-
-
 def get_all_file_paths(directory):
     # initializing empty file paths list
     file_paths = []
@@ -110,25 +37,9 @@ def get_all_file_paths(directory):
     return file_paths
 
 
-def get_aux_filename(inps):
-    """Get auxliary files' default filename"""
-    # path feature of time-series file
-    ts_dir = os.path.dirname(inps.ts_file)
-    ts_prefix = os.path.basename(inps.ts_file).split('timeseries')[0]
-
-    if not inps.vel_file:
-        inps.vel_file = os.path.join(ts_dir, '{}velocity.h5'.format(ts_prefix))
-    if not inps.tcoh_file:
-        inps.tcoh_file = os.path.join(ts_dir, '{}temporalCoherence.h5'.format(ts_prefix))
-    if not inps.mask_file:
-        inps.mask_file = os.path.join(ts_dir, '{}maskTempCoh.h5'.format(ts_prefix))
-    return inps
-
-
 def flatten_lat_lon(box, ts_obj, coords=None):
     if coords is None:
         lats, lons = ut.get_lat_lon(ts_obj.metadata, box=box)
-
     lats = sorted(lats.flatten())
     lons = sorted(lons.flatten())
     return lats, lons
@@ -142,7 +53,7 @@ def split_into_sub_boxes(ds_shape, step=20, num_pixel=50**2, print_msg=True):
     Returns:    box_list  : list of 4-tuple of int, each indicating (col0, row0, col1, row1)
     """
     print('-'*30)
-    print('step: {} pixels'.format(step))
+    print(f'step: {step} pixels')
     win_size = int(np.sqrt(num_pixel) * step)
     length, width = ds_shape
 
@@ -150,7 +61,7 @@ def split_into_sub_boxes(ds_shape, step=20, num_pixel=50**2, print_msg=True):
     nrows = np.ceil(length / win_size).astype(int)
     ncols = np.ceil(width / win_size).astype(int)
     if print_msg:
-        print('number of output boxes: {}'.format(nrows * ncols))
+        print(f'number of output boxes: {nrows * ncols}')
 
     # start/end row/column number of each box
     box_list = []
@@ -165,36 +76,36 @@ def split_into_sub_boxes(ds_shape, step=20, num_pixel=50**2, print_msg=True):
     return box_list
 
 
-def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_percentage=0.2,
+def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_perc=0.2,
                              cutoff=3, ramp_type='quadratic', display=False):
     """Get list of boxes to cover the deforming areas.
     A pixel is identified as deforming if its velocity exceeds the MAD of the whole image.
-    Parameters: vel_file : str, path of velocity file
-                mask_file : str, path of mask file
-                win_size  : int, length and width of the output box
-                min_percentage : float between 0 and 1, minimum percentage of deforming points in the box
-                ramp_type : str, type of phase ramps to be removed while evaluating the deformation
-                display   : bool, plot the identification result or not
-    Returns:    box_list  : list of t-tuple of int, each indicating (col0, row0, col1, row1)
+    Parameters: vel_file  - str, path of velocity file
+                mask_file - str, path of mask file
+                win_size  - int, length and width of the output box
+                min_perc  - float between 0 and 1, minimum percentage of deforming points in the box
+                ramp_type - str, type of phase ramps to be removed while evaluating the deformation
+                display   - bool, plot the identification result or not
+    Returns:    box_list  - list of t-tuple of int, each indicating (col0, row0, col1, row1)
     """
     win_size = int(np.sqrt(num_pixel) * step)
     print('-'*30)
-    print('get boxes on deforming areas with step: {} pixels'.format(step))
+    print(f'get boxes on deforming areas with step: {step} pixels')
     mask = readfile.read(mask_file)[0]
     vel, atr = readfile.read(vel_file)
-    print('removing a {} phase ramp from input velocity before the evaluation'.format(ramp_type))
+    print(f'removing a {ramp_type} phase ramp from input velocity before the evaluation')
     vel = deramp(vel, mask, ramp_type=ramp_type, metadata=atr)[0]               #remove ramp before the evaluation
 
     # get deforming pixels
     mad = ut.median_abs_deviation_threshold(vel[mask], cutoff=cutoff)     #deformation threshold
-    print('velocity threshold / median abs dev: {:.3f} cm/yr'.format(mad))
+    print(f'velocity threshold / median abs dev: {mad:.3f} cm/yr')
     vel[mask == 0] = 0
     mask_aoi = (vel >= mad) + (vel <= -1. * mad)
-    print('number of points: {}'.format(np.sum(mask_aoi)))
+    print(f'number of points: {np.sum(mask_aoi)}')
 
     # get deforming boxes
     box_list = []
-    min_num = min_percentage * (win_size ** 2)
+    min_num = min_perc * (win_size ** 2)
     length, width = vel.shape
     num_row = np.ceil(length / win_size).astype(int)
     num_col = np.ceil(width / win_size).astype(int)
@@ -207,7 +118,7 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
             box = (c0, r0, c1, r1)
             if np.sum(mask_aoi[r0:r1, c0:c1]) >= min_num:
                 box_list.append(box)
-    print('number of boxes : {}'.format(len(box_list)))
+    print(f'number of boxes : {len(box_list)}')
 
     if display:
         fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[8, 4], sharey=True)
@@ -224,14 +135,13 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
         fig.tight_layout()
         out_fig = os.path.join(os.path.dirname(vel_file), 'defo_area.png')
         fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
-        print('save figure to {}'.format(out_fig))
+        print(f'save figure to {out_fig}')
         plt.show()
     return box_list
 
 
 def create_reference_point_element(inps, lats, lons, ts_obj):
     """Create reference point element"""
-    colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
     norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
 
     ref_yx = (int(ts_obj.metadata['REF_Y']), int(ts_obj.metadata['REF_X']))
@@ -240,10 +150,10 @@ def create_reference_point_element(inps, lats, lons, ts_obj):
     ref_point = KML.Placemark(
         KML.Style(
             KML.IconStyle(
-                KML.color(save_kmz.get_hex_color(0.0, colormap, norm)),
+                KML.color(save_kmz.get_hex_color(0.0, inps.colormap, norm)),
                 KML.scale(1.),
                 KML.Icon(
-                    KML.href("{}".format(os.path.basename(inps.star_file)))
+                    KML.href(f"{os.path.basename(inps.star_file)}")
                 )
             )
         ),
@@ -251,7 +161,7 @@ def create_reference_point_element(inps, lats, lons, ts_obj):
                         get_description_string(ref_lalo, ref_yx, 0.00, 0.00, 0.00, 1.00)
                         ),
         KML.Point(
-            KML.coordinates("{}, {}".format(ref_lalo[1], ref_lalo[0]))
+            KML.coordinates(f"{ref_lalo[1]}, {ref_lalo[0]}")
         )
     )
 
@@ -260,16 +170,16 @@ def create_reference_point_element(inps, lats, lons, ts_obj):
 
 def get_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=4):
     """Description information of each data point."""
-    des_str = "<font size={}>".format(font_size)
-    des_str += "Latitude: {:.6f}˚ <br /> \n".format(coords[0])
-    des_str += "Longitude: {:.6f}˚ <br /> \n".format(coords[1])
-    des_str += "Row: {:.0f} <br /> \n".format(yx[0])
-    des_str += "Column: {:.0f} <br /> \n".format(yx[1])
+    des_str = f"<font size={font_size}>"
+    des_str += f"Latitude: {coords[0]:.6f}˚ <br /> \n"
+    des_str += f"Longitude: {coords[1]:.6f}˚ <br /> \n"
+    des_str += f"Row: {yx[0]:.0f} <br /> \n"
+    des_str += f"Column: {yx[1]:.0f} <br /> \n"
     des_str += " <br /> \n"
-    des_str += "Mean LOS velocity [cm/year]: {:.2f} +/- {:.2f} <br /> \n".format(v, vstd)
-    des_str += "Cumulative displacement [cm]: {:.2f} <br /> \n".format(disp)
+    des_str += f"Mean LOS velocity [cm/year]: {v:.2f} +/- {vstd:.2f} <br /> \n"
+    des_str += f"Cumulative displacement [cm]: {disp:.2f} <br /> \n"
     if tcoh is not None:
-        des_str += "Temporal coherence: {:.2f} <br /> \n".format(tcoh)
+        des_str += f"Temporal coherence: {tcoh:.2f} <br /> \n"
     des_str += "</font>"
     des_str += " <br />  <br /> "
     des_str += "*Double click to reset plot <br /> <br />\n"
@@ -279,8 +189,8 @@ def get_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=4):
 
 def generate_js_datastring(dates, dygraph_file, num_date, ts):
     """String of the Java Script for interactive plot of diplacement time-series"""
-    dygraph_file = '../../../{}'.format(os.path.basename(dygraph_file))
-    js_data_string = "<script type='text/javascript' src='{}'></script>".format(dygraph_file)
+    dygraph_file = f'../../../{os.path.basename(dygraph_file)}'
+    js_data_string = f"<script type='text/javascript' src='{dygraph_file}'></script>"
     js_data_string += """
         <div id='graphdiv'> </div>
         <style>
@@ -298,11 +208,11 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts):
     for k in range(num_date):
         date = dates[k]
         dis = ts[k]
-        date_displacement_string = "\"{}, {}\\n\" + \n".format(date, dis)
+        date_displacement_string = f"\"{date}, {dis}\\n\" + \n"
         js_data_string += date_displacement_string
 
     js_data_string += """
-    
+
     "",
        {
          width: 500,
@@ -317,7 +227,7 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts):
                  },
                  valueFormatter: function (d) {
                      var date = new Date(d)
-                     var dateString = 'Date: ' + ('0' + date.getDate()).slice(-2) + 
+                     var dateString = 'Date: ' + ('0' + date.getDate()).slice(-2) +
                                       '/' + ('0' + (date.getMonth() + 1)).slice(-2) +
                                       '/' + date.getFullYear()
                      return dateString;
@@ -347,16 +257,16 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts):
          panEdgeFraction: 0.0
        });
        </script>
-    
+
     """
     return js_data_string
 
 
 def create_kml_region_document(inps, box_list, ts_obj, step):
-    """Create list of KML.Document() objects 
+    """Create list of KML.Document() objects
     for one level of details defined by box_list and step
     """
-    dot_file = '../../{}'.format(os.path.basename(inps.dot_file))
+    dot_file = f'../../{os.path.basename(inps.dot_file)}'
 
     ## 1. read data file into timeseries object
     region_docs = []
@@ -395,14 +305,13 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
         ## 2. Create KML Document
         kml_doc = KML.Document()
 
-        # 2.1 Set and normalize colormap to defined vlim
-        colormap = mpl.cm.get_cmap(inps.colormap)
+        # 2.1 Normalize colormap to defined vlim
         norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
 
         # 2.2 Set number of pixels to use
         num_pixel = int(length / step) * int(width / step)
-        msg = "create KML doc for box {}/{}: {}".format(i+1, num_box, box)
-        msg += ", step: {} pixels, {} pixels in total ...".format(step, num_pixel)
+        msg = f"create KML doc for box {i+1}/{num_box}: {box}"
+        msg += f", step: {step} pixels, {num_pixel} pixels in total ..."
         print(msg)
 
         # 2.3 Create data folder for all points
@@ -423,14 +332,14 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
                     # 2.3.1 Create KML icon style element
                     style = KML.Style(
                         KML.IconStyle(
-                            KML.color(save_kmz.get_hex_color(vc, colormap, norm)),
+                            KML.color(save_kmz.get_hex_color(vc, inps.colormap, norm)),
                             KML.scale(0.5),
-                            KML.Icon(KML.href("{}".format(dot_file)))
+                            KML.Icon(KML.href(f"{dot_file}"))
                         )
                     )
 
                     # 2.3.2 Create KML point element
-                    point = KML.Point(KML.coordinates("{},{}".format(lon, lat)))
+                    point = KML.Point(KML.coordinates(f"{lon},{lat}"))
 
                     js_data_string = generate_js_datastring(dates, inps.dygraph_file, num_date, ts)
 
@@ -460,7 +369,7 @@ def write_network_link_file(region_docs, ts_obj, box_list, lod, net_link_file):
     links_dir = os.path.splitext(net_link_file)[0]
     if not os.path.isdir(links_dir):
         os.makedirs(links_dir)
-    print("create KML region links directory: {}".format(os.path.basename(links_dir)))
+    print(f"create KML region links directory: {os.path.basename(links_dir)}")
 
     ## 2. Create root KML element and KML Document element
     kml = KML.kml()
@@ -468,7 +377,7 @@ def write_network_link_file(region_docs, ts_obj, box_list, lod, net_link_file):
 
     ## 3. Generate a new network link element for each region
     for num, (region_doc, box) in enumerate(zip(region_docs, box_list)):
-        region_kml_file = os.path.join(links_dir, "region_{}.kml".format(num))
+        region_kml_file = os.path.join(links_dir, f"region_{num}.kml")
 
         ## 3.1 Write the first region_document to a file and move it to the proper subdircetory
         kml_1 = KML.kml()
@@ -481,7 +390,7 @@ def write_network_link_file(region_docs, ts_obj, box_list, lod, net_link_file):
 
         ## 3.3 Define new NetworkLink element
         network_link = KML.NetworkLink(
-            KML.name('Region {}'.format(num)),
+            KML.name(f'Region {num}'),
             KML.visibility(1),
             KML.Region(
                 KML.Lod(
@@ -542,19 +451,25 @@ def create_network_link_element(net_link_file, ts_obj):
 
 def generate_network_link(inps, ts_obj, step, lod):
     """Generate the KML.NetworkLink element for one level of details, defined by step and lod"""
+
     net_link_file = os.path.join(inps.kml_data_dir, "{0}by{0}.kml".format(step))
 
     if step <= 0:
-        print('skip step = {}'.format(step))
+        print(f'skip step = {step}')
         return None
 
     elif step == inps.steps[-1]:
-        box_list = get_boxes4deforming_area(inps.vel_file, inps.mask_file,
-                                            step=inps.steps[-1],
-                                            min_percentage=inps.min_percentage,
-                                            cutoff=inps.cutoff)
+        box_list = get_boxes4deforming_area(
+            inps.vel_file, inps.mask_file,
+            step=inps.steps[-1],
+            min_perc=inps.min_percentage,
+            cutoff=inps.cutoff,
+        )
     else:
-        box_list = split_into_sub_boxes((ts_obj.length, ts_obj.width), step=step)
+        box_list = split_into_sub_boxes(
+            ds_shape=(ts_obj.length, ts_obj.width),
+            step=step,
+        )
 
     region_docs = create_kml_region_document(inps, box_list, ts_obj, step)
 
@@ -565,22 +480,23 @@ def generate_network_link(inps, ts_obj, step, lod):
     return net_link
 
 
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    inps.work_dir = os.path.abspath(os.path.dirname(inps.ts_file))
-    inps.cbar_file = os.path.join(inps.work_dir, 'google_earth_cbar.png')
-    inps.star_file = os.path.join(inps.work_dir, "star.png")
-    inps.dot_file = os.path.join(inps.work_dir, "shaded_dot.png")
-    inps.dygraph_file = os.path.join(inps.work_dir, "dygraph-combined.js")
-    inps.kml_data_dir = os.path.join(inps.work_dir, 'kml_data')
+######################################################################################
+def save_kmz_timeseries(inps):
 
-    ## Define file names
+    # resource file paths
+    inps.work_dir = os.path.abspath(os.path.dirname(inps.ts_file))
+    inps.cbar_file = os.path.join(inps.work_dir, "google_earth_cbar.png")
+    inps.star_file = os.path.join(inps.work_dir, "star.png")
+    inps.dot_file  = os.path.join(inps.work_dir, "shaded_dot.png")
+    inps.dygraph_file = os.path.join(inps.work_dir, "dygraph-combined.js")
+    inps.kml_data_dir = os.path.join(inps.work_dir, "kml_data")
+
     if inps.outfile:
-        inps.outfile_base = os.path.splitext(os.path.basename(inps.outfile))[0]
+        fbase = os.path.splitext(os.path.basename(inps.outfile))[0]
     else:
-        inps.outfile_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
-    kml_root_file = os.path.join(inps.work_dir, '{}_root.kml'.format(inps.outfile_base))
-    kmz_file = os.path.join(inps.work_dir, '{}.kmz'.format(inps.outfile_base))
+        fbase = pp.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
+    root_file = os.path.join(inps.work_dir, f"{fbase}_root.kml")
+    kmz_file = os.path.join(inps.work_dir, f"{fbase}.kmz")
 
     ## read data
     ts_obj = timeseries(inps.ts_file)
@@ -588,14 +504,16 @@ def main(iargs=None):
     length, width = ts_obj.length, ts_obj.width
     inps.metadata = ts_obj.metadata
     lats, lons = ut.get_lat_lon(ts_obj.metadata)
-    print('input data shape in row/col: {}/{}'.format(length, width))
+    print(f'input data shape in row/col: {length}/{width}')
 
     vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
-    # Set min/max velocity for colormap
-    if inps.vlim is None:
-        inps.vlim = [np.nanmin(vel), np.nanmax(vel)]
+
+    # Set vmin/max and colormap
+    inps.vlim = inps.vlim if inps.vlim is not None else [np.nanmin(vel), np.nanmax(vel)]
     if inps.wrap:
-        print('re-wrapping data to {} cm/year for color coding'.format(inps.vlim))
+        print(f're-wrapping data to {inps.vlim} cm/year for color coding')
+    inps.colormap = pp.ColormapExt(inps.cmap_name).colormap
+
 
     ##--------- Create root KML file with network links to data KML files --------------##
     kml_root_doc = KML.Document()
@@ -603,9 +521,9 @@ def main(iargs=None):
     # 1 Create Overlay element for colorbar
     cbar_overlay = save_kmz.generate_cbar_element(
         cbar_file=inps.cbar_file,
+        cmap=inps.colormap,
         vmin=inps.vlim[0],
         vmax=inps.vlim[1],
-        cmap=inps.colormap,
     )
     kml_root_doc.append(cbar_overlay)
 
@@ -619,9 +537,12 @@ def main(iargs=None):
     # 3 Create data folder to contain actual data elements
     data_folder = KML.Folder(KML.name("Data"))
     for i, step in enumerate(inps.steps):
-        net_link = generate_network_link(inps, ts_obj,
-                                         step=step,
-                                         lod=(inps.lods[i], inps.lods[i+1]))
+        net_link = generate_network_link(
+            inps,
+            ts_obj,
+            step=step,
+            lod=(inps.lods[i], inps.lods[i+1]),
+        )
         if net_link is not None:
             data_folder.append(net_link)
     kml_root_doc.append(data_folder)
@@ -629,10 +550,10 @@ def main(iargs=None):
 
     ##---------------------------- Write root KML file ------------------------------##
     print('-'*30)
-    print('writing ' + kml_root_file)
+    print(f'writing {root_file}')
     kml_root = KML.kml()
     kml_root.append(kml_root_doc)
-    with open(kml_root_file, 'w') as f:
+    with open(root_file, 'w') as f:
         f.write(etree.tostring(kml_root, pretty_print=True).decode('utf-8'))
 
     ## Copy auxiliary files
@@ -640,7 +561,7 @@ def main(iargs=None):
     for fname in [inps.star_file, inps.dot_file, inps.dygraph_file]:
         src_file = os.path.join(res_dir, os.path.basename(fname))
         shutil.copy2(src_file, inps.work_dir)
-        print("copy {} to the local directory".format(src_file))
+        print(f"copy {src_file} to the local directory")
 
     ## Generate KMZ file
     # 1) go to the directory of kmz file
@@ -650,7 +571,7 @@ def main(iargs=None):
     # 2) zip all data files
     with ZipFile(kmz_file, 'w') as fz:
         kml_data_files = get_all_file_paths(inps.kml_data_dir)
-        for fname in [kml_root_file, 
+        for fname in [root_file,
                       inps.cbar_file,
                       inps.dygraph_file,
                       inps.dot_file,
@@ -663,12 +584,8 @@ def main(iargs=None):
 
     # 3) go back to the running directory
     os.chdir(run_dir)
-    print('merged all files to {}'.format(kmz_file))
+    print(f'merged all files to {kmz_file}')
     print('Done.')
-    print('Open {} in Google Earth and play!'.format(kmz_file))
+    print(f'Open {kmz_file} in Google Earth and play!')
+
     return
-
-
-######################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

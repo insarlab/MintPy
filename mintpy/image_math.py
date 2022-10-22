@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,41 +6,10 @@
 
 
 import os
-import sys
-import argparse
+
 import numpy as np
+
 from mintpy.utils import readfile, writefile
-
-
-#######################################################################################
-EXAMPLE = """example:
-  image_math.py  velocity.h5            '+'  0.5
-  image_math.py  geo_080212_101120.cor  '-'  0.2
-  image_math.py  timeseries.h5          '*'  1.5
-  image_math.py  velocity.h5            '/'  2.0
-  image_math.py  velocity.h5            '^'  2.0
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', help='input file')
-    parser.add_argument('-o', '--output', dest='outfile',
-                        help='output file name.')
-    parser.add_argument('operator', choices=[
-                        '+', '-', '*', '/', '^'], help='mathmatical operator')
-    parser.add_argument('operand', metavar='VALUE', type=float,
-                        help='value to be operated with input file')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
 
 
 #######################################################################################
@@ -68,7 +36,7 @@ def file_operation(fname, operator, operand, out_file=None):
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     print('input is '+k+' file: '+fname)
-    print('operation: file %s %f' % (operator, operand))
+    print(f'operation: file {operator} {operand:f}')
 
     # default output filename
     if not out_file:
@@ -93,19 +61,5 @@ def file_operation(fname, operator, operand, out_file=None):
         data = data_operation(data, operator, operand)
         dsDict[dsName] = data
     writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fname)
+
     return out_file
-
-
-#######################################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-
-    inps.outfile = file_operation(inps.file, inps.operator, inps.operand, inps.outfile)
-
-    print('Done.')
-    return inps.outfile
-
-
-#######################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

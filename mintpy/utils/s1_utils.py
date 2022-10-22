@@ -8,27 +8,33 @@
 
 
 import os
+import re
+
 import numpy as np
+
+from mintpy.objects import timeseries
 from mintpy.utils import ptime, time_func
 
 
-def estimate_S1AB_bias(mintpy_dir, dates, ts_dis):
+def estimate_s1ab_bias(mintpy_dir, ts_dis, safe_list_file=None):
     """Estimate the bias between Sentinel-1 A and B.
-    Parameters: mintpy_dir - str, path of the mintpy working directory
-                dates      - list of datetime.datetime objects
-                ts_dis     - 2D np.ndarray in size of (num_date, num_pixel) in float32
-    Returns:    bias       - 1D np.ndarray in size of (num_pixel) in float32
-                flagA/B    - 1D np.ndarray in size of (num_date) in bool
-                dates_fit  - list of datetime.datetime objects
-                ts_fitA/B  - 1D np.ndarray in size of (num_date_fit) in float32
+    Parameters: mintpy_dir     - str, path of the mintpy working directory
+                ts_dis         - 2D np.ndarray in size of (num_date, num_pixel) in float32
+                safe_list_file - str, path of the SAFE_files.txt file
+    Returns:    bias           - 1D np.ndarray in size of (num_pixel) in float32
+                flagA/B        - 1D np.ndarray in size of (num_date) in bool
+                dates_fit      - list of datetime.datetime objects
+                ts_fitA/B      - 2D np.ndarray in size of (num_date_fit, num_pixel) in float32
     """
-    num_date = len(dates)
-    ts_dis = ts_dis.reshape(num_date, -1)
 
     # dates/flags for S1A/B
-    date_listA = np.loadtxt(os.path.join(mintpy_dir, 'S1A_date.txt'), dtype=str).tolist()
-    date_listB = np.loadtxt(os.path.join(mintpy_dir, 'S1B_date.txt'), dtype=str).tolist()
+    (s1a_date_list_file,
+     s1b_date_list_file) = get_s1ab_date_list_file(mintpy_dir, safe_list_file, print_msg=False)
+    date_listA = np.loadtxt(s1a_date_list_file, dtype=str).tolist()
+    date_listB = np.loadtxt(s1b_date_list_file, dtype=str).tolist()
     date_list = sorted(date_listA + date_listB)
+    num_date = len(date_list)
+
     min_date = date_listB[0]
     flagA = np.array([x in date_listA and x >= min_date for x in date_list], dtype=np.bool_)
     flagB = np.array([x in date_listB and x >= min_date for x in date_list], dtype=np.bool_)
@@ -36,7 +42,15 @@ def estimate_S1AB_bias(mintpy_dir, dates, ts_dis):
     date_listA = np.array(date_list)[flagA].tolist()
     date_listB = np.array(date_list)[flagB].tolist()
 
+    if not date_listA or not date_listB:
+        sname = 'S1A' if not date_listA else 'S1B'
+        msg = f'WARNING: NO {sname} acquisitions in the time series, thus,'
+        msg += ' can NOT estimate S1A/B bias from it.'
+        print(msg)
+        return None, flagA, flagB, None, None, None
+
     # fit
+    ts_dis = ts_dis.reshape(num_date, -1)
     model = dict(polynomial=1)
     mA = time_func.estimate_time_func(model, date_listA, ts_dis[flagA, :], ref_date=date_listA[0])[1]
     mB = time_func.estimate_time_func(model, date_listB, ts_dis[flagB, :], ref_date=date_listB[0])[1]
@@ -50,7 +64,100 @@ def estimate_S1AB_bias(mintpy_dir, dates, ts_dis):
     ts_fitB = np.matmul(GB_fit, mB)
     bias = np.median(ts_fitB - ts_fitA, axis=0)
 
+    # ignore zero bias values
+    bias[bias == 0] = np.nan
+
     return bias, flagA, flagB, dates_fit, ts_fitA, ts_fitB
+
+
+def get_s1ab_date_list_file(mintpy_dir, safe_list_file=None, print_msg=True):
+    """Get (and generate if not exist) the date list file of S1A/B.
+    Parameters: mintpy_dir           - str, path of mintpy working directory
+                safe_list_file       - str, path of SAFE_files.txt file
+    Returns:    s1a/b_date_list_file - str, path of S1A/B_date.txt file
+    """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+    mintpy_dir = os.path.abspath(mintpy_dir)
+    s1a_date_list_file = os.path.join(mintpy_dir, 'S1A_date.txt')
+    s1b_date_list_file = os.path.join(mintpy_dir, 'S1B_date.txt')
+    if not os.path.isfile(s1a_date_list_file):
+        # get SAFE list filename
+        if not safe_list_file:
+            safe_list_file = os.path.join(os.path.dirname(mintpy_dir), 'SAFE_files.txt')
+        if not os.path.isfile(safe_list_file):
+            msg = f'Required file NOT found in: {safe_list_file}!'
+            msg += '\nIt can be generated as: "ls ./SLC > SAFE_files.txt".'
+            raise FileNotFoundError(msg)
+
+        # get date/sensor_list
+        vprint('\nread sensor info from file:', safe_list_file)
+        ts_files = [os.path.join(mintpy_dir, f'timeseries{x}.h5') for x in ['', 'Rg', 'Az']]
+        ts_file = [x for x in ts_files if os.path.isfile(x)][0]
+        date_list = timeseries(ts_file).get_date_list()
+        sensor_list = safe_list_file2sensor_list(safe_list_file, date_list, print_msg=False)[0]
+
+        # write to text file for easy access by other scripts
+        s1a_date_list = [i for i, j in zip(date_list, sensor_list) if j == 'S1A']
+        s1b_date_list = [i for i, j in zip(date_list, sensor_list) if j == 'S1B']
+        np.savetxt(s1a_date_list_file, np.array(s1a_date_list).reshape(-1,1), fmt='%s')
+        vprint(f'write file: {s1a_date_list_file}')
+        if len(s1b_date_list) > 0:
+            np.savetxt(s1b_date_list_file, np.array(s1b_date_list).reshape(-1,1), fmt='%s')
+            vprint(f'write file: {s1b_date_list_file}')
+    else:
+        vprint(f'S1A/B_date.txt files exist in: {mintpy_dir}.')
+
+    return s1a_date_list_file, s1b_date_list_file
+
+
+def safe_list_file2sensor_list(safe_list_file, date_list=None, print_msg=True):
+    """Get list of Sentinel-1 sensor names from txt file with SAFE file names.
+
+    Parameters: safe_list_file - str, path of the text file with Sentinel-1 SAFE file path
+                                 E.g. SAFE_files.txt
+                date_list      - list of str in YYYYMMDD format, reference list of dates
+    Returns:    sensor_list    - list of str in S1A or S1B
+                date_list      - list of str in YYYYMMDD format
+    Example:
+        date_list = timeseries('timeseries.h5').get_date_list()
+        sensor_list = safe_list_file2sensor_list('../SAFE_files.txt',
+                                                 date_list=date_list,
+                                                 print_msg=False)[0]
+        s1b_dates = [i for i, j in zip(date_list, sensor_list) if j == 'S1B']
+        np.savetxt('S1B_date.txt', np.array(s1b_dates).reshape(-1,1), fmt='%s')
+    """
+    # read txt file
+    fc = np.loadtxt(safe_list_file, dtype=str).astype(str).tolist()
+    safe_fnames = [os.path.basename(i) for i in fc]
+
+    # get date_list
+    date_list_out = [re.findall(r'_\d{8}T', i)[0][1:-1] for i in safe_fnames]
+    date_list_out = sorted(list(set(date_list_out)))
+
+    # get sensor_list
+    sensor_list = []
+    for d in date_list_out:
+        safe_fname = [i for i in safe_fnames if d in i][0]
+        sensor = safe_fname.split('_')[0]
+        sensor_list.append(sensor)
+
+    # update against date_list_out
+    if date_list is not None:
+        # check possible missing dates
+        dates_missing = [i for i in date_list if i not in date_list_out]
+        if dates_missing:
+            raise ValueError(f'The following dates are missing:\n{dates_missing}')
+
+        # prune dates not-needed
+        flag = np.array([i in date_list for i in date_list_out], dtype=np.bool_)
+        if np.sum(flag) > 0:
+            sensor_list = np.array(sensor_list)[flag].tolist()
+            dates_removed = np.array(date_list_out)[~flag].tolist()
+            date_list_out = np.array(date_list_out)[flag].tolist()
+            if print_msg:
+                print(f'The following dates are not needed and removed:\n{dates_removed}')
+
+    return sensor_list, date_list
 
 
 def get_subswath_masks(flag, cut_overlap_in_half=False):
@@ -108,7 +215,3 @@ def get_subswath_masks(flag, cut_overlap_in_half=False):
     mask2[mask3==1] = 0
 
     return mask1, mask2, mask3, box1, box2, box3
-
-
-
-

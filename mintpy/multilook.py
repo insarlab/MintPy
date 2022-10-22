@@ -1,75 +1,22 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Heresh Fattahi, Zhang Yunjun, 2013               #
+# Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 
 
+import logging
 import os
-import sys
-import argparse
 import warnings
+
 import h5py
 import numpy as np
 
+from mintpy.utils import attribute as attr, readfile, writefile
+
 # suppress numpy.RuntimeWarning message
-import logging
 np_logger = logging.getLogger('numpy')
 np_logger.setLevel(logging.WARNING)
-
-from mintpy.utils import (
-    readfile,
-    writefile,
-    utils1 as ut,
-    attribute as attr,
-)
-
-
-##################################################################################################
-EXAMPLE = """example:
-  multilook.py  velocity.h5  -r 15 -a 15
-  multilook.py  srtm30m.dem  -r 10 -a 10  -o srtm30m_300m.dem
-
-  # Ignore / skip marginal pixels
-  multilook.py ../../geom_reference/hgt.rdr.full -r 300 -a 100 --margin 58 58 58 58 -o hgt.rdr
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Multilook.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', nargs='+', help='File(s) to multilook')
-    parser.add_argument('-r','--range','-x', dest='lks_x', type=int, default=1,
-                        help='number of multilooking in range  /x direction (default: %(default)s).')
-    parser.add_argument('-a','--azimuth','-y', dest='lks_y', type=int, default=1,
-                        help='number of multilooking in azimuth/y direction (default: %(default)s).')
-    parser.add_argument('-o', '--outfile',
-                        help='Output file name. Disabled when more than 1 input files')
-    parser.add_argument('-m','--method', dest='method', type=str, default='average', choices=['average', 'nearest'],
-                        help='downsampling method (default: %(default)s) \n'
-                             'e.g. nearest for geometry, average for observations')
-    parser.add_argument('--margin', dest='margin', type=int, nargs=4, metavar=('TOP','BOTTOM','LEFT','RIGHT'),
-                        default=[0,0,0,0], help='number of pixels on the margin to skip, (default: %(default)s).')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    inps.file = ut.get_file_list(inps.file)
-
-    # check 1 - num of multilooks
-    if inps.lks_x == 1 and inps.lks_y == 1:
-        raise SystemExit('ERROR: no multilooking specified: lks_x/y=1!')
-
-    # check 2 - output file name
-    if len(inps.file) > 1 and inps.outfile:
-        inps.outfile = None
-        print('more than one file is input, disable custom output filename.')
-    return inps
 
 
 ######################################## Sub Functions ############################################
@@ -110,8 +57,8 @@ def multilook_data(data, lks_y=1, lks_x=1, method='mean'):
     """
     method_list = ['mean', 'median', 'nearest']
     if method not in method_list:
-        msg = 'un-supported multilook method: {}. '.format(method)
-        msg += 'Available methods: {}'.format(method_list)
+        msg = f'un-supported multilook method: {method}. '
+        msg += f'Available methods: {method_list}'
         raise ValueError(msg)
 
     # do nothing if no multilook is applied
@@ -186,7 +133,7 @@ def multilook_data(data, lks_y=1, lks_x=1, method='mean'):
     return coarse_data
 
 
-def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=[0,0,0,0], max_memory=4):
+def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', margin=[0,0,0,0], max_memory=4):
     """ Multilook input file
     Parameters: infile - str, path of input file to be multilooked.
                 lks_y  - int, number of looks in y / row direction.
@@ -207,12 +154,12 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
     print('multilooking {} {} file: {}'.format(atr['PROCESSOR'], k, infile))
     print('number of looks in y / azimuth direction: %d' % lks_y)
     print('number of looks in x / range   direction: %d' % lks_x)
-    print('multilook method: {}'.format(method))
+    print(f'multilook method: {method}')
 
     # margin --> box
     if margin is not [0,0,0,0]:    # top, bottom, left, right
         box = (margin[2], margin[0], width - margin[3], length - margin[1])
-        print('number of pixels to skip in top/bottom/left/right boundaries: {}'.format(margin))
+        print(f'number of pixels to skip in top/bottom/left/right boundaries: {margin}')
     else:
         box = (0, 0, width, length)
 
@@ -220,7 +167,8 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
     ext = os.path.splitext(infile)[1]
     if not outfile:
         if os.getcwd() == os.path.dirname(os.path.abspath(infile)):
-            outfile = os.path.splitext(infile)[0]+'_'+str(lks_y)+'alks_'+str(lks_x)+'rlks'+ext
+            suffix = f'_{lks_y}alks_{lks_x}rlks'
+            outfile = os.path.splitext(infile)[0] + suffix + ext
         else:
             outfile = os.path.basename(infile)
 
@@ -232,7 +180,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
 
     # read source data and multilooking
     dsNames = readfile.get_dataset_list(infile)
-    maxDigit = max([len(i) for i in dsNames])
+    maxDigit = max(len(i) for i in dsNames)
     dsDict = dict()
     for dsName in dsNames:
         print('multilooking {d:<{w}} from {f} ...'.format(
@@ -262,7 +210,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
                      int((r0     - box[1]) / lks_y),
                      int((box[2] - box[0]) / lks_x),
                      int((r1     - box[1]) / lks_y))
-            print('box: {}'.format(box_o))
+            print(f'box: {box_o}')
 
             # read / multilook
             if method == 'nearest':
@@ -279,7 +227,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
                                      box=box_i,
                                      print_msg=False)[0]
 
-                data = multilook_data(data, lks_y, lks_x)
+                data = multilook_data(data, lks_y, lks_x, method=method)
 
             # output block
             if data.ndim == 3:
@@ -317,24 +265,3 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
             writefile.write_isce_xml(atr, outfile)
 
     return outfile
-
-
-##################################################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-
-    for infile in inps.file:
-        multilook_file(infile,
-                       lks_y=inps.lks_y,
-                       lks_x=inps.lks_x,
-                       outfile=inps.outfile,
-                       method=inps.method,
-                       margin=inps.margin)
-
-    print('Done.')
-    return
-
-
-###################################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

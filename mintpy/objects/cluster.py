@@ -8,12 +8,10 @@
 #     from mintpy.objects import cluster
 
 
-import os
-import time
 import glob
+import os
 import shutil
-import numpy as np
-
+import time
 
 # supported / tested clusters
 CLUSTER_LIST = ['lsf', 'pbs', 'slurm', 'local']
@@ -36,6 +34,7 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
     :return: sub_boxes: list(list(4 int)), the splited sub boxes
     """
+    import numpy as np
 
     dimension = dimension.lower()
     if num_split <= 1:
@@ -45,7 +44,7 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     x0, y0, x1, y1 = box
     length, width = y1 - y0, x1 - x0
 
-    # calc step 
+    # calc step
     if dimension == 'y':
         dim_size = length
     else:
@@ -70,8 +69,8 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
             sub_boxes.append([c0, y0, c1, y1])
 
     if print_msg:
-        print('split along {} dimension ({:d}) into {:d} boxes'.format(dimension, dim_size, num_split))
-        print('    with each box up to {:d} in {} dimension'.format(step, dimension))
+        print(f'split along {dimension} dimension ({dim_size:d}) into {num_split:d} boxes')
+        print(f'    with each box up to {step:d} in {dimension} dimension')
 
     return sub_boxes
 
@@ -88,7 +87,7 @@ def set_num_threads(num_threads=None, print_msg=True):
 
     # grab the original number of threads
     if print_msg:
-        print('save the original settings of {}'.format(NUM_THREADS_ENV_LIST))
+        print(f'save the original settings of {NUM_THREADS_ENV_LIST}')
     num_threads_dict = {}
     for key in NUM_THREADS_ENV_LIST:
         num_threads_dict[key] = os.environ.get(key, None)
@@ -99,7 +98,7 @@ def set_num_threads(num_threads=None, print_msg=True):
         for key in NUM_THREADS_ENV_LIST:
             os.environ[key] = num_threads
             if print_msg:
-                print('set {} = {}'.format(key, num_threads))
+                print(f'set {key} = {num_threads}')
 
     return num_threads_dict
 
@@ -107,17 +106,17 @@ def set_num_threads(num_threads=None, print_msg=True):
 def roll_back_num_threads(num_threads_dict, print_msg=True):
     """Set back the number of threads for all environmental variables."""
     if print_msg:
-        print('roll back to the original settings of {}'.format(NUM_THREADS_ENV_LIST))
+        print(f'roll back to the original settings of {NUM_THREADS_ENV_LIST}')
     for key, value in num_threads_dict.items():
         if key in os.environ.keys():
             if value is None:
                 os.environ.pop(key)
                 if print_msg:
-                    print('remove env variable {}'.format(key))
+                    print(f'remove env variable {key}')
             else:
                 os.environ[key] = value
                 if print_msg:
-                    print('set {} = {}'.format(key, value))
+                    print(f'set {key} = {value}')
     return
 
 
@@ -164,9 +163,9 @@ class DaskCluster:
         self.cluster_kwargs['config_name'] = self.config_name
 
         ## printout message
-        print("input Dask cluster type: {}".format(self.cluster_type))
+        print(f"input Dask cluster type: {self.cluster_type}")
         if self.config_name is not None:
-            print("input Dask config name: {}".format(self.config_name))
+            print(f"input Dask config name: {self.config_name}")
 
         ## intitial value
         self.cluster = None
@@ -201,8 +200,8 @@ class DaskCluster:
                 self.cluster = dask_jobqueue.SLURMCluster(**self.cluster_kwargs)
 
             else:
-                msg = 'un-recognized input cluster: {}'.format(self.cluster_type)
-                msg += '\nsupported clusters: {}'.format(CLUSTER_LIST)
+                msg = f'un-recognized input cluster: {self.cluster_type}'
+                msg += f'\nsupported clusters: {CLUSTER_LIST}'
                 raise ValueError(msg)
 
             # show dask cluster job script for reference
@@ -234,10 +233,10 @@ class DaskCluster:
         box = func_data["box"]
         sub_boxes = split_box2sub_boxes(box, num_split=self.num_worker, dimension='x', print_msg=False)
         self.num_worker = len(sub_boxes)
-        print('split patch into {} sub boxes in x direction for workers to process'.format(self.num_worker))
+        print(f'split patch into {self.num_worker} sub boxes in x direction for workers to process')
 
         # start a bunch of workers from the cluster
-        print('scale Dask cluster to {} workers'.format(self.num_worker))
+        print(f'scale Dask cluster to {self.num_worker} workers')
         self.cluster.scale(self.num_worker)
 
         print('initiate Dask client')
@@ -259,7 +258,7 @@ class DaskCluster:
 
         :param func: function, a python function to run in parallel
         :param func_data: dict, a dictionary of the argument to pass to the function
-        :param sub_boxes: list(np.nd.array), list of boxes to be computed in parallel
+        :param sub_boxes: list(np.ndarray), list of boxes to be computed in parallel
 
         :return futures: list(dask.Future), list of futures representing future dask worker calculations
         :return submission_time: time, the time of submission of the dask workers (used to determine worker
@@ -269,7 +268,7 @@ class DaskCluster:
         submission_time = time.time()
         futures = []
         for i, sub_box in enumerate(sub_boxes):
-            print('submit a job to the worker for sub box {}: {}'.format(i, sub_box))
+            print(f'submit a job to the worker for sub box {i}: {sub_box}')
             func_data['box'] = sub_box
 
             # David: I haven't played with fussing with `retries`, however sometimes a future fails
@@ -302,7 +301,7 @@ class DaskCluster:
             # message
             num_future += 1
             sub_t = time.time() - submission_time
-            print("FUTURE #{} complete. Time used: {:.0f} seconds".format(num_future, sub_t))
+            print(f"\nFUTURE #{num_future} complete. Time used: {sub_t:.0f} seconds")
 
             # catch result - sub_box
             # and convert the abosulte sub_box into local col/row start/end relative to the primary box
@@ -328,7 +327,7 @@ class DaskCluster:
                     elif num_dim == 2:
                         results[i][y0:y1, x0:x1] = sub_result
                     else:
-                        msg = "worker result has unexpected dimension: {}".format(num_dim)
+                        msg = f"worker result has unexpected dimension: {num_dim}"
                         msg += '\nit should be either 2 or 3 or 4!'
                         raise Exception(msg)
 
@@ -338,11 +337,13 @@ class DaskCluster:
     def close(self):
         """Close connections to dask client and cluster and moves dask output/error files. """
 
-        self.cluster.close()
-        print('close dask cluster')
-
+        # close client before cluster -> less likely to have the CancelledError
+        # https://github.com/dask/distributed/issues/2273
         self.client.close()
         print('close dask client')
+
+        self.cluster.close()
+        print('close dask cluster')
 
         # move *.o/.e files produced by dask in stdout/stderr
         self.move_dask_stdout_stderr_files()
@@ -378,11 +379,11 @@ class DaskCluster:
 
                 # set num_worker to the number of cores
                 num_worker = str(num_core)
-                print('translate {} to {}'.format(msg, num_worker))
+                print(f'translate {msg} to {num_worker}')
 
             elif num_worker.endswith('%'):
                 num_worker = int(num_core * float(num_worker[:-1]) / 100)
-                print('translate {} to {}'.format(msg, num_worker))
+                print(f'translate {msg} to {num_worker}')
                 if num_worker < 1 or num_worker >= num_core:
                     raise ValueError('Invalid numWorker percentage!')
 
@@ -393,13 +394,13 @@ class DaskCluster:
             # then we assume that the user is not aware of the available resources
             # and use max(num_core/2, 1) instead to be conservative.
             if num_worker > num_core:
-                print('\nWARNING: input number of worker: {} > available cores: {}'.format(num_worker, num_core))
+                print(f'\nWARNING: input number of worker: {num_worker} > available cores: {num_core}')
                 num_worker = max(int(num_core / 2), 1)
-                print('change number of worker to {} and continue\n'.format(num_worker))
+                print(f'change number of worker to {num_worker} and continue\n')
 
         else:
             if num_worker == 'all':
-                msg = 'numWorker = all is NOT supported for cluster type: {}'.format(cluster_type)
+                msg = f'numWorker = all is NOT supported for cluster type: {cluster_type}'
                 raise ValueError(msg)
             num_worker = int(num_worker)
 
@@ -429,8 +430,8 @@ class DaskCluster:
         config_names = list(dask.config.get('jobqueue').keys())
         if self.config_name not in config_names:
             config_location = dask.config.get('config')
-            msg = 'Dask configuration "{}" was not found in {}'.format(self.config_name, config_location)
-            msg += '\nFalling back to default config name: "{}"'.format(self.cluster_type)
+            msg = f'Dask configuration "{self.config_name}" was not found in {config_location}'
+            msg += f'\nFalling back to default config name: "{self.cluster_type}"'
             print(msg)
             self.config_name = self.cluster_type
 
@@ -461,4 +462,3 @@ class DaskCluster:
             shutil.move(item, stderr_folder)
 
 ############################## End of DaskCluster class ####################################
-

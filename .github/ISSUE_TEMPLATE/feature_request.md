@@ -29,10 +29,9 @@ assignees: ''
 <!-- Add any other context about the feature request here. -->
 
 
-**Are you willing to help implement and maintain this feature?** 
+**Are you willing to help implement and maintain this feature?**
 
 - [ ] Yes
 - [ ] No
 
 <!-- Every feature we add is code that we will have to maintain and keep updated. This takes a lot of effort. If you are willing to be involved in the project and help maintain your feature, it will make it easier for us to accept it. -->
-

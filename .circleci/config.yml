@@ -38,7 +38,7 @@ jobs:
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             # install dependencies and source code
             source activate root
-            mamba install --verbose --yes gdal">=3" --file ${MINTPY_HOME}/docs/requirements.txt
+            mamba install --verbose --yes gdal">=3" --file ${MINTPY_HOME}/requirements.txt
             python -m pip install ${MINTPY_HOME}
             # test installation
             smallbaselineApp.py -v
@@ -49,35 +49,36 @@ jobs:
           name: Testing MintPy Python Modules
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
-            ${MINTPY_HOME}/tests/test_asc_desc2horz_vert.py
+            ${MINTPY_HOME}/tests/asc_desc2horz_vert.py
+            ${MINTPY_HOME}/tests/objects/ionex.py
 
       - run:
           name: Testing MintPy on Example Dataset 1/4 - FernandinaSenDT128 (ISCE/topsStack)
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
+            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
 
       - run:
           name: Testing MintPy on Example Dataset 2/4 - SanFranSenDT42 (ARIA)
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
+            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
 
       - run:
           name: Testing MintPy on Example Dataset 3/4 - WellsEnvD2T399 (Gamma)
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
+            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
       - run:
           name: Testing MintPy on Example Dataset 4/4 - WCapeSenAT29 (SNAP)
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
+            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
 
 workflows:
   version: 2

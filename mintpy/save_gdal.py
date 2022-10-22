@@ -1,18 +1,16 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Forrest Williams, Jun 2020                       #
+# Author: Forrest Williams, Zhang Yunjun, Jun 2020         #
 ############################################################
 
 
 import os
-import sys
-import argparse
-import numpy as np
-from osgeo import gdal, osr
-from mintpy.utils import readfile, utils0 as ut, plot as pp
+import warnings
 
+from osgeo import gdal, osr
+
+from mintpy.utils import plot as pp, readfile, utils0 as ut
 
 # link: https://gdal.org/drivers/raster/index.html
 GDAL_DRIVER2EXT = {
@@ -25,121 +23,95 @@ GDAL_DRIVER2EXT = {
 }
 
 
-EXAMPLE = """example:
-  save_gdal.py geo/geo_velocity.h5 
-  save_gdal.py geo/geo_timeseries_ERA5_demErr.h5 -d 20200505_20200517 --of ENVI
-  save_gdal.py geo/geo_ifgramStack.h5 -d unwrapPhase-20101120_20110220 --of ISCE
-  save_gdal.py geo/geo_ifgramStack.h5 -d coherence-20101120_20110220 --of ISCE
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generate GDAL raster from MintPy h5 file.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', help='file to be converted, in geo coordinate.')
-    parser.add_argument('-d', '--dset', '--dataset', dest='dset',
-                        help='date of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-o', '--output', dest='outfile',
-                        help='output file base name. Extension is fixed by GDAL driver')
-    parser.add_argument('--of', '--out-format', '--output-format', dest='out_format', default='GTiff',
-                        help='file format as defined by GDAL driver name, e.g. GTiff, ENVI, default: %(default)s\n'
-                             'GDAL driver names can be found at https://gdal.org/drivers/raster/index.html')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    atr = readfile.read_attribute(inps.file)
-    # Check if file in geo coord
-    if 'X_FIRST' not in atr.keys():
-        raise Exception('ERROR: Input file is not geocoded.')
-
-    return inps
-
-
 ##############################################################################
-def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep, epsg=4326):
+def array2raster(array, out_file, transform, epsg, out_fmt='GTiff'):
+    """Write 2D matrix into gdal raster.
 
-    # transform info
-    cols = array.shape[1]
-    rows = array.shape[0]
-    originX = rasterOrigin[0]
-    originY = rasterOrigin[1]
-    transform = (originX, xStep, 0, originY, 0, yStep)
+    Parameters: array     - 2D np.ndarray
+                out_file  - str, output file path
+                transform - tuple(float), geotransform to connect image- to the geo-coordinates.
+                            https://gdal.org/tutorials/geotransforms_tut.html
+                epsg      - int, EPSG code for the Spatial Reference System (SRS)
+                out_fmt   - str, gdal driver name
+    Returns:    out_file  - str, output file path
+    """
 
-    # write
-    driver = gdal.GetDriverByName(rasterFormat)
-    print('initiate GDAL driver: {}'.format(driver.LongName))
+    driver = gdal.GetDriverByName(out_fmt)
+    print(f'initiate GDAL driver: {driver.LongName}')
 
+    rows, cols = array.shape
     print('create raster band')
-    print('raster row / column number: {}, {}'.format(rows, cols))
-    print('raster transform info: {}'.format(transform))
-    outRaster = driver.Create(rasterName, cols, rows, 1, gdal.GDT_Float32)
-    outRaster.SetGeoTransform(transform)
+    print(f'raster row / column number: {rows}, {cols}')
+    print(f'raster transform info: {transform}')
+    raster = driver.Create(out_file, cols, rows, 1, gdal.GDT_Float32)
+    raster.SetGeoTransform(transform)
 
     print('write data to raster band')
-    outband = outRaster.GetRasterBand(1)
-    outband.WriteArray(array)
+    band = raster.GetRasterBand(1)
+    band.WriteArray(array)
 
-    print('set projection as: EPSG {}'.format(epsg))
-    outRasterSRS = osr.SpatialReference()
-    outRasterSRS.ImportFromEPSG(epsg)
-    outRaster.SetProjection(outRasterSRS.ExportToWkt())
-    outband.FlushCache()
-    print('finished writing to {}'.format(rasterName))
+    print(f'set projection as: EPSG {epsg}')
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(epsg)
+    raster.SetProjection(srs.ExportToWkt())
 
-    return rasterName
+    band.FlushCache()
+    print(f'finished writing to {out_file}')
+
+    return out_file
 
 
-##############################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+def save_gdal(inps):
 
-    # check reference date
-    print('read metadata from file: {}'.format(inps.file))
-    attr = readfile.read_attribute(inps.file)
-    if attr['FILE_TYPE'] == 'timeseries' and inps.dset and '_' in inps.dset:
+    ## read data
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+
+    # grab ref_date from dset
+    if ftype == 'timeseries' and inps.dset and '_' in inps.dset:
         inps.ref_date, inps.dset = inps.dset.split('_')
     else:
         inps.ref_date = None
 
-    # read data
-    print('read data     from file: {}'.format(inps.file))
-    array, attr = readfile.read(inps.file, datasetName=inps.dset)
-    if attr['FILE_TYPE'] == 'timeseries' and inps.ref_date:
-        array -= readfile.read(inps.file, datasetName=inps.ref_date)[0]
+    ds_name = inps.dset if inps.dset else 'data'
+    print(f'read {ds_name} from file: {inps.file}')
+    data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
-    # output filename
+    if ftype == 'timeseries' and inps.ref_date:
+        print(f'read {inps.ref_date} from file: {inps.file}')
+        data -= readfile.read(inps.file, datasetName=inps.ref_date)[0]
+
+    ## prepare the output
+    # output file name
     if not inps.outfile:
-        fbase = pp.auto_figure_title(inps.file,
-                                     datasetNames=inps.dset,
-                                     inps_dict=vars(inps))
+        fbase = pp.auto_figure_title(inps.file, inps.dset, vars(inps))
         inps.outfile = fbase + GDAL_DRIVER2EXT.get(inps.out_format, '')
     else:
         inps.outfile = os.path.abspath(inps.outfile)
 
-    # coordinate info
-    rasterOrigin = (float(attr['X_FIRST']),float(attr['Y_FIRST']))
-    xStep = float(attr['X_STEP'])
-    yStep = float(attr['Y_STEP'])
-    kwargs = dict(xStep=xStep, yStep=yStep)
+    # geotransform
+    transform = (
+        float(atr['X_FIRST']), float(atr['X_STEP']), 0,
+        float(atr['Y_FIRST']), 0, float(atr['Y_STEP']),
+    )
 
-    epsg = attr.get('EPSG', None)
-    if not epsg and 'UTM_ZONE' in attr.keys():
-        epsg = ut.utm_zone2epsg_code(attr['UTM_ZONE'])
-    if epsg:
-        kwargs['epsg'] = int(epsg)
+    # epsg
+    if 'EPSG' in atr.keys():
+        epsg = int(atr['EPSG'])
+    elif 'UTM_ZONE' in atr.keys():
+        epsg = int(ut.utm_zone2epsg_code(atr['UTM_ZONE']))
+    else:
+        epsg = 4326
+        msg = 'No EPSG or UTM_ZONE metadata found! '
+        msg += 'Assume EPSG = 4326 (WGS84) and continue.'
+        warnings.warn(msg)
 
-    # convert array to raster
-    array2raster(array, inps.outfile, inps.out_format, rasterOrigin, **kwargs)
+    ## write gdal raster
+    array2raster(
+        data,
+        out_file=inps.outfile,
+        transform=transform,
+        epsg=epsg,
+        out_fmt=inps.out_format,
+    )
 
     return
-
-
-##############################################################################
-if __name__ == "__main__":
-    main(sys.argv[1:])

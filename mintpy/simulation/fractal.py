@@ -8,13 +8,14 @@
 # Ramon Hanssen, May 2000, available in the following website:
 #     http://doris.tudelft.nl/software/insarfractal.tar.gz
 # Reference:
-#   Hanssen, R. F. (2001), Radar interferometry: data interpretation 
+#   Hanssen, R. F. (2001), Radar interferometry: data interpretation
 # and error analysis, Kluwer Academic Pub, Dordrecht, Netherlands. Chap. 4.7.
 
 
 import os
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 try:
     import pyfftw
@@ -24,13 +25,13 @@ except ImportError:
 
 # speedup pyfftw
 NUM_THREADS = min(os.cpu_count(), 4)
-print('using {} threads for pyfftw computation.'.format(NUM_THREADS))
+print(f'using {NUM_THREADS} threads for pyfftw computation.')
 pyfftw.config.NUM_THREADS = NUM_THREADS
 
 
 def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
                           regime=(0.001, 0.999, 1.00), beta=(5./3., 8./3., 2./3.)):
-    """Simulate an isotropic 2D fractal surface with a power law behavior, which cooresponds with the 
+    """Simulate an isotropic 2D fractal surface with a power law behavior, which cooresponds with the
     [-5/3, -8/3, -2/3] power law.
 
     E.g. equation (4.7.28) from Hanssen (2001):
@@ -79,17 +80,17 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
     """
     beta+1 is used as beta, since, the power exponent
     is defined for a 1D slice of the 2D spectrum:
-    austin94: "Adler, 1981, shows that the surface profile 
+    austin94: "Adler, 1981, shows that the surface profile
       created by the intersection of a plane and a
-      2-D fractal surface is itself fractal with 
-      a fractal dimension equal to that of the 2D 
+      2-D fractal surface is itself fractal with
+      a fractal dimension equal to that of the 2D
       surface decreased by one.
     """
     beta += 1.
 
     """
     The power beta/2 is used because the power spectral
-    density is proportional to the amplitude squared 
+    density is proportional to the amplitude squared
     Here we work with the amplitude, instead of the power
     so we should take sqrt( k.^beta) = k.^(beta/2)  RH
     """
@@ -186,9 +187,9 @@ def get_power_spectral_density(data, resolution=60., freq0=1e-3, display=False, 
         # axis format
         ax.set_xlabel('Wavenumber [cycle/km]')
         ax.set_ylabel('Power '+r'$[cm^2]$')
-        msg = r'$f_0=$'+'{:.3f} '.format(freq0*1e3)+r'$km^{-1}$'
-        msg += '\n'+r'$p_0={:.1f}\/cm^2$'.format(p0*1e4)
-        msg += '\n'+r'$\beta={:.2f}$'.format(beta)
+        msg = r'$f_0=$'+f'{freq0*1e3:.3f} '+r'$km^{-1}$'
+        msg += '\n'+fr'$p_0={p0*1e4:.1f}\/cm^2$'
+        msg += '\n'+fr'$\beta={beta:.2f}$'
         ax.text(0.6, 0.55, msg, transform=ax.transAxes, fontsize=12)
         fig.tight_layout()
 
@@ -258,7 +259,7 @@ def power_slope(freq, psd, freq0=1e-3):
 
     # interpolate psd at reference frequency
     if freq0 < freq[0] or freq0 > freq[-1]:
-        raise ValueError('input frequency of interest {} is out of range ({}, {})'.format(freq0, freq[0], freq[-1]))
+        raise ValueError(f'input frequency of interest {freq0} is out of range ({freq[0]}, {freq[-1]})')
     position = np.interp(np.log10(freq0), logf, range(len(logf)))
     logp0 = np.interp(position, range(len(logp)), logp)
     p0 = np.power(10, logp0)
@@ -319,4 +320,3 @@ def recon_power_spectral_density(N, step, p0, beta, f0=1e-4):
     p = np.power(10, logp)
     f = f.flatten()
     return f, p
-

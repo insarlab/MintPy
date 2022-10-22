@@ -9,7 +9,24 @@
 
 import numpy as np
 from scipy import linalg
+
 from mintpy.utils import ptime
+
+MODEL_EXAMPLE = """time function configuration:
+    model = {
+        'polynomial' : 2,                    # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+        'periodic'   : [1.0, 0.5],           # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+        'stepDate'   : ['20061014'],         # list of str, date(s) in YYYYMMDD.
+        'exp'        : {'20181026': [60],    # dict, key for onset time in YYYYMMDD(THHMM) and value for char times in integer days.
+                        ...
+                        },
+        'log'        : {'20161231': [80],    # dict, key for onset time in YYYYMMDD(THHMM) and value for char times in integer days.
+                        '20190125': [100, 200],
+                        ...
+                        },
+        ...
+    }
+"""
 
 
 def estimate_time_func(model, date_list, dis_ts, ref_date=None, seconds=0):
@@ -18,19 +35,7 @@ def estimate_time_func(model, date_list, dis_ts, ref_date=None, seconds=0):
     Problem setup:
         Gm = d
 
-    Parameters: model     - dict of time functions, e.g.:
-                            {'polynomial' : 2,                    # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                             'periodic'   : [1.0, 0.5],           # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                             'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
-                             'exp'        : {'20181026': [60],    # dict, key for onset time in YYYYMMDD and value for char times in days.
-                                             ...
-                                            },
-                             'log'        : {'20161231': [80.5],  # dict, key for onset time in YYYYMMDD and value for char times in days.
-                                             '20190125': [100, 200],
-                                             ...
-                                            },
-                             ...
-                             }
+    Parameters: model     - dict, time functions config, e.g. {cfg}
                 date_list - list of str, dates in YYYYMMDD format
                 dis_ts    - 2D np.ndarray, displacement observation in size of (num_date, num_pixel)
                 ref_date  - reference date from date_list
@@ -38,7 +43,7 @@ def estimate_time_func(model, date_list, dis_ts, ref_date=None, seconds=0):
     Returns:    G         - 2D np.ndarray, design matrix           in size of (num_date, num_param)
                 m         - 2D np.ndarray, parameter solution      in size of (num_param, num_pixel)
                 e2        - 1D np.ndarray, sum of squared residual in size of (num_pixel,)
-    """
+    """.format(cfg=MODEL_EXAMPLE)
 
     G = get_design_matrix4time_func(date_list, model, ref_date=ref_date, seconds=seconds)
 
@@ -63,30 +68,135 @@ def estimate_time_func(model, date_list, dis_ts, ref_date=None, seconds=0):
     return G, m, e2
 
 
+def inps2model(inps, date_list=None, print_msg=True):
+    """Convert time function inputs from namespace (inps) into dict object.
+
+    Parameters: inps      - namespace, parsed time function inputs. E.g.:
+                            Namespace(
+                                date_list=['20141213', '20141225', ...]   # optional
+                                polynomial=1,
+                                periodic=[1.0, 0.5],
+                                stepDate=['20110311', '20120928T1733'],
+                                exp=[['20170910', '60', '200'], ['20171026', '200']],
+                                log=[['20170910', '60', '200'], ['20171026', '200']],
+                            )
+                date_list - list of str, date in YYYYMMDD(THHMM) format
+    Returns:    model     - dict, time function configuration, e.g. {cfg}
+    """.format(cfg=MODEL_EXAMPLE)
+
+    if not date_list:
+        if hasattr(inps, 'dateList'):
+            date_list = inps.date_list
+        else:
+            raise ValueError('date_list NOT given or found in inps!')
+
+    dmin, dmax = date_list[0], date_list[-1]
+    ymin = ptime.yyyymmdd2years(dmin)
+    ymax = ptime.yyyymmdd2years(dmax)
+
+    ## inps --> model
+    model = dict()
+    model['polynomial'] = inps.polynomial
+    model['periodic']   = inps.periodic
+    model['stepDate']   = inps.stepDate
+
+    if inps.periodic:
+        # check 1 - positive value
+        if any(x <= 0 for x in inps.periodic):
+            raise ValueError(f'Zero or negative input period ({inps.periodic}) found!')
+
+    if inps.stepDate:
+        # check 1 - min/max limit
+        for d_step in inps.stepDate:
+            if not (ymin < ptime.yyyymmdd2years(d_step) < ymax):
+                raise ValueError(f'input step date ({d_step}) exceeds date limit: ({dmin} / {dmax})!')
+
+    for func_name, strs_list in zip(['exp', 'log'], [inps.exp, inps.log]):
+        func_dict = dict()
+
+        if strs_list:
+            for strs in strs_list:
+                onset_time, char_times = strs[0], strs[1:]
+                char_times = [float(x) for x in char_times]
+
+                # check 1 - onset_time - str format
+                date_fmt = ptime.get_date_str_format(onset_time)
+                if date_fmt not in ['%Y%m%d', '%Y%m%dT%H%M']:
+                    raise ValueError(f'input onset time {onset_time} is NOT in YYYYMMDD(THHMM) format!')
+
+                # check 2 - onset_time - min/max limit
+                if ptime.yyyymmdd2years(onset_time) >= ymax:
+                    raise ValueError(f'input exp onset date ({onset_time}) >= the last date: {dmax}')
+
+                # check 3 - char_time - input format
+                if len(char_times) == 0:
+                    msg = 'NO characteristic time inputs found!\n'
+                    msg += '1+ characteristic time(s) are required for each onset date'
+                    msg += f' for the {func_name} function, e.g.:\n'
+                    msg += f'--{func_name} 20181026 60 OR\n'
+                    msg += f'--{func_name} 20161231 80 200   # append as many char_times as you like!'
+                    raise ValueError(msg)
+
+                elif any(x <= 0 for x in char_times):
+                    raise ValueError(f'Zero or negative characteristic time ({char_times}) found!')
+
+                else:
+                    int_char_times = [int(x) for x in char_times]
+                    for int_char_time, char_time in zip(int_char_times, char_times):
+                        if int_char_time != char_time:
+                            msg = 'WARNING: float-format characteristic time detected.'
+                            msg += '\nIgnore the fraction part of a day and continue: '
+                            msg += f'{char_time} --> {int_char_time} days.'
+                            print(msg)
+
+                    # save as dict
+                    func_dict[onset_time] = int_char_times
+
+        # save to model
+        model[func_name] = func_dict
+
+    ## print out model summary
+    if print_msg:
+        print('estimate deformation model with the following assumed time functions:')
+        for key, value in model.items():
+            print(f'    {key:<10} : {value}')
+
+    # warning if no polynomial found
+    if 'polynomial' not in model.keys():
+        raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
+
+    return model
+
+
+def get_num_param(model):
+    """Get the number of unknown paramters from the given time function configuration.
+
+    Parameters: model     - dict, time functions config, e.g. {cfg}
+    Returns:    num_param - int, number of unknown parameters
+    """.format(cfg=MODEL_EXAMPLE)
+
+    num_param = (
+        model['polynomial'] + 1
+        + len(model['periodic']) * 2
+        + len(model['stepDate'])
+        + sum(len(val) for key, val in model['exp'].items())
+        + sum(len(val) for key, val in model['log'].items())
+    )
+
+    return num_param
+
 
 #################################### Design Matrices ##########################################
 
 def get_design_matrix4time_func(date_list, model=None, ref_date=None, seconds=0):
     """Design matrix (function model) for time functions parameter estimation.
     Parameters: date_list - list of str in YYYYMMDD format, size=num_date
-                model     - dict of time functions, e.g.:
-                            {'polynomial' : 2,                    # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                             'periodic'   : [1.0, 0.5],           # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                             'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
-                             'exp'        : {'20181026': [60],    # dict, key for onset time in YYYYMMDD and value for char. times in days.
-                                             ...
-                                             },
-                             'log'        : {'20161231': [80.5],  # dict, key for onset time in YYYYMMDD and value for char. times in days.
-                                             '20190125': [100, 200],
-                                             ...
-                                             },
-                             ...
-                             }
+                model     - dict of time functions, e.g. {cfg}
                 ref_date  - reference date from date_list
                 seconds   - float or str, acquisition time of the day info in seconds.
     Returns:    A         - 2D array of design matrix in size of (num_date, num_param)
                             num_param = (poly_deg + 1) + 2*len(periodic) + len(steps) + len(exp_taus) + len(log_taus)
-    """
+    """.format(cfg=MODEL_EXAMPLE)
 
     ## prepare time info
     # convert list of date into array of years in float
@@ -105,13 +215,13 @@ def get_design_matrix4time_func(date_list, model=None, ref_date=None, seconds=0)
     # read the models
     poly_deg   = model.get('polynomial', 0)
     periods    = model.get('periodic', [])
-    steps      = model.get('step', [])
+    steps      = model.get('stepDate', [])
     exps       = model.get('exp', dict())
     logs       = model.get('log', dict())
     num_period = len(periods)
     num_step   = len(steps)
-    num_exp    = sum([len(val) for key, val in exps.items()])
-    num_log    = sum([len(val) for key, val in logs.items()])
+    num_exp    = sum(len(val) for key, val in exps.items())
+    num_log    = sum(len(val) for key, val in logs.items())
 
     num_param = (poly_deg + 1) + (2 * num_period) + num_step + num_exp + num_log
     if num_param <= 1:
@@ -123,10 +233,12 @@ def get_design_matrix4time_func(date_list, model=None, ref_date=None, seconds=0)
     c0 = 0
 
     # update linear/polynomial term(s)
-    if poly_deg > 0:
-        c1 = c0 + poly_deg + 1
-        A[:, c0:c1] = get_design_matrix4polynomial_func(yr_diff, poly_deg)
-        c0 = c1
+    # poly_deg of 0 --> offset
+    # poly_deg of 1 --> velocity
+    # ...
+    c1 = c0 + poly_deg + 1
+    A[:, c0:c1] = get_design_matrix4polynomial_func(yr_diff, poly_deg)
+    c0 = c1
 
     # update periodic term(s)
     if num_period > 0:
@@ -160,12 +272,13 @@ def get_design_matrix4polynomial_func(yr_diff, degree):
     """design matrix/function model of linear/polynomial velocity estimation
 
     The k! denominator makes the estimated polynomial coefficient (c_k) physically meaningful:
+        k=0 makes c_0 the offset;
         k=1 makes c_1 the velocity;
         k=2 makes c_2 the acceleration;
         k=3 makes c_3 the acceleration rate;
 
     Parameters: yr_diff: time difference from ref_date in decimal years
-                degree : polynomial models: 1=linear, 2=quadratic, 3=cubic, etc.
+                degree : polynomial models: 0=offset, 1=linear, 2=quadratic, 3=cubic, etc.
     Returns:    A      : 2D array of poly-coeff. in size of (num_date, degree+1)
     """
     A = np.zeros([len(yr_diff), degree + 1], dtype=np.float32)
@@ -236,7 +349,7 @@ def get_design_matrix4exp_func(date_list, exp_dict, seconds=0):
     Returns:    A              : 2D array of zeros & ones in size of (num_date, num_exp)
     """
     num_date = len(date_list)
-    num_exp  = sum([len(val) for key, val in exp_dict.items()])
+    num_exp  = sum(len(val) for key, val in exp_dict.items())
     A = np.zeros((num_date, num_exp), dtype=np.float32)
 
     t = np.array(ptime.yyyymmdd2years(date_list, seconds=seconds))
@@ -281,7 +394,7 @@ def get_design_matrix4log_func(date_list, log_dict, seconds=0):
     Returns:    A              : 2D array of zeros & ones in size of (num_date, num_log)
     """
     num_date = len(date_list)
-    num_log  = sum([len(log_dict[x]) for x in log_dict])
+    num_log  = sum(len(log_dict[x]) for x in log_dict)
     A = np.zeros((num_date, num_log), dtype=np.float32)
 
     t = np.array(ptime.yyyymmdd2years(date_list, seconds=seconds))
@@ -302,4 +415,3 @@ def get_design_matrix4log_func(date_list, log_dict, seconds=0):
             i += 1
 
     return A
-

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,160 +6,15 @@
 
 
 import os
-import sys
-import argparse
+import random
+
 import h5py
 import numpy as np
-import random
-from mintpy.objects import timeseries
-from mintpy.defaults.template import get_template_content
-from mintpy.utils import readfile, writefile, utils as ut
+
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
-#########################################  Usage  ##############################################
-TEMPLATE = get_template_content('reference_point')
-
-NOTE = """note: Reference value cannot be nan, thus, all selected reference point must be:
-  a. non zero in mask, if mask is given
-  b. non nan  in data (stack)
-  
-  Priority:
-      input reference_lat/lon
-      input reference_y/x
-      input selection_method
-      existing REF_Y/X attributes (can be ignored by --force option)
-      default selection methods:
-          maxCoherence
-          random
-
-  The recommended reference pixel should meets the following criteria:
-  1) not in deforming areas
-  2) not in areas affected by strong atmospheric turbulence, such as ionospheric streaks
-  3) close but outside of deforming area of interest with similar elevation, to minimize
-     the spatial correlation effect of atmosspheric delay, especially for shot-wavelength
-     deformation (Chaussard et al., 2013; Morales-Rivera et al., 2016)
-  4) in high coherent area to minimize the decorrelation effect
-"""
-
-EXAMPLE = """example:
-  # for ifgramStack file, update metadata only
-  # add --write-data to update data matrix value
-  reference_point.py  inputs/ifgramStack.h5  -t smallbaselineApp.cfg  -c avgSpatialCoh.h5
-  reference_point.py  inputs/ifgramStack.h5 --method manual
-  reference_point.py  inputs/ifgramStack.h5 --method random
-
-  # for all the other files, update both metadata and data matrix value
-  reference_point.py  091120_100407.unw -y 257    -x 151      -m Mask.h5
-  reference_point.py  geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Reference to the same pixel in space.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=NOTE+'\n'+TEMPLATE+'\n'+EXAMPLE)
-
-    parser.add_argument('file', type=str, help='file to be referenced.')
-    parser.add_argument('-t', '--template', dest='template_file',
-                        help='template with reference info')
-    parser.add_argument('-m', '--mask', dest='maskFile', help='mask file')
-
-    parser.add_argument('-o', '--outfile', type=str, default=None,
-                        help='output file name (default: %(default)s). This option is diabled for ifgramStack file.\n'
-                             'None (default) for update data value directly without writing to a new file.\n')
-
-    parser.add_argument('--write-data', dest='write_data', action='store_true',
-                        help='(option for ifgramStack file only) update data value, in addition to update metadata.')
-
-    parser.add_argument('--reset', action='store_true',
-                        help='remove reference pixel information from attributes in the file')
-    parser.add_argument('--force', action='store_true',
-                        help='Enforce the re-selection of reference point.')
-
-    coord = parser.add_argument_group('input coordinates')
-    coord.add_argument('-y', '--row', dest='ref_y', type=int,
-                       help='row/azimuth  number of reference pixel')
-    coord.add_argument('-x', '--col', dest='ref_x', type=int,
-                       help='column/range number of reference pixel')
-    coord.add_argument('-l', '--lat', dest='ref_lat',
-                       type=float, help='latitude  of reference pixel')
-    coord.add_argument('-L', '--lon', dest='ref_lon',
-                       type=float, help='longitude of reference pixel')
-
-    coord.add_argument('-r', '--reference', dest='reference_file',
-                       help='use reference/seed info of this file')
-    coord.add_argument('--lookup', '--lookup-file', dest='lookup_file',
-                       help='Lookup table file from SAR to DEM, i.e. geomap_4rlks.trans\n' +
-                            'Needed for radar coord input file with --lat/lon seeding option.')
-
-    parser.add_argument('-c', '--coherence', dest='coherenceFile', default='averageSpatialCoherence.h5',
-                        help='use input coherence file to find the pixel with max coherence for reference pixel.')
-    parser.add_argument('--min-coherence', dest='minCoherence', type=float, default=0.85,
-                        help='minimum coherence of reference pixel for max-coherence method.')
-    parser.add_argument('--method', type=str, choices=['maxCoherence', 'manual', 'random'],
-                        help='methods to select reference pixel if not given in specific y/x or lat/lon:\n' +
-                             'maxCoherence : select pixel with highest coherence value as reference point\n' +
-                             '               enabled when there is --coherence option input\n' +
-                             'manual       : display stack of input file and manually select reference point\n' +
-                             'random       : random select pixel as reference point\n')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    """Command line parser."""
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    atr = readfile.read_attribute(inps.file)
-    if atr['FILE_TYPE'] != 'ifgramStack':
-        # turn ON wirte_data for non-ifgramStack file by default
-        inps.write_data = True
-
-    else:
-        # disable --output option for ifgramStack file
-        if inps.outfile:
-            raise SystemExit('--outfile is disabled for "ifgramStack" input file!')
-
-    return inps
-
-
-def read_template_file2inps(template_file, inps=None):
-    """Read seed/reference info from template file and update input namespace"""
-    if not inps:
-        inps = cmd_line_parse([''])
-    inps_dict = vars(inps)
-    template = readfile.read_template(template_file)
-    template = ut.check_template_auto_value(template)
-
-    prefix = 'mintpy.reference.'
-    key_list = [i for i in list(inps_dict)
-                if prefix+i in template.keys()]
-    for key in key_list:
-        value = template[prefix+key]
-        if value:
-            if key in ['coherenceFile', 'maskFile']:
-                inps_dict[key] = value
-            elif key == 'minCoherence':
-                inps_dict[key] = float(value)
-
-    key = prefix+'yx'
-    if key in template.keys():
-        value = template[key]
-        if value:
-            value = value.replace('[','').replace(']','')
-            inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
-
-    key = prefix+'lalo'
-    if key in template.keys():
-        value = template[key]
-        if value:
-            value = value.replace('[','').replace(']','')
-            inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
-
-    return inps
-
-
-########################################## Sub Functions #############################################
+###############################################################
 def nearest(x, tbase, xstep):
     """ find nearest neighbour """
     dist = np.sqrt((tbase - x)**2)
@@ -175,13 +29,11 @@ def reference_file(inps):
     """Seed input file with option from input namespace
     Return output file name if succeed; otherwise, return None
     """
-    if not inps:
-        inps = cmd_line_parse([''])
     atr = readfile.read_attribute(inps.file)
 
     # update_mode
-    if (not inps.force 
-            and inps.ref_y is not None and inps.ref_y == int(atr.get('REF_Y', -999)) 
+    if (not inps.force
+            and inps.ref_y is not None and inps.ref_y == int(atr.get('REF_Y', -999))
             and inps.ref_x is not None and inps.ref_x == int(atr.get('REF_X', -999))):
         print('SAME reference pixel is already selected/saved in file, skip updating.')
         return inps.file
@@ -206,17 +58,21 @@ def reference_file(inps):
     else:
         # Find reference y/x
         if inps.method == 'maxCoherence':
-            inps.ref_y, inps.ref_x = select_max_coherence_yx(coh_file=inps.coherenceFile,
-                                                             mask=mask,
-                                                             min_coh=inps.minCoherence)
+            inps.ref_y, inps.ref_x = select_max_coherence_yx(
+                coh_file=inps.coherenceFile,
+                mask=mask,
+                min_coh=inps.minCoherence)
+
         elif inps.method == 'random':
             inps.ref_y, inps.ref_x = random_select_reference_yx(mask)
+
         elif inps.method == 'manual':
             inps = manual_select_reference_yx(stack, inps, mask)
 
         # Check ref_y/x from auto method
         if inps.ref_y is None or inps.ref_x is None:
             raise ValueError('ERROR: no reference y/x found.')
+
 
     # Seeding file with reference y/x
     atrNew = reference_point_attribute(atr, y=inps.ref_y, x=inps.ref_x)
@@ -226,28 +82,37 @@ def reference_file(inps):
         inps.outfile = ut.add_attribute(inps.file, atrNew)
 
     else:
-        if not inps.outfile:
-            inps.outfile = inps.file
-
-        k = atr['FILE_TYPE']
+        inps.outfile = inps.outfile if inps.outfile else inps.file
+        ftype = atr['FILE_TYPE']
         fext = os.path.splitext(inps.file)[1]
 
         if fext == '.h5':
             if inps.outfile == inps.file:
-                print('updating data value without re-writing to a new file')
+                print('updating dataset values without re-writing to a new file')
 
-                if k == 'ifgramStack':
+                if ftype == 'ifgramStack':
                     with h5py.File(inps.file, 'r+') as f:
                         ds = f['unwrapPhase']
-                        for i in range(ds.shape[0]):
-                            ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
+                        num_date12 = ds.shape[0]
+                        prog_bar = ptime.progressBar(maxValue=num_date12)
+                        for i in range(num_date12):
+                            prog_bar.update(i+1, suffix=f'{i+1} / {num_date12}')
+
+                            # make a copy of ds[i] because h5py allows fancy indexing for 1D arrays only.
+                            data_2d = ds[i, :, :]
+
+                            # apply spatial referencing (skip pixels with no-data-value)
+                            data_2d[data_2d != 0.] -= data_2d[inps.ref_y, inps.ref_x]
+                            ds[i, :, :] = data_2d
+
+                        prog_bar.close()
 
                         print('update metadata')
                         f.attrs.update(atrNew)
 
                 else:
                     with h5py.File(inps.file, 'r+') as f:
-                        ds = f[k]
+                        ds = f[ftype]
                         if len(ds.shape) == 3:
                             # 3D matrix
                             for i in range(ds.shape[0]):
@@ -262,10 +127,10 @@ def reference_file(inps):
 
             else:
                 ## write to a new file
-                print('writing the referenced data into file: {}'.format(inps.outfile))
+                print(f'writing the referenced data into file: {inps.outfile}')
 
                 # 1. read and update data value
-                data, atr = readfile.read(inps.file)
+                data, atr = readfile.read(inps.file, datasetName=ftype)
                 if len(data.shape) == 3:
                     # 3D matrix
                     for i in range(data.shape[0]):
@@ -300,7 +165,6 @@ def reference_file(inps):
     return inps.outfile
 
 
-###############################################################
 def reference_point_attribute(atr, y, x):
     atrNew = dict()
     atrNew['REF_Y'] = str(y)
@@ -321,7 +185,7 @@ def manual_select_reference_yx(data, inps, mask=None):
     """
     from matplotlib import pyplot as plt
     print('\nManual select reference point ...')
-    print('Click on a pixel that you want to choose as the refernce ')
+    print('Click on a pixel that you want to choose as the reference ')
     print('    pixel in the time-series analysis;')
     print('Then close the displayed window to continue.\n')
     if mask is not None:
@@ -351,15 +215,17 @@ def manual_select_reference_yx(data, inps, mask=None):
                 print('\nWARNING:')
                 print('The selectd pixel has NaN value in data.')
                 print('Try a difference location please.')
-    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+
+    fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
-    print('y/x: {}'.format((inps.ref_y, inps.ref_x)))
+    print(f'y/x: {(inps.ref_y, inps.ref_x)}')
+
     return inps
 
 
 def select_max_coherence_yx(coh_file, mask=None, min_coh=0.85):
     """Select pixel with coherence > min_coh in random"""
-    print('random select pixel with coherence > {}'.format(min_coh))
+    print(f'random select pixel with coherence > {min_coh}')
     print('\tbased on coherence file: '+coh_file)
     coh, coh_atr = readfile.read(coh_file)
     if mask is not None:
@@ -375,7 +241,7 @@ def select_max_coherence_yx(coh_file, mask=None, min_coh=0.85):
 
     y, x = random_select_reference_yx(coh_mask, print_msg=False)
     #y, x = np.unravel_index(np.argmax(coh), coh.shape)
-    print('y/x: {}'.format((y, x)))
+    print(f'y/x: {(y, x)}')
     return y, x
 
 
@@ -387,15 +253,45 @@ def random_select_reference_yx(data_mat, print_msg=True):
         y = random.choice(list(range(nrow)))
         x = random.choice(list(range(ncol)))
     if print_msg:
-        print('random select pixel\ny/x: {}'.format((y, x)))
+        print(f'random select pixel\ny/x: {(y, x)}')
     return y, x
 
 
 ###############################################################
+def read_template2inps(template_file, inps):
+    """Read seed/reference info from template file and update input namespace"""
+    inps_dict = vars(inps)
+    template = readfile.read_template(template_file, skip_chars=['[', ']'])
+    template = ut.check_template_auto_value(template)
+
+    prefix = 'mintpy.reference.'
+    key_list = [i for i in list(inps_dict)
+                if prefix+i in template.keys()]
+    for key in key_list:
+        value = template[prefix+key]
+        if value:
+            if key in ['coherenceFile', 'maskFile']:
+                inps_dict[key] = value
+            elif key == 'minCoherence':
+                inps_dict[key] = float(value)
+
+    key = prefix+'yx'
+    if key in template.keys():
+        value = template[key]
+        if value:
+            inps.ref_y, inps.ref_x = (int(i) for i in value.split(','))
+
+    key = prefix+'lalo'
+    if key in template.keys():
+        value = template[key]
+        if value:
+            inps.ref_lat, inps.ref_lon = (float(i) for i in value.split(','))
+
+    return inps
+
+
 def read_reference_file2inps(reference_file, inps=None):
     """Read reference info from reference file and update input namespace"""
-    if not inps:
-        inps = cmd_line_parse([''])
     atrRef = readfile.read_attribute(inps.reference_file)
     if (inps.ref_y is None or inps.ref_x is None) and 'REF_X' in atrRef.keys():
         inps.ref_y = int(atrRef['REF_Y'])
@@ -403,6 +299,7 @@ def read_reference_file2inps(reference_file, inps=None):
     if (inps.ref_lat is None or inps.ref_lon is None) and 'REF_LON' in atrRef.keys():
         inps.ref_lat = float(atrRef['REF_LAT'])
         inps.ref_lon = float(atrRef['REF_LON'])
+
     return inps
 
 
@@ -424,7 +321,8 @@ def read_reference_input(inps):
     # priority: Direct Input > Reference File > Template File
     if inps.template_file:
         print('reading reference info from template: '+inps.template_file)
-        inps = read_template_file2inps(inps.template_file, inps)
+        inps = read_template2inps(inps.template_file, inps)
+
     if inps.reference_file:
         print('reading reference info from reference: '+inps.reference_file)
         inps = read_reference_file2inps(inps.reference_file, inps)
@@ -440,11 +338,11 @@ def read_reference_input(inps):
         (inps.ref_y,
          inps.ref_x) = coord.geo2radar(np.array(inps.ref_lat),
                                        np.array(inps.ref_lon))[0:2]
-        print('input reference point in lat/lon: {}'.format((inps.ref_lat, inps.ref_lon)))
+        print(f'input reference point in lat/lon: {(inps.ref_lat, inps.ref_lon)}')
 
     # Check input ref_y/x
     if inps.ref_y is not None and inps.ref_x is not None:
-        print('input reference point in y/x: {}'.format((inps.ref_y, inps.ref_x)))
+        print(f'input reference point in y/x: {(inps.ref_y, inps.ref_x)}')
         # Do not use ref_y/x outside of data coverage
         if not (0 <= inps.ref_y < length and 0 <= inps.ref_x < width):
             inps.ref_y, inps.ref_x = None, None
@@ -453,10 +351,12 @@ def read_reference_input(inps):
         # Do not use ref_y/x in masked out area
         if inps.maskFile and os.path.isfile(inps.maskFile):
             print('mask: '+inps.maskFile)
-            mask = readfile.read(inps.maskFile, datasetName='mask')[0]
+            ds_names = readfile.get_dataset_list(inps.maskFile)
+            ds_name = [x for x in ds_names if x in ['mask', 'waterMask']][0]
+            mask = readfile.read(inps.maskFile, datasetName=ds_name)[0]
             if mask[inps.ref_y, inps.ref_x] == 0:
                 inps.ref_y, inps.ref_x = None, None
-                msg = 'input reference point is in masked OUT area defined by {}!'.format(inps.maskFile)
+                msg = f'input reference point is in masked OUT area defined by {inps.maskFile}!'
                 raise ValueError(msg)
 
     else:
@@ -464,9 +364,9 @@ def read_reference_input(inps):
         print('no input reference y/x.')
         if not inps.method:
             # Use existing REF_Y/X if 1) no ref_y/x input and 2) no method input and 3) ref_yx is in coverage
-            if (not inps.force 
+            if (not inps.force
                     and 'REF_X' in atr.keys()
-                    and 0 <= float(atr['REF_Y']) <= length 
+                    and 0 <= float(atr['REF_Y']) <= length
                     and 0 <= float(atr['REF_X']) <= width):
                 print('REF_Y/X exists in input file, skip updating.')
                 print('REF_Y: '+atr['REF_Y'])
@@ -492,20 +392,3 @@ def remove_reference_pixel(File):
         atrDrop[i] = 'None'
     File = ut.add_attribute(File, atrDrop)
     return File
-
-
-#######################################  Main Function  ########################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    inps.file = ut.get_file_list(inps.file)[0]
-    inps = read_reference_input(inps)
-
-    if inps.go_reference:
-        reference_file(inps)
-    print('Done.')
-    return
-
-
-################################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

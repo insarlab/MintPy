@@ -1,4 +1,4 @@
-MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Markup Zip) files for easy offline viewing in [Google Earth](https://www.google.com/earth/) via `save_kmz_timeseries.py` and `save_kmz.py` script. Below are screenshots of the displacement time-series and average velocity of [Fernandina volcano estimated from Sentinel-1 data](demo_dataset.md).    
+MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Markup Zip) files for easy offline viewing in [Google Earth](https://www.google.com/earth/) via `save_kmz_timeseries.py` and `save_kmz.py` script. Below are screenshots of the displacement time-series and average velocity of [Fernandina volcano estimated from Sentinel-1 data](demo_dataset.md).
 
 ### 1. Displacement time-series ###
 
@@ -24,7 +24,7 @@ MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Mar
 
 save_kmz_timeseries.py embeds a [dygraphs](http://dygraphs.com) javascript for interactive plot of the time-series deformation at each point. This allows the user to select any placemark onscreen to display the time-series data in an interactive chart. Placemarks are colored based on the velocity.
 
-The script also use the [regions KML feature](https://developers.google.com/kml/documentation/regions) to support very large datasets without sacrificing resolution. It divides the data matrix into regionalized boxes, nests them using network links so that Google Earth could load them in a "smart" way. 
+The script also use the [regions KML feature](https://developers.google.com/kml/documentation/regions) to support very large datasets without sacrificing resolution. It divides the data matrix into regionalized boxes, nests them using network links so that Google Earth could load them in a "smart" way.
 
 **Alert: for very large datasets, the default settings are not generic due to the various computer memories, data sizes and different prefered details. The user is highly recommended to read the following to understand how the regions feature works and adjust parameters accordingly.**
 

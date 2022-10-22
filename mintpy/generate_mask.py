@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,173 +6,44 @@
 
 
 import os
-import sys
 import time
-import warnings
-import argparse
+
 import h5py
 import numpy as np
-from mintpy.utils import readfile, writefile, utils as ut
+
+from mintpy.utils import readfile, utils as ut, writefile
 
 
 ################################################################################################
-EXAMPLE = """example:
-  generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
-  generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5 --base inputs/geometryRadar.h5 --base-dset shadow --base-value 1
-  generate_mask.py  avgSpatialCoh.h5     -m 0.7 --base waterMask.h5 -o maskSpatialCoh.h5
-
-  # exlcude area by min/max value and/or subset in row/col direction
-  generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
-
-  # exlcude pixel cluster based on minimum number of pixels
-  generate_mask.py  maskTempCoh.h5 -p 10 mask_1.h5
-
-  # exclude pixels with large velocity STD: |velocity| > cutoff (2 by default) * velocityStd
-  generate_mask.py  velocity.h5 --vstd
-  generate_mask.py  velocity.h5 --vstd --vstd-num 3
-
-  # exclude / include an circular area
-  generate_mask.py  maskTempCoh.h5 -m 0.5 --ex-circle 230 283 100 -o maskTempCoh_nonDef.h5
-  generate_mask.py  maskTempCoh.h5 -m 0.5 --in-circle 230 283 100 -o maskTempCoh_Def.h5
-  # maskout an area within a circle AND with height smaller than a threshold
-  generate_mask.py  inputs/geometryGeo.h5 height --in-circle 339 370 21 -M 1400 --revert -o maskCrater.h5
-
-  # use an specific dataset from multiple dataset file
-  generate_mask.py  geometryRadar.dem height -m 0.5 -o waterMask.h5
-  generate_mask.py  ifgramStack.h5 unwrapPhase-20101120_20110220 -m 4
-
-  # common mask file of pixels in all connected components / with non-zero unwrapped phase
-  generate_mask.py  ifgramStack.h5  --nonzero  -o maskConnComp.h5  --update
-
-  # interative polygon selection of region of interest
-  # useful for custom mask generation in unwrap error correction with bridging
-  generate_mask.py  waterMask.h5 -m 0.5 --roipoly
-  generate_mask.py  azOff.h5 --roipoly --view-cmd "-v -0.1 0.1"
-  generate_mask.py  velocity.h5 --roipoly --view-cmd "--dem ./inputs/geometryGeo.h5 --contour-step 100 --contour-smooth 0.0"
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generate mask file from input file',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', help='input file')
-    parser.add_argument('dset', nargs='?',
-                        help='date of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-o', '--output', dest='outfile',
-                        help='output file name.')
-    parser.add_argument('--keep-nan', dest='keep_nan', action='store_true',
-                        help='Do not exclude pixels with NaN value')
-    parser.add_argument('--revert', action='store_true', help='revert 0 and 1 value of output mask file')
-
-    parser.add_argument('-m', '--min', dest='vmin', type=float,
-                        help='minimum value for selected pixels')
-    parser.add_argument('-M', '--max', dest='vmax', type=float,
-                        help='maximum value for selected pixels')
-    parser.add_argument('-p','--mp','--minpixels', dest='minpixels', type=int,
-                        help='minimum cluster size in pixels, to remove small pixel clusters.')
-
-    # vmask
-    vmask = parser.add_argument_group('AOI for threshold', 'Define the AOI for thresholding operations.')
-    vmask.add_argument('--vx', dest='v_subset_x', nargs=2, type=int, metavar=('XMIN', 'XMAX'),
-                       help='AOI range in X for threshold operation (and keep the rest untouched.)')
-    vmask.add_argument('--vy', dest='v_subset_y', nargs=2, type=int, metavar=('YMIN', 'YMAX'),
-                       help='AOI range in Y for threshold operation (and keep the rest untouched.)')
-    vmask.add_argument('--vroipoly', action='store_true',
-                       help='AOI via interactive polygonal region of interest (ROI) selection.')
-
-    # velocity masking by velocityStd
-    parser.add_argument('--vstd', action='store_true',
-                        help='mask according to the formula: |velocity| > a * velocityStd')
-    parser.add_argument('--vstd-num', dest='vstd_num', type=int, default=2,
-                        help='multiple of velocityStd (a) to use for cutoff')
-
-    aoi = parser.add_argument_group('AOI', 'define secondary area of interest')
-    # AOI defined by parameters in command line
-    aoi.add_argument('-x','--sub-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
-                     help='selection range in x/cross-track/range direction')
-    aoi.add_argument('-y','--sub-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
-                     help='selection range in y/along-track/azimuth direction')
-    aoi.add_argument('--ex-circle', dest='ex_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
-                     help='exclude area defined by an circle (x, y, radius) in pixel number')
-    aoi.add_argument('--in-circle', dest='in_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
-                     help='include area defined by an circle (x, y, radius) in pixel number')
-
-    # AOI defined by file
-    aoi.add_argument('--base', dest='base_file', type=str,
-                     help='exclude pixels == base_value\n'
-                          'output_mask[base_data == base_value] = 0')
-    aoi.add_argument('--base-dset','--base-dataset', dest='base_dataset', type=str,
-                     help='dataset in base_file to be used, for file with multiple datasets.\n'
-                          'i.e.: --base inputs/geometryRadar.h5 --base-dset shadow --base-value 1')
-    aoi.add_argument('--base-value', dest='base_value', type=float, default=0,
-                     help='value of pixels in base_file to be excluded.\nDefault: 0')
-
-    # AOI manual selected
-    aoi.add_argument('--roipoly', action='store_true',
-                     help='Interactive polygonal region of interest (ROI) selection.')
-    aoi.add_argument('--view-cmd', dest='view_cmd', type=str,
-                     help='view.py command to facilitate the AOI selection.'
-                          'E.g. "-v -0.1 0.1"')
-
-    # special type of mask
-    parser.add_argument('--nonzero', dest='nonzero', action='store_true',
-                        help='Select all non-zero pixels.\n' +
-                             'i.e. maskConnComp.h5 from ifgramStack.h5')
-
-    parser.add_argument('--update', dest='update_mode', action='store_true',
-                        help='Enable update checking for --nonzero option.')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    # check the optional --base and --base-dset options
-    if inps.base_file and inps.base_dataset:
-        base_dataset_list = readfile.get_dataset_list(inps.base_file)
-        if inps.base_dataset not in base_dataset_list:
-            msg = 'dataset {} NOT found in input base file {}'.format(inps.base_dataset, inps.base_file)
-            msg += '\navailable datasets:\n{}'.format(base_dataset_list)
-            warnings.warn(msg)
-            print('ignore --base --base-dset option and continue')
-            inps.base_file = None
-            inps.base_dataset = None
-
-    return inps
-
-
 def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
     flag = 'skip'
 
     # check output file vs input dataset
-    if not os.path.isfile(inps.outfile):
+    if not inps.outfile or not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('1) output file {} NOT exist.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} NOT exist.')
     else:
-        print('1) output file {} already exists.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} already exists.')
         with h5py.File(inps.file, 'r') as f:
             ti = float(f[inps.dset].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('2) output file is NOT newer than input dataset: {}.'.format(inps.dset))
+            print(f'2) output file is NOT newer than input dataset: {inps.dset}.')
         else:
-            print('2) output file is newer than input dataset: {}.'.format(inps.dset))
+            print(f'2) output file is newer than input dataset: {inps.dset}.')
 
     # result
-    print('run or skip: {}.'.format(flag))
+    print(f'run or skip: {flag}.')
     return flag
 
 
 ################################################################################################
 def create_threshold_mask(inps):
     if inps.dset:
-        print('read %s %s' % (inps.file, inps.dset))
+        print(f'read {inps.file} {inps.dset}')
     else:
         print('read %s' % (inps.file))
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
@@ -233,7 +103,7 @@ def create_threshold_mask(inps):
             raise ValueError('Input file MUST be a velocity file when using the --vstd option!')
         data_std = readfile.read(inps.file, datasetName='velocityStd')[0]
         mask[nanmask] *= (np.abs(data[nanmask]) > (inps.vstd_num * data_std[nanmask]))
-        print('exclude pixels according to the formula: |velocity| > {} * velocityStd'.format(inps.vstd_num))
+        print(f'exclude pixels according to the formula: |velocity| > {inps.vstd_num} * velocityStd')
 
     # subset in Y
     if inps.subset_y is not None:
@@ -254,14 +124,14 @@ def create_threshold_mask(inps):
         x, y, r = inps.ex_circle
         cmask = ut.get_circular_mask(x, y, r, (length, width))
         mask[cmask == 1] = 0
-        print('exclude pixels inside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
+        print(f'exclude pixels inside of circle defined as (x={x}, y={y}, r={r})')
 
     # include circular area
     if inps.in_circle:
         x, y, r = inps.in_circle
         cmask = ut.get_circular_mask(x, y, r, (length, width))
         mask[cmask == 0] = 0
-        print('exclude pixels outside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
+        print(f'exclude pixels outside of circle defined as (x={x}, y={y}, r={r})')
 
     # interactively select polygonal region of interest (ROI)
     if inps.roipoly:
@@ -281,10 +151,10 @@ def create_threshold_mask(inps):
         mask[base_data == float(inps.base_value)] = 0
 
         # message
-        msg = 'exclude pixels in base file {} '.format(os.path.basename(inps.base_file))
+        msg = f'exclude pixels in base file {os.path.basename(inps.base_file)} '
         if inps.base_dataset:
-            msg += 'dataset {} '.format(inps.base_dataset)
-        msg += 'with value == {}'.format(inps.base_value)
+            msg += f'dataset {inps.base_dataset} '
+        msg += f'with value == {inps.base_value}'
         print(msg)
 
     # revert
@@ -297,56 +167,36 @@ def create_threshold_mask(inps):
     # Write mask file
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask, out_file=inps.outfile, metadata=atr)
+
     return inps.outfile
 
 
-################################################################################################
-def main(iargs=None):
+def create_mask(inps):
+    """Create mask based on non-zero values or threshold."""
+
     start_time = time.time()
-    inps = cmd_line_parse(iargs)
-    atr = readfile.read_attribute(inps.file)
-    k = atr['FILE_TYPE']
-    print('input {} file: {}'.format(k, inps.file))
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+    print(f'input {ftype} file: {inps.file}')
 
-    # default output filename
-    if not inps.outfile:
-        if inps.roipoly:
-            inps.outfile = 'maskPoly.h5'
-        elif 'temporalCoherence' in inps.file:
-            suffix = inps.file.split('temporalCoherence')[1]
-            inps.outfile = 'maskTempCoh'+suffix
-        else:
-            inps.outfile = 'mask.h5'
-        if inps.file.startswith('geo_'):
-            inps.outfile = 'geo_'+inps.outfile
-
-    # default vmin for temporal coherence
-    if inps.vmin is None and inps.file.endswith('temporalCoherence.h5'):
-        inps.vmin = 0.7
-
-    ##### Mask: Non-zero
-    if inps.nonzero and k == 'ifgramStack':
-        # get dataset name
-        if not inps.dset:
-            with h5py.File(inps.file, 'r') as f:
-                inps.dset = [i for i in ['connectComponent', 'unwrapPhase'] if i in f.keys()][0]
-
+    # create mask using non-zero
+    if inps.nonzero and ftype == 'ifgramStack':
         # update mode
-        if inps.update_mode and inps.outfile and run_or_skip(inps) == 'skip':
-            return inps.outfile
+        if inps.update_mode and run_or_skip(inps) == 'skip':
+            return
 
         # run
-        inps.outfile = ut.nonzero_mask(inps.file, out_file=inps.outfile, datasetName=inps.dset)
-        return inps.outfile
+        inps.outfile = ut.nonzero_mask(
+            inps.file,
+            out_file=inps.outfile,
+            datasetName=inps.dset,
+        )
 
-    ##### Mask: Threshold
-    inps.outfile = create_threshold_mask(inps)
+    # create mask using threshold
+    else:
+        create_threshold_mask(inps)
 
+    # used time
     m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
-    return inps.outfile
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
-
-################################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])
+    return

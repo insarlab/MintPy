@@ -1,0 +1,27 @@
+# requirements.txt          for dependency installation via conda
+# docs/environment.yml      for dependency installation via conda and create a new environment
+# docs/ports.txt            for dependency installation via mac-ports
+# setup.py                  for mintpy     installation via pip after the dependency installation above
+# docs/requirements4rtd.txt for readthedocs, which uses pip with limited memory usage
+python>=3.6
+pip
+cartopy
+cvxopt
+dask>=1.0
+dask-jobqueue>=0.3
+defusedxml
+# gdal>=3     # for ISCE, ARIA, FRInGE, HyP3, GMTSAR users
+h5py
+joblib
+lxml
+matplotlib
+numpy
+pre-commit    # for developers
+pyaps3>=0.3
+pykml>=0.2
+pyproj
+pyresample
+pysolid
+rich
+scikit-image
+scipy

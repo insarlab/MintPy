@@ -15,19 +15,18 @@ dependencies:
   - dask>=1.0
   - dask-jobqueue>=0.3
   - defusedxml
+  - gdal>=3      # for ISCE, ARIA, FRInGE, HyP3, GMTSAR users
   - h5py
   - joblib
   - lxml
   - matplotlib
   - numpy
-  - pyaps3
+  - pre-commit   # for developers
+  - pyaps3>=0.3
   - pykml>=0.2
   - pyproj
+  - pyresample
   - pysolid
+  - rich
   - scikit-image
   - scipy
-  # for ARIA, FRInGE, HyP3, GMTSAR
-  - gdal>=3
-  # for pyresample
-  - pyresample
-  - openmp

@@ -6,15 +6,30 @@
 # Recommend import:
 #   from mintpy.utils import ptime
 
+import datetime as dt
 import os
 import re
-import time
-import datetime as dt
+
 import numpy as np
+
 from mintpy.objects.progress import progressBar
 
 
 ################################################################
+def get_compact_isoformat(date_str):
+    """Get the "compact-looking" isoformat of the input datetime string.
+    Parameters: date_str   - str, an example date string
+    Returns:    iso_format - str, date string in "compact" iso format
+    """
+    date_str = date_str[0] if isinstance(date_str, list) else date_str
+    iso_format = get_date_str_format(date_str)
+    iso_format = iso_format.replace('y', 'Y')
+    iso_format = iso_format.replace('%Y%m%d', '%Y-%m-%d')
+    iso_format = iso_format.replace('%H%M%S', '%H:%M:%S')
+    iso_format = iso_format.replace('%H%M',   '%H:%M')
+    return iso_format
+
+
 def get_date_str_format(date_str):
     """Get the datetime string format as defined in:
     https://docs.python.org/3.7/library/datetime.html#strftime-and-strptime-behavior
@@ -25,8 +40,7 @@ def get_date_str_format(date_str):
                             YYMMDD
     Returns:    date_str_format - str, datetime string format
     """
-    if isinstance(date_str, list):
-        date_str = date_str[0]
+    date_str = date_str[0] if isinstance(date_str, list) else date_str
 
     try:
         date_str = date_str.decode('utf8')
@@ -34,37 +48,70 @@ def get_date_str_format(date_str):
         pass
 
     date_str_format = None
-    if len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', date_str)) > 0:
+    if len(re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%dT%H:%M:%S'
 
-    elif len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}:\d{2}', date_str)) > 0:
+    elif len(re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%dT%H:%M'
 
-    elif len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}', date_str)) > 0:
+    elif len(re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%dT%H'
 
-    elif len(re.findall('\d{4}-\d{2}-\d{2}T', date_str)) > 0:
+    elif len(re.findall(r'\d{4}-\d{2}-\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%d'
 
-    elif len(re.findall('\d{8}T\d{6}', date_str)) > 0:
+    elif len(re.findall(r'\d{8}T\d{6}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M%S'
 
-    elif len(re.findall('\d{8}T\d{4}', date_str)) > 0:
+    elif len(re.findall(r'\d{8}T\d{4}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M'
 
-    elif len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+    elif len(re.findall(r'\d{6}T\d{4}', date_str)) > 0:
         date_str_format = '%y%m%dT%H%M'
 
-    elif len(re.findall('\d{8}', date_str)) > 0:
+    elif len(re.findall(r'\d{8}', date_str)) > 0:
         date_str_format = '%Y%m%d'
 
-    elif len(re.findall('\d{6}', date_str)) > 0:
+    elif len(re.findall(r'\d{6}', date_str)) > 0:
         date_str_format = '%y%m%d'
 
     else:
-        raise ValueError('un-recognized date string format for "{}"!'.format(date_str))
+        raise ValueError(f'un-recognized date string format for "{date_str}"!')
 
     return date_str_format
+
+
+def get_date12_from_path(file_path):
+    """Get date12 str from a given file path.
+
+    Parameters: file_path  - str, path to a file that contains date1/2 info
+    Returns:    date12_str - str, date12 in (YY)YYMMDD(THHMM)[-_](YY)YYMMDD(THHMM) format
+    """
+
+    # support date string format
+    date12_fmts = [
+        r'\d{8}T\d{4}[-_]\d{8}T\d{4}',   # %Y%m%dT%H%M
+        r'\d{8}[-_]\d{8}',               # %Y%m%d
+        r'\d{6}[-_]\d{6}',               # %y%m%d
+    ]
+
+    # search date12 pattern part by part in the file path
+    date12_str = None
+    parts = file_path.split(os.sep)[::-1]
+    for part in parts:
+        for date12_fmt in date12_fmts:
+            if len(re.findall(date12_fmt, part)) > 0:
+                date12_str = re.findall(date12_fmt, part)[0]
+                break
+
+        # exit remaining parts searching
+        if date12_str:
+            break
+
+    if not date12_str:
+        raise ValueError(f'NO date12 str found in path: {file_path}!')
+
+    return date12_str
 
 
 def round_seconds(datetime_obj):
@@ -119,7 +166,7 @@ def decimal_year2datetime(years):
         x = float(x)
         year = np.floor(x).astype(int)
         yday = np.floor((x - year) * 365.25).astype(int) + 1
-        x2 = '{:d}-{:d}'.format(year, yday)
+        x2 = f'{year:d}-{yday:d}'
         try:
             xt = dt.datetime.strptime(x2, "%Y-%j")
         except:
@@ -135,7 +182,7 @@ def decimal_year2datetime(years):
             years_dt.append(decimal_year2datetime1(year))
 
     else:
-        raise ValueError('unrecognized input format: {}. Only float/str/list are supported.'.format(type(years)))
+        raise ValueError(f'unrecognized input format: {type(years)}. Only float/str/list are supported.')
     return years_dt
 
 
@@ -248,7 +295,7 @@ def yyyymmdd_date12(date12_list_in):
     # convert
     m_dates = yyyymmdd([i.replace('-', '_').split('_')[0] for i in date12_list])
     s_dates = yyyymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
-    date12_list_out = ['{}_{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
+    date12_list_out = [f'{m}_{s}' for m, s in zip(m_dates, s_dates)]
 
     # ensure same type output
     if isinstance(date12_list_in, str):
@@ -271,7 +318,7 @@ def yymmdd_date12(date12_list_in):
     # convert
     m_dates = yymmdd([i.replace('-', '_').split('_')[0] for i in date12_list])
     s_dates = yymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
-    date12_list_out = ['{}-{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
+    date12_list_out = [f'{m}-{s}' for m, s in zip(m_dates, s_dates)]
 
     # ensure same type output
     if isinstance(date12_list_in, str):
@@ -288,8 +335,10 @@ def read_date_txt(date_file):
 
     if os.path.isfile(date_file):
         # read text file
-        with open(date_file, 'r') as f:
+        with open(date_file) as f:
             date_list = f.read().splitlines()
+        # ignore invalid lines, e.g. empty
+        date_list = [x for x in date_list if x]
 
         # format
         date_list = sorted(yyyymmdd(date_list))
@@ -327,6 +376,48 @@ def read_date_list(date_list_in, date_list_all=None):
     return date_list_out
 
 
+def get_exclude_date_list(date_list, start_date=None, end_date=None, exclude_date=None):
+    """Get exclude date list from input options (start/end/ex_date).
+
+    Parameters: date_list    - list of str, all dates in YYYYMMDD(THHMM) format
+                start_date   - str, starting date
+                end_date     - str, ending date
+                exclude_date - list of str, exclude date in YYYYMMDD or text file
+    Returns:    ex_date_list - list of str, exclude date
+    """
+
+    year_list = yyyymmdd2years(date_list)
+    ex_date_list = []
+
+    # exclude_date
+    if exclude_date:
+        ex_date_list += read_date_list(list(exclude_date), date_list_all=date_list)
+        print(f'exclude date: {ex_date_list}')
+
+    # start_date
+    if start_date:
+        print(f'start   date: {start_date}')
+        year_min = yyyymmdd2years(yyyymmdd(start_date))
+        for year, date_str in zip(year_list, date_list):
+            if year < year_min and date_str not in ex_date_list:
+                print(f'  remove date: {date_str}')
+                ex_date_list.append(date_str)
+
+    # end_date
+    if end_date:
+        print(f'end     date: {end_date}')
+        year_max = yyyymmdd2years(yyyymmdd(end_date))
+        for year, date_str in zip(year_list, date_list):
+            if year > year_max and date_str not in ex_date_list:
+                print(f'  remove date: {date_str}')
+                ex_date_list.append(date_str)
+
+    ex_date_list = sorted(list(set(ex_date_list)))
+
+    return ex_date_list
+
+
+
 ################################################################
 def date_list2tbase(date_list):
     """Get temporal Baseline in days with respect to the 1st date
@@ -354,7 +445,6 @@ def date_list2tbase(date_list):
     return tbase, dateDict
 
 
-################################################################
 def date_list2vector(date_list):
     """Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
     Parameters: date_list  - list of string, date in YYYYMMDD or YYMMDD format
@@ -411,7 +501,8 @@ def utc2solar_time(utc_time, longitude):
     Example:    utc_time = dt.datetime(2015, 2, 9, 3, 18, 48)
                 solar_time = ptime.utc2solar_time(utc_time, 130.7)
     """
-    from math import pi, cos, sin
+    from math import cos, pi, sin
+
     # use 366 for leap years
     if utc_time.year % 4 == 0 and utc_time.year % 100 != 0 and utc_time.year % 400 != 0:
         year_len = 366
@@ -429,4 +520,3 @@ def utc2solar_time(utc_time, longitude):
     solar_time = dt.datetime.combine(utc_time.date(), dt.time(0)) + dt.timedelta(minutes=tst)
 
     return solar_time
-

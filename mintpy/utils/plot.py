@@ -3,37 +3,26 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
-#
 # Recommend import:
 #     from mintpy.utils import plot as pp
 
 
-import os
-import argparse
-import warnings
 import datetime as dt
+import os
+import warnings
+
 import h5py
-import numpy as np
-
 import matplotlib as mpl
-from matplotlib import pyplot as plt, ticker, dates as mdates
+import numpy as np
+from matplotlib import dates as mdates, pyplot as plt, ticker
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy import stats
 
-import pyproj
-from cartopy import crs as ccrs
-from cartopy.mpl import geoaxes, ticker as cticker
-
-from mintpy.objects.coord import coordinate
+from mintpy.objects import TIMESERIES_DSET_NAMES, TIMESERIES_KEY_NAMES
 from mintpy.objects.colors import ColormapExt
-from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
-from mintpy.utils import (
-    arg_group,
-    ptime,
-    readfile,
-    network as pnet,
-    utils0 as ut0,
-)
-
+from mintpy.objects.coord import coordinate
+from mintpy.utils import network as pnet, ptime, readfile, utils0 as ut0
+from mintpy.utils.map import draw_lalo_label, draw_scalebar
 
 min_figsize_single = 6.0       # default min size in inch, for single plot
 max_figsize_single = 10.0      # default min size in inch, for single plot
@@ -57,29 +46,12 @@ mplColors = ['#1f77b4',
 
 
 ########################################### Parser utilities ##############################################
-def cmd_line_parse(iargs=''):
-    parser = argparse.ArgumentParser(description='Ploting Parser')
-    parser = arg_group.add_data_disp_argument(parser)
-    parser = arg_group.add_dem_argument(parser)
-    parser = arg_group.add_figure_argument(parser)
-    parser = arg_group.add_gps_argument(parser)
-    parser = arg_group.add_mask_argument(parser)
-    parser = arg_group.add_map_argument(parser)
-    parser = arg_group.add_point_argument(parser)
-    parser = arg_group.add_reference_argument(parser)
-    parser = arg_group.add_save_argument(parser)
-    parser = arg_group.add_subset_argument(parser)
-
-    inps = parser.parse_args(args=iargs)
-    return inps
-
-
 def read_pts2inps(inps, coord_obj):
     """Read pts_* options"""
     ## 1. merge pts_file/lalo/yx into pts_yx
     # pts_file --> pts_lalo
     if inps.pts_file and os.path.isfile(inps.pts_file):
-        print('read points lat/lon from text file: {}'.format(inps.pts_file))
+        print(f'read points lat/lon from text file: {inps.pts_file}')
         inps.pts_lalo = np.loadtxt(inps.pts_file, usecols=(0,1), dtype=bytes).astype(float)
 
     # pts_lalo --> pts_yx
@@ -87,9 +59,11 @@ def read_pts2inps(inps, coord_obj):
         # format pts_lalo to 2D array in size of (num_pts, 2)
         inps.pts_lalo = np.array(inps.pts_lalo).reshape(-1, 2)
         # pts_lalo --> pts_yx
-        inps.pts_yx = coord_obj.geo2radar(inps.pts_lalo[:, 0],
-                                          inps.pts_lalo[:, 1],
-                                          print_msg=False)[:2]
+        inps.pts_yx = coord_obj.geo2radar(
+            inps.pts_lalo[:, 0],
+            inps.pts_lalo[:, 1],
+            print_msg=False,
+        )[:2]
         inps.pts_yx = np.array(inps.pts_yx).T.reshape(-1, 2)
 
     ## 2. pts_yx --> pts_yx/lalo
@@ -99,9 +73,11 @@ def read_pts2inps(inps, coord_obj):
 
         # pts_yx --> pts_lalo
         try:
-            inps.pts_lalo = coord_obj.radar2geo(inps.pts_yx[:, 0],
-                                                inps.pts_yx[:, 1],
-                                                print_msg=False)[:2]
+            inps.pts_lalo = coord_obj.radar2geo(
+                inps.pts_yx[:, 0],
+                inps.pts_yx[:, 1],
+                print_msg=False,
+            )[:2]
             inps.pts_lalo = np.array(inps.pts_lalo).T.reshape(-1, 2)
         except ValueError:
             pass
@@ -124,7 +100,7 @@ def add_inner_title(ax, title, loc, prop=None, **kwargs):
 
 
 def auto_figure_size(ds_shape, scale=1.0, disp_cbar=False, disp_slider=False,
-                     cbar_ratio=0.25, slider_ratio=0.30, print_msg=True):
+                     cbar_ratio=0.25, slider_ratio=0.15, print_msg=True):
     """Get auto figure size based on input data shape
     Adjust if display colobar on the right and/or slider on the bottom
 
@@ -149,7 +125,7 @@ def auto_figure_size(ds_shape, scale=1.0, disp_cbar=False, disp_slider=False,
     # fig_shape/scale --> fig_size
     fig_size = [i*fig_scale*scale for i in fig_shape]
     if print_msg:
-        print('figure size : [{:.2f}, {:.2f}]'.format(fig_size[0], fig_size[1]))
+        print(f'figure size : [{fig_size[0]:.2f}, {fig_size[1]:.2f}]')
 
     return fig_size
 
@@ -183,8 +159,11 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
                 fig_title += '_unwCor'
         else:
             fig_title = datasetNames[0].split('-')[0]
+            # for ionStack.h5 file
+            if fbase.lower().startswith('ion'):
+                fig_title += '_ion'
 
-    elif k in timeseriesKeyNames and len(datasetNames) == 1:
+    elif k in TIMESERIES_KEY_NAMES and len(datasetNames) == 1:
         if 'ref_date' in inps_dict.keys():
             ref_date = inps_dict['ref_date']
         elif 'REF_DATE' in atr.keys():
@@ -195,14 +174,13 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
         if not ref_date:
             fig_title = datasetNames[0]
         else:
-            fig_title = '{}_{}'.format(ref_date, datasetNames[0])
+            fig_title = f'{ref_date}_{datasetNames[0]}'
 
         # grab info of applied phase corrections from filename
-        try:
-            processMark = os.path.basename(fname).split('timeseries')[1].split(fext)[0]
-            fig_title += processMark
-        except:
-            pass
+        if 'timeseries' in fname:
+            proc_suffix = os.path.basename(fname).split('timeseries')[1].split(fext)[0]
+            if proc_suffix:
+                fig_title += proc_suffix if proc_suffix.startswith('_') else f'_{proc_suffix}'
 
     elif k == 'geometry':
         if len(datasetNames) == 1:
@@ -230,7 +208,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
         # show dataset name for multi-band binry files
         num_band = int(atr.get('BANDS', '1'))
         if num_band > 1 and len(datasetNames) == 1:
-            fig_title += ' - {}'.format(datasetNames[0])
+            fig_title += f' - {datasetNames[0]}'
 
     # suffix for subset
     if inps_dict.get('pix_box', None):
@@ -301,6 +279,11 @@ def auto_multilook_num(box, num_time, max_memory=4.0, print_msg=True):
     elif num_pixel > ( 4e6*20) :  multilook_num = 2;       #  2k * 2k image with 20  subplots
     else:                         multilook_num = 1;
 
+    # do not apply multilooking if the spatial size <= 180 * 360
+    # corresponding to 1x1 deg for world map
+    if (box[2] - box[0]) * (box[3] - box[1]) <= 180 * 360:
+        multilook_num = 1
+
     ## scale based on memory
     # The auto calculation above uses ~1.5 GB in reserved memory and ~700 MB in actual memory.
     if max_memory <= 2.0:
@@ -316,7 +299,7 @@ def auto_multilook_num(box, num_time, max_memory=4.0, print_msg=True):
 
     # print out msg
     if multilook_num > 1 and print_msg:
-        print('total number of pixels: {:.1E}'.format(num_pixel))
+        print(f'total number of pixels: {num_pixel:.1E}')
         print('* multilook {0} by {0} with nearest interpolation for display to save memory'.format(multilook_num))
 
     return multilook_num
@@ -386,9 +369,10 @@ def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=Tru
         if metadata['FILE_TYPE'] == 'timeseries' and metadata['DATA_TYPE'].startswith('complex'):
             ds_names += ['.slc']
 
-        gray_ds_names = ['coherence', 'temporalCoherence', 'waterMask', 'shadowMask',
-                         '.cor', '.mli', '.slc', '.amp', '.ramp']
-
+        gray_ds_names = [
+            'coherence', 'temporalCoherence', 'waterMask', 'shadowMask',
+            '.cor', '.mli', '.slc', '.amp', '.ramp',
+        ]
         cmap_name = 'gray' if any(i in gray_ds_names for i in ds_names) else 'jet'
 
     if print_msg:
@@ -407,6 +391,7 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
     if min_val == max_val:
         cmap_lut = 256
         vlim = [min_val, max_val]
+        unique_values = None
 
     else:
         vstep = np.min(np.abs(np.diff(unique_values))).astype(float)
@@ -419,7 +404,7 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
             vlim = [min_val - vstep/2, max_val + vstep/2]
 
             if print_msg:
-                msg = 'data has uniform and limited number ({} <= {})'.format(unique_values.size, max_discrete_num_step)
+                msg = f'data has uniform and limited number ({unique_values.size} <= {max_discrete_num_step})'
                 msg += ' of unique values --> discretize colormap'
                 print(msg)
 
@@ -429,52 +414,53 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
 
             cmap_lut = 256
             vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
+            unique_values = None
 
-    return cmap_lut, vlim
+    return cmap_lut, vlim, unique_values
 
 
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_year=0.2,
                            every_month=None):
     """Adjust X axis
-    Input:
-        ax          - matplotlib figure axes object
-        datevector  - list of float, date in years
-                         i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
-                      OR list of datetime.datetime objects
-        every_year  - int, number of years per major locator
-        buffer_year - float in years, None for keep the original xlim range.
-    Output:
-        ax  - matplotlib figure axes object
-        dss - datetime.datetime object, xmin
-        dee - datetime.datetime object, xmax
+    Parameters: ax          - matplotlib figure axes object
+                datevector  - list of float, date in years
+                              i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
+                              OR list of datetime.datetime objects
+                every_year  - int, number of years per major locator
+                buffer_year - float in years, None for keep the original xlim range.
+    Returns:    ax          - matplotlib figure axes object
+                xmin/max    - datetime.datetime object, X-axis min/max value
     """
-    # convert datetime.datetime format into date in years
+    # convert datetime.datetime format into date in years in float
     if isinstance(datevector[0], dt.datetime):
-        datevector = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in datevector]
+        datevector = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in datevector]
 
-    # Min/Max
+    # xmin/max
     if buffer_year is not None:
-        ts = datevector[0]  - buffer_year;        ys=int(ts);  ms=int((ts - ys) * 12.0)
-        te = datevector[-1] + buffer_year + 0.1;  ye=int(te);  me=int((te - ye) * 12.0)
-        if ms > 12:   ys = ys + 1;   ms = 1
-        if me > 12:   ye = ye + 1;   me = 1
-        if ms < 1:    ys = ys - 1;   ms = 12
-        if me < 1:    ye = ye - 1;   me = 12
-        dss = dt.datetime(ys, ms, 1, 0, 0)
-        dee = dt.datetime(ye, me, 1, 0, 0)
+        # refine with buffer_year
+        t0 = datevector[0]  - buffer_year;
+        t1 = datevector[-1] + buffer_year + 0.1;
+        y0 = int(t0);  m0 = int((t0 - y0) * 12.0)
+        y1 = int(t1);  m1 = int((t1 - y1) * 12.0)
+        if m0 > 12:   y0 += 1;   m0 = 1
+        if m1 > 12:   y1 += 1;   m1 = 1
+        if m0 < 1 :   y0 -= 1;   m0 = 12
+        if m1 < 1 :   y1 -= 1;   m1 = 12
+        xmin = dt.datetime(y0, m0, 1, 0, 0)
+        xmax = dt.datetime(y1, m1, 1, 0, 0)
     else:
-        (dss, dee) = ax.get_xlim()
-    ax.set_xlim(dss, dee)
+        (xmin, xmax) = mdates.num2date(ax.get_xlim())
+    ax.set_xlim(xmin, xmax)
 
     # auto param
     if not every_year:
-        every_year = max(1, np.rint((dee - dss).days / 365.25 / 5).astype(int))
+        every_year = max(1, np.rint((xmax - xmin).days / 365.25 / 5).astype(int))
 
     if not every_month:
-        if   every_year <= 3:  every_month = 1
-        elif every_year <= 6:  every_month = 3
-        elif every_year <= 12: every_month = 6
-        else:                  every_month = None
+        if   every_year <= 3 :  every_month = 1
+        elif every_year <= 6 :  every_month = 3
+        elif every_year <= 12:  every_month = 6
+        else:                   every_month = None
 
     # Label/Tick format
     ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
@@ -486,7 +472,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_
     # Label font size
     ax.tick_params(labelsize=fontsize)
     # fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
-    return ax, dss, dee
+    return ax, xmin, xmax
 
 
 def auto_adjust_yaxis(ax, dataList, fontsize=12, ymin=None, ymax=None):
@@ -628,8 +614,8 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         pbase12[i] = pbaseList[s_idx] - pbaseList[m_idx]
         tbase12[i] = tbaseList[s_idx] - tbaseList[m_idx]
     if print_msg:
-        print('max perpendicular baseline: {:.2f} m'.format(np.max(np.abs(pbase12))))
-        print('max temporal      baseline: {} days'.format(np.max(tbase12)))
+        print(f'max perpendicular baseline: {np.max(np.abs(pbase12)):.2f} m')
+        print(f'max temporal      baseline: {np.max(tbase12)} days')
 
     ## Keep/Drop - date12
     date12List_keep = sorted(list(set(date12List) - set(date12List_drop)))
@@ -644,7 +630,7 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     idx_date_keep = [dateList.index(i) for i in dateList_keep]
     idx_date_drop = [dateList.index(i) for i in dateList_drop]
 
-    # Ploting
+    # Plotting
     if cohList is not None:
         data_min = min(cohList)
         data_max = max(cohList)
@@ -652,7 +638,7 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         disp_max = p_dict['vlim'][1]
         if print_msg:
             print('showing coherence')
-            print('data range: {}'.format([data_min, data_max]))
+            print(f'data range: {[data_min, data_max]}')
             print('display range: {}'.format(p_dict['vlim']))
 
         if p_dict['disp_cbar']:
@@ -800,6 +786,7 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, p_dict={}, dateList_drop=[]
 
     return ax
 
+
 def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_drop=[],
                                       rotate_deg=-45., cmap='RdBu', disp_half=False, disp_min=0.2):
     """Plot Rotated Coherence Matrix, suitable for Sentinel-1 data with sequential network"""
@@ -809,7 +796,7 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
     elif isinstance(cmap, mpl.colors.LinearSegmentedColormap):
         pass
     else:
-        raise ValueError('unrecognized colormap input: {}'.format(cmap))
+        raise ValueError(f'unrecognized colormap input: {cmap}')
 
     #calculate coherence matrix
     coh_mat = pnet.coherence_matrix(date12_list, coh_list)
@@ -819,7 +806,7 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
         s_dates = [i.split('_')[1] for i in date12_list]
         date_list = sorted(list(set(m_dates + s_dates)))
         for date12 in date12_list_drop:
-            idx1, idx2 = [date_list.index(i) for i in date12.split('_')]
+            idx1, idx2 = (date_list.index(i) for i in date12.split('_'))
             coh_mat[idx2, idx1] = np.nan
 
     #aux info
@@ -895,17 +882,20 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
         dateList = sorted(list(set(m_dates + s_dates)))
         # Set dropped pairs' value to nan, in upper triangle only.
         for date12 in date12List_drop:
-            idx1, idx2 = [dateList.index(i) for i in date12.split('_')]
+            idx1, idx2 = (dateList.index(i) for i in date12.split('_'))
             coh_mat[idx1, idx2] = np.nan
 
     # Show diagonal value as black, to be distinguished from un-selected interferograms
     diag_mat = np.diag(np.ones(coh_mat.shape[0]))
     diag_mat[diag_mat == 0.] = np.nan
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
-    im = ax.imshow(coh_mat, cmap=cmap,
-                   vmin=p_dict['vlim'][0],
-                   vmax=p_dict['vlim'][1],
-                   interpolation='nearest')
+    im = ax.imshow(
+        coh_mat,
+        cmap=cmap,
+        vmin=p_dict['vlim'][0],
+        vmax=p_dict['vlim'][1],
+        interpolation='nearest',
+    )
 
     date_num = coh_mat.shape[0]
     if date_num < 30:    tick_step = 5
@@ -939,9 +929,173 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     return ax, coh_mat, im
 
 
+def plot_num_triplet_with_nonzero_integer_ambiguity(fname, display=False, font_size=12, fig_size=[9,3]):
+    """Plot the histogram for the number of triplets with non-zero integer ambiguity.
 
+    Fig. 3d-e in Yunjun et al. (2019, CAGEO).
+
+    Parameters: fname - str, path to the numTriNonzeroIntAmbiguity.h5 file.
+    """
+
+    # read data
+    data, atr = readfile.read(fname)
+    vmax = int(np.nanmax(data))
+
+    # plot
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=fig_size)
+
+    # subplot 1 - map
+    ax = axs[0]
+    im = ax.imshow(data, cmap='RdBu_r', interpolation='nearest')
+
+    # reference point
+    if all(key in atr.keys() for key in ['REF_Y','REF_X']):
+        ax.plot(int(atr['REF_X']), int(atr['REF_Y']), 's', color='white', ms=3)
+
+    # format
+    auto_flip_direction(atr, ax=ax, print_msg=False)
+    fig.colorbar(im, ax=ax)
+    ax.set_title(r'$T_{int}$', fontsize=font_size)
+
+    # subplot 2 - histogram
+    ax = axs[1]
+    ax.hist(data[~np.isnan(data)].flatten(), range=(0, vmax), log=True, bins=vmax)
+
+    # axis format
+    ax.set_xlabel(r'# of triplets w non-zero int ambiguity $T_{int}$', fontsize=font_size)
+    ax.set_ylabel('# of pixels', fontsize=font_size)
+    ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
+    ax.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=15))
+    ax.yaxis.set_minor_locator(ticker.LogLocator(base=10.0, numticks=15,
+                                                 subs=(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)))
+    ax.yaxis.set_minor_formatter(ticker.NullFormatter())
+
+    for ax in axs:
+        ax.tick_params(which='both', direction='in', labelsize=font_size,
+                       bottom=True, top=True, left=True, right=True)
+
+    fig.tight_layout()
+
+    # output
+    out_fig = f'{os.path.splitext(fname)[0]}.png'
+    print('plot and save figure to file', out_fig)
+    fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
+
+    if display:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return
+
+
+def plot_timeseries_rms(rms_file, cutoff=3, out_fig=None, disp_fig=True,
+                        fig_size=[5, 3], font_size=12, tick_year_num=1, legend_loc='best',
+                        disp_legend=True, disp_side_plot=True, disp_thres_text=False,
+                        ylabel='Residual phase RMS [mm]'):
+    """ Bar plot for the phase residual RMS time series.
+
+    Parameters: rms_file - str, path to the time series RMS text file
+                           Generated by utils1.get_residual_rms().
+                cutoff   - float, cutoff value of MAD outlier detection
+                fig_size - list of 2 float, figure size in inch
+    """
+
+    # read date / RMS info from text file
+    fc = np.loadtxt(rms_file, dtype=bytes).astype(str)
+    rms_list = fc[:, 1].astype(np.float32) * 1000.
+    date_list = list(fc[:, 0])
+
+    dates, datevector = ptime.date_list2vector(date_list)
+    dates = np.array(dates)
+    try:
+        bar_width = min(ut0.most_common(np.diff(dates).tolist(), k=2))*3/4
+    except:
+        bar_width = np.min(np.diff(dates).tolist())*3/4
+    rms = np.array(rms_list)
+
+    # Plot all dates
+    fig, ax = plt.subplots(figsize=fig_size)
+    ax.bar(dates, rms, bar_width.days, color='C0')
+
+    # Plot reference date
+    ref_idx = np.argmin(rms)
+    ax.bar(dates[ref_idx], rms[ref_idx], bar_width.days, color='C1', label='Reference date')
+
+    # Plot exclude dates
+    rms_threshold = ut0.median_abs_deviation_threshold(rms, center=0., cutoff=cutoff)
+    ex_idx = rms > rms_threshold
+    if np.any(ex_idx==True):
+        ax.bar(dates[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude date')
+
+    # Plot rms_threshold line
+    (ax, xmin, xmax) = auto_adjust_xaxis_date(ax, datevector, font_size, every_year=tick_year_num)
+    ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k',
+            label=f'Median Abs Dev * {cutoff}')
+
+    # axis format
+    ax = auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)
+    #ax.set_xlabel('Time [years]', fontsize=font_size)
+    ax.set_ylabel(ylabel, fontsize=font_size)
+    ax.tick_params(which='both', direction='in', labelsize=font_size,
+                   bottom=True, top=True, left=True, right=True)
+
+    # 2nd axes for circles
+    if disp_side_plot:
+        divider = make_axes_locatable(ax)
+        ax2 = divider.append_axes("right", "10%", pad="2%")
+        ax2.plot(np.ones(rms.shape, np.float32) * 0.5, rms, 'o', mfc='none', color='C0')
+        ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5, rms[ref_idx], 'o', mfc='none', color='C1')
+        if np.any(ex_idx==True):
+            ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5, rms[ex_idx], 'o', mfc='none', color='darkgray')
+        ax2.plot(np.array([0, 1]), np.array([rms_threshold, rms_threshold]), '--k')
+
+        ax2.set_ylim(ax.get_ylim())
+        ax2.set_xlim([0, 1])
+        ax2.tick_params(which='both', direction='in', labelsize=font_size,
+                        bottom=True, top=True, left=True, right=True)
+        ax2.get_xaxis().set_ticks([])
+        ax2.get_yaxis().set_ticklabels([])
+
+    if disp_legend:
+        ax.legend(loc=legend_loc, frameon=False, fontsize=font_size)
+
+    # rms_threshold text
+    if disp_thres_text:
+        ymin, ymax = ax.get_ylim()
+        yoff = (ymax - ymin) * 0.1
+        if (rms_threshold - ymin) > 0.5 * (ymax - ymin):
+            yoff *= -1.
+        ax.annotate(f'Median Abs Dev * {cutoff}',
+                    xy=(xmin + (xmax-xmin)*0.05, rms_threshold + yoff ),
+                    color='k', xycoords='data', fontsize=font_size)
+
+    # figure output
+    if out_fig:
+        print('save figure to file:', out_fig)
+        fig.savefig(out_fig, bbox_inches='tight', transparent=True)
+
+    if disp_fig:
+        plt.show()
+    else:
+        plt.close()
+
+    return
+
+
+
+###############################################  GNSS  ###############################################
 
 def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
+    """Plot GNSS as scatters on top of the input matplotlib.axes.
+
+    Parameters: ax       - matplotlib.axes object
+                SNWE     - tuple of 4 float, for south, north, west and east
+                inps     - Namespace object, from view.py
+                metadata - dict, mintpy metadata
+    Returns:    ax       - matplotlib.axes object
+    """
+
     from mintpy.objects import gps
     vprint = print if print_msg else lambda *args, **kwargs: None
 
@@ -958,7 +1112,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     # query for GNSS stations
     site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
     if site_names.size == 0:
-        warnings.warn('No GNSS found within {} during {} - {}!'.format(SNWE, start_date, end_date))
+        warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
         print('Continue without GNSS plots.')
         return ax
 
@@ -977,25 +1131,25 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             raise ValueError('No GNSS left after --mask-gps!')
 
     if inps.ref_gps_site and inps.ref_gps_site not in site_names:
-        raise ValueError('input reference GPS site "{}" not available!'.format(inps.ref_gps_site))
+        raise ValueError(f'input reference GPS site "{inps.ref_gps_site}" not available!')
 
     k = metadata['FILE_TYPE']
     if inps.gps_component and k not in ['velocity', 'timeseries', 'displacement']:
         inps.gps_component = None
-        vprint('WARNING: --gps-comp is not implemented for {} file yet, set --gps-comp = None and continue'.format(k))
+        vprint(f'WARNING: --gps-comp is not implemented for {k} file yet, set --gps-comp = None and continue')
 
     if inps.gps_component:
         # plot GPS velocity/displacement along LOS direction
         vprint('-'*30)
         msg = 'plotting GPS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += ' in {} direction'.format(inps.gps_component)
-        msg += ' with respect to {} ...'.format(inps.ref_gps_site) if inps.ref_gps_site else ' ...'
+        msg += f' in {inps.gps_component} direction'
+        msg += f' with respect to {inps.ref_gps_site} ...' if inps.ref_gps_site else ' ...'
         vprint(msg)
-        vprint('number of available GPS stations: {}'.format(len(site_names)))
-        vprint('start date: {}'.format(start_date))
-        vprint('end   date: {}'.format(end_date))
-        vprint('components projection: {}'.format(inps.gps_component))
+        vprint(f'number of available GPS stations: {len(site_names)}')
+        vprint(f'start date: {start_date}')
+        vprint(f'end   date: {end_date}')
+        vprint(f'components projection: {inps.gps_component}')
 
         # get GPS LOS observations
         # save absolute value to support both spatially relative and absolute comparison
@@ -1010,7 +1164,8 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             gps_comp=inps.gps_component,
             horz_az_angle=inps.horz_az_angle,
             print_msg=print_msg,
-            redo=inps.gps_redo)
+            redo=inps.gps_redo,
+        )
 
         # reference GPS
         if inps.ref_gps_site:
@@ -1029,7 +1184,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         if inps.ex_gps_sites:
             ex_flag = np.array([x in inps.ex_gps_sites for x in site_names], dtype=np.bool_)
             if np.sum(ex_flag) > 0:
-                vprint('ignore the following specified stations:\n  {}'.format(site_names[ex_flag]))
+                vprint(f'ignore the following specified stations:\n  {site_names[ex_flag]}')
                 site_names = site_names[~ex_flag]
                 site_lats = site_lats[~ex_flag]
                 site_lons = site_lons[~ex_flag]
@@ -1037,19 +1192,35 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
         nan_flag = np.isnan(site_obs)
         if np.sum(nan_flag) > 0:
-            vprint('ignore the following {} stations due to limited overlap/observations in time'.format(np.sum(nan_flag)))
-            vprint('  {}'.format(site_names[nan_flag]))
+            vprint(f'ignore the following {np.sum(nan_flag)} stations due to limited overlap/observations in time')
+            vprint(f'  {site_names[nan_flag]}')
 
         # plot
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
             if not np.isnan(obs):
                 color = cmap( (obs - vmin) / (vmax - vmin) )
-                ax.scatter(lon, lat, color=color, s=inps.gps_marker_size**2, edgecolors='k', lw=0.5, zorder=10)
+                ax.scatter(
+                    lon,
+                    lat,
+                    color=color,
+                    s=inps.gps_marker_size**2,
+                    edgecolors='k',
+                    lw=0.5,
+                    zorder=10,
+                )
 
     else:
         # plot GPS locations only
         vprint('showing GPS locations')
-        ax.scatter(site_lons, site_lats, s=inps.gps_marker_size**2, color='w', edgecolors='k', lw=0.5, zorder=10)
+        ax.scatter(
+            site_lons,
+            site_lats,
+            s=inps.gps_marker_size**2,
+            color='w',
+            edgecolors='k',
+            lw=0.5,
+            zorder=10,
+        )
 
     # plot GPS label
     if inps.disp_gps_label:
@@ -1057,6 +1228,149 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             ax.annotate(site_name, xy=(lon, lat), fontsize=inps.font_size)
 
     return ax
+
+
+def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=None, ref_gps_site=None, cutoff=5,
+                              fig_size=[4, 4], xname='InSAR', vlim=None, ex_gps_sites=[], display=True):
+    """Scatter plot to compare the velocities between SAR/InSAR and GPS.
+
+    Parameters: vel_file     - str, path of InSAR LOS velocity HDF5 file.
+                csv_file     - str, path of GNSS CSV file, generated after running view.py --gps-comp
+                msk_file     - str, path of InSAR mask file.
+                ref_gps_site - str, reference GNSS site name
+                cutoff       - float, threshold in terms of med abs dev (MAD) for outlier detection
+                xname        - str, xaxis label
+                vlim         - list of 2 float, display value range in the unit of cm/yr
+                               Default is None to grab from data
+                               If set, the range will be used to prune the SAR and GPS observations
+                ex_gps_sites - list of str, exclude GNSS sites for analysis and plotting.
+    Returns:    sites        - list of str, GNSS site names used for comparison
+                insar_obs    - 1D np.ndarray in float32, InSAR velocity in cm/yr
+                gps_obs      - 1D np.ndarray in float32, GNSS  velocity in cm/yr
+    Example:
+        from mintpy.utils import plot as pp
+        csv_file = os.path.join(work_dir, 'geo/gps_enu2los.csv')
+        vel_file = os.path.join(work_dir, 'geo/geo_velocity.h5')
+        msk_file = os.path.join(work_dir, 'geo/geo_maskTempCoh.h5')
+        pp.plot_insar_vs_gps_scatter(
+            vel_file,
+            ref_gps_site='CACT',
+            csv_file=csv_file,
+            msk_file=msk_file,
+            vlim=[-2.5, 2],
+        )
+    """
+
+    disp_unit = 'cm/yr'
+    unit_fac = 100.
+
+    # read GPS velocity from CSV file (generated by gps.get_gps_los_obs())
+    col_names = ['Site', 'Lon', 'Lat', 'Displacement', 'Velocity']
+    num_col = len(col_names)
+    col_types = ['U10'] + ['f8'] * (num_col - 1)
+
+    print(f'read GPS velocity from file: {csv_file}')
+    fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
+    sites = fc['Site']
+    lats = fc['Lat']
+    lons = fc['Lon']
+    gps_obs = fc[col_names[-1]] * unit_fac
+
+    if ex_gps_sites:
+        ex_flag = np.array([x in ex_gps_sites for x in sites], dtype=np.bool_)
+        if np.sum(ex_flag) > 0:
+            sites = sites[~ex_flag]
+            lats = lats[~ex_flag]
+            lons = lons[~ex_flag]
+            gps_obs = gps_obs[~ex_flag]
+
+    # read InSAR velocity
+    print(f'read InSAR velocity from file: {vel_file}')
+    atr = readfile.read_attribute(vel_file)
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    ys, xs = coordinate(atr).geo2radar(lats, lons)[:2]
+
+    msk = readfile.read(msk_file)[0] if msk_file else np.ones((length, width), dtype=np.bool_)
+
+    num_site = sites.size
+    insar_obs = np.zeros(num_site, dtype=np.float32) * np.nan
+    prog_bar = ptime.progressBar(maxValue=num_site)
+    for i in range(num_site):
+        x, y = xs[i], ys[i]
+        if (0 <= x < width) and (0 <= y < length) and msk[y, x]:
+            box = (x, y, x+1, y+1)
+            insar_obs[i] = readfile.read(vel_file, datasetName='velocity', box=box)[0] * unit_fac
+        prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {sites[i]}')
+    prog_bar.close()
+
+    off_med = np.nanmedian(insar_obs - gps_obs)
+    print(f'median offset between InSAR and GPS [before common referencing]: {off_med:.2f} cm/year')
+
+    # reference site
+    if ref_gps_site:
+        print(f'referencing both InSAR and GPS data to site: {ref_gps_site}')
+        ref_ind = sites.tolist().index(ref_gps_site)
+        gps_obs -= gps_obs[ref_ind]
+        insar_obs -= insar_obs[ref_ind]
+
+    # remove NaN value
+    print(f'removing sites with NaN values in GPS or {xname}')
+    flag = np.multiply(~np.isnan(insar_obs), ~np.isnan(gps_obs))
+    if vlim is not None:
+        print(f'pruning sites with value range: {vlim} {disp_unit}')
+        flag *= gps_obs >= vlim[0]
+        flag *= gps_obs <= vlim[1]
+        flag *= insar_obs >= vlim[0]
+        flag *= insar_obs <= vlim[1]
+
+    gps_obs = gps_obs[flag]
+    insar_obs = insar_obs[flag]
+    sites = sites[flag]
+
+    # stats
+    print(f'GPS   min/max: {np.nanmin(gps_obs):.2f} / {np.nanmax(gps_obs):.2f}')
+    print(f'InSAR min/max: {np.nanmin(insar_obs):.2f} / {np.nanmax(insar_obs):.2f}')
+
+    rmse = np.sqrt(np.sum((insar_obs - gps_obs)**2) / (gps_obs.size - 1))
+    r2 = stats.linregress(insar_obs, gps_obs)[2]
+    print(f'RMSE = {rmse:.2f} {disp_unit}')
+    print(f'R^2 = {r2:.2f}')
+
+    # preliminary outlier detection
+    diff_mad = ut0.median_abs_deviation(abs(insar_obs - gps_obs), center=0)
+    print(f'Preliminary outliers detection: abs(InSAR - GNSS) > med abs dev ({diff_mad:.2f}) * {cutoff}')
+    print('Site:  InSAR  GNSS')
+    for site_name, insar_val, gps_val in zip(sites, insar_obs, gps_obs):
+        if abs(insar_val - gps_val) > diff_mad * cutoff:
+            print(f'{site_name:s}: {insar_val:5.1f}, {gps_val:5.1f}  {disp_unit}')
+
+    # plot
+    if display:
+        plt.rcParams.update({'font.size': 12})
+        if vlim is None:
+            vlim = [np.min(insar_obs), np.max(insar_obs)]
+            vbuffer = (vlim[1] - vlim[0]) * 0.2
+            vlim = [vlim[0] - vbuffer, vlim[1] + vbuffer]
+
+        fig, ax = plt.subplots(figsize=fig_size)
+        ax.plot((vlim[0], vlim[1]), (vlim[0], vlim[1]), 'k--')
+        ax.plot(insar_obs, gps_obs, '.', ms=15)
+
+        # axis format
+        ax.set_xlim(vlim)
+        ax.set_ylim(vlim)
+        ax.set_xlabel(f'{xname} [{disp_unit}]')
+        ax.set_ylabel(f'GNSS [{disp_unit}]')
+        ax.set_aspect('equal', 'box')
+        fig.tight_layout()
+
+        # output
+        out_fig = f'{xname.lower()}_vs_gps_scatter.pdf'
+        plt.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
+        print('save figure to file', out_fig)
+        plt.show()
+
+    return sites, insar_obs, gps_obs
 
 
 def plot_colorbar(inps, im, cax):
@@ -1079,15 +1393,17 @@ def plot_colorbar(inps, im, cax):
         orientation = 'horizontal'
 
     # plot colorbar
+    unique_values = getattr(inps, 'unique_values', None)
     if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=[-np.pi, 0, np.pi])
         cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+
+    elif unique_values is not None and len(inps.unique_values) <= 5:
+        # show the exact tick values
+        cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=inps.unique_values)
+
     else:
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, extend=inps.cbar_ext)
-
-    # update ticks
-    if inps.cmap_lut <= 5:
-        inps.cbar_nbins = inps.cmap_lut
 
     if inps.cbar_nbins:
         if inps.cbar_nbins <= 2:
@@ -1107,6 +1423,53 @@ def plot_colorbar(inps, im, cax):
         cbar.set_label(inps.disp_unit,  fontsize=inps.font_size, color=inps.font_color)
 
     return inps, cbar
+
+
+def add_arrow(line, position=None, direction='right', size=15, color=None):
+    """Add an arrow to a line.
+
+    Link: https://stackoverflow.com/questions/34017866
+
+    Parameters: line      - Line2D object
+                position  - x-position of the arrow. If None, mean of xdata is taken
+                direction - 'left' or 'right'
+                size      - size of the arrow in fontsize points
+                color     - if None, line color is taken.
+    Returns:    ann       - matplotlib.text.Annotation object
+    """
+    if color is None:
+        color = line.get_color()
+
+    xdata = line.get_xdata()
+    ydata = line.get_ydata()
+
+    # default position - middle
+    if position is None:
+        position = xdata.mean()
+
+    # find closest index
+    start_ind = np.argmin(np.absolute(xdata - position))
+    if direction == 'right':
+        end_ind = start_ind + 1
+        # special scenario: 2-point line with default position of middle
+        if end_ind >= xdata.size:
+            end_ind = xdata.size - 1
+            start_ind = end_ind - 1
+    else:
+        end_ind = start_ind - 1
+        # special scenario: 2-point line with default position of middle
+        if end_ind <= 0:
+            end_ind = 0
+            start_ind = end_ind + 1
+
+    ann = line.axes.annotate('',
+        xytext=(xdata[start_ind], ydata[start_ind]),
+        xy=(xdata[end_ind], ydata[end_ind]),
+        arrowprops=dict(arrowstyle="->", color=color, linestyle='--'),
+        size=size,
+    )
+
+    return ann
 
 
 
@@ -1133,9 +1496,9 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-
 
     if wrap:
         # wrap is supported for displacement file types only
-        if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm', '1', 'pixel']:
+        if disp_unit.split('/')[0] not in ['radian', 'degree', 'm', 'cm', 'mm', '1', 'pixel']:
             wrap = False
-            print('WARNING: re-wrap is disabled for disp_unit = {}'.format(disp_unit))
+            print(f'WARNING: re-wrap is disabled for disp_unit = {disp_unit}')
         elif disp_unit.split('/')[0] != 'radian' and (wrap_range[1] - wrap_range[0]) == 2.*np.pi:
             disp_unit = 'radian'
             if print_msg:
@@ -1267,24 +1630,28 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
         wrap
     """
     if not disp_unit:
-        disp_unit, wrap = check_disp_unit_and_wrap(metadata,
-                                                   disp_unit=None,
-                                                   wrap=wrap,
-                                                   wrap_range=wrap_range,
-                                                   print_msg=print_msg)
+        disp_unit, wrap = check_disp_unit_and_wrap(
+            metadata,
+            disp_unit=None,
+            wrap=wrap,
+            wrap_range=wrap_range,
+            print_msg=print_msg,
+        )
 
     # Data Operation - Scale to display unit
     disp_scale = 1.0
     if not disp_unit == metadata['UNIT']:
-        data, disp_unit, disp_scale = scale_data2disp_unit(data,
-                                                           metadata=metadata,
-                                                           disp_unit=disp_unit)
+        data, disp_unit, disp_scale = scale_data2disp_unit(
+            data,
+            metadata=metadata,
+            disp_unit=disp_unit,
+        )
 
     # Data Operation - wrap
     if wrap:
         data = wrap_range[0] + np.mod(data - wrap_range[0], wrap_range[1] - wrap_range[0])
         if print_msg:
-            print('re-wrapping data to {}'.format(wrap_range))
+            print(f're-wrapping data to {wrap_range}')
     return data, disp_unit, disp_scale, wrap
 
 
@@ -1313,7 +1680,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
 
             # check coordinate
             if os.path.basename(fname).startswith('geo_'):
-                mask_file = 'geo_{}'.format(mask_file)
+                mask_file = f'geo_{mask_file}'
 
             # absolute path and file existence
             mask_file = os.path.join(os.path.dirname(fname), str(mask_file))
@@ -1332,20 +1699,22 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
                 dsName=None
                 if all(meta['FILE_TYPE'] == 'ifgramStack' for meta in [atr, atr_msk]):
                     date12 = datasetName.split('-')[1]
-                    dsName = 'connectComponent-{}'.format(date12)
+                    dsName = f'connectComponent-{date12}'
 
                 # read mask data
-                mask = readfile.read(mask_file,
-                                     box=box,
-                                     datasetName=dsName,
-                                     print_msg=print_msg)[0]
+                mask = readfile.read(
+                    mask_file,
+                    box=box,
+                    datasetName=dsName,
+                    print_msg=print_msg,
+                )[0]
                 vprint('read mask from file:', os.path.basename(mask_file))
 
             else:
                 mask_file = None
-                msg = 'WARNING: input file has different size from mask file: {}'.format(mask_file)
-                msg += '\n    data file {} row/column number: {} / {}'.format(fname, atr['LENGTH'], atr['WIDTH'])
-                msg += '\n    mask file {} row/column number: {} / {}'.format(mask_file, atr_msk['LENGTH'], atr_msk['WIDTH'])
+                msg = f'WARNING: input file has different size from mask file: {mask_file}'
+                msg += f'\n    data file {fname} row/column number: {atr["LENGTH"]} / {atr["WIDTH"]}'
+                msg += f'\n    mask file {mask_file} row/column number: {atr_msk["LENGTH"]} / {atr_msk["WIDTH"]}'
                 msg += '\n    Continue without mask.'
                 vprint(msg)
 
@@ -1354,16 +1723,16 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
             vprint('Can not open mask file:', mask_file)
 
     elif k in ['HDFEOS']:
-        if datasetName.split('-')[0] in timeseriesDatasetNames:
+        if datasetName.split('-')[0] in TIMESERIES_DSET_NAMES:
             mask_file = fname
             mask = readfile.read(fname, datasetName='mask', print_msg=print_msg)[0]
-            vprint('read {} contained mask dataset.'.format(k))
+            vprint(f'read {k} contained mask dataset.')
 
     elif fname.endswith('PARAMS.h5'):
         mask_file = fname
         with h5py.File(fname, 'r') as f:
             mask = f['cmask'][:] == 1.
-        vprint('read {} contained cmask dataset'.format(os.path.basename(fname)))
+        vprint(f'read {os.path.basename(fname)} contained cmask dataset')
 
     # multilook
     if mask is not None and xstep * ystep > 1:
@@ -1398,19 +1767,19 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
 
 def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     if print_msg:
-        print('reading DEM: {} ...'.format(os.path.basename(dem_file)))
+        print(f'reading DEM: {os.path.basename(dem_file)} ...')
 
-    dem_metadata = readfile.read_attribute(dem_file)
+    dem_meta = readfile.read_attribute(dem_file)
     # read dem data
-    if dem_metadata['FILE_TYPE'] == 'geometry':
+    if dem_meta['FILE_TYPE'] == 'geometry':
         dsName = 'height'
     else:
         dsName = None
 
     # get dem_pix_box
-    coord = coordinate(dem_metadata)
+    coord = coordinate(dem_meta)
     if pix_box is None:
-        pix_box = (0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH']))
+        pix_box = (0, 0, int(dem_meta['WIDTH']), int(dem_meta['LENGTH']))
 
     # Support DEM with different Resolution and Coverage
     if geo_box:
@@ -1419,10 +1788,12 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
         dem_pix_box = pix_box
     box2read = coord.check_box_within_data_coverage(dem_pix_box, print_msg=False)
 
-    dem, dem_metadata = readfile.read(dem_file,
-                                      datasetName=dsName,
-                                      box=box2read,
-                                      print_msg=print_msg)
+    dem, dem_meta = readfile.read(
+        dem_file,
+        datasetName=dsName,
+        box=box2read,
+        print_msg=print_msg,
+    )
 
     # if input DEM does not cover the entire AOI, fill with NaN
     if pix_box is not None and box2read != dem_pix_box:
@@ -1433,10 +1804,11 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
         dem_tmp[box2read[1]-dem_pix_box[1]:box2read[3]-dem_pix_box[1],
                 box2read[0]-dem_pix_box[0]:box2read[2]-dem_pix_box[0]] = dem
         dem = np.array(dem_tmp)
-    return dem, dem_metadata, dem_pix_box
+
+    return dem, dem_meta, dem_pix_box
 
 
-def prepare_dem_background(dem, inps=None, print_msg=True):
+def prepare_dem_background(dem, inps, print_msg=True):
     """Prepare to plot DEM on background
     Parameters: dem : 2D np.int16 matrix, dem data
                 inps : Namespace with the following 4 items:
@@ -1447,8 +1819,16 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
     Returns:    dem_shade : 3D np.array in size of (length, width, 4)
                 dem_contour : 2D np.array in size of (length, width)
                 dem_contour_sequence : 1D np.array
-    Examples:   dem = readfile.read('inputs/geometryRadar.h5')[0]
-                dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(dem=dem)
+    Examples:
+        from mintpy.cli import view
+        from mintpy.utils import plot as pp
+
+        inps = view.cmd_line_parse()
+        dem = readfile.read('inputs/geometryRadar.h5')[0]
+        dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(
+            dem=dem,
+            inps=inps,
+        )
     """
     # default returns
     dem_shade = None
@@ -1456,8 +1836,6 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
     dem_contour_sequence = None
 
     # default inputs
-    if inps is None:
-        inps = cmd_line_parse()
     if inps.shade_max == 999.:
         inps.shade_max = np.nanmax(dem) + 2000
 
@@ -1467,25 +1845,35 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
         ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            dem_shade = ls.shade(dem, vert_exag=inps.shade_exag,
-                                 cmap=ColormapExt('gray').colormap,
-                                 vmin=inps.shade_min,
-                                 vmax=inps.shade_max)
+            dem_shade = ls.shade(
+                dem,
+                vert_exag=inps.shade_exag,
+                cmap=ColormapExt('gray').colormap,
+                vmin=inps.shade_min,
+                vmax=inps.shade_max,
+            )
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
-            msg = f'show shaded relief DEM [min/max: {inps.shade_min}/{inps.shade_max} m; '
-            msg += f'exag: {inps.shade_exag}; az/alt deg: {inps.shade_azdeg}/{inps.shade_altdeg}]'
+            msg = f'show shaded relief DEM (min/max={inps.shade_min:.0f}/{inps.shade_max:.0f} m; '
+            msg += f'exag={inps.shade_exag}; az/alt={inps.shade_azdeg}/{inps.shade_altdeg} deg)'
             print(msg)
 
     # prepare contour
     if inps.disp_dem_contour:
-        from scipy import ndimage
-        dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
-        dem_contour_sequence = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
-        if print_msg:
-            print(('show contour in step of {} m '
-                   'with smoothing factor of {}').format(inps.dem_contour_step,
-                                                         inps.dem_contour_smooth))
+        if (np.nanmax(dem) - np.nanmin(dem)) < inps.dem_contour_step * 2:
+            msg = f'WARNING: elevation range ({np.nanmin(dem):.1f}-{np.nanmax(dem):.1f} m)'
+            msg += f' < 2 contour levels ({inps.dem_contour_step*2:.1f} m)'
+            msg += ' --> skip plotting DEM contour and continue'
+            print(msg)
+
+        else:
+            from scipy import ndimage
+            dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
+            dem_contour_sequence = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
+            if print_msg:
+                msg = f'show contour in step of {inps.dem_contour_step} m '
+                msg += f'with a smoothing factor of {inps.dem_contour_smooth}'
+                print(msg)
 
     # masking
     if inps and inps.mask_dem and (dem_shade is not None or dem_contour is not None):
@@ -1519,18 +1907,20 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
                     'dem_contour_smooth': float, 3.0
                     'pix_box'           : 4-tuple of int, (x0, y0, x1, y1)
     Returns:    ax : matplotlib.pyplot.Axes or BasemapExt object
-    Examples:   m = pp.plot_dem_background(m, geo_box=inps.geo_box, dem=dem, inps=inps)
-                ax = pp.plot_dem_background(ax=ax, geo_box=None, dem_shade=dem_shade,
-                                            dem_contour=dem_contour, dem_contour_seq=dem_contour_seq)
+    Examples:   ax = pp.plot_dem_background(ax, geo_box=inps.geo_box, dem=dem, inps=inps)
+                ax = pp.plot_dem_background(ax, geo_box=None, inps=inps,
+                                            dem_shade=dem_shade,
+                                            dem_contour=dem_contour,
+                                            dem_contour_seq=dem_contour_seq)
     """
-    # default inputs
-    if inps is None:
-        inps = cmd_line_parse()
 
+    # prepare DEM shade/contour datasets
     if all(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:
-        (dem_shade,
-         dem_contour,
-         dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
+        dem_shade, dem_contour, dem_contour_seq = prepare_dem_background(
+            dem,
+            inps=inps,
+            print_msg=print_msg,
+        )
 
     # get extent - (left, right, bottom, top) in data coordinates
     if geo_box is not None:
@@ -1580,245 +1970,3 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
             ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent, **kwargs)
 
     return ax
-
-
-
-###############################################  Maps  ###############################################
-
-def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5]):
-    """Auto calculate lat/lon label sequence based on input geo_box
-    Parameters: geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
-                lalo_step      : float
-                lalo_max_num   : int, rough major tick number along the longer axis
-                step_candidate : list of int, candidate list for the significant number of step
-    Returns:    lats/lons : np.array of float, sequence of lat/lon auto calculated from input geo_box
-                lalo_step : float, lat/lon label step
-    Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
-                lats, lons, step = m.auto_lalo_sequence(geo_box)
-    """
-    max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
-
-    if not lalo_step:
-        # Initial tick step
-        lalo_step = ut0.round_to_1(max_lalo_dist/lalo_max_num)
-
-        # reduce decimal if it ends with 8/9
-        digit = np.int(np.floor(np.log10(lalo_step)))
-        if str(lalo_step)[-1] in ['8','9']:
-            digit += 1
-            lalo_step = round(lalo_step, digit)
-
-        # Final tick step - choose from candidate list
-        lalo_step_candidate = [i*10**digit for i in step_candidate]
-        distance = [(i - max_lalo_dist/lalo_max_num) ** 2 for i in lalo_step_candidate]
-        lalo_step = lalo_step_candidate[distance.index(min(distance))]
-
-    digit = np.int(np.floor(np.log10(lalo_step)))
-
-    # Auto tick sequence
-    lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
-    lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step),
-                                np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step))))
-    lats = np.sort(lats[np.where(np.logical_and(lats >= geo_box[3], lats <= geo_box[1]))])
-
-    lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
-    lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step),
-                                np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step))))
-    lons = np.sort(lons[np.where(np.logical_and(lons >= geo_box[0], lons <= geo_box[2]))])
-    return lats, lons, lalo_step, digit
-
-
-def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
-                    font_size=12, xoffset=None, yoffset=None, projection=ccrs.PlateCarree(), print_msg=True):
-    """Auto draw lat/lon label/tick based on coverage from geo_box
-    Parameters: geo_box   : 4-tuple of float, (W, N, E, S) in degree
-                ax        : CartoPy axes.
-                lalo_step : float
-                lalo_loc  : list of 4 bool, positions where the labels are drawn as in [left, right, top, bottom]
-                            default: [1,0,0,1]
-                lalo_max_num : int
-                ...
-    Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
-                m.draw_lalo_label(geo_box)
-    """
-    # default ax
-    if not ax:
-        ax = plt.gca()
-
-    # default lat/lon sequences
-    lats, lons, lalo_step, digit = auto_lalo_sequence(geo_box, lalo_step=lalo_step, lalo_max_num=lalo_max_num)
-    if print_msg:
-        print('plot lat/lon label in step of {} and location of {}'.format(lalo_step, lalo_loc))
-
-    # ticklabel/tick style
-    ax.tick_params(which='both', direction='in', labelsize=font_size,
-                   left=True, right=True, top=True, bottom=True,
-                   labelleft=lalo_loc[0], labelright=lalo_loc[1],
-                   labeltop=lalo_loc[2], labelbottom=lalo_loc[3])
-    if xoffset is not None:
-        ax.tick_params(axis='x', which='major', pad=xoffset)
-    if yoffset is not None:
-        ax.tick_params(axis='y', which='major', pad=yoffset)
-
-    # ticklabel symbol style
-    decimal_digit = max(0, 0-digit)
-    lon_formatter = cticker.LongitudeFormatter(number_format='.{}f'.format(decimal_digit))
-    lat_formatter = cticker.LatitudeFormatter(number_format='.{}f'.format(decimal_digit))
-    ax.xaxis.set_major_formatter(lon_formatter)
-    ax.yaxis.set_major_formatter(lat_formatter)
-
-    ax.set_xticks(lons, crs=projection)
-    ax.set_yticks(lats, crs=projection)
-    return ax
-
-
-def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
-    """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
-    ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
-    Parameters: ax       : matplotlib.pyplot.axes object
-                geo_box  : tuple of 4 float in (x0, y0, x1, y1) for (W, N, E, S) in degrees / meters
-                unit     : str, coordinate unit - degrees or meters
-                loc      : list of 3 float in (length, lat, lon) of scale bar center in ratio of width, relative coord
-                labelpad : float
-    Returns:    ax
-    Example:    from mintpy.utils import plot as pp
-                pp.draw_scale_bar(ax, geo_box)
-    """
-    geod = pyproj.Geod(ellps='WGS84')
-    if not ax:
-        ax = plt.gca()
-
-    ## location - center
-    lon_c = geo_box[0] + loc[1] * (geo_box[2] - geo_box[0])
-    lat_c = geo_box[3] + loc[2] * (geo_box[1] - geo_box[3])
-
-    ## length
-    # 1. calc scene width in meters
-    if unit.startswith('deg'):
-        if (geo_box[2] - geo_box[0]) > 30:
-            # do not plot scalebar if the longitude span > 30 deg
-            scene_width = None
-            return ax
-        else:
-            scene_width = geod.inv(geo_box[0], geo_box[3],
-                                   geo_box[2], geo_box[3])[2]
-    elif unit.startswith('meter'):
-        scene_width = geo_box[2] - geo_box[0]
-
-    # 2. convert length ratio to length in meters
-    length_meter = ut0.round_to_1(scene_width * loc[0])
-    if length_meter > 1000.0:
-        # round to the nearest km
-        length_meter = np.rint(length_meter/1000.0)*1000.0
-
-    # 3. convert length in meters to length in display coord unit
-    if unit.startswith('deg'):
-        lon_c2 = geod.fwd(lon_c, lat_c, 90, length_meter)[0]
-        length_disp = np.abs(lon_c - lon_c2)
-    elif unit.startswith('meter'):
-        length_disp = length_meter
-
-    ## starting/ending longitude
-    lon0 = lon_c - length_disp / 2.0
-    lon1 = lon_c + length_disp / 2.0
-
-    ## plot scale bar
-    ax.plot([lon0, lon1], [lat_c, lat_c], color=color)
-    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length_disp], color=color)
-    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], color=color)
-
-    ## plot scale bar label
-    unit = 'm'
-    if length_meter >= 1000.0:
-        unit = 'km'
-        length_meter *= 0.001
-    label = '{:.0f} {}'.format(length_meter, unit)
-    txt_offset = (geo_box[1] - geo_box[3]) * labelpad
-
-    ax.text(lon0 + length_disp / 2.0,
-            lat_c + txt_offset,
-            label,
-            verticalalignment='center', horizontalalignment='center',
-            fontsize=font_size, color=color)
-
-    return ax
-
-
-
-###############################################  Faults  #############################################
-
-def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
-    """Read GMT lonlat file into list of 2D np.ndarray
-    # prepare GMT lonlat file
-    cd ~/data/aux/faults
-    gmt kml2gmt UCERF3_Fault.kml > UCERF3_Fault.lonlat
-
-    Parameters: ll_file  - str, path to the GMT lonlat file
-                SNWE     - tuple of 4 float, area of interest in lat/lon
-                min_dist - float, minimum distance in km of fault segments
-    Returns:    faults   - list of 2D np.ndarray in size of [num_point, 2] in float32
-                           with each row for one point in [lon, lat] in degrees
-    Examples:
-        # read faults data
-        ll_file = os.path.expanduser('~/data/aux/faults/UCERF3_Fault.lonlat')
-        faults = read_gmt_lonlat_file(ll_file, SNWE=(31, 36, -118, -113), min_dist=0.1)
-        # add faults to the existing plot
-        fig, ax = plt.subplots(figsize=[7, 7], subplot_kw=dict(projection=ccrs.PlateCarree()))
-        data, atr, inps = view.prep_slice(cmd)
-        ax, inps, im, cbar = view.plot_slice(ax, data, atr, inps)
-
-        prog_bar = ptime.progressBar(maxValue=len(faults))
-        for i, fault in enumerate(faults):
-            ax.plot(fault[:,0], fault[:,1], 'k-', lw=0.2)
-            prog_bar.update(i+1, every=10)
-        prog_bar.close()
-        ax.set_xlim(inps.geo_box[0], inps.geo_box[2])
-        ax.set_ylim(inps.geo_box[3], inps.geo_box[1])
-
-    """
-    # read text file
-    lines = None
-    with open(ll_file, 'r') as f:
-        lines = f.readlines()
-
-    debug_mode = False
-    if debug_mode:
-        lines = lines[:1000]
-
-    # loop to extract/organize the data into list of arrays
-    num_line = len(lines)
-    faults = []
-    fault = []
-    prog_bar = ptime.progressBar(maxValue=num_line)
-    for i, line in enumerate(lines):
-        line = line.strip().replace('\n','').replace('\t', ' ')
-        if line.startswith('>'):
-            fault = []
-        else:
-            fault.append([float(x) for x in line.split()[:2]])
-
-        # save if 1) this is the last line OR 2) the next line starts a new fault
-        if i == num_line - 1 or lines[i+1].startswith('>'):
-            fault = np.array(fault, dtype=np.float32)
-            s = np.nanmin(fault[:,1]); n = np.nanmax(fault[:,1])
-            w = np.nanmin(fault[:,0]); e = np.nanmax(fault[:,0])
-
-            if fault is not None and SNWE:
-                S, N, W, E = SNWE
-                if e < W or w > E or s > N or n < S:
-                    # check overlap of two rectangles
-                    # link: https://stackoverflow.com/questions/40795709
-                    fault = None
-
-            if fault is not None and min_dist > 0:
-                dist = abs(n - s) * 108 * abs(e - w) * 108 * np.cos((n+s)/2 * np.pi/180)
-                if dist < min_dist:
-                    fault = None
-
-            if fault is not None:
-                faults.append(fault)
-
-        prog_bar.update(i+1, every=1000, suffix='line {} / {}'.format(i+1, num_line))
-    prog_bar.close()
-    return faults
-

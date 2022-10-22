@@ -7,17 +7,18 @@
 #   from mintpy.utils import network as pnet
 
 
+import itertools
 import os
 import sys
-import itertools
+
 import h5py
 import numpy as np
-from scipy import sparse
 from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
+from scipy import sparse
+
 from mintpy.objects import ifgramStack, sensor
 from mintpy.utils import ptime, readfile
-
 
 SPEED_OF_LIGHT = 299792458   # m/s, speed of light
 
@@ -103,8 +104,8 @@ def read_baseline_file(baselineFile, exDateList=[]):
     fb = open(baselineFile)
     lines = []
     for line in fb:
-        l = str.replace(line, '\n', '').strip()
-        lines.append(l)
+        line = str.replace(line, '\n', '').strip()
+        lines.append(line)
     fb.close()
 
     # Read each line and put the values into arrays
@@ -166,8 +167,8 @@ def get_date12_list(fname, dropIfgram=False):
     date12_list = []
     ext = os.path.splitext(fname)[1].lower()
     if ext == '.h5':
-        k = readfile.read_attribute(fname)['FILE_TYPE']
-        if k == 'ifgramStack':
+        ftype = readfile.read_attribute(fname)['FILE_TYPE']
+        if ftype == 'ifgramStack':
             date12_list = ifgramStack(fname).get_date12_list(dropIfgram=dropIfgram)
         else:
             return None
@@ -182,21 +183,6 @@ def get_date12_list(fname, dropIfgram=False):
     return date12_list
 
 
-def igram_perp_baseline_list(fname):
-    """Get perpendicular baseline list from input multi_group hdf5 file"""
-    print(('read perp baseline info from '+fname))
-    k = readfile.read_attribute(fname)['FILE_TYPE']
-    h5 = h5py.File(fname, 'r')
-    epochList = sorted(h5[k].keys())
-    p_baseline_list = []
-    for epoch in epochList:
-        p_baseline = (float(h5[k][epoch].attrs['P_BASELINE_BOTTOM_HDR']) +
-                      float(h5[k][epoch].attrs['P_BASELINE_TOP_HDR']))/2
-        p_baseline_list.append(p_baseline)
-    h5.close()
-    return p_baseline_list
-
-
 def critical_perp_baseline(sensor_name, inc_angle, print_msg=False):
     """Critical Perpendicular Baseline for each satellite"""
     # Jers: 5.712e3 m (near_range=688849.0551m)
@@ -208,7 +194,7 @@ def critical_perp_baseline(sensor_name, inc_angle, print_msg=False):
     rg_bandwidth = sensor_dict['chirp_bandwidth']
     bperp_c = wvl * (rg_bandwidth / SPEED_OF_LIGHT) * near_range * np.tan(inc_angle * np.pi / 180.0)
     if print_msg:
-        print('Critical Perpendicular Baseline: {} m'.format(bperp_c))
+        print(f'Critical Perpendicular Baseline: {bperp_c} m')
     return bperp_c
 
 
@@ -278,7 +264,7 @@ def simulate_coherence_v2(date12_list, decor_time=200.0, coh_resid=0.2, inc_angl
         coh[i] = coh_geom * coh_temp
 
     if display:
-        print(('critical perp baseline: %.f m' % pbase_c))
+        print('critical perp baseline: %.f m' % pbase_c)
         coh_mat = coherence_matrix(date12_list, coh)
         plt.figure()
         plt.imshow(coh_mat, vmin=0.0, vmax=1.0, cmap='jet')
@@ -315,14 +301,14 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
         Guarnieri, A. M. (2013), Introduction to RADAR, Politecnico di Milano Dipartimento di Elettronica
             e Informazione, Milano.
         Zebker, H. A., & Villasenor, J. (1992). Decorrelation in interferometric radar echoes.
-            IEEE-TGRS, 30(5), 950-959. 
+            IEEE-TGRS, 30(5), 950-959.
         Hanssen, R. F. (2001). Radar interferometry: data interpretation and error analysis
             (Vol. 2). Dordrecht, Netherlands: Kluwer Academic Pub.
         Morishita, Y., & Hanssen, R. F. (2015). Temporal decorrelation in L-, C-, and X-band satellite
-            radar interferometry for pasture on drained peat soils. IEEE-TGRS, 53(2), 1096-1104. 
+            radar interferometry for pasture on drained peat soils. IEEE-TGRS, 53(2), 1096-1104.
         Parizzi, A., Cong, X., & Eineder, M. (2009). First Results from Multifrequency Interferometry.
             A comparison of different decorrelation time constants at L, C, and X Band. ESA Scientific
-            Publications(SP-677), 1-5. 
+            Publications(SP-677), 1-5.
     """
     date_list, pbase_list, dop_list = read_baseline_file(baseline_file)[0:3]
     tbase_list = ptime.date_list2tbase(date_list)[0]
@@ -382,7 +368,7 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
         print('')
 
     if display:
-        print(('critical perp baseline: %.f m' % pbase_c))
+        print('critical perp baseline: %.f m' % pbase_c)
         cohs_mat = coherence_matrix(date12_list, cohs)
         plt.figure()
         plt.imshow(cohs_mat, vmin=0.0, vmax=1.0, cmap='jet')
@@ -558,7 +544,7 @@ def threshold_coherence_based_mst(date12_list, coh_list):
         date12_list - list of string in YYMMDD-YYMMDD format
         coh_list    - list of float, average coherence for each interferogram
     Output:
-        mst_date12_list - list of string in YYMMDD-YYMMDD format, for MST network of interferograms 
+        mst_date12_list - list of string in YYMMDD-YYMMDD format, for MST network of interferograms
     """
     # coh_list --> coh_mat --> weight_mat
     coh_mat = coherence_matrix(date12_list, coh_list)
@@ -648,7 +634,7 @@ def select_pairs_sequential(date_list, num_conn=2, date_format=None):
     date12_inds = [sorted(i) for i in sorted(date12_inds)]
 
     # Convert index into date12
-    date12_list = ['{}_{}'.format(date_list[ind12[0]], date_list[ind12[1]])
+    date12_list = [f'{date_list[ind12[0]]}_{date_list[ind12[1]]}'
                   for ind12 in date12_inds]
 
     # adjust output date format
@@ -658,7 +644,7 @@ def select_pairs_sequential(date_list, num_conn=2, date_format=None):
         elif date_format == 'YYMMDD':
             date12_list = ptime.yymmdd_date12(date12_list)
         else:
-            raise ValueError('un-supported date format: {}!'.format(date_format))
+            raise ValueError(f'un-supported date format: {date_format}!')
 
     return date12_list
 
@@ -800,14 +786,14 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[], date_format='YYMMDD
     # Select reference date if not existed
     if not m_date:
         m_date = select_reference_date(date8_list, pbase_list)
-        print(('auto select reference date: '+m_date))
+        print('auto select reference date: '+m_date)
 
     # Check input reference date
     m_date8 = ptime.yyyymmdd(m_date)
     if m_date8 not in date8_list:
         print('Input reference date is not existed in date list!')
-        print('Input reference date: {}'.format(m_date8))
-        print('Input date list: {}'.format(date8_list))
+        print(f'Input reference date: {m_date8}')
+        print(f'Input date list: {date8_list}')
         m_date8 = None
 
     # Generate star/ps network

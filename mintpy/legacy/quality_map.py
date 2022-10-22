@@ -7,12 +7,13 @@
 
 
 import sys
-import numpy as np
+
 import h5py
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.ndimage.filters import laplace
-from mintpy.utils import ptime
 
+from mintpy.utils import ptime
 
 ##############################################################################
 USAGE = """
@@ -39,7 +40,7 @@ def main(argv):
     g_name = 'unwrapPhase'
     g_name_out = 'unwrapPhase_laplace'
 
-    print('calculate Laplace filter of {} based on approximate second derivatives.'.format(g_name))
+    print(f'calculate Laplace filter of {g_name} based on approximate second derivatives.')
 
     f = h5py.File(file, 'a')
     ds = f[g_name]
@@ -47,17 +48,17 @@ def main(argv):
         ds_out = f[g_name_out]
     else:
         ds_out = f.create_dataset(g_name_out, shape=ds.shape, dtype=np.float32, chunks=True, compression=None)
-    print('write to dataset /{}'.format(g_name_out))
+    print(f'write to dataset /{g_name_out}')
 
     num_ifgram = ds.shape[0]
     prog_bar = ptime.progressBar(maxValue=num_ifgram)
     for i in range(num_ifgram):
         unw = ds[i, :, :]
         ds_out[i, :, :] = laplace(unw)
-        prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num_ifgram))
+        prog_bar.update(i+1, suffix=f'{i+1}/{num_ifgram}')
     prog_bar.close()
     f.close()
-    print('finished writing to {}'.format(file))
+    print(f'finished writing to {file}')
     return
 
 

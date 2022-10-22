@@ -6,12 +6,13 @@
 ############################################################
 
 
-import sys
 import os
+import sys
 
 import h5py
-import numpy as np
 import matplotlib
+import numpy as np
+
 from mintpy.utils import readfile
 
 
@@ -35,7 +36,7 @@ def usage():
 Simultaneously correcting the baseline error and stratified tropospheric delay correlated with DEM.
 
 reference:
-  Jo, M.-J., J.-S. Won, S.-W. Kim, and H.-S. Jung (2010), A time-series SAR observation of surface 
+  Jo, M.-J., J.-S. Won, S.-W. Kim, and H.-S. Jung (2010), A time-series SAR observation of surface
   deformation at the southern end of the San Andreas Fault Zone, Geos J., 14(3), 277-287..
 
 example:

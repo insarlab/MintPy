@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -6,77 +5,21 @@
 ############################################################
 
 
-
 import os
-import sys
-import argparse
+import warnings
+
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as sio
-import matplotlib.pyplot as plt
-# suppress UserWarning from matplotlib
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 from mintpy.objects import sensor
 from mintpy.utils import ptime, readfile, utils as ut
 
-
-EXAMPLE = """example:
-  save_gbis.py velocity.h5 -g inputs/geometryGeo.h5 -o AlosDT73_20081012_20100302.mat
-  save_gbis.py 20150223_20161031_msk.unw -g inputs/geometryGeo.h5 -o Alos2DT23_20150223_20161031.mat
-  save_gbis.py 20150223_20161031.unw -g inputs/geometryGeo.h5 --out-data ../Model/data --ellipsoid2geoid
-"""
-
-REFERENCE = """references:
-  Bagnardi, M., and A. Hooper (2018), Inversion of Surface Deformation Data for Rapid Estimates of Source 
-  Parameters and Uncertainties: A Bayesian Approach, Geochemistry, Geophysics, Geosystems, 19, 
-  doi:10.1029/2018GC007585.
-
-  Yunjun, Z., Amelung, F., & Aoki, Y. (2021), Imaging the hydrothermal system of Kirishima volcanic complex 
-  with L-band InSAR time series, Geophysical Research Letters, 48(11), e2021GL092879. doi:10.1029/2021GL092879
-"""
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Convert MintPy product to GBIS .mat format.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
-
-    parser.add_argument('file', help='deformation file.')
-    parser.add_argument('dset', nargs='?',
-                        help='date/date12 of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-g','--geometry', dest='geom_file', required=True, help='geometry file')
-    parser.add_argument('-m', '--mask', dest='mask_file', help='mask file.')
-
-    parser.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2,
-                        help='custom reference pixel in lat/lon')
-    parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',
-                        help='do not display the figure')
-    parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
-    parser.add_argument('--out-dir', dest='outdir',
-                        help='custom output directory, ONLY IF --output is not specified.')
-    parser.add_argument('--ellipsoid2geoid', action='store_true',
-                        help='Convert the height of ellipsoid to geoid using "geoidheight" module\n'+
-                             'Download & install geoidheight as below:\n'+
-                             'https://github.com/geodesymiami/2021_Kirishima')
-    return parser
+# suppress UserWarning from matplotlib
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    inps.argv = iargs if iargs else sys.argv[1:]
-    print('{} {}'.format(os.path.basename(__file__), ' '.join(inps.argv)))
-
-    inps.file = os.path.abspath(inps.file)
-
-    # Backend setting
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')
-
-    return inps
-
-
+##############################################################################
 def read_data(inps):
     """
     Returns: defo: 2D np.array with in-valid/masked-out pixel in NaN
@@ -107,8 +50,8 @@ def read_data(inps):
         # update mask to exclude pixel with NaN value
         inps.mask *= ~np.isnan(inps.phase)
     else:
-        raise ValueError("input file not support yet: {}".format(k))
-    print('number of pixels: {}'.format(np.sum(inps.mask)))
+        raise ValueError(f"input file not support yet: {k}")
+    print(f'number of pixels: {np.sum(inps.mask)}')
 
     # change reference point
     if inps.ref_lalo:
@@ -128,7 +71,7 @@ def read_data(inps):
     ref_x = int(inps.metadata['REF_X'])
     inps.mask *= inps.phase != 0
     inps.mask[ref_y, ref_x] = 1
-    print('number of pixels after excluding zero phase value: {}'.format(np.sum(inps.mask)))
+    print(f'number of pixels after excluding zero phase value: {np.sum(inps.mask)}')
 
     # read geometry
     inps.lat, inps.lon = ut.get_lat_lon(inps.metadata, geom_file=inps.geom_file)
@@ -142,8 +85,8 @@ def read_data(inps):
         # import geoid module
         try:
             import geoid
-        except:
-            raise ImportError('Can not import geoidheight!')
+        except ImportError:
+            raise ImportError('Can not import geoidheight (https://github.com/vandry/geoidheight.git)! ')
 
         # calculate offset and correct height
         egm_file = os.path.join(os.path.dirname(geoid.__file__), 'geoids/egm2008-1.pgm')
@@ -153,7 +96,7 @@ def read_data(inps):
 
         # print message
         msg = 'convert height from ellipsoid to geoid'
-        msg += '\n\tby subtracting a constant offset of {:.2f} m'.format(h_offset)
+        msg += f'\n\tby subtracting a constant offset of {h_offset:.2f} m'
         print(msg)
 
     # masking
@@ -190,7 +133,7 @@ def plot_data(inps):
     # reference point
     axs[0].plot(int(inps.metadata['REF_X']),
                 int(inps.metadata['REF_Y']), 'ks', ms=6)
-    axs[0].set_title('Phase [{:.1f}, {:.1f}] um'.format(dmin, dmax));
+    axs[0].set_title(f'Phase [{dmin:.1f}, {dmax:.1f}] um');
     # colorbar
     cbar = fig.colorbar(im, ax=axs[0]);
     cbar.set_label('cm')
@@ -208,9 +151,9 @@ def plot_data(inps):
             cbar.set_label('degree')
 
     # save figure to file
-    out_fig = '{}.png'.format(os.path.splitext(inps.outfile)[0])
+    out_fig = f'{os.path.splitext(inps.outfile)[0]}.png'
     plt.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
-    print('saved figure to {}'.format(out_fig))
+    print(f'saved figure to {out_fig}')
     return
 
 
@@ -229,26 +172,24 @@ def save2mat(inps):
     mdict['Metadata'] = inps.metadata
     # save to mat file
     sio.savemat(inps.outfile, mdict, long_field_names=True)
-    print('save to file: {}'.format(os.path.abspath(inps.outfile)))
-    return
+    print(f'save to file: {os.path.abspath(inps.outfile)}')
 
 
 ##############################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+def save_gbis(inps):
+
+    # matplotlib backend setting
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
+    inps.file = os.path.abspath(inps.file)
 
     read_data(inps)
-
     plot_data(inps)
-
     save2mat(inps)
 
     if inps.disp_fig:
         print('showing...')
         plt.show()
-    return inps.outfile
 
-
-##############################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])
+    return

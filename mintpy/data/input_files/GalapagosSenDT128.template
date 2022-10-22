@@ -5,7 +5,7 @@ ssaraopt                        = --platform=SENTINEL-1A,SENTINEL-1B -r 128 -f 5
 processor                       = isce
 sentinelStack.demDir            = /nethome/famelung/Sentinel/GalapagosT128SenVVD/DEM
 sentinelStack.boundingBox       = '-1 0.15 -91.6 -90.9'
-sentinelStack.subswath          = 1 2  # comment 
+sentinelStack.subswath          = 1 2  # comment
 sentinelStack.numConnections    = 5   # comment
 sentinelStack.azimuthLooks      = 5   # comment
 sentinelStack.rangeLooks        = 15  # comment

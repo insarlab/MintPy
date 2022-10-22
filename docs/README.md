@@ -1,8 +1,8 @@
 [![Language](https://img.shields.io/badge/python-3.6%2B-blue.svg)](https://www.python.org/)
-[![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?logo=circleci&label=test)](https://circleci.com/gh/insarlab/MintPy)
+[![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?logo=circleci&label=CI)](https://circleci.com/gh/insarlab/MintPy)
 [![Docs Status](https://readthedocs.org/projects/mintpy/badge/?color=green&version=latest)](https://mintpy.readthedocs.io/?badge=latest)
-[![Version](https://img.shields.io/github/v/release/insarlab/MintPy?color=green)](https://github.com/insarlab/MintPy/releases)
-[![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/main/LICENSE)
+[![Version](https://img.shields.io/github/v/release/insarlab/MintPy?color=green&label=version)](https://github.com/insarlab/MintPy/releases)
+[![License](https://img.shields.io/badge/license-GPLv3+-yellow.svg)](https://github.com/insarlab/MintPy/blob/main/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Groups-orange.svg)](https://groups.google.com/g/mintpy)
 [![Citation](https://img.shields.io/badge/doi-10.1016%2Fj.cageo.2019.104331-blue)](https://doi.org/10.1016/j.cageo.2019.104331)
 
@@ -57,17 +57,17 @@ Results are plotted in **./pic** folder. To explore more data information and vi
 ```bash
 info.py                    #check HDF5 file structure and metadata
 view.py                    #2D map view
-tsview.py                  #1D point time-series (interactive)   
+tsview.py                  #1D point time-series (interactive)
 plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
-plot_network.py            #plot network configuration of the dataset    
+plot_network.py            #plot network configuration of the dataset
 plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
-save_kmz.py                #generate Google Earth KMZ file in raster image
-save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
+save_kmz.py                #generate Google Earth KMZ file in points or raster image
+save_kmz_timeseries.py     #generate Google Earth KMZ file in points for time-series (interactive)
 ```
 
 #### 2.2 Customized processing recipe ####
 
-MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! [Here](../mintpy/sh/compare_velocity_with_diff_tropo.sh) is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections.
+MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! [Here](../scripts/compare_velocity_with_diff_tropo.sh) is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections.
 
 #### 2.3 Build on top of `mintpy` module ####
 
@@ -108,6 +108,6 @@ _This disclaimer was adapted from the [MetPy project](https://github.com/Unidata
 
 ### 6. Citing this work ###
 
-Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [arXiv](https://eartharxiv.org/9sz6m/), [data & figures](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy).
+Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [arXiv](https://eartharxiv.org/9sz6m/), [data](https://zenodo.org/record/4743058), [notebooks](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy).
 
 In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../mintpy/defaults/smallbaselineApp.cfg) and listed in the [references.md file](./references.md).

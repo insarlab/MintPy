@@ -1,0 +1,65 @@
+name: build docker image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  dockerize:
+    name: Build Docker image and push to GitHub Container Registry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set environment variables for docker build
+        run: |
+          # Lowercase repo for Github Container Registry
+          echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+          # Ensure tags are checked out
+          git fetch origin +refs/tags/*:refs/tags/*
+          # Version number from tag
+          echo "MINTPY_VERSION=$(git describe --tags)" >> $GITHUB_ENV
+
+      - name: Build, tag, and push image to Github Container Registry
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ env.REPO }}:${{ env.MINTPY_VERSION }}
+          labels: |
+            org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
+            org.opencontainers.image.version=${{ env.MINTPY_VERSION }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Add develop tag
+        if: github.ref == 'refs/heads/main'
+        uses: akhilerm/tag-push-action@v1.0.0
+        with:
+          src: ghcr.io/${{ env.REPO }}:${{ env.MINTPY_VERSION }}
+          dst: ghcr.io/${{ env.REPO }}:develop
+
+      - name: Add latest tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: akhilerm/tag-push-action@v1.0.0
+        with:
+          src: ghcr.io/${{ env.REPO }}:${{ env.MINTPY_VERSION }}
+          dst: ghcr.io/${{ env.REPO }}:latest

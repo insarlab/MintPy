@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -6,10 +5,9 @@
 ############################################################
 
 
-import os
-import sys
 import glob
-import argparse
+import os
+
 import numpy as np
 
 try:
@@ -17,41 +15,7 @@ try:
 except ImportError:
     raise ImportError('Can not import gdal!')
 
-from mintpy.utils import (
-    ptime,
-    readfile,
-    writefile,
-    utils as ut,
-)
-
-
-
-#########################################################################
-EXAMPLE = """example:
-  prep_gmtsar.py StHelensEnvDT156.txt
-"""
-
-def create_parser():
-    """Command line parser."""
-    parser = argparse.ArgumentParser(description='Prepare GMTSAR metadata files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-    parser.add_argument('template_file', type=str, help='MintPy template file for GMTSAR products.')
-    parser.add_argument('--mintpy-dir', dest='mintpy_dir', default='./',
-                        help='MintPy directory (default: %(default)s).')
-    parser.add_argument('--force', dest='update_mode', action='store_false',
-                        help='Force to overwrite all .rsc metadata files.')
-    return parser
-
-
-def cmd_line_parse(iargs = None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    inps.template_file = os.path.abspath(inps.template_file)
-    inps.mintpy_dir = os.path.expanduser(inps.mintpy_dir)
-    inps.mintpy_dir = os.path.abspath(inps.mintpy_dir)
-    return inps
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 #########################################################################
@@ -67,9 +31,9 @@ def get_prm_files(ifg_dir):
 def get_multilook_number(ifg_dir, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
     """Get the number of multilook in range and azimuth direction."""
     # grab an arbitrary file in radar-coordiantes
-    rdr_files = [os.path.join(ifg_dir, '{}.grd'.format(i)) for i in fbases]
+    rdr_files = [os.path.join(ifg_dir, f'{i}.grd') for i in fbases]
     if len(rdr_files) == 0:
-        raise ValueError('No radar-coord files found in {} with suffix: {}'.format(ifg_dir, fbases))
+        raise ValueError(f'No radar-coord files found in {ifg_dir} with suffix: {fbases}')
 
     # read step info into multilook number
     ds = gdal.Open(rdr_files[0], gdal.GA_ReadOnly)
@@ -82,9 +46,9 @@ def get_multilook_number(ifg_dir, fbases=['corr', 'phase', 'phasefilt', 'unwrap'
 def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
     """Get the LAT/LON_REF1/2/3/4 from *_ll.grd file."""
     # grab an arbitrary file in geo-coordiantes
-    geo_files = [os.path.join(ifg_dir, '{}_ll.grd'.format(i)) for i in fbases]
+    geo_files = [os.path.join(ifg_dir, f'{i}_ll.grd') for i in fbases]
     if len(geo_files) == 0:
-        print('WARNING: No geo-coord files found in {} with suffix: {}'.format(ifg_dir, fbases))
+        print(f'WARNING: No geo-coord files found in {ifg_dir} with suffix: {fbases}')
         return prm_dict
 
     # read corners lat/lon info
@@ -125,9 +89,9 @@ def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwra
 def get_slant_range_distance(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
     """Get a constant slant range distance in the image center, for dataset in geo-coord."""
     # grab an arbitrary file in radar-coordiantes
-    rdr_files = [os.path.join(ifg_dir, '{}.grd'.format(i)) for i in fbases]
+    rdr_files = [os.path.join(ifg_dir, f'{i}.grd') for i in fbases]
     if len(rdr_files) == 0:
-        raise ValueError('No radar-coord files found in {} with suffix: {}'.format(ifg_dir, fbases))
+        raise ValueError(f'No radar-coord files found in {ifg_dir} with suffix: {fbases}')
 
     # read width from rdr_file
     ds = gdal.Open(rdr_files[0], gdal.GA_ReadOnly)
@@ -141,11 +105,12 @@ def get_slant_range_distance(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasef
     return prm_dict
 
 
+#########################################################################
 def extract_gmtsar_metadata(unw_file, template_file, rsc_file=None, update_mode=True):
     """Extract metadata from GMTSAR interferogram stack."""
 
     # update_mode: check existing rsc_file
-    if update_mode and ut.run_or_skip(rsc_file, in_file=unw_file, check_readable=False) == 'skip':
+    if update_mode and ut.run_or_skip(rsc_file, in_file=unw_file, readable=False) == 'skip':
         return readfile.read_roipac_rsc(rsc_file)
 
     ifg_dir = os.path.dirname(unw_file)
@@ -227,9 +192,12 @@ def prepare_geometry(geom_files, meta, update_mode=True):
 
         # write .rsc file
         rsc_file = geom_file+'.rsc'
-        writefile.write_roipac_rsc(geom_meta, rsc_file,
-                                   update_mode=update_mode,
-                                   print_msg=True)
+        writefile.write_roipac_rsc(
+            geom_meta,
+            rsc_file,
+            update_mode=update_mode,
+            print_msg=True,
+        )
 
     return
 
@@ -255,8 +223,8 @@ def prepare_stack(unw_files, meta, update_mode=True):
 
         # add DATE12
         prm_files = get_prm_files(ifg_dir)
-        date1, date2 = [os.path.splitext(os.path.basename(i))[0] for i in prm_files]
-        ifg_meta['DATE12'] = '{}-{}'.format(ptime.yymmdd(date1), ptime.yymmdd(date2))
+        date1, date2 = (os.path.splitext(os.path.basename(i))[0] for i in prm_files)
+        ifg_meta['DATE12'] = f'{ptime.yymmdd(date1)}-{ptime.yymmdd(date2)}'
 
         # and P_BASELINE_TOP/BOTTOM_HDR
         baseline_file = os.path.join(ifg_dir, 'baseline.txt')
@@ -267,25 +235,25 @@ def prepare_stack(unw_files, meta, update_mode=True):
         else:
             ifg_meta['P_BASELINE_TOP_HDR'] = '0'
             ifg_meta['P_BASELINE_BOTTOM_HDR'] = '0'
-            msg = 'WARNING: No baseline file found in: {}. '.format(baseline_file)
+            msg = f'WARNING: No baseline file found in: {baseline_file}. '
             msg += 'Set P_BASELINE* to 0 and continue.'
             print(msg)
 
         # write .rsc file
         rsc_file = unw_file+'.rsc'
-        writefile.write_roipac_rsc(ifg_meta, rsc_file,
-                                   update_mode=update_mode,
-                                   print_msg=False)
+        writefile.write_roipac_rsc(
+            ifg_meta,
+            rsc_file,
+            update_mode=update_mode,
+            print_msg=False,
+        )
 
-        prog_bar.update(i+1, suffix='{}_{}'.format(date1, date2))
+        prog_bar.update(i+1, suffix=f'{date1}_{date2}')
     prog_bar.close()
-    return
 
 
 #########################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-
+def prep_gmtsar(inps):
     # read file path from template file
     template = readfile.read_template(inps.template_file)
     inps.unw_files = sorted(glob.glob(template['mintpy.load.unwFile']))
@@ -294,21 +262,26 @@ def main(iargs=None):
 
     # extract common metadata
     rsc_file = os.path.join(inps.mintpy_dir, 'inputs/data.rsc')
-    meta = extract_gmtsar_metadata(unw_file=inps.unw_files[0],
-                                   template_file=inps.template_file,
-                                   rsc_file=rsc_file,
-                                   update_mode=inps.update_mode)
+    meta = extract_gmtsar_metadata(
+        unw_file=inps.unw_files[0],
+        template_file=inps.template_file,
+        rsc_file=rsc_file,
+        update_mode=inps.update_mode,
+    )
 
     # prepare metadata for geometry files
-    prepare_geometry([inps.dem_file], meta=meta, update_mode=inps.update_mode)
+    prepare_geometry(
+        geom_files=[inps.dem_file],
+        meta=meta,
+        update_mode=inps.update_mode,
+    )
 
     # prepare metadata for interferogram files
-    prepare_stack(inps.unw_files, meta=meta, update_mode=inps.update_mode)
+    prepare_stack(
+        unw_files=inps.unw_files,
+        meta=meta,
+        update_mode=inps.update_mode,
+    )
 
     print('Done.')
     return
-
-
-#########################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

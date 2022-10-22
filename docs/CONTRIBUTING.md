@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-This document is inspired by similar instructions from numpy, GMT, ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing! 
+This document is inspired by similar instructions from numpy, GMT, ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing!
 
 These are several ways to contribute to the MintPy project:
 
@@ -14,7 +14,7 @@ These are several ways to contribute to the MintPy project:
 If you get stuck at any point you can open an [issue on GitHub](https://github.com/insarlab/MintPy/issues) or comment on any open issue or pull request or contact us on the [user forum](https://groups.google.com/forum/#!forum/mintpy).
 
 For more information on contributing to open source projects, [GitHub's own guide](https://guides.github.com/activities/contributing-to-open-source/)
-is a great starting point if you are new to version control. 
+is a great starting point if you are new to version control.
 
 ## Development process ##
 
@@ -34,6 +34,11 @@ is a great starting point if you are new to version control.
 
    - `upstream`, which refers to the `insarlab` repository
    - `origin`, which refers to your personal fork
+
++ Setting up `pre-commit` within `MintPy` directory:
+   - Run `pre-commit install` to set up the git hook scripts, so that `pre-commit` will run automatically on `git commit` ([https://pre-commit.com/](https://pre-commit.com/)).
+   - If the error of `No .pre-commit-config.yaml file was found` occurrs while doing `git commit`, update MintPy to the latest upstream to have this config file.
+
 
 #### 2. Develop your contribution: ####
 
@@ -92,10 +97,10 @@ Some things that will increase the chance that your pull request is accepted qui
 
 ## Testing ##
 
-It's a good idea to test any changes or bugs you have fixed, in the feature branch locally, before issuing/submitting the pull request. We realize that we don't have a complete testing system in place yet (maybe you can contribute this!), except for an overall testing script `test_smallbaselineApp.py`:
+It's a good idea to test any changes or bugs you have fixed, in the feature branch locally, before issuing/submitting the pull request. We realize that we don't have a complete testing system in place yet (maybe you can contribute this!), except for an overall testing script for `smallbaselineApp.py`:
 
 ```
-${MINTPY_HOME}/tests/test_smallbaselineApp.py
+${MINTPY_HOME}/tests/smallbaselineApp.py
 ```
 
 It takes about 15 mins to finish.

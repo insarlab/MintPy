@@ -6,13 +6,13 @@
 ############################################################
 
 
+import getopt
 import os
 import sys
-import getopt
 
 import h5py
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.ticker import MultipleLocator
 
 
@@ -123,14 +123,14 @@ def find_row_column(Lon, Lat, lon, lat, lon_step, lat_step):
 def usage():
     print("""
    ************************************************************************************************
-   
+
    Compares InSAR and GPS velocities. Option G can be used to specify the mode of Comparison.
    Out put is InSARvsGPS.png
- 
+
    Usage:
-   
+
    insar_vs_gps.py  -v InSARvelocity.h5 -g GPS velocity file -r Name of the reference GPS station -l ststion list to be compared
-   
+
    -l :  if station list is not specified, all stations in GPS velocity file are compared with InSAR
 
    -m min value of the x and y axis of the plot
@@ -155,11 +155,11 @@ def usage():
    -u to plot 1, 2 or 3 sigma uncertainty [default=1]
    -B marker size [default = 15]
    Example:
-     
+
     insar_vs_gps.py  -v geo_InSAR_velocity.h5  -g gpsVelocity.txt -S usgs  -r BEMT -l 'HNPS,DHLG,SLMS,USGC'
     insar_vs_gps.py  -v geo_InSAR_velocity.h5  -g gpsVelocity.txt -S cmm4 -r BEMT -l 'HNPS,DHLG,SLMS,USGC,ROCH,MONP,SIO3,IVCO,TMAP,BMHL,BILL,OGHS'
     insar_vs_gps.py  -v geo_InSAR_velocity.h5  -g gpsVelocity.txt -S usgs -r BEMT
-    insar_vs_gps.py  -v geo_InSAR_velocity.h5  -g gpsVelocity.txt -S usgs -r BEMT -c geo_temporal_coherence.h5 -t 0.95 
+    insar_vs_gps.py  -v geo_InSAR_velocity.h5  -g gpsVelocity.txt -S usgs -r BEMT -c geo_temporal_coherence.h5 -t 0.95
     insar_vs_gps.py  -v geo_InSAR_velocity.h5  -g gpsVelocity.txt -S usgs -r BEMT -c geo_temporal_coherence.h5 -t 0.95  -l 'HNPS,DHLG,SLMS,USGC'
 
     insar_vs_gps.py  -v geo_velocity_New_masked.h5 -g usgs_velocities_NAfixed.txt -r BEMT -S usgs -A yes -C green -x 0 -y 0.5 -H 193.0 -I 23.0
@@ -297,13 +297,13 @@ def main(argv):
         if not np.isnan(insarData[IDYref][IDXref]):
             insarData = insarData - insarData[IDYref][IDXref]
         else:
-            print(""" 
+            print("""
 %%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        WARNING: nan value for InSAR data at the refernce pixel!
                 reference station should be a pixel with valid value in InSAR data.
-                                
+
                 please select another GPS station as the reference station.
-%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                   """)
             sys.exit(1)
     else:

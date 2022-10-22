@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -8,98 +7,98 @@
 #   from mintpy.defaults import auto_path
 
 
+import glob
 import os
 import re
-import glob
-import numpy as np
-
 
 # Default path of data files from different InSAR processors to be loaded into MintPy
 AUTO_PATH_ISCE_TOPS = '''##----------Default file path of ISCE/topsStack products
-mintpy.load.processor      = isce
-mintpy.load.metaFile       = ../reference/IW*.xml
-mintpy.load.baselineDir    = ../baselines
+mintpy.load.processor       = isce
+mintpy.load.metaFile        = ../reference/IW*.xml
+mintpy.load.baselineDir     = ../baselines
 
-mintpy.load.unwFile        = ../merged/interferograms/*/filt*.unw
-mintpy.load.corFile        = ../merged/interferograms/*/filt*.cor
-mintpy.load.connCompFile   = ../merged/interferograms/*/filt*.unw.conncomp
-mintpy.load.ionoFile       = None
-mintpy.load.intFile        = None
+mintpy.load.unwFile         = ../merged/interferograms/*/filt*.unw
+mintpy.load.corFile         = ../merged/interferograms/*/filt*.cor
+mintpy.load.connCompFile    = ../merged/interferograms/*/filt*.unw.conncomp
+mintpy.load.intFile         = None
 
-mintpy.load.demFile        = ../merged/geom_reference/hgt.rdr
-mintpy.load.lookupYFile    = ../merged/geom_reference/lat.rdr
-mintpy.load.lookupXFile    = ../merged/geom_reference/lon.rdr
-mintpy.load.incAngleFile   = ../merged/geom_reference/los.rdr
-mintpy.load.azAngleFile    = ../merged/geom_reference/los.rdr
-mintpy.load.shadowMaskFile = ../merged/geom_reference/shadowMask.rdr
-mintpy.load.waterMaskFile  = ../merged/geom_reference/waterMask.rdr
-mintpy.load.bperpFile      = None
+mintpy.load.ionUnwFile      = ../ion/*/ion_cal/filt.ion
+mintpy.load.ionCorFile      = ../ion/*/ion_cal/raw_no_projection.cor
+mintpy.load.ionConnCompFile = None
+
+mintpy.load.demFile         = ../merged/geom_reference/hgt.rdr
+mintpy.load.lookupYFile     = ../merged/geom_reference/lat.rdr
+mintpy.load.lookupXFile     = ../merged/geom_reference/lon.rdr
+mintpy.load.incAngleFile    = ../merged/geom_reference/los.rdr
+mintpy.load.azAngleFile     = ../merged/geom_reference/los.rdr
+mintpy.load.shadowMaskFile  = ../merged/geom_reference/shadowMask.rdr
+mintpy.load.waterMaskFile   = ../merged/geom_reference/waterMask.rdr
+mintpy.load.bperpFile       = None
 '''
 
 AUTO_PATH_ISCE_STRIPMAP = '''##----------Default file path of ISCE/stripmapStack products
-mintpy.load.processor      = isce
-mintpy.load.metaFile       = ${m_shelve}/data.dat
-mintpy.load.baselineDir    = ../baselines
+mintpy.load.processor       = isce
+mintpy.load.metaFile        = ${m_shelve}/data.dat
+mintpy.load.baselineDir     = ../baselines
 
-mintpy.load.unwFile        = ../Igrams/*/filt*.unw
-mintpy.load.corFile        = ../Igrams/*/filt*.cor
-mintpy.load.connCompFile   = ../Igrams/*/filt*.unw.conncomp
-mintpy.load.ionoFile       = None
-mintpy.load.intFile        = None
+mintpy.load.unwFile         = ../Igrams/*/filt*.unw
+mintpy.load.corFile         = ../Igrams/*/filt*.cor
+mintpy.load.connCompFile    = ../Igrams/*/filt*.unw.conncomp
+mintpy.load.intFile         = None
 
-mintpy.load.demFile        = ../geom_reference/hgt.rdr
-mintpy.load.lookupYFile    = ../geom_reference/lat.rdr
-mintpy.load.lookupXFile    = ../geom_reference/lon.rdr
-mintpy.load.incAngleFile   = ../geom_reference/los.rdr
-mintpy.load.azAngleFile    = ../geom_reference/los.rdr
-mintpy.load.shadowMaskFile = ../geom_reference/shadowMask.rdr
-mintpy.load.waterMaskFile  = ../geom_reference/waterMask.rdr
-mintpy.load.bperpFile      = None
+mintpy.load.demFile         = ../geom_reference/hgt.rdr
+mintpy.load.lookupYFile     = ../geom_reference/lat.rdr
+mintpy.load.lookupXFile     = ../geom_reference/lon.rdr
+mintpy.load.incAngleFile    = ../geom_reference/los.rdr
+mintpy.load.azAngleFile     = ../geom_reference/los.rdr
+mintpy.load.shadowMaskFile  = ../geom_reference/shadowMask.rdr
+mintpy.load.waterMaskFile   = ../geom_reference/waterMask.rdr
+mintpy.load.bperpFile       = None
 '''
 
 AUTO_PATH_ROIPAC = '''##----------Default file path of ROI_PAC products
-mintpy.load.processor      = roipac
-mintpy.load.unwFile        = ../PROCESS/DONE/IFG*/filt*.unw
-mintpy.load.corFile        = ../PROCESS/DONE/IFG*/filt*.cor
-mintpy.load.connCompFile   = ../PROCESS/DONE/IFG*/filt*snap_connect.byt
+mintpy.load.processor       = roipac
+mintpy.load.unwFile         = ../PROCESS/DONE/IFG*/filt*.unw
+mintpy.load.corFile         = ../PROCESS/DONE/IFG*/filt*.cor
+mintpy.load.connCompFile    = ../PROCESS/DONE/IFG*/filt*snap_connect.byt
 
-mintpy.load.demFile        = ../PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
-mintpy.load.lookupYFile    = ../PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
-mintpy.load.lookupXFile    = ../PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
-mintpy.load.incAngleFile   = None
-mintpy.load.azAngleFile    = None
-mintpy.load.shadowMaskFile = None
-mintpy.load.bperpFile      = None
+mintpy.load.demFile         = ../PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
+mintpy.load.lookupYFile     = ../PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
+mintpy.load.lookupXFile     = ../PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
+mintpy.load.incAngleFile    = None
+mintpy.load.azAngleFile     = None
+mintpy.load.shadowMaskFile  = None
+mintpy.load.bperpFile       = None
 '''
 
 AUTO_PATH_GAMMA = '''##----------Default file path of GAMMA products
-mintpy.load.processor      = gamma
-mintpy.load.unwFile        = ../PROCESS/DONE/IFG*/diff*rlks.unw
-mintpy.load.corFile        = ../PROCESS/DONE/IFG*/*filt*rlks.cor
-mintpy.load.connCompFile   = None
+mintpy.load.processor       = gamma
+mintpy.load.unwFile         = ../PROCESS/DONE/IFG*/diff*rlks.unw
+mintpy.load.corFile         = ../PROCESS/DONE/IFG*/*filt*rlks.cor
+mintpy.load.connCompFile    = None
 
-mintpy.load.demFile        = ../PROCESS/SIM/sim_${m_date12}/sim*.hgt_sim
-mintpy.load.lookupYFile    = ../PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
-mintpy.load.lookupXFile    = ../PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
-mintpy.load.incAngleFile   = None
-mintpy.load.azAngleFile    = None
-mintpy.load.shadowMaskFile = None
-mintpy.load.bperpFile      = ../merged/baselines/*/*.base_perp
+mintpy.load.demFile         = ../PROCESS/SIM/sim_${m_date12}/sim*.hgt_sim
+mintpy.load.lookupYFile     = ../PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
+mintpy.load.lookupXFile     = ../PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
+mintpy.load.incAngleFile    = None
+mintpy.load.azAngleFile     = None
+mintpy.load.shadowMaskFile  = None
+mintpy.load.bperpFile       = ../merged/baselines/*/*.base_perp
 '''
 
 AUTO_PATH_ARIA = '''##----------Default file path of ARIA products
-mintpy.load.processor      = aria
-mintpy.load.unwFile        = ../stack/unwrapStack.vrt
-mintpy.load.corFile        = ../stack/cohStack.vrt
-mintpy.load.connCompFile   = ../stack/connCompStack.vrt
+mintpy.load.processor       = aria
+mintpy.load.unwFile         = ../stack/unwrapStack.vrt
+mintpy.load.corFile         = ../stack/cohStack.vrt
+mintpy.load.connCompFile    = ../stack/connCompStack.vrt
 
-mintpy.load.demFile        = ../DEM/*.dem
-mintpy.load.lookupYFile    = None
-mintpy.load.lookupXFile    = None
-mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
-mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
-mintpy.load.shadowMaskFile = None
-mintpy.load.waterMaskFile  = ../mask/watermask.msk
+mintpy.load.demFile         = ../DEM/*.dem
+mintpy.load.lookupYFile     = None
+mintpy.load.lookupXFile     = None
+mintpy.load.incAngleFile    = ../incidenceAngle/*.vrt
+mintpy.load.azAngleFile     = ../azimuthAngle/*.vrt
+mintpy.load.shadowMaskFile  = None
+mintpy.load.waterMaskFile   = ../mask/watermask.msk
 '''
 
 
@@ -182,11 +181,11 @@ def get_auto_path(processor, work_dir, template):
     for key, value in auto_path_dict.items():
         if value:
             for var1, var2 in var_dict.items():
-                value = value.replace(var1, var2)    
+                value = value.replace(var1, var2)
             auto_path_dict[key] = value
 
     ## 3. update input template option with auto value
-    max_digit = max([len(key) for key in auto_path_dict.keys()])
+    max_digit = max(len(key) for key in auto_path_dict.keys())
     for key, value in auto_path_dict.items():
         if value and template[key] == 'auto':
             template[key] = value
@@ -197,6 +196,8 @@ def get_auto_path(processor, work_dir, template):
 
 def get_reference_date12(proj_dir, processor='roipac'):
     """date12 of reference interferogram in YYMMDD-YYMMDD format"""
+    import numpy as np
+
     m_date12 = None
 
     # opt 1 - reference_ifgram.txt
@@ -209,7 +210,7 @@ def get_reference_date12(proj_dir, processor='roipac'):
     if processor == 'roipac':
         try:
             lookup_file = glob.glob(os.path.join(proj_dir, 'PROCESS/GEO/geo_*/geomap*.trans'))[0]
-            m_date12 = re.findall('\d{6}-\d{6}', lookup_file)[0]
+            m_date12 = re.findall(r'\d{6}-\d{6}', lookup_file)[0]
         except:
             print("No reference interferogram found! Check the PROCESS/GEO/geo_* folder")
 
@@ -229,10 +230,10 @@ def get_dem_file(proj_dir, m_date12, processor):
 
     if m_date12 and processor == 'roipac':
         # get the number of looks used in lookup table file
-        lookup_file = os.path.join(proj_dir, 'PROCESS/GEO/geo_{}/geomap*.trans'.format(m_date12))
-        lks = re.findall('_\d+rlks', glob.glob(lookup_file)[0])[0]
+        lookup_file = os.path.join(proj_dir, f'PROCESS/GEO/geo_{m_date12}/geomap*.trans')
+        lks = re.findall(r'_\d+rlks', glob.glob(lookup_file)[0])[0]
 
         # use the one with same multilook info as the lookup table file.
-        dem_file = os.path.join(proj_dir, 'PROCESS/DONE/*${m_date12}*', 'radar{}.hgt'.format(lks))
+        dem_file = os.path.join(proj_dir, 'PROCESS/DONE/*${m_date12}*', f'radar{lks}.hgt')
 
     return dem_file

@@ -8,18 +8,19 @@
 #     from mintpy.objects import timeseries, ifgramStack, geometry
 
 
+import datetime as dt
+import itertools
 import os
 import time
-import itertools
-import datetime as dt
+
 import h5py
 import numpy as np
-from mintpy.utils import ptime, time_func
 
+from mintpy.utils import ptime
 
 ##------------------ Global Variables ---------------------##
 
-dataTypeDict = {
+DATA_TYPE_DICT = {
     'bool': np.bool_, 'byte': np.bool_, 'flag': np.bool_,
     'int': np.int16, 'int16': np.int16, 'short': np.int16, 'int32': np.int32,
     'int64': np.int64, 'long': np.int64,
@@ -30,9 +31,9 @@ dataTypeDict = {
     'complex128': np.complex128, 'complex_': np.complex128, 'cpx_float64': np.complex128,
 }
 
-timeseriesKeyNames = ['timeseries', 'HDFEOS', 'giantTimeseries']
+TIMESERIES_KEY_NAMES = ['timeseries', 'HDFEOS', 'giantTimeseries']
 
-timeseriesDatasetNames = [
+TIMESERIES_DSET_NAMES = [
     'timeseries',
     'raw',
     'troposphericDelay',
@@ -41,12 +42,14 @@ timeseriesDatasetNames = [
     'displacement',
 ]
 
-geometryDatasetNames = [
+GEOMETRY_DSET_NAMES = [
+    # coordinates
     'height',
     'latitude',
     'longitude',
     'rangeCoord',
     'azimuthCoord',
+    # others
     'incidenceAngle',
     'azimuthAngle',
     'slantRangeDistance',
@@ -56,7 +59,8 @@ geometryDatasetNames = [
     'bperp',
 ]
 
-ifgramDatasetNames = [
+IFGRAM_DSET_NAMES = [
+    # interferogram
     'unwrapPhase',
     'unwrapPhase_bridging_phaseClosure',
     'unwrapPhase_bridging',
@@ -64,8 +68,8 @@ ifgramDatasetNames = [
     'coherence',
     'connectComponent',
     'wrapPhase',
-    'ionoPhase',
     'magnitude',
+    # offset
     'azimuthOffset',
     'azimuthOffsetStd',
     'rangeOffset',
@@ -74,13 +78,12 @@ ifgramDatasetNames = [
     'refPhase',
 ]
 
-datasetUnitDict = {
+DSET_UNIT_DICT = {
     # interferogram
     'unwrapPhase'      : 'radian',
     'coherence'        : '1',
     'connectComponent' : '1',
     'wrapPhase'        : 'radian',
-    'ionoPhase'        : 'radian',
     'magnitude'        : '1',
 
     # offset
@@ -137,7 +140,6 @@ datasetUnitDict = {
     'dem'       : 'm',
     'hgt'       : 'm',
     'hgt_sim'   : 'm',
-    'magnitude' : '1',
     'intensity' : '1',
 }
 
@@ -151,8 +153,6 @@ class timeseries:
 
     File structure: https://mintpy.readthedocs.io/en/latest/api/data_structure/#timeseries
     """
-    # point get_design_matrix4time_func() to utils.time_func for backward compatibility
-    get_design_matrix4time_func = time_func.get_design_matrix4time_func
 
     def __init__(self, file=None):
         self.file = file
@@ -162,14 +162,14 @@ class timeseries:
         try:
             self.f.close()
             if print_msg:
-                print('close timeseries file: {}'.format(os.path.basename(self.file)))
+                print(f'close timeseries file: {os.path.basename(self.file)}')
         except:
             pass
         return None
 
     def open(self, print_msg=True):
         if print_msg:
-            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+            print(f'open {self.name} file: {os.path.basename(self.file)}')
         self.get_metadata()
         self.get_size()
         self.get_date_list()
@@ -196,7 +196,7 @@ class timeseries:
 
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
-        self.sliceList = ['{}-{}'.format(self.name, i) for i in self.dateList]
+        self.sliceList = [f'{self.name}-{i}' for i in self.dateList]
         return None
 
     def get_metadata(self):
@@ -242,7 +242,7 @@ class timeseries:
                     data = tsobj.read(box=(100,300,500,800))
         """
         if print_msg:
-            print('reading {} data from file: {} ...'.format(self.name, self.file))
+            print(f'reading {self.name} data from file: {self.file} ...')
         self.open(print_msg=False)
 
         # convert input datasetName into list of dates
@@ -268,15 +268,29 @@ class timeseries:
             # Get Index in space/2_3 dimension
             if box is None:
                 box = [0, 0, self.width, self.length]
+            xsize = box[2] - box[0]
+            ysize = box[3] - box[1]
 
             # read
-            data = ds[:,
-                      box[1]:box[3],
-                      box[0]:box[2]][dateFlag]
+            num_slice = np.sum(dateFlag)
+            inds = np.where(dateFlag)[0].tolist()
+
+            if num_slice / dateFlag.size < 0.05:
+                # single indexing if only a small fraction is read
+                data = np.zeros((num_slice, ysize, xsize), dtype=ds.dtype)
+                for i, ind in enumerate(inds):
+                    data[i] = ds[ind,
+                                 box[1]:box[3],
+                                 box[0]:box[2]]
+            else:
+                data = ds[:,
+                          box[1]:box[3],
+                          box[0]:box[2]][dateFlag]
 
             if squeeze and any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
         return data
+
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None, compression=None):
         """
@@ -313,7 +327,7 @@ class timeseries:
             # get ref file compression type if input compression is None
             if compression is None:
                 with h5py.File(refFile, 'r') as rf:
-                    compression = rf[timeseriesDatasetNames[0]].compression
+                    compression = rf[TIMESERIES_DSET_NAMES[0]].compression
             refobj.close(print_msg=False)
         data = np.array(data, dtype=np.float32)
         dates = np.array(dates, dtype=np.string_)
@@ -325,10 +339,10 @@ class timeseries:
         outDir = os.path.dirname(os.path.abspath(outFile))
         if not os.path.isdir(outDir):
             os.makedirs(outDir)
-            print('create directory: {}'.format(outDir))
+            print(f'create directory: {outDir}')
 
         # 3D dataset - timeseries
-        print('create timeseries HDF5 file: {} with w mode'.format(outFile))
+        print(f'create timeseries HDF5 file: {outFile} with w mode')
         with h5py.File(outFile, 'w') as f:
             print(('create dataset /timeseries of {t:<10} in size of {s} '
                    'with compression={c}').format(t=str(data.dtype),
@@ -340,17 +354,17 @@ class timeseries:
                              compression=compression)
 
             # 1D dataset - date / bperp
-            print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))
+            print(f'create dataset /dates      of {str(dates.dtype):<10} in size of {dates.shape}')
             f.create_dataset('date', data=dates)
 
             if bperp.shape != ():
-                print('create dataset /bperp      of {:<10} in size of {}'.format(str(bperp.dtype), bperp.shape))
+                print(f'create dataset /bperp      of {str(bperp.dtype):<10} in size of {bperp.shape}')
                 f.create_dataset('bperp', data=bperp)
 
             # Attributes
             for key, value in metadata.items():
                 f.attrs[key] = str(value)
-        print('finished writing to {}'.format(outFile))
+        print(f'finished writing to {outFile}')
         return outFile
 
     def timeseries_std(self, maskFile=None, outFile=None):
@@ -367,15 +381,15 @@ class timeseries:
 
         # Write text file
         header = 'Standard Deviation in space for each acquisition of time-series\n'
-        header += 'Timeseries file: {}\n'.format(self.file)
-        header += 'Mask file: {}\n'.format(maskFile)
+        header += f'Timeseries file: {self.file}\n'
+        header += f'Mask file: {maskFile}\n'
         header += 'Date\t\tSTD (m)'
         if not outFile:
             outFile = os.path.join(os.path.dirname(os.path.abspath(self.file)),
-                                   'std_{}.txt'.format(os.path.splitext(os.path.basename(self.file))[0]))
+                                   f'std_{os.path.splitext(os.path.basename(self.file))[0]}.txt')
         np.savetxt(outFile, np.hstack((np.array(self.dateList).reshape(-1, 1), self.std.reshape(-1, 1))),
                    fmt='%s', delimiter='\t', header=header)
-        print('save timeseries STD to text file: {}'.format(outFile))
+        print(f'save timeseries STD to text file: {outFile}')
         return outFile
 
     def timeseries_rms(self, maskFile=None, outFile=None):
@@ -393,27 +407,27 @@ class timeseries:
 
         # Calculate RMS one date at a time
         self.rms = np.zeros(num_date) * np.nan
-        print('reading {} data from file: {} ...'.format(self.name, self.file))
+        print(f'reading {self.name} data from file: {self.file} ...')
         prog_bar = ptime.progressBar(maxValue=num_date)
         for i in range(num_date):
-            data = self.read(datasetName='{}'.format(date_list[i]), print_msg=False)
+            data = self.read(datasetName=f'{date_list[i]}', print_msg=False)
             if maskFile and os.path.isfile(maskFile):
                 data[mask == 0] = np.nan
             self.rms[i] = np.sqrt(np.nanmean(np.square(data), axis=(0, 1)))
-            prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num_date))
+            prog_bar.update(i+1, suffix=f'{i+1}/{num_date}')
         prog_bar.close()
 
         # Write text file
         header = 'Root Mean Square in space for each acquisition of time-series\n'
-        header += 'Timeseries file: {}\n'.format(self.file)
-        header += 'Mask file: {}\n'.format(maskFile)
+        header += f'Timeseries file: {self.file}\n'
+        header += f'Mask file: {maskFile}\n'
         header += 'Date\t\tRMS (m)'
         if not outFile:
             outFile = os.path.join(os.path.dirname(os.path.abspath(self.file)),
-                                   'rms_{}.txt'.format(os.path.splitext(os.path.basename(self.file))[0]))
+                                   f'rms_{os.path.splitext(os.path.basename(self.file))[0]}.txt')
         np.savetxt(outFile, np.hstack((np.array(self.dateList).reshape(-1, 1), self.rms.reshape(-1, 1))),
                    fmt='%s', delimiter='\t', header=header)
-        print('save timeseries RMS to text file: {}'.format(outFile))
+        print(f'save timeseries RMS to text file: {outFile}')
         return outFile
 
     def spatial_average(self, maskFile=None, box=None, reverseMask=False, threshold=None):
@@ -422,7 +436,7 @@ class timeseries:
         if maskFile and os.path.isfile(maskFile):
             print('read mask from file: '+maskFile)
             mask = singleDataset(maskFile).read(box=box)
-            data[mask == int(reverseMask)] = np.nan
+            data[:, mask == int(reverseMask)] = np.nan
 
         # calculate area ratio if threshold is specified
         # percentage of pixels with value above the threshold
@@ -434,21 +448,89 @@ class timeseries:
         return dmean, self.dateList
 
     def temporal_average(self):
-        print('calculating the temporal average of timeseries file: {}'.format(self.file))
+        print(f'calculating the temporal average of timeseries file: {self.file}')
         self.open(print_msg=False)
         data = self.read(squeeze=False)
         dmean = np.nanmean(data, axis=0)
         return dmean
+
+
+    def temporal_derivative(self, out_file):
+        print(f'calculating the temporal derivative of timeseries file: {self.file}')
+
+        # read
+        print('reading timeseries data')
+        self.open(print_msg=False)
+        ts_data = self.read(print_msg=False)
+
+        # calculate
+        print('calculate the 1st derivative of timeseries data')
+        ts_data_1d = np.zeros(ts_data.shape, np.float32)
+        ts_data_1d[1:, :, :] = np.diff(ts_data, n=1, axis=0)
+
+        # write
+        if not out_file:
+            fbase = os.path.splitext(self.file)[0]
+            out_file = f'{fbase}_1stDiff.h5'
+        self.write2hdf5(ts_data_1d, outFile=out_file, refFile=self.file)
+
+        return out_file
+
+
+    def temporal_filter(self, time_win=0.1, out_file=None):
+        """Filter the time-series in time with a moving window.
+
+        Parameters: time_win - float, sigma of Gaussian dist. in time in years
+                    out_file - str, output file name
+        Returns:    out_file - str, output file name
+        """
+
+        # read
+        self.open()
+        ts_data = self.read().reshape(self.numDate, -1)
+        tbase = self.tbase.reshape(-1, 1) / 365.25   # tempora baseline in years
+
+        # apply moving window in time
+        print('-'*50)
+        print(f'filtering in time with a Gaussian window in size of {time_win:.1f} years')
+        ts_data_filt = np.zeros(ts_data.shape, np.float32)
+
+        prog_bar = ptime.progressBar(maxValue=self.numDate)
+        for i in range(self.numDate):
+            # calc weight from Gaussian (normal) distribution in time
+            tbase_diff = tbase[i] - tbase
+            weight = np.exp(-0.5 * (tbase_diff**2) / (time_win**2))
+            weight /= np.sum(weight)
+
+            # smooth the current acquisition
+            ts_data_filt[i, :] = np.sum(ts_data * weight, axis=0)
+
+            prog_bar.update(i+1, suffix=self.dateList[i])
+        prog_bar.close()
+        del ts_data
+
+        # prepare for writing: temporal referencing + reshape
+        ts_data_filt -= ts_data_filt[self.refIndex, :]
+        ts_data_filt = np.reshape(ts_data_filt, (self.numDate, self.length, self.width))
+
+        # write
+        if not out_file:
+            fbase = os.path.splitext(self.file)[0]
+            out_file = f'{fbase}_tempGauss.h5'
+        self.write2hdf5(ts_data_filt, outFile=out_file, refFile=self.file)
+
+        return
+
 
     def save2bl_list_file(self, out_file='bl_list.txt'):
         """Generate bl_list.txt file from timeseries h5 file."""
         self.open(print_msg=False)
         date6_list = [i[2:8] for i in self.dateList]
         pbase_list = self.pbase.tolist()
-        print('write baseline list info to file: {}'.format(out_file))
+        print(f'write baseline list info to file: {out_file}')
         with open(out_file, 'w') as f:
             for d, pbase in zip(date6_list, pbase_list):
-                f.write('{}\t{}\n'.format(d, pbase))
+                f.write(f'{d}\t{pbase}\n')
         return out_file
 
 ################################ timeseries class end ##################################
@@ -471,13 +553,13 @@ class geometry:
         try:
             self.f.close()
             if print_msg:
-                print('close geometry file: {}'.format(os.path.basename(self.file)))
+                print(f'close geometry file: {os.path.basename(self.file)}')
         except:
             pass
 
     def open(self, print_msg=True):
         if print_msg:
-            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+            print(f'open {self.name} file: {os.path.basename(self.file)}')
         self.get_metadata()
         self.get_size()
         self.numPixel = self.length * self.width
@@ -502,7 +584,7 @@ class geometry:
 
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
-            dsName = [i for i in f.keys() if i in geometryDatasetNames][0]
+            dsName = [i for i in f.keys() if i in GEOMETRY_DSET_NAMES][0]
             dsShape = f[dsName].shape
             if len(dsShape) == 3:
                 self.length, self.width = dsShape[1:3]
@@ -520,7 +602,7 @@ class geometry:
                 self.metadata[key] = value
         return self.metadata
 
-    def read(self, datasetName=geometryDatasetNames[0], box=None, print_msg=True):
+    def read(self, datasetName=GEOMETRY_DSET_NAMES[0], box=None, print_msg=True):
         """Read 2D / 3D dataset with bounding box in space
         Parameters: datasetName : (list of) string, to point to specific 2D dataset, e.g.:
                         height
@@ -547,7 +629,7 @@ class geometry:
             box = (0, 0, self.width, self.length)
 
         if datasetName is None:
-            datasetName = geometryDatasetNames[0]
+            datasetName = GEOMETRY_DSET_NAMES[0]
         elif isinstance(datasetName, str):
             datasetName = [datasetName]
 
@@ -555,7 +637,7 @@ class geometry:
             familyName = datasetName[0].split('-')[0]
             ds = f[familyName]
             if print_msg:
-                print('reading {:<15} data from file: {} ...'.format(familyName, self.file))
+                print(f'reading {familyName:<15} data from file: {self.file} ...')
 
             if len(ds.shape) == 1:
                 data = ds[:]
@@ -598,7 +680,7 @@ class ifgramStack:
         try:
             self.f.close()
             if print_msg:
-                print('close {} file: {}'.format(self.name, os.path.basename(self.file)))
+                print(f'close {self.name} file: {os.path.basename(self.file)}')
         except:
             pass
 
@@ -609,14 +691,14 @@ class ifgramStack:
             All string in YYYYMMDD        named with date (following roipac)
         """
         if print_msg:
-            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+            print(f'open {self.name} file: {os.path.basename(self.file)}')
         self.get_metadata()
         self.get_size()
         self.read_datetimes()
         self.numPixel = self.length * self.width
 
         # time info
-        self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
+        self.date12List = [f'{i}_{j}' for i, j in zip(self.mDates, self.sDates)]
         self.tbaseIfgram = np.array([i.days + i.seconds / (24 * 60 * 60)
                                      for i in (self.sTimes - self.mTimes)],
                                     dtype=np.float32)
@@ -625,17 +707,17 @@ class ifgramStack:
             self.dropIfgram = f['dropIfgram'][:]
             self.pbaseIfgram = f['bperp'][:]
 
-            # get existed datasetNames in the order of ifgramDatasetNames
+            # get existed datasetNames in the order of IFGRAM_DSET_NAMES
             dsNames = [i for i in f.keys()
                        if (isinstance(f[i], h5py.Dataset)
                            and f[i].shape[-2:] == (self.length, self.width))]
-            self.datasetNames = [i for i in ifgramDatasetNames if i in dsNames]
-            self.datasetNames += [i for i in dsNames if i not in ifgramDatasetNames]
+            self.datasetNames = [i for i in IFGRAM_DSET_NAMES if i in dsNames]
+            self.datasetNames += [i for i in dsNames if i not in IFGRAM_DSET_NAMES]
 
         # Get sliceList for self.read()
         self.sliceList = []
         for dsName in self.datasetNames:
-            self.sliceList += ['{}-{}'.format(dsName, i) for i in self.date12List]
+            self.sliceList += [f'{dsName}-{i}' for i in self.date12List]
 
         # Time in timeseries domain
         self.dateList = self.get_date_list(dropIfgram=False)
@@ -669,7 +751,7 @@ class ifgramStack:
                 self.metadata[key] = value
 
         # START/END_DATE
-        dateList = sorted([i.decode('utf8') for i in dates])
+        dateList = sorted(i.decode('utf8') for i in dates)
         self.metadata['START_DATE'] = dateList[0]
         self.metadata['END_DATE'] = dateList[-1]
         return self.metadata
@@ -740,7 +822,7 @@ class ifgramStack:
             familyName = datasetName[0].split('-')[0]
             ds = f[familyName]
             if print_msg:
-                print('reading {} data from file: {} ...'.format(familyName, self.file))
+                print(f'reading {familyName} data from file: {self.file} ...')
 
             # get dateFlag - mark in time/1st dimension
             dateFlag = np.zeros((self.numIfgram), dtype=np.bool_)
@@ -774,9 +856,9 @@ class ifgramStack:
             datasetName = 'coherence'
 
         if useMedian:
-            print('calculating spatial median of {} in file {} ...'.format(datasetName, self.file))
+            print(f'calculating spatial median of {datasetName} in file {self.file} ...')
         else:
-            print('calculating spatial mean of {} in file {} ...'.format(datasetName, self.file))
+            print(f'calculating spatial mean of {datasetName} in file {self.file} ...')
 
         # read mask
         if maskFile and os.path.isfile(maskFile):
@@ -793,7 +875,7 @@ class ifgramStack:
 
             prog_bar = ptime.progressBar(maxValue=numIfgram)
             for i in range(numIfgram):
-                prog_bar.update(i+1, suffix='{}/{}'.format(i+1, numIfgram))
+                prog_bar.update(i+1, suffix=f'{i+1}/{numIfgram}')
 
                 # read
                 data = dset[i, box[1]:box[3], box[0]:box[2]]
@@ -825,7 +907,7 @@ class ifgramStack:
                 dates = dates[f['dropIfgram'][:], :]
         mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
         sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
-        date12List = ['{}_{}'.format(i, j) for i, j in zip(mDates, sDates)]
+        date12List = [f'{i}_{j}' for i, j in zip(mDates, sDates)]
         return date12List
 
     def get_drop_date12_list(self):
@@ -834,7 +916,7 @@ class ifgramStack:
             dates = dates[~f['dropIfgram'][:], :]
         mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
         sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
-        date12List = ['{}_{}'.format(i, j) for i, j in zip(mDates, sDates)]
+        date12List = [f'{i}_{j}' for i, j in zip(mDates, sDates)]
         return date12List
 
     def get_date_list(self, dropIfgram=False):
@@ -861,7 +943,7 @@ class ifgramStack:
         elif 'REF_Y' not in self.metadata.keys():
             raise ValueError('No REF_X/Y found!\nrun reference_point.py to select reference pixel.')
         else:
-            print('reference pixel in y/x: ({}, {}) from dataset: {}'.format(self.refY, self.refX, unwDatasetName))
+            print(f'reference pixel in y/x: ({self.refY}, {self.refX}) from dataset: {unwDatasetName}')
             ref_phase = self.read(datasetName=unwDatasetName,
                                   box=(self.refX, self.refY, self.refX+1, self.refY+1),
                                   dropIfgram=dropIfgram,
@@ -877,7 +959,7 @@ class ifgramStack:
             if datasetName is None:
                 datasetName = [i for i in ['connectComponent', 'unwrapPhase']
                                if i in f.keys()][0]
-            print('calculate the common mask of pixels with non-zero {} value'.format(datasetName))
+            print(f'calculate the common mask of pixels with non-zero {datasetName} value')
 
             dset = f[datasetName]
             mask = np.ones(dset.shape[1:3], dtype=np.bool_)
@@ -890,7 +972,7 @@ class ifgramStack:
             # Loop to save memory usage
             prog_bar = ptime.progressBar(maxValue=num2read)
             for i in range(num2read):
-                prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num2read))
+                prog_bar.update(i+1, suffix=f'{i+1}/{num2read}')
                 data = dset[idx2read[i], :, :]
                 mask[data == 0.] = 0
                 mask[np.isnan(data)] = 0
@@ -901,15 +983,15 @@ class ifgramStack:
         self.open(print_msg=False)
         if datasetName is None:
             datasetName = 'coherence'
-        print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
+        print(f'calculate the temporal average of {datasetName} in file {self.file} ...')
 
         # index of pairs to read
         ifgram_flag = np.ones(self.numIfgram, dtype=np.bool_)
         if dropIfgram:
             ifgram_flag = self.dropIfgram
             if np.all(ifgram_flag == 0.):
-                raise Exception(('ALL interferograms are marked as dropped, '
-                                 'can not calculate temporal average.'))
+                raise Exception('ALL interferograms are marked as dropped, '
+                                'can not calculate temporal average.')
 
         # temporal baseline for phase
         # with unit of years (float64 for very short tbase of UAVSAR data)
@@ -940,7 +1022,7 @@ class ifgramStack:
             for i in range(num_step):
                 r0 = i * row_step
                 r1 = min(r0 + row_step, self.length)
-                prog_bar.update(i+1, suffix='lines {}/{}'.format(r1, self.length))
+                prog_bar.update(i+1, suffix=f'lines {r1}/{self.length}')
 
                 # read
                 data = dset[:, r0:r1, :][ifgram_flag]
@@ -968,10 +1050,158 @@ class ifgramStack:
             num_conn[i] = np.where(Ai == 1)[0] - np.where(Ai == -1)[0]
         return np.max(num_conn)
 
-    # Functions for Unwrap error correction
+
+    def split2boxes(self, max_memory=4, dim0_size=None, print_msg=True):
+        """Split into chunks in rows to reduce memory usage.
+
+        Parameters: max_memory - float, max memory to use in GB
+                    dim0_size  - the 1st dimension size of all used datasets
+                                 e.g., dim0_size = num_pair * 2 + num_date
+                    print_msg  - bool
+        Returns:    box_list   - list of tuple of 4 int
+                    num_box    - int, number of boxes
+        """
+        self.open(print_msg=False)
+        length = self.length
+        width = self.width
+
+        # dimension in time: phase/offset, weight, timeseries, etc.
+        if not dim0_size:
+            # for time series estimation
+            dim0_size = self.numIfgram * 2 + self.numDate
+        ds_size = dim0_size * length * width * 4
+
+        num_box = int(np.ceil(ds_size * 1.5 / (max_memory * 1024**3)))
+        y_step = int(np.ceil((length / num_box) / 10) * 10)
+        num_box = int(np.ceil(length / y_step))
+        if print_msg and num_box > 1:
+            print('maximum memory size: %.1E GB' % max_memory)
+            print('split %d lines into %d patches for processing' % (length, num_box))
+            print('    with each patch up to %d lines' % y_step)
+
+        # y_step / num_box --> box_list
+        box_list = []
+        for i in range(num_box):
+            y0 = i * y_step
+            y1 = min([length, y0 + y_step])
+            box = (0, y0, width, y1)
+            box_list.append(box)
+
+        return box_list, num_box
+
+
+    # Functions for closure phase bias
+    def get_closure_phase_index(self, conn, dropIfgram=True):
+        """Get the indices of interferograms that forms the given connection level closure loop.
+
+        Parameters: conn       - int, connection level
+                    dropIfgram - bool, exclude the dropped interferograms.
+        Returns:    cp_idx     - 2D np.ndarray in int16 in size of (num_cp, conn + 1)
+                                 Each row for the indices of interferograms for one closure loop.
+                                 num_cp <= num_date - conn
+        """
+        date12_list = self.get_date12_list(dropIfgram=False)
+        date_list = self.get_date_list(dropIfgram=dropIfgram)
+        num_date = len(date_list)
+
+        # get the closure index
+        cp_idx = []
+        for i in range(num_date - conn):
+            # compose the connection-n pairs
+            cp_date12_list = []
+            for j in range(conn):
+                cp_date12_list.append(f'{date_list[i+j]}_{date_list[i+j+1]}')
+            cp_date12_list.append(f'{date_list[i]}_{date_list[i+conn]}')
+
+            # add to cp_idx, ONLY IF all pairs exist for this closure loop
+            if all(x in date12_list for x in cp_date12_list):
+                cp_idx.append([date12_list.index(x) for x in cp_date12_list])
+
+        # list(list) to 2D array
+        cp_idx = np.array(cp_idx, dtype=np.int16)
+        cp_idx = np.unique(cp_idx, axis=0)
+
+        return cp_idx
+
+
+    def get_sequential_closure_phase(self, box, conn, post_proc=None):
+        """Computes wrapped sequential closure phases for a given conneciton level.
+
+        Reference: Equation (21) in Zheng et al. (2022, TGRS)
+        For conn = 5, seq_closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
+
+        Parameters: box       - tuple of 4 int, bounding box in (x0, y0, x1, y1)
+                    conn      - int, connection level of the closure phase
+                    post_proc - str, post processing of the closure phase:
+                                None - 3D array in float32, seq closure phase
+                                sum  - 2D array in complex64, sum  in time of the complex seq closure phase
+                                mean - 2D array in complex64, mean in time of the complex seq closure phase
+        Returns:    cp_w      - 3D np.ndarray in float32 in size of (num_cp, box_len, box_wid)
+                                wrapped sequential  closure phase for the given connection level.
+                    sum_cp    - None or 2D np.ndarray in complex64 in size of (box_len, box_width)
+                                wrapped average seq closure phase for the given connection level,
+                                controlled by post_proc.
+                    num_cp    - int, number of  seq closure phase for the given connection level.
+        """
+        # basic info
+        num_date = len(self.get_date_list(dropIfgram=True))
+        box_wid = box[2] - box[0]
+        box_len = box[3] - box[1]
+
+        ## get the closure index
+        cp_idx = self.get_closure_phase_index(conn=conn, dropIfgram=True)
+        num_cp = cp_idx.shape[0]
+        print(f'number of closure measurements expected: {num_date - conn}')
+        print(f'number of closure measurements found   : {num_cp}')
+
+        if not post_proc:
+            if num_cp < num_date - conn:
+                msg = f'num_cp ({num_cp}) < num_date - conn ({num_date - conn})'
+                msg += ' --> some interferograms are missing!'
+                raise Exception(msg)
+        else:
+            if num_cp < 1:
+                raise Exception(f"No triplets found at connection level: {conn}!")
+
+        ## read data
+        phase = self.read(box=box, print_msg=False)
+        ref_phase = self.get_reference_phase(dropIfgram=False)
+        for i in range(phase.shape[0]):
+            mask = phase[i] != 0.
+            phase[i][mask] -= ref_phase[i]
+
+        ## calculate the 3D complex seq closure phase
+        cp_w = np.zeros((num_cp, box_len, box_wid), dtype=np.complex64)
+        for i in range(num_cp):
+
+            # calculate closure phase - cp0_w
+            idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
+            cp0_w = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
+
+            # get the wrapped closure phase
+            cp_w[i] = np.exp(1j * cp0_w)
+
+        ## post-processing
+        if not post_proc:
+            sum_cp = None
+
+        elif post_proc == 'sum':
+            sum_cp = np.sum(cp_w, axis=0)
+
+        elif post_proc == 'mean':
+            sum_cp = np.mean(cp_w, axis=0)
+
+        else:
+            raise ValueError(f'un-recognized post_proc={post_proc}! Available choices: sum, mean.')
+
+        return np.angle(cp_w), sum_cp, num_cp
+
+
+    # Functions for unwrapping error correction
     @staticmethod
     def get_design_matrix4triplet(date12_list):
         """Generate the design matrix of ifgram triangle for unwrap error correction using phase closure
+
         Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
         Returns:    C : 2D np.array in size of (num_tri, num_ifgram) consisting 0, 1, -1
                         for 3 SAR acquisition in t1, t2 and t3 in time order,
@@ -1018,15 +1248,17 @@ class ifgramStack:
             C_list.append(row)
 
         if len(C_list) == 0:
-            print('\nWARNING: No triangles found from input date12_list:\n{}!\n'.format(date12_list))
+            print(f'\nWARNING: No triangles found from input date12_list:\n{date12_list}!\n')
             return None
 
         return np.stack(C_list).astype(np.float32)
 
-    # Functions for Network Inversion
+
+    # Functions for network inversion / time series estimation
     @staticmethod
     def get_design_matrix4timeseries(date12_list, refDate=None):
         """Return design matrix of the input ifgramStack for timeseries estimation
+
         Parameters: date12_list - list of string in YYYYMMDD_YYYYMMDD format
                     refDate     - str, date in YYYYMMDD format
                                   set to None for the 1st date
@@ -1058,7 +1290,7 @@ class ifgramStack:
         A = np.zeros((num_ifgram, num_date), np.float32)
         B = np.zeros((num_ifgram, num_date), np.float32)
         for i in range(num_ifgram):
-            ind1, ind2 = [date_list.index(d) for d in date12_list[i].split('_')]
+            ind1, ind2 = (date_list.index(d) for d in date12_list[i].split('_'))
             A[i, ind1] = -1
             A[i, ind2] = 1
             # support date12_list with the first date NOT being the earlier date
@@ -1116,14 +1348,14 @@ class ifgramStack:
             return
 
         with h5py.File(self.file, 'r+') as f:
-            print('open file {} with r+ mode'.format(self.file))
+            print(f'open file {self.file} with r+ mode')
             print('update HDF5 dataset "/dropIfgram".')
             f['dropIfgram'][:] = np.array([i not in date12List2Drop for i in date12ListAll], dtype=np.bool_)
 
-            # update MODIFICATION_TIME for all datasets in ifgramDatasetNames
-            for dsName in ifgramDatasetNames:
+            # update MODIFICATION_TIME for all datasets in IFGRAM_DSET_NAMES
+            for dsName in IFGRAM_DSET_NAMES:
                 if dsName in f.keys():
-                    print('update MODIFICATION_TIME in HDF5 dataset "/{}"'.format(dsName))
+                    print(f'update MODIFICATION_TIME in HDF5 dataset "/{dsName}"')
                     f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
                     time.sleep(1)   #to distinguish the modification time of input files
 
@@ -1184,13 +1416,13 @@ class HDFEOS:
         try:
             self.f.close()
             if print_msg:
-                print('close timeseries file: {}'.format(os.path.basename(self.file)))
+                print(f'close timeseries file: {os.path.basename(self.file)}')
         except:
             pass
 
     def open(self, print_msg=True):
         if print_msg:
-            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+            print(f'open {self.name} file: {os.path.basename(self.file)}')
         self.get_metadata()
         self.length = int(self.metadata['LENGTH'])
         self.width = int(self.metadata['WIDTH'])
@@ -1204,13 +1436,13 @@ class HDFEOS:
             self.numDate = len(self.dateList)
 
             # get slice list
-            self.sliceList += ['{}/displacement-{}'.format(gname, i) for i in self.dateList]
+            self.sliceList += [f'{gname}/displacement-{i}' for i in self.dateList]
             for gname in ['HDFEOS/GRIDS/timeseries/quality',
                           'HDFEOS/GRIDS/timeseries/geometry']:
                 g = f[gname]
                 for key in g.keys():
                     if isinstance(g[key], h5py.Dataset) and len(g[key].shape) == 2:
-                        self.sliceList.append('{}/{}'.format(gname, key))
+                        self.sliceList.append(f'{gname}/{key}')
 
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
@@ -1255,16 +1487,16 @@ class HDFEOS:
             box = [0, 0, self.width, self.length]
 
         if datasetName is None:
-            datasetName = [timeseriesDatasetNames[-1]]
+            datasetName = [TIMESERIES_DSET_NAMES[-1]]
         elif isinstance(datasetName, str):
             datasetName = [datasetName]
 
         with h5py.File(self.file, 'r') as f:
             familyName = datasetName[0].split('-')[0]
             groupName = self.datasetGroupNameDict[familyName]
-            ds = f['HDFEOS/GRIDS/timeseries/{}/{}'.format(groupName, familyName)]
+            ds = f[f'HDFEOS/GRIDS/timeseries/{groupName}/{familyName}']
             if print_msg:
-                print('reading {} data from file: {} ...'.format(familyName, self.file))
+                print(f'reading {familyName} data from file: {self.file} ...')
 
             if len(ds.shape) == 1:
                 data = ds[:]

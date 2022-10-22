@@ -6,33 +6,34 @@
 ############################################################
 
 
+import getopt
 import os
 import sys
-import getopt
+
 import h5py
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def usage():
     print("""
 *****************************************************************************************
-   Generating multiple profiles(each profile includes seeveral transects [specified by -n])  
+   Generating multiple profiles(each profile includes seeveral transects [specified by -n])
    perpendicular to a Fault . Fault is a path specified by lat and lon coordinates.
 
    Usage:
        -n number of transects used to generate one profile
-       -d distance [in pixel] between individual transects to generate one profile   
+       -d distance [in pixel] between individual transects to generate one profile
        -F a txt file including the fault coordinates (first column lon , second column: lat)
        -p flip profile left-right (yes or no) [default: no]
        -u flip up - down [default: no]
        -g gps_file (if exists)
        -S source of GPS velocities (usgs,cmm4,mintpy)
-       -G gps stations to compare with InSAR  (all,insar,profile)  
-          "all": all gps stations is projected to the profile 
-          "insar": same as all but limited to the area covered by insar    
+       -G gps stations to compare with InSAR  (all,insar,profile)
+          "all": all gps stations is projected to the profile
+          "insar": same as all but limited to the area covered by insar
           "profile": only those gps stations which are in the profile area]
-    
+
        -x lower bound to display in x direction
        -X higher bound to display in x direction
        -l lower bound to display in y direction
@@ -45,7 +46,7 @@ def usage():
        -D Distance between two consequent average profile
 
    Example:
-       multi_transect.py -f geo_velocity_masked.h5 -n 50 -d 1 -W 10 -D 2 -F Chaman_fault.txt 
+       multi_transect.py -f geo_velocity_masked.h5 -n 50 -d 1 -W 10 -D 2 -F Chaman_fault.txt
 
 ********************************************************************************************
     """)
@@ -73,16 +74,16 @@ def gps_to_LOS(Ve, Vn, theta, heading):
 
 def check_st_in_box(x, y, x0, y0, x1, y1, X0, Y0, X1, Y1):
 
-    m1 = float(y1-y0)/float((x1-x0))
+    m1 = float(y1-y0)/float(x1-x0)
     c1 = float(y0-m1*x0)
 
-    m2 = float(Y1-Y0)/float((X1-X0))
+    m2 = float(Y1-Y0)/float(X1-X0)
     c2 = float(Y0-m2*X0)
 
-    m3 = float(y0-Y0)/float((x0-X0))
+    m3 = float(y0-Y0)/float(x0-X0)
     c3 = float(Y0-m3*X0)
 
-    m4 = float(y1-Y1)/float((x1-X1))
+    m4 = float(y1-Y1)/float(x1-X1)
     c4 = float(Y1-m4*X1)
 
     yy1 = m1*x+c1
@@ -128,7 +129,7 @@ def check_st_in_box2(x, y, x0, y0, x1, y1, X0, Y0, X1, Y1):
 
 
 def line(x0, y0, x1, y1):
-    m = float(y1-y0)/float((x1-x0))
+    m = float(y1-y0)/float(x1-x0)
     c = float(y0-m*x0)
     return m, c
 
@@ -635,7 +636,7 @@ def main(argv=None):
 
         if ntrans > 1:
 
-            m = float(y1-y0)/float((x1-x0))
+            m = float(y1-y0)/float(x1-x0)
             c = float(y0-m*x0)
             m1 = -1.0/m
             try:
@@ -717,15 +718,15 @@ def main(argv=None):
                     insarData = insarData - insarData[IDYref][IDXref]
 
                 else:
-                    print(""" 
+                    print("""
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      
-      WARNING: nan value for InSAR data at the refernce pixel!
+
+      WARNING: nan value for InSAR data at the reference pixel!
                reference station should be a pixel with valid value in InSAR data.
-                               
+
                please select another GPS station as the reference station.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                    """)
                     sys.exit(1)
             else:

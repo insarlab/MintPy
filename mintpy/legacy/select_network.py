@@ -6,22 +6,23 @@
 ############################################################
 
 
-import os
-import sys
-import glob
 import argparse
 import datetime
+import glob
 import inspect
+import os
+import sys
+
 import matplotlib.pyplot as plt
 
 import mintpy
-from mintpy.objects import sensor, ifgramStack
 from mintpy.defaults.template import get_template_content
+from mintpy.objects import ifgramStack, sensor
 from mintpy.utils import (
-    ptime,
-    readfile,
     network as pnet,
     plot as pp,
+    ptime,
+    readfile,
     utils as ut,
 )
 
@@ -75,7 +76,7 @@ def create_parser():
     fig.add_argument('--fs', '--fontsize', type=int,
                      default=12, help='font size in points')
     fig.add_argument('--show-fig', dest='disp_fig', action='store_true',
-                     help='display network ploting result')
+                     help='display network plotting result')
     fig.add_argument('--figext', dest='figext', default='.pdf',
                      help='file extension to be saved.')
     fig.add_argument('--dpi', dest='figdpi', type=int, default=150,
@@ -181,8 +182,8 @@ def read_template2inps(templateFile, inps=None):
     # Check obsolete option prefix
     for i in ['selectPairs.', 'select.network.']:
         if any(i in key for key in template.keys()):
-            msg = 'obsolete option prefix detected: {}\n'.format(i)
-            msg += 'Use {} instead'.format(prefix)
+            msg = f'obsolete option prefix detected: {i}\n'
+            msg += f'Use {prefix} instead'
             raise Exception(msg)
     if all(prefix not in key for key in template.keys()):
         msg = 'no valid input option deteced in template file!\n'
@@ -260,7 +261,7 @@ def read_template2inps(templateFile, inps=None):
 
     # Auto path of bl_list.txt file (for Miami user)
     if not inps.baseline_file and 'SCRATCHDIR' in os.environ:
-        bl_file = os.path.join(os.getenv('SCRATCHDIR'), '{}/SLC/bl_list.txt'.format(project_name))
+        bl_file = os.path.join(os.getenv('SCRATCHDIR'), f'{project_name}/SLC/bl_list.txt')
         if os.path.isfile(bl_file):
             inps.baseline_file = bl_file
 
@@ -303,7 +304,7 @@ def read_exclude_date(inps, date_list_all):
     if not inps.excludeDate:
         inps.excludeDate = []
     else:
-        log('input exclude dates: {}'.format(inps.excludeDate))
+        log(f'input exclude dates: {inps.excludeDate}')
 
     if inps.startDate:
         log('input start date: '+inps.startDate)
@@ -318,7 +319,7 @@ def read_exclude_date(inps, date_list_all):
         inps.excludeDate = sorted(inps.excludeDate)
 
     if inps.excludeDate:
-        log('exclude    dates: ({})\n{}'.format(len(inps.excludeDate), inps.excludeDate))
+        log(f'exclude    dates: ({len(inps.excludeDate)})\n{inps.excludeDate}')
     return inps.excludeDate
 
 
@@ -328,14 +329,14 @@ def select_network_candidate(inps):
 
     # Pair selection from reference
     if inps.referenceFile:
-        log('select initial network from reference file: {}'.format(inps.referenceFile))
+        log(f'select initial network from reference file: {inps.referenceFile}')
         stack_obj = ifgramStack(inps.referenceFile)
         date12_list = stack_obj.get_date12_list(dropIfgram=True)
         date12_list = ptime.yymmdd_date12(date12_list)
 
     # Pais selection from method
     elif inps.baseline_file:
-        log('select initial network with method: {}'.format(inps.method))
+        log(f'select initial network with method: {inps.method}')
         if inps.method == 'all':
             date12_list = pnet.select_pairs_all(date_list)
         elif inps.method == 'delaunay':
@@ -351,7 +352,7 @@ def select_network_candidate(inps):
         else:
             raise Exception('Unrecoganized select method: '+inps.method)
 
-    log('initial number of interferograms: {}'.format(len(date12_list)))
+    log(f'initial number of interferograms: {len(date12_list)}')
     inps.date12_list = date12_list
     inps.date_list = date_list
     inps.tbase_list = tbase_list
@@ -404,9 +405,9 @@ def prune_network(date12_list, inps):
     # print stat info
     m_dates = [date12.replace('_', '-').split('-')[0] for date12 in date12_list]
     s_dates = [date12.replace('_', '-').split('-')[1] for date12 in date12_list]
-    log('number of acquisitions   input   : {}'.format(len(inps.date_list)))
-    log('number of acquisitions   selected: {}'.format(len(list(set(m_dates + s_dates)))))
-    log('number of interferograms selected: {}'.format(len(date12_list)))
+    log(f'number of acquisitions   input   : {len(inps.date_list)}')
+    log(f'number of acquisitions   selected: {len(list(set(m_dates + s_dates)))}')
+    log(f'number of interferograms selected: {len(date12_list)}')
 
     return date12_list
 
@@ -448,10 +449,10 @@ def write_ifgram_list(inps):
                                                      ifgram_tbase_list[i],
                                                      ifgram_pbase_list[i])
         if inps.cohList:
-            line += '       {:1.4f}'.format(inps.cohList[i])
+            line += f'       {inps.cohList[i]:1.4f}'
         f.write(line+'\n')
     f.close()
-    log('write network/pairs info into file: {}'.format(inps.outfile))
+    log(f'write network/pairs info into file: {inps.outfile}')
     return inps.outfile
 
 
@@ -459,7 +460,7 @@ def plot_network_info(inps):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
-    out_fig_name = os.path.join(inps.out_dir, 'network{}'.format(inps.figext))
+    out_fig_name = os.path.join(inps.out_dir, f'network{inps.figext}')
     log('plot network / pairs to file: '+os.path.basename(out_fig_name))
     fig1, ax1 = plt.subplots(figsize=inps.fig_size)
     ax1 = pp.plot_network(ax1,
@@ -470,7 +471,7 @@ def plot_network_info(inps):
                           print_msg=False)
     plt.savefig(out_fig_name, bbox_inches='tight', dpi=inps.figdpi)
 
-    out_fig_name = os.path.join(inps.out_dir, 'bperpHistory{}'.format(inps.figext))
+    out_fig_name = os.path.join(inps.out_dir, f'bperpHistory{inps.figext}')
     log('plot baseline history to file: '+os.path.basename(out_fig_name))
     fig2, ax2 = plt.subplots(figsize=inps.fig_size)
     ax2 = pp.plot_perp_baseline_hist(ax2,
@@ -478,7 +479,7 @@ def plot_network_info(inps):
                                      inps.pbase_list)
     plt.savefig(out_fig_name, bbox_inches='tight', dpi=inps.figdpi)
 
-    out_fig_name = os.path.join(inps.out_dir, 'coherenceMatrix{}'.format(inps.figext))
+    out_fig_name = os.path.join(inps.out_dir, f'coherenceMatrix{inps.figext}')
     if inps.cohList:
         log('plot predicted coherence matrix to file: '+os.path.basename(out_fig_name))
         fig3, ax3 = plt.subplots(figsize=inps.fig_size)

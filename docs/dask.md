@@ -44,7 +44,7 @@ Download and run the FernandinaSenDT128 example data; then run with and without 
 
 ```bash
 cd FernandinaSenDT128/mintpy
-ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster no 
+ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster no
 ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster local --num-worker 8
 ```
 
@@ -62,7 +62,7 @@ As of Jun 2020, we have tried on one HPC system where local cluster worked on th
 
 ## 2. non-local cluster on HPC [work in progress] ##
 
-**Note:** This has not been tested much. SlurmCluster works for us using a shared queue (on XSEDE's comet at SDSC) but not LSFCluster (on Miami's pegasus). We believe this is caused by the HPC configuration, but we don't know by what. Please tell us if you have an idea.   
+**Note:** This has not been tested much. SlurmCluster works for us using a shared queue (on XSEDE's comet at SDSC) but not LSFCluster (on Miami's pegasus). We believe this is caused by the HPC configuration, but we don't know by what. Please tell us if you have an idea.
 
 PBScluster did not work either. But we tested only on a small server without shared disk space between the workers and the client (the compute and login nodes respectively). This leads to the dask workers running on the compute nodes being unable to use mintpy code as the codebase is local to login node ([see this issue](https://github.com/dask/dask-jobqueue/issues/436)).
 
@@ -106,7 +106,7 @@ smallbaselineApp.py smallbaselineApp.cfg
 
 #### 2.3 Configuration parameters in `~/.config/dask/mintpy.yaml` ####
 
-We provide a brief description below for the most commonly used configurations of dask-jobqueue for MintPy. Users are recommended to check [Dask-Jobqueue](https://jobqueue.dask.org/en/latest/configuration-setup.html) for more detailed and comprehensive documentaion. 
+We provide a brief description below for the most commonly used configurations of dask-jobqueue for MintPy. Users are recommended to check [Dask-Jobqueue](https://jobqueue.dask.org/en/latest/configuration-setup.html) for more detailed and comprehensive documentaion.
 
 + **name:** Name of the worker job as it will appear to the job scheduler. Any values are perfectly fine.
 
@@ -114,15 +114,15 @@ We provide a brief description below for the most commonly used configurations o
 
 + **memory:** Total amount of memory your code could possibly use (not the memory per job/worker). It is recommended to check what the maximum memory available on a compute node on you system is before setting this value. It is recommended to set this to a reasonably high value so as to ensure the dask workers do not run our memory while performing their calculations, which will result in the processing routine failing. **Required parameter for dask_jobqueue cluster objects with a non-null value. For systems that do not use the —mem directive in their job specifications, please see the section on the 'header-skip'.**
 
-+ **processes:** Number of python processes you would like your code to use per job. For compute nodes with many cores, each core can often handle multiple running processes at a time which allow for faster computations and lower running times, without effecting slowing down the queuing time by requesting additional physical resources (cores and memory). 
++ **processes:** Number of python processes you would like your code to use per job. For compute nodes with many cores, each core can often handle multiple running processes at a time which allow for faster computations and lower running times, without effecting slowing down the queuing time by requesting additional physical resources (cores and memory).
 
-  If left as `null`, this value will automatically be set to `~sqrt(cores)` so that the number of processes and threads per process are approximately equal.  Processes can be thought of as the number of workers a given compute core can handle simultaneously, so, by setting `processes: 1` as in the default `mintpy.yaml` file, each core handles a single worker at a time, and then begins working on the next one after completing the previous one. If `processes: 5`, each core works on 5 workers at a time, and begins handling another worker as soon as any one of the previous 5 have completed. 
+  If left as `null`, this value will automatically be set to `~sqrt(cores)` so that the number of processes and threads per process are approximately equal.  Processes can be thought of as the number of workers a given compute core can handle simultaneously, so, by setting `processes: 1` as in the default `mintpy.yaml` file, each core handles a single worker at a time, and then begins working on the next one after completing the previous one. If `processes: 5`, each core works on 5 workers at a time, and begins handling another worker as soon as any one of the previous 5 have completed.
 
   It is generally **recommended** by dask to keep the number of processes low and instead to request additional physical resources, as specifying too many processes on some systems has been known to lead to failed jobs and workers.
 
-+ **walltime:** Maximum amount of time your job is permitted to run on a compute node before it is killed by the node. Walltimes are required to ensure users and jobs cannot hog nodes for extended periods of time without doing any substantial computations. Most queues have maximum allowed compute times, after which still running jobs will be terminated, but this is often on the order of 48+ hours. 
++ **walltime:** Maximum amount of time your job is permitted to run on a compute node before it is killed by the node. Walltimes are required to ensure users and jobs cannot hog nodes for extended periods of time without doing any substantial computations. Most queues have maximum allowed compute times, after which still running jobs will be terminated, but this is often on the order of 48+ hours.
 
-  It is recommended to use relatively short walltimes for MintPy (the test dataset uses `wall time: 00:30:00` (30 minutes)) to have a higher priority in the job queue, but not too short, or your job may never connect to the dask scheduler and finish its computation (when in doubt, start small and work towards larger wall times as needed). 
+  It is recommended to use relatively short walltimes for MintPy (the test dataset uses `wall time: 00:30:00` (30 minutes)) to have a higher priority in the job queue, but not too short, or your job may never connect to the dask scheduler and finish its computation (when in doubt, start small and work towards larger wall times as needed).
 
   Note that the walltime format changes slightly depending on the job scheduler that is in place on your HPC system. For `LSF` schedulers, walltime is accepted and expected to be in `HH:MM` format, while `SLURM` and `PBS` schedulers only accept walltime in `HH:MM:SS` format.
 

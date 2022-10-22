@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,60 +6,16 @@
 
 
 import os
-import sys
-import argparse
+
 import numpy as np
+
+from mintpy.mask import mask_matrix
+from mintpy.multilook import multilook_data
 from mintpy.objects import timeseries
 from mintpy.utils import readfile, writefile
-from mintpy.multilook import multilook_data
-from mintpy.mask import mask_matrix
 
 
 ############################################################################
-EXAMPLE = """example:
-  tropo_phase_elevation.py  timeseries_demErr.h5      -g inputs/geometryRadar.h5  -m maskTempCoh.h5    
-  tropo_phase_elevation.py  geo_timeseries_demErr.h5  -g geo_geometryRadar.h5     -m geo_maskTempCoh.h5
-"""
-
-REFERENCE = """reference:
-  Doin, M. P., C. Lasserre, G. Peltzer, O. Cavalie, and C. Doubre (2009), Corrections of stratified 
-  tropospheric delays in SAR interferometry: Validation with global atmospheric models, J App. Geophy.,
-  69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Correct Topo-correlated Stratified tropospheric delay',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
-
-    parser.add_argument('timeseries_file', help='time-series file to be corrected')
-    parser.add_argument('-g', '--geometry', dest='geom_file', required=True,
-                        help='DEM file used for correlation calculation.')
-    parser.add_argument('-m', '--mask', dest='mask_file', required=True,
-                        help='mask file for pixels used for correlation calculation')
-
-    parser.add_argument('-t', '--threshold', type=float, default=0.,
-                        help='correlation threshold to apply phase correction.\n'
-                             'if not set, all dates will be corrected.')
-    parser.add_argument('-l', '--looks', dest='num_multilook', type=int, default=8,
-                        help='number of looks applied to data for empirical estimation (default: %(default)s).')
-
-    parser.add_argument('--poly-order', '-p', dest='poly_order', type=int, default=1, choices=[1, 2, 3],
-                        help='polynomial order of phase-height correlation (default: %(default)s).')
-    parser.add_argument('-o', '--outfile', help='output corrected timeseries file name')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    if inps.threshold and (not 0.0 <= inps.threshold <= 1.0):
-        raise argparse.ArgumentTypeError('%r not in range [0.0, 1.0]' % inps.threshold)
-    return inps
-
-
 def design_matrix(dem, poly_order=1):
     """Design matrix for phase/elevation ratio estimation
     Parameters: dem : 1D array in size of (length*width, ), or
@@ -76,20 +31,14 @@ def design_matrix(dem, poly_order=1):
     return A
 
 
-def read_topographic_data(geom_file, metadata):
-    print('read DEM from file: '+geom_file)
-    dem = readfile.read(geom_file,
-                        datasetName='height',
-                        print_msg=False)[0]
-
-    print('considering the incidence angle of each pixel ...')
-    inc_angle = readfile.read(geom_file,
-                              datasetName='incidenceAngle',
-                              print_msg=False)[0]
+def read_topographic_data(geom_file, meta):
+    print('read height & incidenceAngle from file: '+geom_file)
+    dem = readfile.read(geom_file, datasetName='height', print_msg=False)[0]
+    inc_angle = readfile.read(geom_file, datasetName='incidenceAngle', print_msg=False)[0]
     dem *= 1.0/np.cos(inc_angle*np.pi/180.0)
 
-    ref_y = int(metadata['REF_Y'])
-    ref_x = int(metadata['REF_X'])
+    ref_y = int(meta['REF_Y'])
+    ref_x = int(meta['REF_X'])
     dem -= dem[ref_y, ref_x]
 
     # Design matrix for elevation v.s. phase
@@ -133,23 +82,23 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
         plt.xlabel('Elevation (m)')
         plt.ylabel('Range Change (m)')
         plt.title(title)
-        out_file = 'phase_elevation_ratio_{}.png'.format(title)
+        out_file = f'phase_elevation_ratio_{title}.png'
         plt.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
-        print('save to {}'.format(out_file))
+        print(f'save to {out_file}')
         plt.show()
 
     print('----------------------------------------------------------')
     print('Empirical tropospheric delay correction based on phase/elevation ratio (Doin et al., 2009)')
-    print('polynomial order: {}'.format(inps.poly_order))
+    print(f'polynomial order: {inps.poly_order}')
 
     if inps.num_multilook > 1:
-        print('number of multilook: {} (multilook data for estimation only)'.format(inps.num_multilook))
+        print(f'number of multilook: {inps.num_multilook} (multilook data for estimation only)')
         mask = multilook_data(mask, inps.num_multilook, inps.num_multilook)
         dem = multilook_data(dem, inps.num_multilook, inps.num_multilook)
         ts_data = multilook_data(ts_data, inps.num_multilook, inps.num_multilook)
 
     if inps.threshold > 0.:
-        print('correlation threshold: {}'.format(inps.threshold))
+        print(f'correlation threshold: {inps.threshold}')
 
     mask_nan = ~np.isnan(dem)
     dem = dem[mask_nan]
@@ -166,9 +115,9 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
             comp_data = np.vstack((dem, phase))
             cc = np.corrcoef(comp_data)[0, 1]
             topo_trop_corr[i] = cc
-        print('{}: {:>5.2f}'.format(inps.date_list[i], cc))
+        print(f'{inps.date_list[i]}: {cc:>5.2f}')
     topo_trop_corr = np.abs(topo_trop_corr)
-    print('average correlation magnitude: {:>5.2f}'.format(np.nanmean(topo_trop_corr)))
+    print(f'average correlation magnitude: {np.nanmean(topo_trop_corr):>5.2f}')
 
     # estimate ratio parameter
     print('----------------------------------------------------------')
@@ -198,36 +147,38 @@ def estimate_tropospheric_delay(dem, X, metadata):
 
 
 ############################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+def run_tropo_phase_elevation(inps):
 
-    # read timeseries data
-    obj = timeseries(inps.timeseries_file)
-    obj.open()
-    ts_data = obj.read()
-    inps.date_list = list(obj.dateList)
+    # read time-series data
+    ts_obj = timeseries(inps.timeseries_file)
+    ts_obj.open()
+    ts_data = ts_obj.read()
+    inps.date_list = list(ts_obj.dateList)
 
     # read topographic data (DEM)
-    dem = read_topographic_data(inps.geom_file, obj.metadata)
+    dem = read_topographic_data(inps.geom_file, ts_obj.metadata)
 
-    # estimate phase/elevation ratio parameters
+    # estimate tropo delay
     X = estimate_phase_elevation_ratio(dem, ts_data, inps)
+    trop_data = estimate_tropospheric_delay(dem, X, ts_obj.metadata)
 
-    # correct trop delay in timeseries
-    trop_data = estimate_tropospheric_delay(dem, X, obj.metadata)
+    # correct for trop delay
     mask = ts_data == 0.
     ts_data -= trop_data
     ts_data[mask] = 0.
 
-    # write time-series file
-    metadata = dict(obj.metadata)
-    metadata['mintpy.troposphericDelay.polyOrder'] = str(inps.poly_order)
+    # write corrected time-series file
+    meta = dict(ts_obj.metadata)
+    meta['mintpy.troposphericDelay.polyOrder'] = str(inps.poly_order)
     if not inps.outfile:
-        inps.outfile = '{}_tropHgt.h5'.format(os.path.splitext(inps.timeseries_file)[0])
-    writefile.write(ts_data, out_file=inps.outfile, metadata=metadata, ref_file=inps.timeseries_file)
-    return inps.outfile
+        fbase = os.path.splitext(inps.timeseries_file)[0]
+        inps.outfile = f'{fbase}_tropHgt.h5'
 
+    writefile.write(
+        ts_data,
+        out_file=inps.outfile,
+        metadata=meta,
+        ref_file=inps.timeseries_file,
+    )
 
-############################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])
+    return

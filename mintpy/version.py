@@ -1,15 +1,16 @@
-#!/usr/bin/env python3
 # grab version / date of the latest commit
 
 
+import collections
 import os
 import subprocess
-import collections
-
 
 ###########################################################################
 Tag = collections.namedtuple('Tag', 'version date')
 release_history = (
+    Tag('1.4.1', '2022-08-15'),
+    Tag('1.4.0', '2022-08-04'),
+    Tag('1.3.3', '2022-04-14'),
     Tag('1.3.2', '2021-11-21'),
     Tag('1.3.1', '2021-08-02'),
     Tag('1.3.0', '2021-03-06'),
@@ -32,28 +33,31 @@ release_history = (
 release_version = release_history[0].version
 release_date = release_history[0].date
 
-def get_version_info(version='v{}'.format(release_version), date=release_date):
+def get_version_info():
     """Grab version and date of the latest commit from a git repository"""
     # go to the repository directory
     dir_orig = os.getcwd()
     os.chdir(os.path.dirname(os.path.dirname(__file__)))
 
-    # grab git info into string
     try:
+        # grab from git cmd
         cmd = "git describe --tags"
         version = subprocess.check_output(cmd.split(), stderr=subprocess.DEVNULL)
-        version = version.decode('utf-8').strip()
+        version = version.decode('utf-8').strip()[1:]
 
-        #if there are new commits after the latest release
+        # if there are new commits after the latest release
         if '-' in version:
             version, num_commit = version.split('-')[:2]
-            version += '-{}'.format(num_commit)
+            version += f'-{num_commit}'
 
         cmd = "git log -1 --date=short --format=%cd"
         date = subprocess.check_output(cmd.split(), stderr=subprocess.DEVNULL)
         date = date.decode('utf-8').strip()
+
     except:
-        pass
+        # use the latest release version/date
+        version = release_version
+        date = release_date
 
     # go back to the original directory
     os.chdir(dir_orig)
@@ -62,18 +66,18 @@ def get_version_info(version='v{}'.format(release_version), date=release_date):
 
 ###########################################################################
 
-version_num, version_date = get_version_info()
+version, version_date = get_version_info()
 version_description = """MintPy version {v}, date {d}""".format(
-    v=version_num,
+    v=version,
     d=version_date,
 )
 
 # generate_from: http://patorjk.com/software/taag/
-logo = """
+logo = r"""
 ___________________________________________________________
 
-  /##      /## /##             /##     /#######           
- | ###    /###|__/            | ##    | ##__  ##          
+  /##      /## /##             /##     /#######
+ | ###    /###|__/            | ##    | ##__  ##
  | ####  /#### /## /#######  /######  | ##  \ ## /##   /##
  | ## ##/## ##| ##| ##__  ##|_  ##_/  | #######/| ##  | ##
  | ##  ###| ##| ##| ##  \ ##  | ##    | ##____/ | ##  | ##
@@ -82,12 +86,11 @@ ___________________________________________________________
  |__/     |__/|__/|__/  |__/   \___/  |__/       \____  ##
                                                  /##  | ##
                                                 |  ######/
-   Miami InSAR Time-series software in Python    \______/ 
+   Miami InSAR Time-series software in Python    \______/
           MintPy {v}, {d}
 ___________________________________________________________
-""".format(v=version_num, d=version_date)
+""".format(v=version, d=version_date)
 
 website = 'https://github.com/insarlab/MintPy'
 
 description = 'Miami INsar Time-series software in PYthon'
-

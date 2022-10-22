@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -8,52 +7,13 @@
 
 
 import os
-import sys
-import argparse
-import numpy as np
+
 import matplotlib.pyplot as plt
-try:
-    from skimage.transform import rescale
-except ImportError:
-    raise ImportError('Could not import skimage!')
+import numpy as np
+from skimage.transform import rescale
 
-from mintpy.utils import readfile, writefile, plot as pp
 from mintpy.multilook import multilook_data
-
-
-#############################################################################################
-EXAMPLE = """example:
-  image_stitch.py  vel_AlosAT422.h5  vel_AlosAT423.h5  vel_AlosAT424.h5  vel_AlosAT425.h5 -o  vel_AlosA.h5
-  image_stitch.py geom_AlosAT422.h5 geom_AlosAT423.h5 geom_AlosAT424.h5 geom_AlosAT425.h5 -o geom_AlosA.h5 --no-offset
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Stitch >=2 geocoded datasets sharing common area into one.\n'
-                                                 '\tFunction automatically finds the common area and calculates\n'
-                                                 '\tthe average offset between the two velocity.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-    parser.add_argument('file1', help='file to stitch')
-    parser.add_argument('file2s', nargs='+', metavar='file2', help='file(s) to stitch')
-    parser.add_argument('-o', '--output', dest='outfile', required=True, help='output file name')
-
-    # stitch option
-    parser.add_argument('--no-offset','--no-off', dest='apply_offset', action='store_false',
-                        help='Do not apply offset if data sets are merely to be stitched '
-                             'and no adjustment of values needs to be made '
-                             '(i.e., for two coherence maps), use this flag')
-
-    # plot options
-    parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',
-                        help='do not display the result ploting.')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
+from mintpy.utils import plot as pp, readfile, writefile
 
 
 #############################################################################################
@@ -100,7 +60,7 @@ def manual_offset_estimate(mat1, mat2):
 
     # Calculate the Offset - Difference
     # offset=V2[y00:y11,x00:x11]-V2[y0:y1,x0:x1]
-    offset = (  np.nansum(mat2[y00:y11, x00:x11]) / np.sum(np.isfinite(mat2[y00:y11, x00:x11])) 
+    offset = (  np.nansum(mat2[y00:y11, x00:x11]) / np.sum(np.isfinite(mat2[y00:y11, x00:x11]))
               - np.nansum(mat1[y0:y1, x0:x1]) / np.sum(np.isfinite(mat1[y0:y1, x0:x1])))
 
     return offset
@@ -138,7 +98,7 @@ def get_corners(atr):
 
 
 def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=True):
-    """Stitch two geocoded matrices 
+    """Stitch two geocoded matrices
     and/or shift the 2nd matrix value to match with the 1st one.
 
     Parameters: mat1/2       - 2D np.ndarray
@@ -147,26 +107,24 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     Returns:    mat          - 2D np.ndarray, stitched matrix
                 atr          - dict, attributes of stitched matrix
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
 
     # resize the 2nd matrix, if it has different spatial resolution
     ratio_x = abs((float(atr1['X_STEP']) - float(atr2['X_STEP'])) / float(atr1['X_STEP']))
     ratio_y = abs((float(atr1['Y_STEP']) - float(atr2['Y_STEP'])) / float(atr1['Y_STEP']))
     if any(i > 1e-3 for i in [ratio_x, ratio_y]):
-        if print_msg:
-            print('file 1: X_STEP - {}, Y_STEP - {}'.format(atr1['X_STEP'], atr1['Y_STEP']))
-            print('file 2: X_STEP - {}, Y_STEP - {}'.format(atr2['X_STEP'], atr2['Y_STEP']))
-            print('rescale the 2nd matrix into the same spatial resolution as the 1st one ...')
+        vprint('file 1: X_STEP - {}, Y_STEP - {}'.format(atr1['X_STEP'], atr1['Y_STEP']))
+        vprint('file 2: X_STEP - {}, Y_STEP - {}'.format(atr2['X_STEP'], atr2['Y_STEP']))
+        vprint('rescale the 2nd matrix into the same spatial resolution as the 1st one ...')
         mat2, atr2 = rescale_data(mat2, meta=atr2, ref_meta=atr1)
 
     # input spatial extents
-    if print_msg:
-        print('grab corners of input matrices')
+    vprint('grab corners of input matrices')
     S1, N1, W1, E1, width1, length1 = get_corners(atr1)
     S2, N2, W2, E2, width2, length2 = get_corners(atr2)
 
     # output spatial extent
-    if print_msg:
-        print('calculate corners of output matrix')
+    vprint('calculate corners of output matrix')
     W, E = min(W1, W2), max(E1, E2)
     S, N = min(S1, S2), max(N1, N2)
     lon_step = float(atr1['X_STEP'])
@@ -175,8 +133,7 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     length = int(np.ceil((S - N) / lat_step))
 
     # index of input matrices in output matrix
-    if print_msg:
-        print('estimate difference in the overlaping area')
+    vprint('estimate difference in the overlaping area')
     lon_seq = np.arange(W, W + width  * lon_step, lon_step)
     lat_seq = np.arange(N, N + length * lat_step, lat_step)
     x1, y1 = np.argmin(np.square(lon_seq - W1)), np.argmin(np.square(lat_seq - N1))
@@ -193,9 +150,8 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     if apply_offset:
         offset = np.nansum(mat_diff) / np.sum(np.isfinite(mat_diff))
         if ~np.isnan(offset):
-            if print_msg:
-                print('average offset between two matrices in the common area: {}'.format(offset))
-                print('offset all pixel values in the 2nd matrix by {} '.format(offset))
+            vprint(f'average offset between two matrices in the common area: {offset}')
+            vprint(f'offset all pixel values in the 2nd matrix by {offset} ')
             mat2 -= offset
         else:
             print('*'*50)
@@ -203,11 +159,14 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
             print('    continue the stitching without applying offset')
             print('*'*50)
 
-    # output matrix
-    if print_msg:
-        print('create output metadata and matrix in shape of {}'.format((length, width)))
+    # initiate output matrix
+    # with the default value of NaN for float type and 0 for the other types
+    vprint(f'create output metadata and matrix in shape of {(length, width)}')
+    fill_value = np.nan if str(mat1.dtype).startswith('float') else 0
+    mat = np.zeros([length, width]) * fill_value
+
+    # fill the output matrix
     flag2 = np.isfinite(mat2)
-    mat = np.zeros([length, width]) * np.nan
     mat[y1:y1+length1, x1:x1+width1] = mat1
     mat[y2:y2+length2, x2:x2+width2][flag2] = mat2[flag2]
     mat = np.array(mat, dtype=mat1.dtype)
@@ -249,13 +208,7 @@ def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
 
     # output
     fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=150)
-    print('save figure to file: {}'.format(out_fig))
-
-    #if disp_fig:
-    #    print('showing ...')
-    #    plt.show()
-    #else:
-    #    plt.close()
+    print(f'save figure to file: {out_fig}')
 
     return
 
@@ -279,8 +232,8 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
         if atr['FILE_TYPE'] == 'velocity' and len(ds_names) > 1:
             ds_names = ['velocity']
 
-    print('files to be stitched: {}'.format(fnames))
-    print('datasets to be stitched: {}'.format(ds_names))
+    print(f'files to be stitched: {fnames}')
+    print(f'datasets to be stitched: {ds_names}')
 
     # stitching
     dsDict = {}
@@ -293,7 +246,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
 
         # masking
         if no_data_value is not None:
-            print('convert no_data_value from {} to NaN'.format(no_data_value))
+            print(f'convert no_data_value from {no_data_value} to NaN')
             mat[mat==no_data_value] = np.nan
 
         # skip pixels with zero incidenceAngle for geometry files
@@ -304,7 +257,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
 
         for i, fname in enumerate(fnames[1:]):
             print('-'*30)
-            print('read data from file: {}'.format(fname))
+            print(f'read data from file: {fname}')
             # reading
             mat2, atr2 = readfile.read(fname, datasetName=ds_name)
             # masking
@@ -317,18 +270,16 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
                 mat2[inc_angle2 == 0] = np.nan
 
             print('stitching ...')
-            (mat, atr,
-             mat11,
-             mat22,
-             mat_diff) = stitch_two_matrices(mat, atr,
-                                             mat2, atr2,
-                                             apply_offset=apply_offset)
+            mat, atr, mat11, mat22, mat_diff = stitch_two_matrices(
+                mat, atr,
+                mat2, atr2,
+                apply_offset=apply_offset)
 
             # plot
             if apply_offset:
                 print('plot stitching & shifting result ...')
-                suffix = '{}{}'.format(i, i+1)
-                out_fig = '{}_{}.png'.format(os.path.splitext(out_file)[0], suffix)
+                suffix = f'{i}{i+1}'
+                out_fig = f'{os.path.splitext(out_file)[0]}_{suffix}.png'
                 plot_stitch(mat11, mat22, mat, mat_diff, out_fig=out_fig)
 
         dsDict[ds_name_out] = mat
@@ -345,20 +296,3 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
         plt.close()
 
     return out_file
-
-
-#############################################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-
-    stitch_files(fnames=[inps.file1] + inps.file2s,
-                 out_file=inps.outfile,
-                 apply_offset=inps.apply_offset,
-                 disp_fig=inps.disp_fig)
-
-    return inps.outfile
-
-
-#############################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])
