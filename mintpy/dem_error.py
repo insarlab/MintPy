@@ -239,9 +239,9 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False):
     G = G0[date_flag, :]
     ts = ts0[date_flag, :]
     if phase_velocity:
-        tbase = tbase[date_flag, :]
-        G = np.diff(G, axis=0) / np.diff(tbase, axis=0)
-        ts = np.diff(ts, axis=0) / np.diff(tbase, axis=0)
+        tbase = tbase[date_flag]
+        G = np.diff(G, axis=0) / np.repeat(np.diff(tbase, axis=0).reshape(-1,1), G.shape[1], axis=1)
+        ts = np.diff(ts, axis=0) / np.repeat(np.diff(tbase, axis=0).reshape(-1,1), ts.shape[1], axis=1)
 
     # Inverse using L-2 norm to get unknown parameters X
     # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
