@@ -16,6 +16,9 @@ EXAMPLE = """example:
   #for velocity: output an interferogram with temporal baseline in DATE12 metadata
   save_roipac.py  velocity.h5
   save_roipac.py  velocity.h5 -m maskTempCoh.h5 maskAoiShinmoe.h5
+  #for non-veloicty dataset, e.g. step or annualAmplitude
+  save_roipac.py  velocity.h5  step20080221
+  save_roipac.py  velocity.h5  annualAmplitude
 
   #for time-series: specify (date1_)date2
   save_roipac.py  timeseries_ERA5_ramp_demErr.h5  #use the last date
