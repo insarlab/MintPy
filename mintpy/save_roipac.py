@@ -61,7 +61,7 @@ def read_data(inps):
             data = readfile.read(inps.file, datasetName = inps.dset)[0]
 
         # displacement to phase
-        print('convert displacement to phase in radian')
+        print('convert velocity or displacement to phase in radian')
         data *= range2phase
 
         if inps.ref_yx:
