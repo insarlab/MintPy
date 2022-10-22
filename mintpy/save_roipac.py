@@ -44,7 +44,7 @@ def read_data(inps):
     # various file types
     print(f'read {inps.dset} from file {inps.file}')
     k = atr['FILE_TYPE']
-        if k == 'velocity':
+    if k == 'velocity':
         # read/prepare data
         if inps.dset == None:
             inps.dset = 'velocity'
