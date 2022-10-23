@@ -46,24 +46,29 @@ def read_data(inps):
     k = atr['FILE_TYPE']
     if k == 'velocity':
         # read/prepare data
-        data = readfile.read(inps.file)[0]
+        if not inps.dset:
+            inps.dset = 'velocity'
+            print('No selected datset, assuming "velocity" and continue.')
+        data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
-        # velocity to displacement
-        print('convert velocity to displacement for {}'.format(atr['DATE12']))
-        date1, date2 = atr['DATE12'].split('_')
-        dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
-        data *= (dt2 - dt1).days / 365.25
+        # convert velocity to cumulative displacement
+        if inps.dset == 'velocity':
+            print('convert velocity to displacement for {}'.format(atr['DATE12']))
+            dt1, dt2 = ptime.date_list2vector(atr['DATE12'].split('_'))[0]
+            data *= (dt2 - dt1).days / 365.25
 
-        # displacement to phase
-        print('convert displacement to phase in radian')
-        data *= range2phase
+        # convert data from the unit of meter to radian
+        if atr.get('UNIT', 'm/year').startswith('m'):
+            print('convert the unit from meter to radian')
+            data *= range2phase
+            atr['UNIT'] = 'radian'
 
+        # apply the custom spatial referencing
         if inps.ref_yx:
             data -= data[inps.ref_yx[0], inps.ref_yx[1]]
 
         # metadata
         atr['FILE_TYPE'] = '.unw'
-        atr['UNIT'] = 'radian'
 
         # output filename
         if not inps.outfile:
