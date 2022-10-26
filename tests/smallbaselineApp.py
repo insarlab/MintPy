@@ -82,6 +82,7 @@ def cmd_line_parse(iargs=None):
     # expand test_dir
     inps.test_dir = os.path.expanduser(inps.test_dir)
     inps.test_dir = os.path.expandvars(inps.test_dir)
+    inps.test_dir = os.path.abspath(inps.test_dir)
 
     return inps
 

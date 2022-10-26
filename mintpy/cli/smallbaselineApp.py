@@ -33,17 +33,17 @@ REFERENCE = """reference:
 """
 
 EXAMPLE = """example:
-  smallbaselineApp.py                         #run with default template 'smallbaselineApp.cfg'
-  smallbaselineApp.py <custom_template>       #run with default and custom templates
-  smallbaselineApp.py -h / --help             #help
-  smallbaselineApp.py -H                      #print    default template options
-  smallbaselineApp.py -g                      #generate default template if it does not exist
-  smallbaselineApp.py -g <custom_template>    #generate/update default template based on custom template
-  smallbaselineApp.py --plot                  #plot results w/o run [to populate the 'pic' folder after failed runs]
+  smallbaselineApp.py                         # run with default template 'smallbaselineApp.cfg'
+  smallbaselineApp.py <custom_template>       # run with default and custom templates
+  smallbaselineApp.py -h / --help             # help
+  smallbaselineApp.py -H                      # print    default template options
+  smallbaselineApp.py -g                      # generate default template if it does not exist
+  smallbaselineApp.py -g <custom_template>    # generate/update default template based on custom template
+  smallbaselineApp.py --plot                  # plot results w/o run [to populate the 'pic' folder after failed runs]
 
-  # Run with --start/stop/dostep options
-  smallbaselineApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity' only
-  smallbaselineApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
+  # step processing with --start/stop/dostep options
+  smallbaselineApp.py GalapagosSenDT128.template --dostep velocity  # run at step 'velocity' only
+  smallbaselineApp.py GalapagosSenDT128.template --end load_data    # end after step 'load_data'
 """
 
 

@@ -67,7 +67,7 @@ setup(
         "pykml>=0.2",
         "pyproj",
         "pyresample",  # pip installed version does not work
-        #"pysolid",    # will be available soon after the pypi project transfer is completed
+        "pysolid",     # pip installed version does not work because Fortran compiler is needed but not available via pip
         "rich",
         "setuptools",
         "scikit-image",
