@@ -136,6 +136,11 @@ def cmd_line_parse(iargs=None):
     if (not inps.dis_file and not inps.date_list):
         raise SystemExit('ERROR: --file OR --date-list is required.\n\n'+EXAMPLE)
 
+    # check: --hour option (ensure 2 chars)
+    if inps.hour:
+        hour = int(float(inps.hour))
+        inps.hour = f'{hour:02d}'
+
     # default: --tropo-file option
     if inps.geom_file and not inps.tropo_file:
         geom_dir = os.path.dirname(inps.geom_file)
