@@ -24,13 +24,13 @@ import numpy as np
 from skimage.transform import resize
 
 from mintpy.diff import diff_file
-from mintpy.objects.euler import EulerPole
+from mintpy.objects.euler_pole import EulerPole
 from mintpy.objects.resample import resample
 from mintpy.utils import readfile, utils as ut, writefile
 
 # ITRF2014-PMM defined in Altamimi et al. (2017)
 # units:
-#   omega_x/y/z in mas/yr (milli-second of arc per year)
+#   omega_x/y/z in mas/yr (milli-arcsecond per year)
 #   omega       in deg/Ma (degree per megayear or one-million-year)
 #   wrms_e/n    in mm/yr  (milli-meter per year), WRMS: weighted root mean scatter
 Tag = collections.namedtuple('Tag', 'name num_site omega_x omega_y omega_z omega wrms_e wrms_n')
@@ -92,15 +92,14 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
         if omega_cart is not None:
             au = 'mas/yr' # angular velo unit
             print(f'input omega_cartesian in [wx, wy, wz]: {omega_cart} ({au})')
-            Pole = EulerPole(omega_cart, coord='cartesian', unit=au)
+            Pole = EulerPole(wx=omega_cart[0], wy=omega_cart[1], wz=omega_cart[2], unit=au)
         else:
             au = 'deg/Ma' # angular velo unit
             print(f'input omega_spherical in [lat, lon, w]: {omega_sph} (deg, deg, {au})')
-            Pole = EulerPole(omega_sph, coord='spherical', unit=au)
+            Pole = EulerPole(lat=omega_sph[0], lon=omega_sph[1], rotationRate=omega_sph[2], unit=au)
+        Pole.printMsg()
 
-        Pole.print_msg()
-
-        V_enu = np.array(Pole.velocity_enu(lats_flt, lons_flt, alt=0.0, ellps=True))
+        V_enu = np.array(Pole.getVelocityENU(lats_flt, lons_flt, alt=0.0, ellps=True))
         print('Done with PMM to ENU calculation')
         ve_low = V_enu[0].reshape(lats.shape)
         vn_low = V_enu[1].reshape(lats.shape)
