@@ -76,7 +76,6 @@ def test_validate_euler_pole():
     print('\nComputed results by euler_pole.py:')
     print('\t'.join(truths.keys())+'\t U vel [mm/yr]')
     for i, (lat, lon) in enumerate(zip(lats, lons)):
-        speed = np.sqrt(v[0,i]**2 + v[1,i]**2 + v[2,i]**2)
         print(f'{lat:.2f}\t\t{lon:.2f}\t\t{v[0,i]:.4f}\t\t{v[1,i]:.2f}\t\t{v[2,i]:.4f}')
 
     # compare
@@ -89,5 +88,3 @@ if __name__ == '__main__':
     print(f'Testing {__file__}')
 
     test_validate_euler_pole()
-
-    print('\nTesting is successful!')

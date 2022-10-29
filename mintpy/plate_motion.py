@@ -92,8 +92,8 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
         else:
             print(f'input omega_spherical in [lat, lon, w]: {omega_sph} [deg, deg, deg/Ma]')
             pole_obj = EulerPole(
-                lat=omega_sph[0],
-                lon=omega_sph[1],
+                pole_lat=omega_sph[0],
+                pole_lon=omega_sph[1],
                 rot_rate=omega_sph[2],
                 unit='deg/Ma',
             )

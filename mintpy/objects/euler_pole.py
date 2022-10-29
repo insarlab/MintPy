@@ -42,9 +42,9 @@ EXAMPLE = """Define an Euler pole:
     # equivalent ways to describe the Eurasian plate in the ITRF2014 plate motion model
     EulerPole(wx=-0.085, wy=-0.531, wz=0.770, unit='mas/yr')
     EulerPole(wx=-0.024, wy=-0.148, wz=0.214, unit='deg/Ma')
-    EulerPole(lat=55.070, lon=-99.095, rot_rate=0.939, unit='mas/yr')
-    EulerPole(lat=55.070, lon=-99.095, rot_rate=0.261, unit='deg/Ma')
-    EulerPole(lat=-55.070, lon=80.905, rot_rate=-0.939, unit='mas/yr')
+    EulerPole(pole_lat=55.070, pole_lon=-99.095, rot_rate=0.939, unit='mas/yr')
+    EulerPole(pole_lat=55.070, pole_lon=-99.095, rot_rate=0.261, unit='deg/Ma')
+    EulerPole(pole_lat=-55.070, pole_lon=80.905, rot_rate=-0.939, unit='mas/yr')
 """
 
 class EulerPole:
@@ -52,13 +52,13 @@ class EulerPole:
 
     EXAMPLE:
         # compute velocity of the Eurasia plate in ITRF2014-PMM from Altamimi et al. (2017)
-        pole_obj = EulerPole(lat=55.070, lon=-99.095, rot_rate=0.939, unit='mas/yr')
+        pole_obj = EulerPole(pole_lat=55.070, pole_lon=-99.095, rot_rate=0.939, unit='mas/yr')
         pole_obj.print_info()
         vx, vy, vz = pole_obj.get_velocity_xyz(lats, lons, alt=0.0) # in  ECEF xyz coordinate
         ve, vn, vu = pole_obj.get_velocity_enu(lats, lons, alt=0.0) # in local ENU coordinate
     """
 
-    def __init__(self, wx=None, wy=None, wz=None, lat=None, lon=None, rot_rate=None, unit='mas/yr'):
+    def __init__(self, wx=None, wy=None, wz=None, pole_lat=None, pole_lon=None, rot_rate=None, unit='mas/yr'):
         # check - unit
         if unit.lower().startswith('mas'):
             unit = 'mas/yr'
@@ -87,8 +87,8 @@ class EulerPole:
             raise ValueError(f'Incomplete Euler Pole input!\n{EXAMPLE}')
 
         # save member variables
-        self.plat    = lat        # Euler pole latitude   [degree]
-        self.plon    = lon        # Euler pole longitude  [degree]
+        self.poleLat = lat        # Euler pole latitude   [degree]
+        self.poleLon = lon        # Euler pole longitude  [degree]
         self.rotRate = rot_rate   # angular rotation rate [mas/yr]
         self.wx      = wx         # angular velocity x    [mas/yr]
         self.wy      = wy         # angular velocity y    [mas/yr]
@@ -140,14 +140,14 @@ class EulerPole:
         """Print the Euler pole information.
         """
         # maximum digit
-        vals = [self.plat, self.plon, self.rotRate, self.wx, self.wy, self.wz]
+        vals = [self.poleLat, self.poleLon, self.rotRate, self.wx, self.wy, self.wz]
         md = len(str(int(np.max(np.abs(vals))))) + 5
         md += 1 if any(x < 0 for x in vals) else 0
 
         print('\n------------------ Euler Pole description ------------------')
         print('Spherical expression:')
-        print(f'   Pole Latitude  : {self.plat:{md}.4f} deg')
-        print(f'   Pole Longitude : {self.plon:{md}.4f} deg')
+        print(f'   Pole Latitude  : {self.poleLat:{md}.4f} deg')
+        print(f'   Pole Longitude : {self.poleLon:{md}.4f} deg')
         print(f'   Rotation rate  : {self.rotRate * MASY2DMY:{md}.4f} deg/Ma = {self.rotRate:{md}.4f} mas/yr')
         print('Cartesian expression (angular velocity vector):')
         print(f'   wx             : {self.wx * MASY2DMY:{md}.4f} deg/Ma = {self.wx:{md}.4f} mas/yr')
@@ -236,7 +236,7 @@ def cart2sph(rx, ry, rz):
         # convert xyz coord to spherical coord
         lat, lon, r = cart2sph(x, y, z)
         # convert Euler vector (in cartesian) to Euler pole (in spherical)
-        plat, plon, rot_rate = cart2sph(wx, wy, wz)
+        pole_lat, pole_lon, rot_rate = cart2sph(wx, wy, wz)
     """
     r = np.sqrt(rx**2 + ry**2 + rz**2)
     lat = np.rad2deg(np.arcsin(rz / r))
@@ -254,7 +254,7 @@ def sph2cart(lat, lon, r=1):
         # convert spherical coord to xyz coord
         x, y, z = sph2cart(lat, lon, r=radius)
         # convert Euler pole (in spherical) to Euler vector (in cartesian)
-        wx, wy, wz = sph2cart(plat, plon, r=rot_rate)
+        wx, wy, wz = sph2cart(pole_lat, pole_lon, r=rot_rate)
     """
     rx = r * np.cos(np.deg2rad(lat)) * np.cos(np.deg2rad(lon))
     ry = r * np.cos(np.deg2rad(lat)) * np.sin(np.deg2rad(lon))

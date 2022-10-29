@@ -13,9 +13,9 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 #########################################  Usage  ##############################################
 REFERENCE = """reference:
-  Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P. and Xu, X., (2022), The Impact of
-    Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields, Geophys. Res. Lett. (under review)
-    doi:10.1002/essoar.10511538.2
+  Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P. and Xu, X., (2022),
+    The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields,
+    Geophys. Res. Lett. 49, e2022GL099835, doi:10.1029/2022GL099835.
 
   # list of no-net-rotation (NNR) plate motion models (PMMs):
   # ONLY ITRF14 should be used, as Sentinel-1's orbit is in ITRF2014 reference frame.
@@ -26,8 +26,8 @@ REFERENCE = """reference:
     doi:10.1093/gji/ggx136
   MORVEL - Table 1 of Argus et al. (2011) - 56 plates
     Argus, D. F., Gordon, R. G., & DeMets, C. (2011). Geologically current motion of 56
-    plates relative to the no-net-rotation reference frame. Geochemistry, Geophysics, Geosystems, 12(11).
-    doi:10.1029/2011GC003751
+    plates relative to the no-net-rotation reference frame. Geochemistry, Geophysics,
+    Geosystems, 12(11). doi:10.1029/2011GC003751
 """
 
 EXAMPLE = """example:
