@@ -634,6 +634,18 @@ def en2az(v_e, v_n, orb_az_angle):
     return v_az
 
 
+def calc_azimuth_from_east_north_obs(east, north):
+    """Calculate the azimuth angle of the given horizontal observation (in east and north)
+
+    Parameters: east     - float,  eastward motion
+                north    - float, northward motion
+    Returns:    az_angle - float, azimuth angle in degree
+                           measured from the north with anti-clockwise as positive
+    """
+    az_angle = -1 * np.rad2deg(np.arctan2(east, north)) % 360
+    return az_angle
+
+
 def get_unit_vector4component_of_interest(los_inc_angle, los_az_angle, comp='enu2los', horz_az_angle=None):
     """Get the unit vector for the component of interest.
     Parameters: los_inc_angle - np.ndarray or float, incidence angle from vertical, in the unit of degrees

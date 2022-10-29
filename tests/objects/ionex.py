@@ -2,12 +2,6 @@
 # Author: Zhang Yunjun, Jun 2022
 """Test mintpy.objects.ionex module for the IONEX file reading and interpolation."""
 
-############################################################
-# Program is part of MintPy                                #
-# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, Jun 2022                           #
-############################################################
-
 
 import os
 

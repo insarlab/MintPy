@@ -2,11 +2,6 @@
 # Author: Yuan-Kai Liu, Oct 2022
 """Test mintpy.objects.euler module for the Euler pole and velocity computation."""
 
-############################################################
-# Program is part of MintPy                                #
-# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Yuan-Kai Liu, Oct 2022                           #
-############################################################
 
 import numpy as np
 
@@ -37,8 +32,8 @@ def read_validation_truth():
     truths = {
         'Latitude'       : [47, 43, 39, 35, 31],
         'Longitude'      : [109, 105, 101, 97, 93],
-        'Speed [mm/yr]'  : [28.07, 28.57, 28.89, 29.02, 28.98],
-        'Azimuth [deg]'  : [106.15, 103.70, 101.37, 99.11, 96.88],
+        #'Speed [mm/yr]'  : [28.07, 28.57, 28.89, 29.02, 28.98],
+        #'Azimuth [deg]'  : [106.15, 103.70, 101.37, 99.11, 96.88],
         'E vel [mm/yr]'  : [26.96, 27.76, 28.32, 28.66, 28.77],
         'N vel [mm/yr]'  : [-7.81, -6.77, -5.70, -4.59, -3.47]}
 
@@ -61,11 +56,11 @@ def test_validate_euler_pole():
     aust, eura, arab = test_build_euler_pole()
     print('\n\nExample poles:')
     print('\n < Australian plate >')
-    aust.printMsg()
+    aust.print_info()
     print('\n < Eurasian plate >')
-    eura.printMsg()
+    eura.print_info()
     print('\n < Arabian plate >')
-    arab.printMsg()
+    arab.print_info()
 
     # Read UNAVCO as ground truth
     truths = read_validation_truth()
@@ -75,14 +70,14 @@ def test_validate_euler_pole():
     lons = truths['Longitude']
 
     print('Compute linear velocity from the Euler pole...')
-    v = 1e3 * np.array(eura.getVelocityENU(lats, lons))
-    azi, speed = eura.getVelocityAzi(lats, lons)
+    v = 1e3 * np.array(eura.get_velocity_enu(lats, lons))
+    #azi, speed = eura.getVelocityAzi(lats, lons)
 
     print('\nComputed results by euler_pole.py:')
     print('\t'.join(truths.keys())+'\t U vel [mm/yr]')
     for i, (lat, lon) in enumerate(zip(lats, lons)):
         speed = np.sqrt(v[0,i]**2 + v[1,i]**2 + v[2,i]**2)
-        print(f'{lat:.2f}\t\t{lon:.2f}\t\t{speed:.4f}\t\t{azi[i]:.2f}\t\t{v[0,i]:.4f}\t\t{v[1,i]:.2f}\t\t{v[2,i]:.4f}')
+        print(f'{lat:.2f}\t\t{lon:.2f}\t\t{v[0,i]:.4f}\t\t{v[1,i]:.2f}\t\t{v[2,i]:.4f}')
 
     # compare
     assert np.allclose([v[0], v[1]], [truths['E vel [mm/yr]'], truths['N vel [mm/yr]']], rtol=1e-02)

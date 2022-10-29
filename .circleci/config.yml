@@ -51,6 +51,7 @@ jobs:
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             ${MINTPY_HOME}/tests/asc_desc2horz_vert.py
             ${MINTPY_HOME}/tests/objects/ionex.py
+            ${MINTPY_HOME}/tests/objects/euler_pole.py
 
       - run:
           name: Testing MintPy on Example Dataset 1/4 - FernandinaSenDT128 (ISCE/topsStack)
