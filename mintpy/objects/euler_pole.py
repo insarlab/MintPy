@@ -58,7 +58,8 @@ class EulerPole:
         ve, vn, vu = pole_obj.get_velocity_enu(lats, lons, alt=0.0) # in local ENU coordinate
     """
 
-    def __init__(self, wx=None, wy=None, wz=None, pole_lat=None, pole_lon=None, rot_rate=None, unit='mas/yr'):
+    def __init__(self, wx=None, wy=None, wz=None, pole_lat=None, pole_lon=None, rot_rate=None,
+                 unit='mas/yr', name=None):
         # check - unit
         if unit.lower().startswith('mas'):
             unit = 'mas/yr'
@@ -77,22 +78,29 @@ class EulerPole:
         # calculate Euler vector and pole
         if all([wx, wy, wz]):
             # calc Euler pole from vector
-            lat, lon, rot_rate = cart2sph(wx, wy, wz)
+            pole_lat, pole_lon, rot_rate = cart2sph(wx, wy, wz)
 
-        elif all([lat, lon, rot_rate]):
+        elif all([pole_lat, pole_lon, rot_rate]):
             # calc Euler vector from pole
-            wx, wy, wz = sph2cart(lat, lon, r=rot_rate)
+            wx, wy, wz = sph2cart(pole_lat, pole_lon, r=rot_rate)
 
         else:
             raise ValueError(f'Incomplete Euler Pole input!\n{EXAMPLE}')
 
         # save member variables
-        self.poleLat = lat        # Euler pole latitude   [degree]
-        self.poleLon = lon        # Euler pole longitude  [degree]
+        self.name = name
+        self.poleLat = pole_lat   # Euler pole latitude   [degree]
+        self.poleLon = pole_lon   # Euler pole longitude  [degree]
         self.rotRate = rot_rate   # angular rotation rate [mas/yr]
-        self.wx      = wx         # angular velocity x    [mas/yr]
-        self.wy      = wy         # angular velocity y    [mas/yr]
-        self.wz      = wz         # angular velocity z    [mas/yr]
+        self.wx = wx              # angular velocity x    [mas/yr]
+        self.wy = wy              # angular velocity y    [mas/yr]
+        self.wz = wz              # angular velocity z    [mas/yr]
+
+
+    def __repr__(self):
+        msg = f'{self.__class__.__name__}(name={self.name}, poleLat={self.poleLat}, poleLon={self.poleLon}, '
+        msg += f'rotRate={self.rotRate}, wx={self.wx}, wy={self.wy}, wz={self.wz}, unit=mas/yr)'
+        return msg
 
 
     def __add__(self, other):
