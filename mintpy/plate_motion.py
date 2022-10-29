@@ -94,7 +94,7 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
             pole_obj = EulerPole(
                 lat=omega_sph[0],
                 lon=omega_sph[1],
-                rotationRate=omega_sph[2],
+                rot_rate=omega_sph[2],
                 unit='deg/Ma',
             )
         pole_obj.print_info()
