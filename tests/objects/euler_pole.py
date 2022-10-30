@@ -6,8 +6,6 @@
 import collections
 import math
 
-import numpy as np
-
 from mintpy.objects.euler_pole import MASY2DMY, EulerPole
 from mintpy.plate_motion import ITRF2014_PMM
 
