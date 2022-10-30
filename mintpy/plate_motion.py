@@ -3,22 +3,16 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Yuan-Kai Liu, Zhang Yunjun, May 2022             #
 ############################################################
+# Recommend usage:
+#   from mintpy import plate_motion as pmm
 #
-# Extra dependency:
-#   + platemotion: https://github.com/lcx366/PlateTectonic
-#   + astropy
-#   How to install both:
-#      option (1) pip install platemotion
-#      option (2) git clone git@github.com:lcx366/PlateTectonic.git $TOOL_DIR/PlateTectonic
-#                 echo 'export PYTHONPATH=$PYTHONPATH:$TOOL_DIR/PlateTectonic' >> ~/.bashrc
-#                 somehow install other dependencies in setup.py using your conda
+# Reference:
+#   Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P. and Xu, X., (2022),
+#     The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields,
+#     Geophys. Res. Lett. 49, e2022GL099835, doi:10.1029/2022GL099835.
 #
-# To-Do List (updated 2022.5.30 Yuan-Kai Liu):
-#   + Potentially, we can make built-in PMM tables/dictionaries for easier user string input of the plate name
-#   + Calculate Euler rotation to multi-points ENU motion is slow (called by pmm2enu_at() here)
-#       In `platemotion` package, use array operation rather than for loops
-#           https://github.com/lcx366/PlateTectonic/blob/main/platemotion/classes/plate.py#L153
-#   + Replace platemotion package by equations of Euler trasnformation to relax this dependency at all?
+# To-Do List (updated 2022.10.12 Yuan-Kai Liu):
+#   + Use built-in PMM table ITRF2014_PMM for easier/automatic user input string input
 
 
 import collections
@@ -27,24 +21,11 @@ import numpy as np
 from skimage.transform import resize
 
 from mintpy.diff import diff_file
+from mintpy.objects.euler_pole import EulerPole
 from mintpy.objects.resample import resample
 from mintpy.utils import readfile, utils as ut, writefile
 
-# https://docs.astropy.org/en/stable/units/index.html
-try:
-    from astropy import units as u
-    from platemotion import Plate
-except ImportError:
-    msg = 'Can NOT import platemotion!'
-    msg += '\nCheck more details at https://github.com/lcx366/PlateTectonic.'
-    raise ImportError(msg)
-
-
 # ITRF2014-PMM defined in Altamimi et al. (2017)
-# units:
-#   omega_x/y/z in mas/yr (milli-second of arc per year)
-#   omega       in deg/Ma (degree per megayear or one-million-year)
-#   wrms_e/n    in mm/yr  (milli-meter per year), WRMS: weighted root mean scatter
 Tag = collections.namedtuple('Tag', 'name num_site omega_x omega_y omega_z omega wrms_e wrms_n')
 ITRF2014_PMM = {
     'ANTA' : Tag('Antartica'  ,   7,  -0.248,  -0.324,   0.675,  0.219,  0.20,  0.16),
@@ -59,92 +40,18 @@ ITRF2014_PMM = {
     'SOAM' : Tag('S. America' ,  30,  -0.270,  -0.301,  -0.140,  0.119,  0.34,  0.35),
     'SOMA' : Tag('Somalia'    ,   3,  -0.121,  -0.794,   0.884,  0.332,  0.32,  0.30),
 }
+PMM_UNIT = {
+    'omega'   : 'deg/Ma',  # degree per megayear or one-million-year
+    'omega_x' : 'mas/yr',  # milli-arcsecond per year
+    'omega_y' : 'mas/yr',  # milli-arcsecond per year
+    'omega_z' : 'mas/yr',  # milli-arcsecond per year
+    'wrms_e'  : 'mm/yr',   # milli-meter per year, weighted root mean scatter
+    'wrms_n'  : 'mm/yr',   # milli-meter per year, weighted root mean scatter
+}
 
 
-####################################### Sub Functions ##########################################
-def build_plate_motion_model(omega_cart=None, omega_sph=None):
-    """Build a plate motion model based on the given Euler roation vector
-    Parameters: omega_sph  - list or np.array, Spherical representation [lat, lon, w] (deg, deg, deg/Ma)
-                omega_cart - list or np.array, Cartesian representation [wx, wy, wz] (mas/yr)
-    Returns:    plate      - platemotion.Plate object
-    """
-    # Check input variables
-    if (omega_cart is None) and (omega_sph is None):
-        raise ValueError('Neither omega_cart (wxyz) nor omega_sph (Euler Pole) are given! At least one is required.')
+####################################### Major Function ###########################################
 
-    # Set a NaN moment of inertia (to get class Plate running)
-    iner_null = np.zeros([3,3]) * np.nan * (u.kg * u.km**2)
-
-    # Create an instrance of class Plate from `platemotion` pkg
-    plate = Plate(info={'inertia_tensor': iner_null})
-    if omega_cart is not None:
-        print('input omega_cartesian in [wx, wy, wz] (mas/yr)')
-        omega = np.array(omega_cart) * u.mas/u.yr
-        plate.set_omega(omega, 'cartesian')
-    else:
-        print('input omega_spherical in [lat, lon, w] (deg, deg, deg/Ma)')
-        omega = [omega_sph[0]*u.deg,
-                 omega_sph[1]*u.deg,
-                 omega_sph[2]*u.deg/u.Ma]
-        plate.set_omega(omega, 'spherical')
-
-    print('\n--------------------------------------')
-    print('Euler Pole and Rotation Vector')
-    print('in spherical coordinates:')
-    print(f'  Pole Latitude : {plate.omega_spherical[0].degree:10.4f} deg')
-    print(f'  Pole Longitude: {plate.omega_spherical[1].degree:10.4f} deg')
-    print(f'  Rotation rate : {plate.omega_spherical[2].to(u.deg/u.Ma):10.4f}  \n')
-    print('in Cartesian coordinates:')
-    print(f'  wx: {plate.omega_cartesian[0]:10.4f}')
-    print(f'  wy: {plate.omega_cartesian[1]:10.4f}')
-    print(f'  wz: {plate.omega_cartesian[2]:10.4f}')
-    print('--------------------------------------\n')
-    return plate
-
-
-def pmm2enu_at(pmm_obj, lats, lons):
-    """Evaluate the PMM at given lats/lons for the motion in ENU.
-
-    Parameters: pmm_obj - plate motion model instance
-                lats    - 0/1/2D array in float32, latitudes
-                lons    - 0/1/2D array in float32, longitudes
-    Returns:    ve/n/u  - 0/1/2D array in float32, plate motion in east / north / up
-                          in meter/year.
-    """
-    if isinstance(lats, float) or isinstance(lats, int):
-        loc = np.array([lats, lons, 0])
-        v = pmm_obj.velocity_at(loc,'geodetic')
-        ve = v.en[0]
-        vn = v.en[1]
-        vu = 0
-
-    elif lats.ndim in [1, 2]:
-        # prepare locations as array in size of (3, num_pts)
-        elev = np.zeros_like(lats)
-        locs = np.vstack((
-            lats.flatten(),
-            lons.flatten(),
-            elev.flatten(),
-        ))
-        # run PMM
-        v = pmm_obj.velocity_at(locs, 'geodetic')
-        ve = v.en[:, 0].reshape(lats.shape)
-        vn = v.en[:, 1].reshape(lats.shape)
-        vu = np.zeros(lats.shape, dtype=np.float32)
-
-    else:
-        raise ValueError(f'Un-recognized lat/lon grid dimension: {lats.ndim}!')
-
-    # convert from mm/year to meter/year
-    #     and from astropy.units.quantity.Quantity to np.ndarray
-    ve = np.array(ve, dtype=np.float32) * 1e-3
-    vn = np.array(vn, dtype=np.float32) * 1e-3
-    vu = np.array(vu, dtype=np.float32) * 1e-3
-
-    return ve, vn, vu
-
-
-####################################### Sub Functions ##########################################
 def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=None,
                       pmm_enu_file=None, pmm_file=None, pmm_comp='enu2los', pmm_step=10.):
     """Estimate LOS motion due to the rigid plate motion (translation and/or rotation).
@@ -167,29 +74,63 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
     atr_geo = ut.prepare_geo_los_geometry(geom_file, unit='deg')[2]
     shape_geo = [int(atr_geo['LENGTH']), int(atr_geo['WIDTH'])]
 
-    ## plate motion model in the region
+    ## calc plate motion in the region
     print('-'*50)
     if omega_cart or omega_sph:
-        print('compute the rigid plate motion using a plate motion model (PMM; translation & rotation)')
-        if omega_cart is not None:
-            pmm_obj = build_plate_motion_model(omega_cart=omega_cart)
-        else:
-            pmm_obj = build_plate_motion_model(omega_sph=omega_sph)
+        print('compute the rigid plate motion defined as an Euler Pole')
 
-        # prepare the coarse grid
+        # construct Euler Pole object
+        if omega_cart is not None:
+            print(f'input omega_cartesian in [wx, wy, wz]: {omega_cart} [mas/yr]')
+            pole_obj = EulerPole(
+                wx=omega_cart[0],
+                wy=omega_cart[1],
+                wz=omega_cart[2],
+                unit='mas/yr',
+            )
+
+        else:
+            print(f'input omega_spherical in [lat, lon, w]: {omega_sph} [deg, deg, deg/Ma]')
+            pole_obj = EulerPole(
+                pole_lat=omega_sph[0],
+                pole_lon=omega_sph[1],
+                rot_rate=omega_sph[2],
+                unit='deg/Ma',
+            )
+        pole_obj.print_info()
+
+        # prepare the coarse grid (for the points of interest)
         latc = float(atr_geo['Y_FIRST']) + float(atr_geo['Y_STEP']) * shape_geo[0] / 2
         ystep = abs(int(pmm_step * 1000 / (float(atr_geo['Y_STEP']) * 108e3)))
         xstep = abs(int(pmm_step * 1000 / (float(atr_geo['X_STEP']) * 108e3 * np.cos(np.deg2rad(latc)))))
         ystep, xstep = max(ystep, 5), max(xstep, 5)
         lats, lons = ut.get_lat_lon(atr_geo, dimension=2, ystep=ystep, xstep=xstep)
+        print(f'calculate plate motion on the coarse grid: size = ~{pmm_step} km, shape = {lats.shape}')
 
-        # transform PMM to ENU velocity on a coarse grid
-        # to-do: multi-pixel rotation is slow; change the `platemotion` code to Big Array operation rather than For Loops
-        print(f'compute PMM via platemotion.Plate: grid_size = {pmm_step} km, grid_shape = {lats.shape} ...')
-        ve_low, vn_low, vu_low = pmm2enu_at(pmm_obj, lats, lons)
+        # calculate plate motion in ENU at the coarse grid
+        ve_low, vn_low, vu_low = pole_obj.get_velocity_enu(lats, lons, alt=0.0, ellps=True)
 
-        # interpolate back to the initial grid
-        print(f'interpolate corase PMM to the full resolution: {lats.shape} -> {shape_geo}'
+        # for debugging purpose
+        debug_mode = False
+        if debug_mode:
+            from matplotlib import pyplot as plt
+
+            # calculate plate motion in ECEF (XYZ) coordinates
+            vx, vy, vz = pole_obj.get_velocity_xyz(lats, lons, alt=0.0, ellps=True)
+
+            # plot
+            fig, axs = plt.subplots(nrows=2, ncols=3, figsize=[12, 6])
+            vlist = [vx, vy, vz, ve_low, vn_low, vu_low]
+            titles = ['X', 'Y', 'Z', 'E', 'N', 'U']
+            for ax, data, title in zip(axs.flatten(), vlist, titles):
+                im = ax.imshow(data, interpolation='nearest')
+                fig.colorbar(im, ax=ax)
+                ax.set_title(title)
+            fig.tight_layout()
+            plt.show()
+
+        # resample coarse grid back to the initial fine grid
+        print(f'resample plate motion from corase back to original grid: {lats.shape} -> {shape_geo}'
               ' via skimage.transform.resize ...')
         kwargs = dict(order=1, mode='edge', anti_aliasing=True, preserve_range=True)
         ve = resize(ve_low, shape_geo, **kwargs)
@@ -203,7 +144,7 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
         vu = const_vel_enu[2] * np.ones(shape_geo, dtype=np.float32)
 
 
-    # radar-code PMM if input geometry is in radar coordinates
+    # radar-code the plate motion if input geometry is in radar coordinates
     atr = readfile.read_attribute(geom_file)
     if 'Y_FIRST' not in atr.keys():
         print('radar-coding the rigid plate motion in ENU ...')
@@ -219,7 +160,7 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
         vu = res_obj.run_resample(src_data=vu[box[1]:box[3], box[0]:box[2]])
 
 
-    # Project model from ENU to direction of interest
+    ## project Plate motion from ENU to direction of interest, e.g. LOS or az
     c0, c1 = pmm_comp.split('2')
     print(f'project the ridig plate motion from {c0.upper()} onto {c1.upper()} direction')
     los_inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
@@ -229,7 +170,7 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
             + vn * unit_vec[1]
             + vu * unit_vec[2])
 
-    # Save the plate motion model velocity into HDF5 files
+    # save the plate motion model velocity into HDF5 files
     # metadata
     atr['FILE_TYPE'] = 'velocity'
     atr['DATA_TYPE'] = 'float32'
@@ -240,12 +181,9 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
 
     if pmm_enu_file:
         # dataset
-        dsDict = {
-            'east'  : ve,
-            'north' : vn,
-            'up'    : vu,
-        }
-
+        dsDict = {'east'  : ve,
+                  'north' : vn,
+                  'up'    : vu}
         # write
         writefile.write(dsDict, out_file=pmm_enu_file, metadata=atr)
 
@@ -253,15 +191,6 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
         writefile.write(vlos, out_file=pmm_file, metadata=atr)
 
     return ve, vn, vu, vlos
-
-
-def correct_plate_motion(vel_file, mfile, ofile):
-    """Apply the plate motion correction from files.
-    """
-    file1 = vel_file       # input uncorrected LOS velocity file
-    file2 = [mfile]        # PMM LOS velocity file
-    diff_file(file1, file2, ofile)
-    return
 
 
 ################################################################################################
@@ -282,6 +211,6 @@ def run_plate_motion(inps):
     if inps.vel_file and inps.pmm_file and inps.cor_vel_file:
         print('-'*50)
         print('Correct input velocity for the rigid plate motion')
-        correct_plate_motion(inps.vel_file, inps.pmm_file, inps.cor_vel_file)
+        diff_file(inps.vel_file, [inps.pmm_file], inps.cor_vel_file)
 
     return
