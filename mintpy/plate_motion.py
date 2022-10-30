@@ -108,12 +108,26 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
         print(f'calculate plate motion on the coarse grid: size = ~{pmm_step} km, shape = {lats.shape}')
 
         # calculate plate motion in ENU at the coarse grid
-        ve_low, vn_low, vu_low = pole_obj.get_velocity_enu(
-            lats,
-            lons,
-            alt=0.0,
-            ellps=True,
-        )
+        ve_low, vn_low, vu_low = pole_obj.get_velocity_enu(lats, lons, alt=0.0, ellps=True)
+
+        # for debugging purpose
+        debug_mode = False
+        if debug_mode:
+            from matplotlib import pyplot as plt
+
+            # calculate plate motion in ECEF (XYZ) coordinates
+            vx, vy, vz = pole_obj.get_velocity_xyz(lats, lons, alt=0.0, ellps=True)
+
+            # plot
+            fig, axs = plt.subplots(nrows=2, ncols=3, figsize=[12, 6])
+            vlist = [vx, vy, vz, ve_low, vn_low, vu_low]
+            titles = ['X', 'Y', 'Z', 'E', 'N', 'U']
+            for ax, data, title in zip(axs.flatten(), vlist, titles):
+                im = ax.imshow(data, interpolation='nearest')
+                fig.colorbar(im, ax=ax)
+                ax.set_title(title)
+            fig.tight_layout()
+            plt.show()
 
         # resample coarse grid back to the initial fine grid
         print(f'resample plate motion from corase back to original grid: {lats.shape} -> {shape_geo}'
