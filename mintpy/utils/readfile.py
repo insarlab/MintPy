@@ -859,7 +859,7 @@ def sort_dataset_list4velocity(ds_list_in):
     Returns:    ds_list - list(str), list of names for 2D/3D datasets
     """
 
-    ds_list1 = ['velocity']
+    ds_list1 = [x for x in ['velocity'] if x in ds_list_in]
     ds_list3 = [x for x in ['velocityStd'] if x in ds_list_in]
     ds_list5 = [x for x in ['intercept', 'interceptStd', 'residue'] if x in ds_list_in]
 

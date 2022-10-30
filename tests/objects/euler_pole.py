@@ -1,90 +1,75 @@
 #!/usr/bin/env python3
-# Author: Yuan-Kai Liu, Oct 2022
+# Author: Yuan-Kai Liu, Zhang Yunjun, Oct 2022
 """Test mintpy.objects.euler module for the Euler pole and velocity computation."""
 
 
+import collections
+import math
+
 import numpy as np
 
-from mintpy.objects.euler_pole import EulerPole
+from mintpy.objects.euler_pole import MASY2DMY, EulerPole
 from mintpy.plate_motion import ITRF2014_PMM
 
-
-def test_build_euler_pole():
-    # Read the Poles
-    print('ITRF2014 No-net-rotation Plate Motion Model (Altamimi et al., 2017)')
-
-    Tags = ['Tag','name','num_site','omega_x','omega_y','omega_z','omega','wrms_e','wrms_n']
-    print('{:8s}{:15s}{:10s}{:12s}{:12s}{:12s}{:10s}{:10s}{:10s}'.format(*Tags))
-    for k, v in ITRF2014_PMM.items():
-        print('{:8s}{:15s}{:3d}{:12.3f}{:12.3f}{:12.3f}{:12.3f}{:12.3f}{:12.3f}'.format(
-            k, v.name, v.num_site, v.omega_x, v.omega_y, v.omega_z, v.omega, v.wrms_e, v.wrms_n))
-
-    # Inititalized the Euler poles for the plates
-    aust = EulerPole(wx=ITRF2014_PMM['AUST'].omega_x, wy=ITRF2014_PMM['AUST'].omega_y, wz=ITRF2014_PMM['AUST'].omega_z)
-    eura = EulerPole(wx=ITRF2014_PMM['EURA'].omega_x, wy=ITRF2014_PMM['EURA'].omega_y, wz=ITRF2014_PMM['EURA'].omega_z)
-    arab = EulerPole(wx=ITRF2014_PMM['ARAB'].omega_x, wy=ITRF2014_PMM['ARAB'].omega_y, wz=ITRF2014_PMM['ARAB'].omega_z)
-    return aust, eura, arab
+# validation against the UNAVCO Plate Motion Calculator
+# https://www.unavco.org/software/geodetic-utilities/plate-motion-calculator/plate-motion-calculator.html
+# accessed on Oct 29, 2022.
+# config: height=0, model=ITRF2014, reference=NNR no-net-rotation
+# note: azimuth here is measured from the north with positive for clock-wise direction
+# unit:                              deg deg mm/yr   deg   mm/yr mm/yr
+Tag = collections.namedtuple('Tag', 'lat lon speed azimuth vel_n vel_e')
+POINT_PM = {
+    'AUST' : Tag(-24,  132,  67.56,  28.94,  59.12,  32.69),
+    'EURA' : Tag( 27,   62,  28.85,  79.21,   5.40,  28.34),
+    'ARAB' : Tag( 18,   48,  46.51,  50.92,  29.32,  36.11),
+}
+PLATE_NAMES = POINT_PM.keys()
 
 
-def read_validation_truth():
-    # Results from UNAVCO calculator on the Eurasian plate:
-    # (https://www.unavco.org/software/geodetic-utilities/plate-motion-calculator/plate-motion-calculator.html)
-    truths = {
-        'Latitude'       : [47, 43, 39, 35, 31],
-        'Longitude'      : [109, 105, 101, 97, 93],
-        #'Speed [mm/yr]'  : [28.07, 28.57, 28.89, 29.02, 28.98],
-        #'Azimuth [deg]'  : [106.15, 103.70, 101.37, 99.11, 96.88],
-        'E vel [mm/yr]'  : [26.96, 27.76, 28.32, 28.66, 28.77],
-        'N vel [mm/yr]'  : [-7.81, -6.77, -5.70, -4.59, -3.47]}
+def test_euler_pole_initiation():
+    print('Test 1: EulerPole object initiation and vector2pole conversion.')
 
-    print('\nGround truth from UNAVCO calculator:')
-    print('Model: ITRF2014 Eurasian    Reference: NNR no-net-rotation')
-    tests_res = []
-    for i in range(len(truths['Latitude'])):
-        tests_res.append([])
-        for v in truths.values():
-            tests_res[i].append(v[i])
-    print('\t'.join(truths.keys()))
-    for i, res in enumerate(tests_res):
-        print('\t\t'.join(np.array(res).astype('str')))
-    print('\n\n')
-    return truths
+    for plate_name in PLATE_NAMES:
+        print(f'Plate name: ITRF2014-PMM {plate_name}')
+
+        # get PMM info from Table 1 in Altamimi et al. (2017) as reference
+        plate_pmm = ITRF2014_PMM[plate_name]
+
+        # build EulerPole obj
+        pole_obj = EulerPole(wx=plate_pmm.omega_x, wy=plate_pmm.omega_y, wz=plate_pmm.omega_z)
+
+        # compare rotation rate: ITRF2014_PMM vs. Euler vector to pole conversion
+        print(f'Reference  rotation rate from Altamimi et al. (2017): {plate_pmm.omega:.4f} deg/Ma')
+        print(f'Calculated rotation rate from pole2vector conversion: {plate_pmm.omega:.4f} deg/Ma')
+        assert math.isclose(plate_pmm.omega, pole_obj.rotRate*MASY2DMY, abs_tol=5e-4)
+        print('Pass.')
 
 
-def test_validate_euler_pole():
-    # Build plate models
-    aust, eura, arab = test_build_euler_pole()
-    print('\n\nExample poles:')
-    print('\n < Australian plate >')
-    aust.print_info()
-    print('\n < Eurasian plate >')
-    eura.print_info()
-    print('\n < Arabian plate >')
-    arab.print_info()
+def test_plate_motion_calc():
+    print('Test 2: Plate motion calculation and validation against UNAVCO website.')
 
-    # Read UNAVCO as ground truth
-    truths = read_validation_truth()
+    for plate_name in PLATE_NAMES:
+        # get UNAVCO result as reference
+        point_pm = POINT_PM[plate_name]
+        print(f'Plate = ITRF2014-PMM {plate_name}, point lat/lon = {point_pm.lat}/{point_pm.lon}')
 
-    # Test our MintPy calculation from mintpy/objects/euler_pole.py
-    lats = truths['Latitude']
-    lons = truths['Longitude']
+        # calculate using EulerPole in m/yr
+        plate_pmm = ITRF2014_PMM[plate_name]
+        pole_obj = EulerPole(wx=plate_pmm.omega_x, wy=plate_pmm.omega_y, wz=plate_pmm.omega_z)
+        ve, vn = pole_obj.get_velocity_enu(point_pm.lat, point_pm.lon, print_msg=False)[:2]
 
-    print('Compute linear velocity from the Euler pole...')
-    v = 1e3 * np.array(eura.get_velocity_enu(lats, lons))
-    #azi, speed = eura.getVelocityAzi(lats, lons)
-
-    print('\nComputed results by euler_pole.py:')
-    print('\t'.join(truths.keys())+'\t U vel [mm/yr]')
-    for i, (lat, lon) in enumerate(zip(lats, lons)):
-        print(f'{lat:.2f}\t\t{lon:.2f}\t\t{v[0,i]:.4f}\t\t{v[1,i]:.2f}\t\t{v[2,i]:.4f}')
-
-    # compare
-    assert np.allclose([v[0], v[1]], [truths['E vel [mm/yr]'], truths['N vel [mm/yr]']], rtol=1e-02)
-
+        print(f'Reference   (UNAVCO): vel_e={point_pm.vel_e:.2f}, vel_n={point_pm.vel_n:.2f} mm/yr')
+        print(f'Calculation (MintPy): vel_e={ve*1e3:.2f}, vel_n={vn*1e3:.2f} mm/yr')
+        assert math.isclose(point_pm.vel_e, ve*1e3, abs_tol=0.05)
+        assert math.isclose(point_pm.vel_n, vn*1e3, abs_tol=0.05)
+        print('Pass.')
 
 
 if __name__ == '__main__':
 
+    print('-'*50)
     print(f'Testing {__file__}')
 
-    test_validate_euler_pole()
+    test_euler_pole_initiation()
+
+    test_plate_motion_calc()

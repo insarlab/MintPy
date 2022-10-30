@@ -164,7 +164,7 @@ class EulerPole:
         print('------------------------------------------------------------\n')
 
 
-    def get_velocity_xyz(self, lat, lon, alt=0.0, ellps=True):
+    def get_velocity_xyz(self, lat, lon, alt=0.0, ellps=True, print_msg=True):
         """Compute cartesian velocity (vx, vy, vz) of the Euler Pole at point(s) of interest.
 
         Parameters: lat   - float / 1D/2D np.ndarray, points of interest (latitude)  [degree]
@@ -180,10 +180,12 @@ class EulerPole:
 
         # convert lat/lon into x/y/z
         if ellps:
-            print('assume a spheroidal Earth as defined in WGS84')
+            if print_msg:
+                print('assume a spheroidal Earth as defined in WGS84')
             x, y, z = coord_llh2xyz(lat, lon, alt)
         else:
-            print(f'assume a spherical Earth with radius={EARTH_RADIUS} m')
+            if print_msg:
+                print(f'assume a spherical Earth with radius={EARTH_RADIUS} m')
             x, y, z = sph2cart(lat, lon, alt+EARTH_RADIUS)
 
         # ensure matrix is flattened
@@ -211,7 +213,7 @@ class EulerPole:
         return vx, vy, vz
 
 
-    def get_velocity_enu(self, lat, lon, alt=0.0, ellps=True):
+    def get_velocity_enu(self, lat, lon, alt=0.0, ellps=True, print_msg=True):
         """Compute the spherical velocity (ve, vn, vu) of the Euler Pole at point(s) of interest.
 
         Parameters: lat   - float / 1D/2D np.ndarray, points of interest (latitude)  [degree]
@@ -222,7 +224,7 @@ class EulerPole:
                     vn    - float / 1D/2D np.ndarray, north linear velocity [meter/year]
                     vu    - float / 1D/2D np.ndarray, up    linear velocity [meter/year]
         """
-        vx, vy, vz = self.get_velocity_xyz(lat, lon, alt=alt, ellps=ellps)
+        vx, vy, vz = self.get_velocity_xyz(lat, lon, alt=alt, ellps=ellps, print_msg=print_msg)
         # convert ECEF to ENU velocity via matrix rotation: V_enu = T * V_xyz
         ve, vn, vu = transform_xyz_enu(lat, lon, x=vx, y=vy, z=vz)
 

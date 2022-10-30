@@ -100,6 +100,7 @@ def test_get_ionex_value():
 
 if __name__ == '__main__':
 
+    print('-'*50)
     print(f'Testing {__file__}')
 
     prep_test_data(prep_mode=False)
