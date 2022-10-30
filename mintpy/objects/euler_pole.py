@@ -156,11 +156,11 @@ class EulerPole:
         print('Spherical expression:')
         print(f'   Pole Latitude  : {self.poleLat:{md}.4f} deg')
         print(f'   Pole Longitude : {self.poleLon:{md}.4f} deg')
-        print(f'   Rotation rate  : {self.rotRate * MASY2DMY:{md}.4f} deg/Ma = {self.rotRate:{md}.4f} mas/yr')
+        print(f'   Rotation rate  : {self.rotRate * MASY2DMY:{md}.4f} deg/Ma   = {self.rotRate:{md}.4f} mas/yr')
         print('Cartesian expression (angular velocity vector):')
-        print(f'   wx             : {self.wx * MASY2DMY:{md}.4f} deg/Ma = {self.wx:{md}.4f} mas/yr')
-        print(f'   wy             : {self.wy * MASY2DMY:{md}.4f} deg/Ma = {self.wy:{md}.4f} mas/yr')
-        print(f'   wz             : {self.wz * MASY2DMY:{md}.4f} deg/Ma = {self.wz:{md}.4f} mas/yr')
+        print(f'   wx             : {self.wx * MASY2DMY:{md}.4f} deg/Ma   = {self.wx:{md}.4f} mas/yr')
+        print(f'   wy             : {self.wy * MASY2DMY:{md}.4f} deg/Ma   = {self.wy:{md}.4f} mas/yr')
+        print(f'   wz             : {self.wz * MASY2DMY:{md}.4f} deg/Ma   = {self.wz:{md}.4f} mas/yr')
         print('------------------------------------------------------------\n')
 
 
