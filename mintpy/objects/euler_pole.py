@@ -224,9 +224,19 @@ class EulerPole:
                     vn    - float / 1D/2D np.ndarray, north linear velocity [meter/year]
                     vu    - float / 1D/2D np.ndarray, up    linear velocity [meter/year]
         """
+        # calculate ECEF velocity
         vx, vy, vz = self.get_velocity_xyz(lat, lon, alt=alt, ellps=ellps, print_msg=print_msg)
+
         # convert ECEF to ENU velocity via matrix rotation: V_enu = T * V_xyz
         ve, vn, vu = transform_xyz_enu(lat, lon, x=vx, y=vy, z=vz)
+
+        # enforce zero vertical velocitpy when ellps=False
+        # to avoid artefacts due to numerical precision
+        if not ellps:
+            if isinstance(lat, np.ndarray):
+                vu[:] = 0
+            else:
+                vu = 0
 
         return ve, vn, vu
 
