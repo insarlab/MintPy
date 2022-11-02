@@ -6,14 +6,7 @@
 ############################################################
 # Recommend import:
 #     from mintpy.objects.euler_pole import EulerPole
-
-
-import numpy as np
-import pyproj
-
-from mintpy.objects.constants import EARTH_RADIUS
-
-################################################################################################
+#
 # Reference:
 #  Pichon, X. L., Francheteau, J. & Bonnin, J. Plate Tectonics; Developments in Geotectonics 6;
 #    Hardcover – January 1, 1973. Page 28-29
@@ -22,13 +15,19 @@ from mintpy.objects.constants import EARTH_RADIUS
 #  Navipedia, Transformations between ECEF and ENU coordinates. [Online].
 #    https://gssc.esa.int/navipedia/index.php/Transformations_between_ECEF_and_ENU_coordinates
 
+
+import numpy as np
+import pyproj
+
+from mintpy.objects.constants import EARTH_RADIUS
+
 # global variables
-# mas = milli arc second
-MAS2RAD = np.pi / 3600000 / 180    # 1 mas          = x radian
+MAS2RAD = np.pi / 3600000 / 180    # 1 mas (milli arc second) = x radian
 MASY2DMY = 1e6 / 3600000           # 1 mas per year = x degree per million year
 
 
-## Define the Euler pole class
+####################################  EulerPole class begin  #############################################
+# Define the Euler pole class
 EXAMPLE = """Define an Euler pole:
   Method 1 - Use an Euler vector [wx, wy, wz]
              wx/y/z   - float, angular velocity in x/y/z-axis [mas/yr or deg/Ma]
@@ -50,7 +49,7 @@ EXAMPLE = """Define an Euler pole:
 class EulerPole:
     """EulerPole object to compute velocity for a given tectonic plate.
 
-    EXAMPLE:
+    Example:
         # compute velocity of the Eurasia plate in ITRF2014-PMM from Altamimi et al. (2017)
         pole_obj = EulerPole(pole_lat=55.070, pole_lon=-99.095, rot_rate=0.939, unit='mas/yr')
         pole_obj.print_info()
@@ -240,12 +239,12 @@ class EulerPole:
 
         return ve, vn, vu
 
+####################################  EulerPole class end  ###############################################
 
 
-################################################################################################
-# Sub-functions for the math of Euler Pole and linear velocity
+####################################  Utility functions  #################################################
+# Utility functions for the math/geometry operations of Euler Pole and linear velocity
 # reference: https://yuankailiu.github.io/assets/docs/Euler_pole_doc.pdf
-
 def cart2sph(rx, ry, rz):
     """Convert cartesian coordinates to spherical.
 

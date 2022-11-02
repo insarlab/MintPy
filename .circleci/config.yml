@@ -46,7 +46,7 @@ jobs:
             solid_earth_tides.py -h
 
       - run:
-          name: Testing MintPy Python Modules
+          name: Unit Testing
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             ${MINTPY_HOME}/tests/asc_desc2horz_vert.py
@@ -54,28 +54,28 @@ jobs:
             ${MINTPY_HOME}/tests/objects/euler_pole.py
 
       - run:
-          name: Testing MintPy on Example Dataset 1/4 - FernandinaSenDT128 (ISCE/topsStack)
+          name: Workflow Testing 1/4 - FernandinaSenDT128 (ISCE/topsStack)
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
 
       - run:
-          name: Testing MintPy on Example Dataset 2/4 - SanFranSenDT42 (ARIA)
+          name: Workflow Testing 2/4 - SanFranSenDT42 (ARIA)
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
 
       - run:
-          name: Testing MintPy on Example Dataset 3/4 - WellsEnvD2T399 (Gamma)
+          name: Workflow Testing 3/4 - WellsEnvD2T399 (Gamma)
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
       - run:
-          name: Testing MintPy on Example Dataset 4/4 - WCapeSenAT29 (SNAP)
+          name: Workflow Testing 4/4 - WCapeSenAT29 (SNAP)
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
