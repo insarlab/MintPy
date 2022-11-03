@@ -941,6 +941,7 @@ class TimeSeriesAnalysis:
 
         # use relative path for shorter and cleaner printout view command
         stack_file  = os.path.relpath(stack_file)  if stack_file  else stack_file
+        ion_file    = os.path.relpath(ion_file)    if ion_file    else ion_file
         geom_file   = os.path.relpath(geom_file)   if geom_file   else geom_file
         lookup_file = os.path.relpath(lookup_file) if lookup_file else lookup_file
         mask_file   = os.path.relpath(mask_file)   if mask_file   else mask_file
