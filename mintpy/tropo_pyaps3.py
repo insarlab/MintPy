@@ -406,7 +406,7 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     Parameters: grib_files : list of string of grib files
     Returns:    grib_files : list of string
     """
-    print('\n------------------------------------------------------------------------------')
+    print('-'*50)
     print('downloading weather model data using PyAPS ...')
 
     # Get date list to download (skip already downloaded files)
@@ -414,7 +414,7 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     grib_files2dload = sorted(list(set(grib_files) - set(grib_files_exist)))
     date_list2dload = [str(re.findall(r'\d{8}', os.path.basename(i))[0]) for i in grib_files2dload]
     print('number of grib files to download: %d' % len(date_list2dload))
-    print('------------------------------------------------------------------------------\n')
+    print('-'*50)
 
     # Download grib file using PyAPS
     if len(date_list2dload) > 0:
@@ -492,53 +492,53 @@ def get_delay(grib_file, tropo_model, delay_type, dem, inc, lat, lon, mask=None,
 
 
 ###############################################################
-def calc_delay_timeseries(inps):
-    """Calculate delay time-series and write it to HDF5 file.
-    Parameters: inps : namespace, all input parameters
-    Returns:    tropo_file : str, file name of ECMWF.h5
-    """
+def run_or_skip(grib_files, tropo_file, geom_file):
+    """Run or skip the calculation of tropo delay time-series file."""
+
     def get_dataset_size(fname):
         atr = readfile.read_attribute(fname)
         shape = (int(atr['LENGTH']), int(atr['WIDTH']))
         return shape
 
-    def run_or_skip(grib_files, tropo_file, geom_file):
-        print('update mode: ON')
-        print(f'output file: {tropo_file}')
-        flag = 'skip'
+    print('update mode: ON')
+    print(f'output file: {tropo_file}')
+    flag = 'skip'
 
-        # check existence and modification time
-        if ut.run_or_skip(out_file=tropo_file, in_file=grib_files, print_msg=False) == 'run':
+    # check existence and modification time
+    if ut.run_or_skip(out_file=tropo_file, in_file=grib_files, print_msg=False) == 'run':
+        flag = 'run'
+        print('1) output file either do NOT exist or is NOT newer than all GRIB files.')
+
+    else:
+        print('1) output file exists and is newer than all GRIB files.')
+
+        # check dataset size in space / time
+        date_list = [str(re.findall(r'\d{8}', os.path.basename(i))[0]) for i in grib_files]
+        if (get_dataset_size(tropo_file) != get_dataset_size(geom_file)
+                or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
             flag = 'run'
-            print('1) output file either do NOT exist or is NOT newer than all GRIB files.')
-
+            print(f'2) output file does NOT have the same len/wid as the geometry file {geom_file} or does NOT contain all dates')
         else:
-            print('1) output file exists and is newer than all GRIB files.')
+            print('2) output file has the same len/wid as the geometry file and contains all dates')
 
-            # check dataset size in space / time
-            date_list = [str(re.findall(r'\d{8}', os.path.basename(i))[0]) for i in grib_files]
-            if (get_dataset_size(tropo_file) != get_dataset_size(geom_file)
-                    or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
-                flag = 'run'
-                print(f'2) output file does NOT have the same len/wid as the geometry file {geom_file} or does NOT contain all dates')
-            else:
-                print('2) output file has the same len/wid as the geometry file and contains all dates')
+            # check if output file is fully written
+            with h5py.File(tropo_file, 'r') as f:
+                if np.all(f['timeseries'][-1,:,:] == 0):
+                    flag = 'run'
+                    print('3) output file is NOT fully written.')
+                else:
+                    print('3) output file is fully written.')
 
-                # check if output file is fully written
-                with h5py.File(tropo_file, 'r') as f:
-                    if np.all(f['timeseries'][-1,:,:] == 0):
-                        flag = 'run'
-                        print('3) output file is NOT fully written.')
-                    else:
-                        print('3) output file is fully written.')
+    # result
+    print(f'run or skip: {flag}')
+    return flag
 
-        # result
-        print(f'run or skip: {flag}')
-        return flag
 
-    if run_or_skip(inps.grib_files, inps.tropo_file, inps.geom_file) == 'skip':
-        return
-
+def calc_delay_timeseries(inps):
+    """Calculate delay time-series and write it to HDF5 file.
+    Parameters: inps : namespace, all input parameters
+    Returns:    tropo_file : str, file name of ECMWF.h5
+    """
 
     ## 1. prepare geometry data
     geom_obj = geometry(inps.geom_file)
@@ -597,7 +597,7 @@ def calc_delay_timeseries(inps):
 
 
     ## 3. calculate phase delay
-    print('\n------------------------------------------------------------------------------')
+    print('-'*50)
     print('calculating absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
     print(f'number of grib files used: {num_date}')
 
@@ -635,7 +635,6 @@ def calc_delay_timeseries(inps):
 def correct_timeseries(dis_file, tropo_file, cor_dis_file):
     # diff.py can handle different reference in space and time
     # between the absolute tropospheric delay and the double referenced time-series
-    print('\n------------------------------------------------------------------------------')
     print('correcting relative delay for input time-series using diff.py')
 
     iargs = [dis_file, tropo_file, '-o', cor_dis_file, '--force']
@@ -648,7 +647,6 @@ def correct_timeseries(dis_file, tropo_file, cor_dis_file):
 
 
 def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
-    print('\n------------------------------------------------------------------------------')
     print('correcting relative delay for input interferogram')
 
     print(f'read phase from {dis_file}')
@@ -695,36 +693,50 @@ def run_tropo_pyaps3(inps):
     # get corresponding grib files info
     get_grib_info(inps)
 
-    ## download
-    inps.grib_files = dload_grib_files(
-        inps.grib_files,
-        tropo_model=inps.tropo_model,
-        snwe=inps.snwe)
-
-    ## calculate tropo delay and save to h5 file
-    if inps.geom_file:
-        calc_delay_timeseries(inps)
+    ## 1. download
+    print('\n'+'-'*80)
+    print('Download global atmospheric model files...')
+    if inps.geom_file and run_or_skip(inps.grib_files, inps.tropo_file, inps.geom_file) == 'skip':
+        print(f'Skip downloading and use existed troposhperic delay HDF5 file: {inps.tropo_file}.')
     else:
+        inps.grib_files = dload_grib_files(
+            inps.grib_files,
+            tropo_model=inps.tropo_model,
+            snwe=inps.snwe)
+
+    ## 2. calculate tropo delay and save to h5 file
+    if not inps.geom_file:
         print('No input geometry file, skip calculating and correcting tropospheric delays.')
         return
 
-    ## correct tropo delay from displacement time-series
+    print('\n'+'-'*80)
+    print('Calculate tropospheric delay and write to HDF5 file...')
+    if run_or_skip(inps.grib_files, inps.tropo_file, inps.geom_file) == 'run':
+        calc_delay_timeseries(inps)
+    else:
+        print(f'Skip re-calculating and use existed troposhperic delay HDF5 file: {inps.tropo_file}.')
+
+    ## 3. correct tropo delay from displacement time-series
     if inps.dis_file:
-        ftype = inps.atr['FILE_TYPE']
-        if ftype == 'timeseries':
-            correct_timeseries(
-                dis_file=inps.dis_file,
-                tropo_file=inps.tropo_file,
-                cor_dis_file=inps.cor_dis_file)
+        print('\n'+'-'*80)
+        print('Applying tropospheric correction to displacement file...')
+        if ut.run_or_skip(inps.cor_dis_file, [inps.dis_file, inps.tropo_file]) == 'run':
+            ftype = inps.atr['FILE_TYPE']
+            if ftype == 'timeseries':
+                correct_timeseries(
+                    dis_file=inps.dis_file,
+                    tropo_file=inps.tropo_file,
+                    cor_dis_file=inps.cor_dis_file)
 
-        elif ftype == '.unw':
-            correct_single_ifgram(
-                dis_file=inps.dis_file,
-                tropo_file=inps.tropo_file,
-                cor_dis_file=inps.cor_dis_file)
+            elif ftype == '.unw':
+                correct_single_ifgram(
+                    dis_file=inps.dis_file,
+                    tropo_file=inps.tropo_file,
+                    cor_dis_file=inps.cor_dis_file)
+            else:
+                print(f'input file {ftype} is not timeseries nor .unw, correction is not supported yet.')
         else:
-            print(f'input file {ftype} is not timeseries nor .unw, correction is not supported yet.')
-
+            print(f'Skip re-applying and use existed corrected displacement file: {inps.cor_dis_file}.')
     else:
         print('No input displacement file, skip correcting tropospheric delays.')
 
