@@ -4,14 +4,14 @@
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 
-import os
+
 import h5py
 import numpy as np
 from matplotlib import dates as mdates, pyplot as plt
 
 from mintpy.objects import ifgramStack
 from mintpy.utils import network as pnet, plot as pp, ptime, utils as ut
-os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
 
 ###########################  Sub Function  #############################
 def reset_network(stackFile):
