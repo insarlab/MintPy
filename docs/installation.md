@@ -187,3 +187,13 @@ temporary-directory: /tmp  # Directory for local disk like /tmp, /scratch, or /l
 # If you are sharing the same machine with others, use the following instead to avoid permission issues with others.
 # temporary-directory: /tmp/{replace_this_with_your_user_name}
 ```
+
+#### c. Extra environment variables setup ####
+
+We recommend setting the following environment variables, e.g. in your `~/.bash_profile` file, to avoid occasional errors.
+
+```bash
+export VRT_SHARED_SOURCE=0             # do not share dataset while using GDAL VRT in a multi-threading environment
+export HDF5_DISABLE_VERSION_CHECK=2    # supress the HDF5 version warning message (0 for abort; 1/2 for printout/suppress warning message)
+export HDF5_USE_FILE_LOCKING=FALSE     # request that HDF5 file locks should NOT be used
+```
