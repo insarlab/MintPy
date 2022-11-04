@@ -575,7 +575,7 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
             out_dset_list = outObj.datasetNames
             out_date12_list = outObj.date12List
 
-            if (out_size == in_size
+            if (out_size[1:] == in_size[1:]
                     and set(in_dset_list).issubset(set(out_dset_list))
                     and set(in_date12_list).issubset(set(out_date12_list))):
                 print('All date12   exists in file {} with same size as required,'

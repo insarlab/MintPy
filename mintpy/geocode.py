@@ -99,7 +99,8 @@ def run_geocode(inps):
                 dest_box = res_obj.dest_box_list[i]
 
                 # read
-                print('-'*50+'\nreading {d:<{w}} in block {b} from {f} ...'.format(
+                print('-'*50 + f'{i+1}/{res_obj.num_box}')
+                print('reading {d:<{w}} in block {b} from {f} ...'.format(
                     d=dsName, w=maxDigit, b=src_box, f=os.path.basename(infile)))
 
                 data = readfile.read(infile,

@@ -404,8 +404,8 @@ class resample:
                                               lon0:lon1:lon_num*1j]
 
                 # src_box
-                src_area = (src_lat1 - src_lat0) * (src_lon1 - src_lon0)
-                dest_area = (lat1 - lat0) * (lon1 - lon0)
+                src_area = abs(src_lat1 - src_lat0) * abs(src_lon1 - src_lon0)
+                dest_area = abs(lat1 - lat0) * abs(lon1 - lon0)
                 if dest_area < src_area * 0.5:
                     # reduction of swath data
                     # https://pyresample.readthedocs.io/en/latest/data_reduce.html
