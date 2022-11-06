@@ -1,0 +1,78 @@
+# link: https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+name: publish 📦 to PyPI
+
+# Build on every branch push, tag push, and pull request change
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+
+jobs:
+  build-sdist-n-wheel:
+    name: Build 🐍 distributions and wheels 📦
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+
+      - name: Install pypa/build
+        run: >-
+          python -m
+          pip install
+          build
+          --user
+
+      - name: Build a source tarball and a binary wheel
+        run: >-
+          python -m
+          build
+          --sdist
+          --wheel
+          --outdir dist/
+          .
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: |
+            dist/*.tar.gz
+            dist/*.whl
+
+  upload-to-pypi:
+    name: Upload 📦 to (Test) PyPI
+    needs: [build-sdist-n-wheel]
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'insarlab' && github.event_name == 'push'
+    steps:
+
+      - uses: actions/download-artifact@v3
+        with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
+          name: artifact
+          path: dist
+
+      - name: Publish developed version 📦 to Test PyPI
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
+          skip_existing: false
+          verbose: true
+
+      - name: Publish released version 📦 to PyPI
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
