@@ -24,6 +24,9 @@ config_keys = [
     'excludeDate',
 ]
 
+# debug mode
+debug_mode = False
+
 
 ############################################################################
 def run_or_skip(inps):
@@ -216,13 +219,15 @@ def read_geometry(ts_file, geom_file=None, box=None):
     return sin_inc_angle, range_dist, pbase
 
 
-def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False):
+def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False,
+                       cond=1e-8, display=False, sharey=True):
     """Estimate DEM error with least square optimization.
     Parameters: ts0            - 2D np.array in size of (numDate, numPixel), original displacement time-series
                 G0             - 2D np.array in size of (numDate, numParam), design matrix in [G_geom, G_defo]
                 tbase          - 2D np.array in size of (numDate, 1), temporal baseline
                 date_flag      - 1D np.array in bool data type, mark the date used in the estimation
                 phase_velocity - bool, use phase history or phase velocity for minimization
+                cond           - float, cutoff for ‘small’ singular values in least squares solution.
     Returns:    delta_z        - 2D np.array in size of (1,       numPixel) estimated DEM residual
                 ts_cor         - 2D np.array in size of (numDate, numPixel),
                                     corrected timeseries = tsOrig - delta_z_phase
@@ -235,37 +240,35 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False):
     if date_flag is None:
         date_flag = np.ones(ts0.shape[0], np.bool_)
 
-    # Prepare Design matrix G and observations ts for inversion
+    # skip noisy acquisitions
     G = G0[date_flag, :]
     ts = ts0[date_flag, :]
+
     if phase_velocity:
-        tbase = tbase[date_flag]
-        G = np.diff(G, axis=0) / np.repeat(np.diff(tbase, axis=0).reshape(-1,1), G.shape[1], axis=1)
-        ts = np.diff(ts, axis=0) / np.repeat(np.diff(tbase, axis=0).reshape(-1,1), ts.shape[1], axis=1)
+        # adjust from phase to phase velocity
+        tbase_diff = np.diff(tbase[date_flag], axis=0).reshape(-1,1)
+        ts_diff = np.diff(ts, axis=0) / np.repeat(tbase_diff, ts.shape[1], axis=1)
+        G_diff = np.diff(G, axis=0) / np.repeat(tbase_diff, G.shape[1], axis=1)
 
     # Inverse using L-2 norm to get unknown parameters X
     # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
     # equivalent to X = np.dot(np.dot(np.linalg.inv(np.dot(G.T, G)), G.T), ts)
     #               X = np.dot(np.linalg.pinv(G), ts)
-    X = linalg.lstsq(G, ts, cond=1e-15)[0]
+    X = linalg.lstsq(G, ts, cond=cond)[0]
 
-    # Prepare Outputs
+    # prepare outputs
     delta_z = X[0, :]
     ts_cor = ts0 - np.dot(G0[:, 0].reshape(-1, 1), delta_z.reshape(1, -1))
     ts_res = ts0 - np.dot(G0, X)
 
     # for debug
-    debug_mode = False
-    if debug_mode:
-        import matplotlib.pyplot as plt
-        fig, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, ncols=1, figsize=(8, 8))
-        ts_all = np.hstack((ts0, ts_res, ts_cor))
-        ymin = np.min(ts_all)
-        ymax = np.max(ts_all)
-        ax1.plot(ts0, '.');           ax1.set_ylim((ymin, ymax)); ax1.set_title('Original  Timeseries')
-        ax2.plot(ts_cor, '.');        ax2.set_ylim((ymin, ymax)); ax2.set_title('Corrected Timeseries')
-        ax3.plot(ts_res, '.');        ax3.set_ylim((ymin, ymax)); ax3.set_title('Fitting Residual')
-        ax4.plot(ts_cor-ts_res, '.'); ax4.set_ylim((ymin, ymax)); ax4.set_title('Fitted Deformation Model')
+    if debug_mode or display:
+        from matplotlib import pyplot as plt
+        fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(8, 8), sharex=True, sharey=sharey)
+        titles = ['Original TS', 'Corrected TS', 'Fitting residual', 'Fitted defo model']
+        for ax, data, title in zip(axs, [ts0, ts_cor, ts_res, ts_cor - ts_res], titles):
+            ax.plot(data, '.')
+            ax.set_title(title)
         plt.show()
 
     return delta_z, ts_cor, ts_res
@@ -292,6 +295,10 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
     ts_obj.open(print_msg=False)
 
     ## 1. input info
+    if debug_mode:
+        debug_y, debug_x = 611, 713
+        print(f'DEBUG at Y/X = {debug_y}/{debug_x}')
+        box = [debug_x, debug_y, debug_x+1, debug_y+1]
 
     # size
     if box:
@@ -334,10 +341,8 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
 
     num_pixel2inv = int(np.sum(mask))
     idx_pixel2inv = np.where(mask)[0]
-    print(('number of pixels to invert: {} out of {}'
-           ' ({:.1f}%)').format(num_pixel2inv,
-                                num_pixel,
-                                num_pixel2inv/num_pixel*100))
+    perc = num_pixel2inv/num_pixel*100
+    print(f'number of pixels to invert: {num_pixel2inv} out of {num_pixel} ({perc:.1f}%)')
 
 
     ## 2. estimation
@@ -362,12 +367,13 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
         G = np.hstack((G_geom, G_defo))
 
         # run
-        (delta_z_i,
-         ts_cor_i,
-         ts_res_i) = estimate_dem_error(ts_data[:, mask], G,
-                                        tbase=tbase,
-                                        date_flag=date_flag,
-                                        phase_velocity=phase_velocity)
+        delta_z_i, ts_cor_i, ts_res_i = estimate_dem_error(
+            ts0=ts_data[:, mask],
+            G0=G,
+            tbase=tbase,
+            date_flag=date_flag,
+            phase_velocity=phase_velocity,
+        )
 
         # assemble
         delta_z[mask] = delta_z_i
@@ -390,12 +396,13 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
             G = np.hstack((G_geom, G_defo))
 
             # run
-            (delta_z_i,
-             ts_cor_i,
-             ts_res_i) = estimate_dem_error(ts_data[:, idx], G,
-                                            tbase=tbase,
-                                            date_flag=date_flag,
-                                            phase_velocity=phase_velocity)
+            delta_z_i, ts_cor_i, ts_res_i = estimate_dem_error(
+                ts0=ts_data[:, idx],
+                G0=G,
+                tbase=tbase,
+                date_flag=date_flag,
+                phase_velocity=phase_velocity,
+            )
 
             # assemble
             delta_z[idx] = delta_z_i
@@ -481,9 +488,11 @@ def correct_dem_error(inps):
 
     # split in row/line direction based on the input memory limit
     num_box = int(np.ceil((num_epoch * length * width * 4) * 2.5 / (inps.maxMemory * 1024**3)))
-    box_list = cluster.split_box2sub_boxes(box=(0, 0, width, length),
-                                           num_split=num_box,
-                                           dimension='y')
+    box_list = cluster.split_box2sub_boxes(
+        box=(0, 0, width, length),
+        num_split=num_box,
+        dimension='y',
+    )
 
     # 3.2 prepare the input arguments for *_patch()
     data_kwargs = {
@@ -525,9 +534,11 @@ def correct_dem_error(inps):
             cluster_obj.open()
 
             # run dask
-            delta_z, ts_cor, ts_res = cluster_obj.run(func=correct_dem_error_patch,
-                                                      func_data=data_kwargs,
-                                                      results=[delta_z, ts_cor, ts_res])
+            delta_z, ts_cor, ts_res = cluster_obj.run(
+                func=correct_dem_error_patch,
+                func_data=data_kwargs,
+                results=[delta_z, ts_cor, ts_res],
+            )
 
             # close dask cluster and client
             cluster_obj.close()
@@ -540,24 +551,27 @@ def correct_dem_error(inps):
 
         # DEM error - 2D
         block = [box[1], box[3], box[0], box[2]]
-        writefile.write_hdf5_block(dem_err_file,
-                                   data=delta_z,
-                                   datasetName='dem',
-                                   block=block)
+        writefile.write_hdf5_block(
+            dem_err_file,
+            data=delta_z,
+            datasetName='dem',
+            block=block)
 
         # corrected time-series - 3D
         block = [0, num_date, box[1], box[3], box[0], box[2]]
-        writefile.write_hdf5_block(ts_cor_file,
-                                   data=ts_cor,
-                                   datasetName='timeseries',
-                                   block=block)
+        writefile.write_hdf5_block(
+            ts_cor_file,
+            data=ts_cor,
+            datasetName='timeseries',
+            block=block)
 
         # residual time-series - 3D
         block = [0, num_date, box[1], box[3], box[0], box[2]]
-        writefile.write_hdf5_block(ts_res_file,
-                                   data=ts_res,
-                                   datasetName='timeseries',
-                                   block=block)
+        writefile.write_hdf5_block(
+            ts_res_file,
+            data=ts_res,
+            datasetName='timeseries',
+            block=block)
 
     # roll back to the origial number of threads
     cluster.roll_back_num_threads(num_threads_dict)
