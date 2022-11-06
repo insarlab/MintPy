@@ -247,8 +247,8 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False,
     if phase_velocity:
         # adjust from phase to phase velocity
         tbase_diff = np.diff(tbase[date_flag], axis=0).reshape(-1,1)
-        ts_diff = np.diff(ts, axis=0) / np.repeat(tbase_diff, ts.shape[1], axis=1)
-        G_diff = np.diff(G, axis=0) / np.repeat(tbase_diff, G.shape[1], axis=1)
+        ts = np.diff(ts, axis=0) / np.repeat(tbase_diff, ts.shape[1], axis=1)
+        G = np.diff(G, axis=0) / np.repeat(tbase_diff, G.shape[1], axis=1)
 
     # Inverse using L-2 norm to get unknown parameters X
     # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
@@ -264,7 +264,7 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False,
     # for debug
     if debug_mode or display:
         from matplotlib import pyplot as plt
-        fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(8, 8), sharex=True, sharey=sharey)
+        _, axs = plt.subplots(nrows=4, ncols=1, figsize=(8, 8), sharex=True, sharey=sharey)
         titles = ['Original TS', 'Corrected TS', 'Fitting residual', 'Fitted defo model']
         for ax, data, title in zip(axs, [ts0, ts_cor, ts_res, ts_cor - ts_res], titles):
             ax.plot(data, '.')
