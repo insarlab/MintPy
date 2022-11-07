@@ -92,12 +92,19 @@ def cmd_line_parse(iargs=None):
         print(DEFAULT_TEMPLATE)
         sys.exit(0)
 
-    # check: --template option
+    # check: -t/--template option
+    # -t option is required AND
+    # smallbaselineApp.cfg file is required
     if not inps.template_file:
         parser.print_usage()
         script_name = os.path.basename(__file__)
         print(f'{script_name}: error: -t/--template option is required.')
         print(f'run {script_name} -H to show the example template file.')
+        sys.exit(1)
+
+    elif all(not x.endswith('smallbaselineApp.cfg') for x in inps.template_file):
+        script_name = os.path.basename(__file__)
+        print(f'{script_name}: error: at least smallbaselineApp.cfg file is required for -t/--template option.')
         sys.exit(1)
 
     return inps
