@@ -271,11 +271,13 @@ def get_design_matrix4time_func(date_list, model=None, ref_date=None, seconds=0)
 def get_design_matrix4polynomial_func(yr_diff, degree):
     """design matrix/function model of linear/polynomial velocity estimation
 
+    d = c0 + c1 * t + 1/2 * c2 * t^2 + 1/6 * c3 * t^3 + ...
+
     The k! denominator makes the estimated polynomial coefficient (c_k) physically meaningful:
-        k=0 makes c_0 the offset;
-        k=1 makes c_1 the velocity;
-        k=2 makes c_2 the acceleration;
-        k=3 makes c_3 the acceleration rate;
+        k=0 makes c0 the offset;
+        k=1 makes c1 the velocity;
+        k=2 makes c2 the acceleration;
+        k=3 makes c3 the acceleration rate;
 
     Parameters: yr_diff: time difference from ref_date in decimal years
                 degree : polynomial models: 0=offset, 1=linear, 2=quadratic, 3=cubic, etc.

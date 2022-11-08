@@ -144,8 +144,7 @@ def test_dem_error_with_complex_defo(date_list, tbase, rel_tol=0.05, plot=False)
     print('Test 2: complex time-series with highly non-linear displacement.')
 
     # setting
-    #model = {'polynomial' : 2, 'stepDate' : ['20190818', '20200812']}
-    model = {'polynomial' : 2}
+    model = {'polynomial' : 2, 'stepDate' : ['20190818', '20200812']}
 
     # simulate displacement time-series
     # run the following to re-generate:
