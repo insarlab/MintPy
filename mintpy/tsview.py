@@ -837,9 +837,13 @@ class timeseriesViewer():
             valmax=self.num_date-1,
             valstep=1)
 
-        # plot reference date as a gray dot
+        # plot reference date:
+        # as a gray dot on the slider AND
+        # as x-axis label
         if ref_idx is not None:
             self.tslider.ax.scatter(ref_idx, 0.5, s=8**2, marker='o', color='gray', edgecolors='w')
+            disp_date = self.dates[ref_idx].strftime(self.disp_date_format)
+            self.ax_tslider.set_title(f'Reference: N = {ref_idx}, Time = {disp_date}', fontsize=self.font_size)
 
         return self.tslider
 

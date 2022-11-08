@@ -1,6 +1,6 @@
 version: 2.1
 jobs:
-  test:
+  unit-n-workflow-tests:
     docker:
       - image: ubuntu:bionic
         environment:
@@ -9,6 +9,7 @@ jobs:
         user: root
     working_directory: /root/tools/MintPy
     resource_class: large
+
     steps:
       - checkout
       - run:
@@ -28,14 +29,14 @@ jobs:
             ${HOME}/tools/miniconda3/bin/conda config --set channel_priority strict
             ${HOME}/tools/miniconda3/bin/conda install --yes mamba
             cat ${HOME}/.condarc
+            # modify/export env var PATH to BASH_ENV to be shared across run steps
+            echo 'export PATH=${CONDA_PREFIX}/bin:${PATH}' >> ${BASH_ENV}
 
       - run:
           name: Installing MintPy
           no_output_timeout: 30m
           command: |
             export PYTHONUNBUFFERED=1
-            # setup environment variable
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             # install dependencies and source code
             source activate root
             mamba install --verbose --yes gdal">=3" --file ${MINTPY_HOME}/requirements.txt
@@ -46,44 +47,39 @@ jobs:
             solid_earth_tides.py -h
 
       - run:
-          name: Unit Testing
+          name: Unit Test
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             ${MINTPY_HOME}/tests/objects/euler_pole.py
             ${MINTPY_HOME}/tests/objects/ionex.py
             ${MINTPY_HOME}/tests/asc_desc2horz_vert.py
             ${MINTPY_HOME}/tests/dem_error.py
 
       - run:
-          name: Workflow Testing 1/4 - FernandinaSenDT128 (ISCE/topsStack)
+          name: Workflow Test 1/4 - FernandinaSenDT128 (ISCE/topsStack)
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
 
       - run:
-          name: Workflow Testing 2/4 - SanFranSenDT42 (ARIA)
+          name: Workflow Test 2/4 - SanFranSenDT42 (ARIA)
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
 
       - run:
-          name: Workflow Testing 3/4 - WellsEnvD2T399 (Gamma)
+          name: Workflow Test 3/4 - WellsEnvD2T399 (Gamma)
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
       - run:
-          name: Workflow Testing 4/4 - WCapeSenAT29 (SNAP)
+          name: Workflow Test 4/4 - WCapeSenAT29 (SNAP)
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
 
 workflows:
   version: 2
-  test:
+  unit-n-workflow-tests:
     jobs:
-      - test
+      - unit-n-workflow-tests
