@@ -45,7 +45,7 @@ Configuration parameters for each step are initiated with default values in a cu
 wget https://zenodo.org/record/3952953/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/FernandinaSenDT128.txt
+smallbaselineApp.py ${MINTPY_HOME}/../docs/templates/FernandinaSenDT128.txt
 ```
 
 <p align="left">

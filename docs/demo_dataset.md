@@ -10,7 +10,7 @@ Size: ~750 MB
 wget https://zenodo.org/record/3952953/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/FernandinaSenDT128.txt
+smallbaselineApp.py ${MINTPY_HOME}/../docs/templates/FernandinaSenDT128.txt
 ```
 
 <p align="left">
@@ -31,7 +31,7 @@ Size: ~2.7 GB
 wget https://zenodo.org/record/4265413/files/SanFranSenDT42.tar.xz
 tar -xvJf SanFranSenDT42.tar.xz
 cd SanFranSenDT42/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/SanFranSenDT42.txt
+smallbaselineApp.py ${MINTPY_HOME}/../docs/templates/SanFranSenDT42.txt
 ```
 
 <p align="left">
@@ -52,7 +52,7 @@ Size: ~280 MB
 wget https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz
 tar -xvJf WellsEnvD2T399.tar.xz
 cd WellsEnvD2T399/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/WellsEnvD2T399.txt
+smallbaselineApp.py ${MINTPY_HOME}/../docs/templates/WellsEnvD2T399.txt
 ```
 
 <p align="left">
@@ -73,7 +73,7 @@ Size: ~480 MB
 wget https://zenodo.org/record/5502403/files/RidgecrestSenDT71.tar.xz
 tar -xvJf RidgecrestSenDT71.tar.xz
 cd RidgecrestSenDT71
-smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/RidgecrestSenDT71.txt
+smallbaselineApp.py ${MINTPY_HOME}/../docs/templates/RidgecrestSenDT71.txt
 ```
 
 ### Sentinel-1 on Western Cape, South Africa with SNAP ###
@@ -86,7 +86,7 @@ Size: ~520 MB
 wget https://zenodo.org/record/4318134/files/WCapeSenAT29.tar.xz
 tar -xvJf WCapeSenAT29.tar.xz
 cd WCapeSenAT29
-smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/WCapeSenAT29.txt
+smallbaselineApp.py ${MINTPY_HOME}/../docs/templates/WCapeSenAT29.txt
 ```
 
 ### ALOS on Kuju with ROI_PAC ###
@@ -99,7 +99,7 @@ Size: ~240 MB
 wget https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz
 tar -xvJf KujuAlosAT422F650.tar.xz
 cd KujuAlosAT422F650/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/KujuAlosAT422F650.txt
+smallbaselineApp.py ${MINTPY_HOME}/../docs/templates/KujuAlosAT422F650.txt
 ```
 
 <p align="left">
