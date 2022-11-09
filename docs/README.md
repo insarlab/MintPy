@@ -45,7 +45,7 @@ Configuration parameters for each step are initiated with default values in a cu
 wget https://zenodo.org/record/3952953/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/FernandinaSenDT128.txt
+smallbaselineApp.py ${MINTPY_HOME}/docs/templates/FernandinaSenDT128.txt
 ```
 
 <p align="left">
@@ -84,7 +84,7 @@ Algorithms implemented in the software are described in details at [Yunjun et al
 
 + [Quick start with example datasets](./demo_dataset.md)
 + [Example data directory](./dir_structure.md)
-+ [Example template files for InSAR processors](https://github.com/insarlab/MintPy/tree/main/mintpy/data/input_files/README.md)
++ [Example template files](./templates/README.md)
 + [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
 
 ### 4. Contact us ###

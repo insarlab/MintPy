@@ -72,7 +72,7 @@ The parallel proceesing on multiple machines is supported via [`Dask-jobqueue`](
 We provide an example [YAML configuration file](../mintpy/defaults/mintpy.yaml), besides the `dask.yaml`,  `distributed.yaml` and `jobqueue.yaml` files in `~/.config/dask` installed by dask by default. One can copy it over to the `~/.config/dask` directory as below for dask to identify and use it.
 
 ```bash
-cp $MINTPY_HOME/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
+cp $MINTPY_HOME/src/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
 ```
 
 **Note on `DASK_CONFIG`:** Besides the default `~/.config/dask` directory, one can use the `DASK_CONFIG` environment variable to use a custom directory to store the configuration files. However, it has lower priority than the default directory; and it is **generally NOT recommended**.
