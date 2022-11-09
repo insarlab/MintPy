@@ -26,7 +26,7 @@ nav:
         - Installation: installation.md
         - Example datasets: demo_dataset.md
         - Example directory structure: dir_structure.md
-        - Example template files: https://github.com/insarlab/MintPy/tree/main/mintpy/data/input_files
+        - Example template files: templates/README.md
         - Parallel processing with Dask: dask.md
         - Tutorials in Jupyter Notebook: https://github.com/insarlab/MintPy-tutorial
         - Frequently Asked Questions: FAQs.md

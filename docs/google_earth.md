@@ -32,7 +32,7 @@ The script also use the [regions KML feature](https://developers.google.com/kml/
 
 The script samples the input 3D dataset at 3 levels of details by default (`--steps` option): low-, moderate- and high-resolution. Each LOD is displayed at a different zoom-level (`--level-of-details` option) within Google Earth. On startup, the low-resolution LOD is displayed; then at ~20km in altitude, the low-resolution LOD disappears and the moderate-resolution LOD becomes visible; similarly, the high-resolution LOD shows at ~10km. In this way, Google Earth only has to load as many placemark as are on the screen currently. This LOD strategy drastically increases performance.
 
-The low- and moderate-resolution LODs cover the entire region, while the high-resolution LOD covers only the actively deforming regions. These regions (red boxes below) are currently identified as boxes having >20% pixels with velocity magnitude > the global velocity median absolute deviation [[source code](https://github.com/insarlab/MintPy/blob/main/mintpy/save_kmz_timeseries.py#L160)].
+The low- and moderate-resolution LODs cover the entire region, while the high-resolution LOD covers only the actively deforming regions. These regions (red boxes below) are currently identified as boxes having >20% pixels with velocity magnitude > the global velocity median absolute deviation (`mintpy.save_kmz_timeseries.get_boxes4deforming_area`).
 
 <p align="center">
   <img src="https://yunjunzhang.files.wordpress.com/2020/03/defo_area.png">

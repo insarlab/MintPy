@@ -44,7 +44,7 @@ The following attributes vary for each interferogram:
 +  BANDS = number of bands, for binary file I/O.
 +  INTERLEAVE = band interleave type, i.e. BSQ, BIL, BIP for binary file I/O.
 +  NO_DATA_VALUE = No data value, value that should be ignored.
-+  UNIT = data unit, i.e. m, m/yr, radian, and 1 for file without unit, such as coherence [[source]](https://github.com/insarlab/MintPy/blob/main/mintpy/objects/stack.py#L75)
++  UNIT = data unit, i.e. m, m/yr, radian, and 1 for file without unit, such as coherence [[source]](https://github.com/insarlab/MintPy/blob/main/src/mintpy/objects/stack.py#L75)
 +  REF_DATE = reference date
 +  REF_X/Y/LAT/LON = column/row/latitude/longitude of reference point
 +  SUBSET_XMIN/XMAX/YMIN/YMAX = start/end column/row number of subset in the original coverage

@@ -84,7 +84,7 @@ Algorithms implemented in the software are described in details at [Yunjun et al
 
 + [Quick start with example datasets](./demo_dataset.md)
 + [Example data directory](./dir_structure.md)
-+ [Example template files for InSAR processors](https://github.com/insarlab/MintPy/tree/main/mintpy/data/input_files/README.md)
++ [Example template files](./templates/README.md)
 + [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
 
 ### 4. Contact us ###
