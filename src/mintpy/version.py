@@ -48,7 +48,7 @@ def get_version_info():
         # if there are new commits after the latest release
         if '-' in version:
             version, num_commit = version.split('-')[:2]
-            version += f'-{num_commit}'
+            version += f'.post{num_commit}'
 
         cmd = "git log -1 --date=short --format=%cd"
         date = subprocess.check_output(cmd.split(), stderr=subprocess.DEVNULL)
