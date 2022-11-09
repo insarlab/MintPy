@@ -249,6 +249,10 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False,
         tbase_diff = np.diff(tbase[date_flag], axis=0).reshape(-1,1)
         ts = np.diff(ts, axis=0) / np.repeat(tbase_diff, ts.shape[1], axis=1)
         G = np.diff(G, axis=0) / np.repeat(tbase_diff, G.shape[1], axis=1)
+        # remove the all-zero column in G
+        G = np.hstack((G[:,:1], G[:,2:]))
+        # remove the all-one column in G0 because it is not estimated
+        G0 = np.hstack((G0[:,:1], G0[:,2:]))
 
     # Inverse using L-2 norm to get unknown parameters X
     # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
