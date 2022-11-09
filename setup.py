@@ -13,7 +13,7 @@ from setuptools import find_packages, setup
 
 # Grab version and description from version.py
 # link: https://stackoverflow.com/questions/53648900
-sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 from mintpy.version import description, version
 
 # Grab long_description from README.md
@@ -91,7 +91,8 @@ setup(
     },
 
     # package discovery
-    packages=find_packages(),
+    packages=find_packages("src"),  # include all packages under src
+    package_dir={"": "src"},        # tell distutils packages are under src
     entry_points={
         'console_scripts': [
             'mintpy = mintpy.__main__:main',
