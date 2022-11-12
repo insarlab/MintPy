@@ -14,6 +14,8 @@
 #    Palo Alto. DOI: 10.4236/ojapps.2015.54016. Page 145-156.
 #  Navipedia, Transformations between ECEF and ENU coordinates. [Online].
 #    https://gssc.esa.int/navipedia/index.php/Transformations_between_ECEF_and_ENU_coordinates
+#  Goudarzi, M. A., Cocard, M. & Santerre, R. (2014), EPC: Matlab software to estimate Euler
+#    pole parameters, GPS Solutions, 18, 153-162, doi: 10.1007/s10291-013-0354-4
 
 
 import numpy as np
@@ -178,6 +180,9 @@ class EulerPole:
         poi_shape = lat.shape if isinstance(lat, np.ndarray) else None
 
         # convert lat/lon into x/y/z
+        # Note: the conversion assumes either a spherical or spheroidal Earth, tests show that
+        # using a ellipsoid as defined in WGS84 produce results closer to the UNAVCO website
+        # calculator, which also uses the WGS84 ellipsoid.
         if ellps:
             if print_msg:
                 print('assume a spheroidal Earth as defined in WGS84')

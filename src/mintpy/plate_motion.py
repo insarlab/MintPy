@@ -10,12 +10,7 @@
 #   Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P. and Xu, X., (2022),
 #     The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields,
 #     Geophys. Res. Lett. 49, e2022GL099835, doi:10.1029/2022GL099835.
-#
-# To-Do List (updated 2022.10.12 Yuan-Kai Liu):
-#   + Use built-in PMM table ITRF2014_PMM for easier/automatic user input string input
 
-
-import collections
 
 import numpy as np
 from skimage.transform import resize
@@ -24,31 +19,6 @@ from mintpy.diff import diff_file
 from mintpy.objects.euler_pole import EulerPole
 from mintpy.objects.resample import resample
 from mintpy.utils import readfile, utils as ut, writefile
-
-# ITRF2014-PMM defined in Altamimi et al. (2017)
-Tag = collections.namedtuple('Tag', 'name num_site omega_x omega_y omega_z omega wrms_e wrms_n')
-ITRF2014_PMM = {
-    'ANTA' : Tag('Antartica'  ,   7,  -0.248,  -0.324,   0.675,  0.219,  0.20,  0.16),
-    'ARAB' : Tag('Arabia'     ,   5,   1.154,  -0.136,   1.444,  0.515,  0.36,  0.43),
-    'AUST' : Tag('Australia'  ,  36,   1.510,   1.182,   1.215,  0.631,  0.24,  0.20),
-    'EURA' : Tag('Eurasia'    ,  97,  -0.085,  -0.531,   0.770,  0.261,  0.23,  0.19),
-    'INDI' : Tag('India'      ,   3,   1.154,  -0.005,   1.454,  0.516,  0.21,  0.21),
-    'NAZC' : Tag('Nazca'      ,   2,  -0.333,  -1.544,   1.623,  0.629,  0.13,  0.19),
-    'NOAM' : Tag('N. America' ,  72,   0.024,  -0.694,  -0.063,  0.194,  0.23,  0.28),
-    'NUBI' : Tag('Nubia'      ,  24,   0.099,  -0.614,   0.733,  0.267,  0.28,  0.36),
-    'PCFC' : Tag('Pacific'    ,  18,  -0.409,   1.047,  -2.169,  0.679,  0.36,  0.31),
-    'SOAM' : Tag('S. America' ,  30,  -0.270,  -0.301,  -0.140,  0.119,  0.34,  0.35),
-    'SOMA' : Tag('Somalia'    ,   3,  -0.121,  -0.794,   0.884,  0.332,  0.32,  0.30),
-}
-PMM_UNIT = {
-    'omega'   : 'deg/Ma',  # degree per megayear or one-million-year
-    'omega_x' : 'mas/yr',  # milli-arcsecond per year
-    'omega_y' : 'mas/yr',  # milli-arcsecond per year
-    'omega_z' : 'mas/yr',  # milli-arcsecond per year
-    'wrms_e'  : 'mm/yr',   # milli-meter per year, weighted root mean scatter
-    'wrms_n'  : 'mm/yr',   # milli-meter per year, weighted root mean scatter
-}
-
 
 ####################################### Major Function ###########################################
 
@@ -143,6 +113,9 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
         vn = const_vel_enu[1] * np.ones(shape_geo, dtype=np.float32)
         vu = const_vel_enu[2] * np.ones(shape_geo, dtype=np.float32)
 
+    else:
+        raise ValueError('No plate motion configuration (--om-cart/sph or --enu) found!')
+
 
     # radar-code the plate motion if input geometry is in radar coordinates
     atr = readfile.read_attribute(geom_file)
@@ -197,6 +170,7 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
 def run_plate_motion(inps):
     """Calculate and/or correct for the rigid motion from tectonic plates."""
 
+    # calculate plate motion
     calc_plate_motion(
         geom_file=inps.geom_file,
         omega_cart=inps.omega_cart,
@@ -208,6 +182,7 @@ def run_plate_motion(inps):
         pmm_step=inps.pmm_step,
     )
 
+    # correct plate motion from input velocity
     if inps.vel_file and inps.pmm_file and inps.cor_vel_file:
         print('-'*50)
         print('Correct input velocity for the rigid plate motion')
