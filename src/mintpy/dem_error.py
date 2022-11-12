@@ -249,6 +249,12 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False,
         tbase_diff = np.diff(tbase[date_flag], axis=0).reshape(-1,1)
         ts = np.diff(ts, axis=0) / np.repeat(tbase_diff, ts.shape[1], axis=1)
         G = np.diff(G, axis=0) / np.repeat(tbase_diff, G.shape[1], axis=1)
+        # remove the all-zero column in G and all-one column in G0
+        # as the unknown constant term of the polynomial func is not estimated,
+        # resulting in a larger time-series residual ts_res, thus, not suitable
+        # for RMS based noise evaluation with timeseries_rms.py
+        G = np.hstack((G[:,:1], G[:,2:]))
+        G0 = np.hstack((G0[:,:1], G0[:,2:]))
 
     # Inverse using L-2 norm to get unknown parameters X
     # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
