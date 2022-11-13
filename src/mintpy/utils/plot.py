@@ -1408,6 +1408,8 @@ def plot_colorbar(inps, im, cax):
         else:
             cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
             cbar.update_ticks()
+    elif inps.cbar_ticks:
+        cbar.set_ticks(inps.cbar_ticks)
 
     cbar.ax.tick_params(which='both', direction='out', labelsize=inps.font_size, colors=inps.font_color)
 

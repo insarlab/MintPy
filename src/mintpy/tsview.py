@@ -616,17 +616,17 @@ def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
 
     # write
     np.savetxt(outName, data, fmt='%s', delimiter='\t', header=header)
-    vprint('save displacement time-series to file: '+outName)
+    print('save displacement time-series to file: '+outName)
 
     # Figure - point time-series
     outName = f'{inps.outfile_base}_ts.pdf'
     inps.fig_pts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-    vprint('save time-series plot to file: '+outName)
+    print('save time-series plot to file: '+outName)
 
     # Figure - map
     outName = f'{inps.outfile_base}_{inps.date_list[inps.idx]}.png'
     inps.fig_img.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-    vprint('save map plot to file: '+outName)
+    print('save map plot to file: '+outName)
     return
 
 
