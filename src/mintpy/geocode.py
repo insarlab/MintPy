@@ -78,10 +78,19 @@ def run_geocode(inps):
             atr = attr.update_attribute4geo2radar(atr, res_obj=res_obj)
 
         # instantiate output file
-        file_is_hdf5 = os.path.splitext(outfile)[1] in ['.h5', '.he5']
-        if file_is_hdf5:
+        hdf5_file = os.path.splitext(outfile)[1] in ['.h5', '.he5']
+        if hdf5_file:
+            # grab metadata from input file: dataset compression and UNIT
             compression = readfile.get_hdf5_compression(infile)
-            writefile.layout_hdf5(outfile, metadata=atr, ref_file=infile, compression=compression)
+            ds_unit_dict = readfile.get_hdf5_dataset_attrs(infile, key='UNIT')
+            # initiate output file
+            writefile.layout_hdf5(
+                outfile,
+                metadata=atr,
+                ds_unit_dict=ds_unit_dict,
+                ref_file=infile,
+                compression=compression,
+            )
         else:
             dsDict = dict()
 
@@ -90,7 +99,7 @@ def run_geocode(inps):
         maxDigit = max(len(i) for i in dsNames)
         for dsName in dsNames:
 
-            if not file_is_hdf5:
+            if not hdf5_file:
                 dsDict[dsName] = np.zeros((res_obj.length, res_obj.width))
 
             # loop for block-by-block IO
@@ -120,7 +129,7 @@ def run_geocode(inps):
                     block = [dest_box[1], dest_box[3],
                              dest_box[0], dest_box[2]]
 
-                if file_is_hdf5:
+                if hdf5_file:
                     print(f'write data in block {block} to file: {outfile}')
                     writefile.write_hdf5_block(outfile,
                                                data=data,
@@ -132,11 +141,11 @@ def run_geocode(inps):
                                    block[2]:block[3]] = data
 
             # for binary file: ensure same data type
-            if not file_is_hdf5:
+            if not hdf5_file:
                 dsDict[dsName] = np.array(dsDict[dsName], dtype=data.dtype)
 
         # write binary file
-        if not file_is_hdf5:
+        if not hdf5_file:
             atr['BANDS'] = len(dsDict.keys())
             writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=infile)
 
