@@ -871,6 +871,33 @@ def sort_dataset_list4velocity(ds_list_in):
     return ds_list
 
 
+def get_hdf5_dataset_attrs(fname, key='UNIT'):
+    """Get the top-level dataset attribute for the given HDF5 file.
+
+    Parameters: fname - str, path to the HDF5 file
+    Returns:    attrs - dict, key/value of all top-level datasets
+    """
+
+    fext = os.path.splitext(fname)[1]
+    if fext not in ['.h5', '.he5']:
+        raise ValueError(f'input file ({fname}) does not end with .h5/he5!')
+
+    # default output: empty
+    attrs = {}
+
+    # grab attrs from input file for the given key
+    with h5py.File(fname) as f:
+        # get top-level dataset names
+        ds_names = [x for x in f.keys() if isinstance(f[x], h5py.Dataset)]
+
+        # extract given attribute to the output dict
+        for ds_name in ds_names:
+            if key in f[ds_name].attrs.keys():
+                attrs[ds_name] = f[ds_name].attrs[key]
+
+    return attrs
+
+
 def get_hdf5_compression(fname):
     """Get the compression type of input HDF5 file"""
     ext = os.path.splitext(fname)[1].lower()

@@ -27,7 +27,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
                 metadata     - dict of attributes
                 ref_file     - str, reference file to get auxliary info
                 compression  - str, compression while writing to HDF5 file, None, "lzf", "gzip"
-                ds_unit_dict - dict, dataset unit definition
+                ds_unit_dict - dict, top-level dataset unit definition
                     {dname : dunit,
                      dname : dunit,
                      ...
@@ -141,7 +141,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
             # write attributes in dataset level
             if ds_unit_dict is not None:
                 for key, value in ds_unit_dict.items():
-                    if value is not None:
+                    if key in f.keys() and value is not None:
                         f[key].attrs['UNIT'] = value
                         vprint(f'add /{key:<{maxDigit}} attribute: UNIT = {value}')
 
@@ -236,7 +236,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                                 ...
                                }
                 metadata     - dict, metadata
-                ds_unit_dict - dict, dataset unit definition
+                ds_unit_dict - dict, top-level dataset unit definition
                                {dname : dunit,
                                 dname : dunit,
                                 ...
@@ -376,7 +376,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
         # write attributes in dataset level
         if ds_unit_dict is not None:
             for key, value in ds_unit_dict.items():
-                if value is not None:
+                if key in f.keys() and value is not None:
                     f[key].attrs['UNIT'] = value
                     vprint(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
 
