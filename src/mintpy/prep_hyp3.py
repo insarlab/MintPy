@@ -8,8 +8,8 @@
 import datetime as dt
 import os
 
+from mintpy.constants import SPEED_OF_LIGHT
 from mintpy.objects import sensor
-from mintpy.objects.constants import SPEED_OF_LIGHT
 from mintpy.utils import readfile, utils1 as ut, writefile
 
 

@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Feb 2022                           #
 ############################################################
 # Recommend usage:
-#   from mintpy.objects.constants import SPEED_OF_LIGHT
+#   from mintpy.constants import SPEED_OF_LIGHT
 
 
 SPEED_OF_LIGHT = 299792458  # meters per second

@@ -3,13 +3,13 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
 ```
 /mintpy
 ------------------ level 0 --------------------
+    constants
     /defaults
         auto_path
         template
     /objects
         cluster
         colors
-        constants
         euler_pole
         giant
         ramp
@@ -62,7 +62,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
     /utils
         plot          (objects/{stack, coord, colors}, utils/{ptime, utils0, readfile, network, map})
         utils         (objects/{stack, coord, resample}, utils/{ptime, attribute, utils1, readfile})
-        isce_utils    (objects/{constants}, utils/{ptime, readfile, writefile, attribute, utils1})
+        isce_utils    (constants, utils/{ptime, readfile, writefile, attribute, utils1})
 ------------------ level 6 --------------------
     /objects
         insar_vs_gps  (objects/{stack, giant}, utils/{readfile, gps, plot, utils})

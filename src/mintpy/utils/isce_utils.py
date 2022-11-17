@@ -26,8 +26,8 @@ import time
 import numpy as np
 from scipy import ndimage
 
+from mintpy.constants import EARTH_RADIUS, SPEED_OF_LIGHT
 from mintpy.objects import sensor
-from mintpy.objects.constants import EARTH_RADIUS, SPEED_OF_LIGHT
 from mintpy.utils import (
     attribute as attr,
     ptime,
