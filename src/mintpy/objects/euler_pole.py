@@ -21,7 +21,7 @@
 import numpy as np
 import pyproj
 
-from mintpy.objects.constants import EARTH_RADIUS
+from mintpy.constants import EARTH_RADIUS
 
 # global variables
 MAS2RAD = np.pi / 3600000 / 180    # 1 mas (milli arc second) = x radian
