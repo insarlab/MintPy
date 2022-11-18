@@ -1,14 +1,17 @@
 ## 1. Install the released version ##
 
-#### a. via conda ####
+<details open>
+<summary>via conda</summary>
 
 MintPy is available on the [conda-forge](https://anaconda.org/conda-forge/mintpy) channel. The latest released version can be installed via `conda` as:
 
 ```bash
 conda install -c conda-forge mintpy
 ```
+</details>
 
-#### b. via docker ####
+<details>
+<summary>via docker</summary>
 
 Docker allows one to run MintPy in a dedicated container, which is essentially an efficient virtual machine, and to be independent of platform OS. First, install [docker](https://docs.docker.com/install/) if you have not already done so. Then run the following to pull the latest stable released constainer image version from [MintPy GitHub Container Registry](https://github.com/insarlab/MintPy/pkgs/container/mintpy) to your local machine:
 
@@ -17,8 +20,10 @@ docker pull ghcr.io/insarlab/mintpy:latest
 ```
 
 Check [here](docker.md) for more details on Docker container image usage, e.g. pulling development version and running in shell or Jupyter server.
+</details>
 
-#### c. via apt (Linux Debian) ####
+<details>
+<summary>via apt (Linux Debian)</summary>
 
 MintPy is available in the main archive of the [Debian](https://tracker.debian.org/pkg/mintpy) GNU/Linux OS. It can be installed by using your favourite package manager or running the following command:
 
@@ -27,9 +32,9 @@ apt install mintpy
 ```
 
 The same procedure, in priciple, can be used in [Ubuntu](https://ubuntu.com) and all the other [Debian derivatives](https://wiki.debian.org/Derivatives/Census). Check [here](https://salsa.debian.org/debian-gis-team/mintpy/-/blob/master/debian/README.Debian) for more detailed usage.
+</details>
 
-
-#### d. [Post-Installation Setup](#3-post-installation-setup) ####
+#### [Post-Installation Setup](#3-post-installation-setup) ####
 
 ## 2. Install the development version ##
 
@@ -37,13 +42,8 @@ Note: The installation note below is tested on Linux and macOS, and is still exp
 
 MintPy is written in Python 3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient management and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
-Quick links:
-
-+ [Install on Linux](#21-install-on-linux)
-+ [Install on macOS](#22-install-on-macos)
-+ [Install on Windows](#23-install-on-windows)
-
-### 2.1 Install on Linux ###
+<details>
+<summary><h3>2.1 Install on Linux</h3></summary>
 
 #### a. Download source code ####
 
@@ -77,30 +77,41 @@ Install the dependencies into a custom existing environment [recommended] by run
 conda install -c conda-forge --file ~/tools/MintPy/requirements.txt
 ```
 
-Or install the dependencies to a new environment named "mintpy" by running:
+<details>
+<summary>Or install the dependencies to a new environment named "mintpy" by running:</summary>
 
 ```bash
 conda env create -f ~/tools/MintPy/docs/environment.yml
 conda activate mintpy
 ```
+</details>
 
 #### c. Install MintPy ####
 
-Install MintPy into the current environment with pip by running:
+<details open>
+<summary>Install MintPy with pip in development mode [recommended]:</summary>
 
-```bash
-cd ~/tools
-python -m pip install MintPy
-```
-
-Or install MintPy with pip in development mode [recommended] as below. The development mode allows one to install the package without copying files to your interpreter directory (e.g. the `site-packages` directory), thus, one could "edit" the source code and have changes take effect immediately without having to rebuild and reinstall.
+The development mode allows one to install the package without copying files to your interpreter directory (e.g. the `site-packages` directory), thus, one could "edit" the source code and have changes take effect immediately without having to rebuild and reinstall.
 
 ```bash
 cd ~/tools
 python -m pip install -e MintPy
 ```
+</details>
 
-Or simply set up the environment variables as below in your source file, e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users:
+<details>
+<summary>Or install MintPy with pip:</summary>
+
+```bash
+cd ~/tools
+python -m pip install MintPy
+```
+</details>
+
+<details>
+<summary>Or simply set up the environment variables:</summary>
+
+Add below in your source file, e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users:
 
 ```bash
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
@@ -108,10 +119,13 @@ export MINTPY_HOME=~/tools/MintPy
 export PATH=${PATH}:${MINTPY_HOME}/src/mintpy/cli
 export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}/src
 ```
+</details>
 
 #### d. [Post-Installation Setup](#3-post-installation-setup) ####
+</details>
 
-### 2.2 Install on macOS ###
+<details>
+<summary><h3>2.2 Install on macOS</h3></summary>
 
 Install Xcode with command line tools, if you have not already done so.
 
@@ -126,13 +140,16 @@ Install Xcode with command line tools, if you have not already done so.
 
 + Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
-#### a. Install MintPy via conda ####
+<details open>
+<summary>Install MintPy via conda</summary>
 
 Same as the [instruction for Linux](#21-install-on-linux).
+</details>
 
-#### b. Install MintPy via MacPorts ####
+<details>
+<summary>Or install MintPy via MacPorts</summary>
 
-Same as the [instruction for Linux](#21-install-on-linux), except for the dependencies' installation, which is as below.
+Same as the instruction for Linux, except for the dependencies' installation, which is as below.
 
 Install [macports](https://www.macports.org/install.php) if you have not done so. Add the following at the bottom of your `~/.bash_profile` file:
 
@@ -164,10 +181,14 @@ sudo -H /opt/local/bin/pip install git+https://github.com/storpipfugl/pykdtree.g
 sudo -H /opt/local/bin/pip install git+https://github.com/pytroll/pyresample.git
 sudo -H /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
 ```
+</details>
+</details>
 
-### 2.3 Install on Windows ###
+<details>
+<summary><h3>2.3 Install on Windows</h3></summary>
 
 Same as the [instruction for Linux](#21-install-on-linux), except for the "c. Install MintPy" section, only the `pip install` approaches are recommended, as the "setup environment variable" approach is not tested.
+</details>
 
 ## 3. Post-Installation Setup
 
