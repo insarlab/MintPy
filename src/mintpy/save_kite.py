@@ -50,7 +50,7 @@ def create_kite_container(dis, atr, date1, date2, inc_angle, az_angle, out_file)
         config.meta.time_master = dt.datetime.strptime(date1, '%Y%m%d') + utc_sec
         config.meta.time_slave =  dt.datetime.strptime(date2, '%Y%m%d') + utc_sec
 
-    config.meta.orbital_node = atr['ORBIT_DIRECTION'].captilize()
+    config.meta.orbital_node = atr['ORBIT_DIRECTION'].capitalize()
     config.meta.wavelength = atr['WAVELENGTH']
     config.meta.satellite_name = atr['PLATFORM']
 
