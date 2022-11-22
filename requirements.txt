@@ -9,7 +9,6 @@ cartopy
 cvxopt
 dask>=1.0
 dask-jobqueue>=0.3
-defusedxml
 # gdal>=3     # for ISCE, ARIA, FRInGE, HyP3, GMTSAR users
 h5py
 joblib

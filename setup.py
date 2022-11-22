@@ -56,7 +56,6 @@ setup(
         "cvxopt",
         "dask>=1.0",
         "dask-jobqueue>=0.3",
-        "defusedxml",
         "h5py",
         "joblib",
         "lxml",

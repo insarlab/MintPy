@@ -7,8 +7,8 @@
 
 import glob
 import os
+import xml.etree.ElementTree as ET
 
-import defusedxml.ElementTree as ET
 import h5py
 import numpy as np
 

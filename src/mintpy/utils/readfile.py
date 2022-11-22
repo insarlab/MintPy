@@ -13,8 +13,8 @@ import os
 import re
 import sys
 import warnings
+import xml.etree.ElementTree as ET
 
-import defusedxml.ElementTree as ET
 import h5py
 import numpy as np
 
