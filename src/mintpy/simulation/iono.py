@@ -58,7 +58,6 @@ def vtec2range_delay(vtec, inc_angle, freq, obs_type='phase'):
 
     # convert to TEC in LOS based on equation (3) in Chen and Zebker (2012)
     ref_angle = iono_incidence2refraction_angle(inc_angle, vtec, freq)
-    #print('refraction angle on the ionosphere min/max: {:.1f}/{:.1f} deg'.format(np.nanmin(ref_angle), np.nanmax(ref_angle)))
     tec = vtec / np.cos(ref_angle * np.pi / 180.0)
 
     # calculate range delay based on equation (1) in Chen and Zebker (2012)
