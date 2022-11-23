@@ -72,7 +72,6 @@ py37-cartopy
 py37-cvxopt +accelerate +dsdp +fftw +glpk +gsl
 py37-cython
 py37-dask
-py37-defusedxml
 py37-distributed
 py37-gdbm
 py37-h5py

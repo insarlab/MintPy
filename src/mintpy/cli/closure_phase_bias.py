@@ -20,6 +20,8 @@ REFERENCE = """reference:
 
 EXAMPLE = """example:
   # Note: ONLY sequential network is supported in this implementation.
+  # Notebook tutorial:
+  #   https://nbviewer.org/github/insarlab/MintPy-tutorial/blob/main/applications/closure_phase_bias.ipynb
 
   # create mask for areas suseptible to biases
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 5  -a mask

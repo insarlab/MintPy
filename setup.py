@@ -56,7 +56,6 @@ setup(
         "cvxopt",
         "dask>=1.0",
         "dask-jobqueue>=0.3",
-        "defusedxml",
         "h5py",
         "joblib",
         "lxml",
@@ -96,7 +95,6 @@ setup(
     entry_points={
         'console_scripts': [
             'mintpy = mintpy.__main__:main',
-            'add_attribute.py = mintpy.add_attribute:main',
             'add.py = mintpy.cli.add:main',
             'asc_desc2horz_vert.py = mintpy.cli.asc_desc2horz_vert:main',
             'closure_phase_bias.py = mintpy.cli.closure_phase_bias:main',

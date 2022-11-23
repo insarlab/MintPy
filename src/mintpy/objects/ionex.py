@@ -78,7 +78,7 @@ def dload_ionex(date_str, tec_dir, sol_code='jpl', date_fmt='%Y%m%d', print_msg=
 
 #################################### Read ######################################
 
-def get_ionex_value(tec_file, utc_sec, lat, lon, interp_method='linear3d', rotate_tec_map=False,
+def get_ionex_value(tec_file, utc_sec, lat, lon, interp_method='linear3d', rotate_tec_map=True,
                     print_msg=True):
     """Get the TEC value from input IONEX file for the input lat/lon/datetime.
 

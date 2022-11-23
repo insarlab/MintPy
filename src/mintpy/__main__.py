@@ -561,7 +561,6 @@ def get_parser():
     get_unwrap_error_phase_closure_parser(sp)
 
     # misc
-    # get_add_attribute_parser(sp)
     get_dem_gsi_parser(sp)
     get_generate_mask_parser(sp)
     try:
