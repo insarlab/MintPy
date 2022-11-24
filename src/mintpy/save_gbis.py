@@ -40,12 +40,21 @@ def read_data(inps):
     if k in ['.unw','velocity']:
         inps.phase = readfile.read(inps.file)[0]
         if k == 'velocity':
+            if not inps.dset:
+                inps.dset = 'velocity'
+                print('No selected datset, assuming "velocity" and continue.')
+            inps.phase, atr = readfile.read(inps.file, datasetName=inps.dset)
             # velocity to displacement
-            date1, date2 = inps.metadata['DATE12'].split('_')
-            dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
-            inps.phase *= (dt2 - dt1).days / 365.25
+            if inps.dset == 'velocity':
+                print('convert velocity to displacement for {}'.format(atr['DATE12']))
+                date1, date2 = inps.metadata['DATE12'].split('_')
+                dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
+                inps.phase *= (dt2 - dt1).days / 365.25
+            
             # displacement to phase
-            inps.phase *= inps.range2phase
+            if atr.get('UNIT', 'm/year').startswith('m'):
+                print('convert the unit from meter to radian')
+                inps.phase *= inps.range2phase
 
         # update mask to exclude pixel with NaN value
         inps.mask *= ~np.isnan(inps.phase)
