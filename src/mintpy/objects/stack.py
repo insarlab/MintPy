@@ -1164,22 +1164,22 @@ class ifgramStack:
                 raise Exception(f"No triplets found at connection level: {conn}!")
 
         ## read data
-        phase = self.read(box=box, print_msg=False)
-        ref_phase = self.get_reference_phase(dropIfgram=False)
-        for i in range(phase.shape[0]):
-            mask = phase[i] != 0.
-            phase[i][mask] -= ref_phase[i]
+        if 'wrapPhase' in self.datasetNames:
+            print('Using wrapped phase to compute closure phases')
+            phase = self.read(datasetName='wrapPhase',box=box, print_msg=False)
+
+        else:
+            phase = self.read(datasetName='unwrapPhase',box=box, print_msg=False)
 
         ## calculate the 3D complex seq closure phase
-        cp_w = np.zeros((num_cp, box_len, box_wid), dtype=np.complex64)
+        cp_w = np.zeros((num_cp, np.shape(phase)[1], np.shape(phase)[2]), dtype=np.complex64)
         for i in range(num_cp):
 
-            # calculate closure phase - cp0_w
+            # calculate closure phase
             idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
-            cp0_w = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
+            phasecpx = np.exp(1j*phase)
+            cp_w[i] = np.prod(phasecpx[idx_plus], axis=0) * np.conj(phasecpx[idx_minor])
 
-            # get the wrapped closure phase
-            cp_w[i] = np.exp(1j * cp0_w)
 
         ## post-processing
         if not post_proc:
