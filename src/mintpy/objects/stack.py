@@ -1177,7 +1177,7 @@ class ifgramStack:
 
             # calculate closure phase
             idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
-            cp0_w[i] = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
+            cp0_w = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
             # get the wrapped closure phase
             cp_w[i] = np.exp(1j * cp0_w)
 
