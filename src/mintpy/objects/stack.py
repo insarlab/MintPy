@@ -1169,7 +1169,7 @@ class ifgramStack:
             phase = self.read(datasetName='wrapPhase',box=box, print_msg=False)
 
         else:
-            phase = self.read(datasetName='unwrapPhase',box=box, print_msg=False)
+            phase = self.read(box=box, print_msg=False)
 
         ## calculate the 3D complex seq closure phase
         cp_w = np.zeros((num_cp, np.shape(phase)[1], np.shape(phase)[2]), dtype=np.complex64)
@@ -1177,9 +1177,9 @@ class ifgramStack:
 
             # calculate closure phase
             idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
-            phasecpx = np.exp(1j*phase)
-            cp_w[i] = np.prod(phasecpx[idx_plus], axis=0) * np.conj(phasecpx[idx_minor])
-
+            cp0_w[i] = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
+            # get the wrapped closure phase
+            cp_w[i] = np.exp(1j * cp0_w)
 
         ## post-processing
         if not post_proc:
