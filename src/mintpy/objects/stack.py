@@ -1172,7 +1172,7 @@ class ifgramStack:
             phase = self.read(box=box, print_msg=False)
 
         ## calculate the 3D complex seq closure phase
-        cp_w = np.zeros((num_cp, np.shape(phase)[1], np.shape(phase)[2]), dtype=np.complex64)
+        cp_w = np.zeros((num_cp, box_len, box_wid), dtype=np.complex64)
         for i in range(num_cp):
 
             # calculate closure phase
