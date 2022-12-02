@@ -349,6 +349,8 @@ def compute_unwrap_closure_phase(stack_file, conn, num_worker=1, outdir='./', ma
     ## calc the cumulativev unwrapped closure phase time-series
     print('-'*60)
     print('step 3/3: calculate the unwrapped cumulative sequential closure phase time-series ...')
+    print('step 3/3: Note that you need a specified referece point in the ifgramStack.h5 to continue. ')
+    print('step 3/3: A good reference point should be a pixel that has good temporal coherence and no bias')
     cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta)
 
     return
