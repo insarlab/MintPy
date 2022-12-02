@@ -15,6 +15,7 @@ import time
 
 import h5py
 import numpy as np
+from scipy import ndimage
 
 from mintpy.utils import ptime
 
@@ -477,36 +478,57 @@ class timeseries:
         return out_file
 
 
-    def temporal_filter(self, time_win=0.1, out_file=None):
+    def temporal_filter(self, time_win=1.0, filter_type='guassian', out_file=None):
         """Filter the time-series in time with a moving window.
 
-        Parameters: time_win - float, sigma of Gaussian dist. in time in years
-                    out_file - str, output file name
-        Returns:    out_file - str, output file name
+        Parameters: time_win    - float, sigma of Gaussian distribution in time in months (30.4 days)
+                    filter_type - str, filter type: gaussian, median
+                    out_file    - str, output file name
+        Returns:    out_file    - str, output file name
         """
+        # use integer type if possible for shorter default output file name
+        time_win = int(time_win) if float(time_win).is_integer() else time_win
+
+        # output file
+        if not out_file:
+            fbase = os.path.splitext(self.file)[0]
+            out_file = f'{fbase}_temp{filter_type.capitalize()}{time_win}.h5'
+        print(f'output file: {out_file}')
 
         # read
         self.open()
         ts_data = self.read().reshape(self.numDate, -1)
-        tbase = self.tbase.reshape(-1, 1) / 365.25   # tempora baseline in years
 
-        # apply moving window in time
         print('-'*50)
-        print(f'filtering in time with a Gaussian window in size of {time_win:.1f} years')
         ts_data_filt = np.zeros(ts_data.shape, np.float32)
 
-        prog_bar = ptime.progressBar(maxValue=self.numDate)
-        for i in range(self.numDate):
-            # calc weight from Gaussian (normal) distribution in time
-            tbase_diff = tbase[i] - tbase
-            weight = np.exp(-0.5 * (tbase_diff**2) / (time_win**2))
-            weight /= np.sum(weight)
+        if filter_type == 'gaussian':
+            print(f'temporal filtering via a Gaussian window of {time_win} months')
+            tbase = self.tbase.reshape(-1, 1) / 365.25 * 12  # months (30.4 days)
+            prog_bar = ptime.progressBar(maxValue=self.numDate)
+            for i in range(self.numDate):
 
-            # smooth the current acquisition
-            ts_data_filt[i, :] = np.sum(ts_data * weight, axis=0)
+                # calc weight from Gaussian (normal) distribution in time
+                tbase_diff = tbase[i] - tbase
+                weight = np.exp(-0.5 * (tbase_diff**2) / (time_win**2))
+                weight /= np.sum(weight)
 
-            prog_bar.update(i+1, suffix=self.dateList[i])
-        prog_bar.close()
+                # smooth the current acquisition via Gaussian weighting
+                ts_data_filt[i, :] = np.sum(ts_data * weight, axis=0)
+
+                prog_bar.update(i+1, suffix=self.dateList[i])
+            prog_bar.close()
+
+        elif filter_type == 'median':
+            print(f'temporal filtering via scipy.ndimage.median_filter of {time_win} acquisitions')
+            ts_data_filt = ndimage.median_filter(
+                ts_data,
+                size=(time_win, 1),
+                mode='nearest',
+            )
+
+        else:
+            raise ValueError(f'un-supported temporal filter: {filter_type}!')
         del ts_data
 
         # prepare for writing: temporal referencing + reshape
@@ -514,9 +536,6 @@ class timeseries:
         ts_data_filt = np.reshape(ts_data_filt, (self.numDate, self.length, self.width))
 
         # write
-        if not out_file:
-            fbase = os.path.splitext(self.file)[0]
-            out_file = f'{fbase}_tempGauss.h5'
         self.write2hdf5(ts_data_filt, outFile=out_file, refFile=self.file)
 
         return

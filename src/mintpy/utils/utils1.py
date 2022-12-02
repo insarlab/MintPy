@@ -595,7 +595,7 @@ def add_attribute(fname, atr_new=dict(), print_msg=False):
                 else:
                     # update the item for valid input
                     f.attrs[key] = str(value)
-                    vprint(f'{key} = {str(value)}')
+                    vprint(f'add/update {key} = {str(value)}')
 
     else:
         for key, value in iter(atr_new.items()):
@@ -608,7 +608,7 @@ def add_attribute(fname, atr_new=dict(), print_msg=False):
             else:
                 # update the item for valid input
                 atr[key] = str(value)
-                vprint(f'{key} = {str(value)}')
+                vprint(f'add/update {key} = {str(value)}')
 
         # write to RSC file
         writefile.write_roipac_rsc(atr, fname+'.rsc', print_msg=print_msg)

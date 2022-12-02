@@ -1145,7 +1145,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         vprint('-'*30)
         msg = 'plotting GPS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += f' in {inps.gps_component} direction'
+        msg += f' in IGS14 reference frame in {inps.gps_component} direction'
         msg += f' with respect to {inps.ref_gps_site} ...' if inps.ref_gps_site else ' ...'
         vprint(msg)
         vprint(f'number of available GPS stations: {len(site_names)}')

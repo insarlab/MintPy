@@ -22,7 +22,7 @@ EXAMPLE = """example:
   prep_isce.py -f "./merged/interferograms/*/filt_*.unw" "./ion/*/ion_cal/filt.ion" -m ./reference/IW1.xml -b ./baselines/ -g ./merged/geom_reference/
 
   # topsStack for offset
-  prep_isce.py -f "./merged/offsets/*/*Off*.bip" -m ./reference/IW1.xml -b ./baselines/ -g ./merged/geom_reference/
+  prep_isce.py -f "./merged/offsets/*/*Off*.bip" -m ./reference/IW1.xml -b ./baselines/ -g ./merged/offsets/geom_reference/
 
   ## stripmapStack
   prep_isce.py -f "./Igrams/*/filt_*.unw" -m ./referenceShelve/data.dat -b ./baselines/ -g ./geom_reference/
@@ -72,7 +72,7 @@ def create_parser(subparsers=None):
                         help='Directory with baselines. '
                              'Set "random" to generate baseline with random value from [-10,10].')
     parser.add_argument('-g', '--geometry-dir', dest='geom_dir', type=str, default=None, required=True,
-                        help='Directory with geometry files ')
+                        help='Directory with geometry files.')
     parser.add_argument('--geom-files', dest='geom_files', type=str, nargs='*',
                         default=[f'{i}.rdr' for i in GEOMETRY_PREFIXS],
                         help='List of geometry file basenames. Default: %(default)s.\n'
