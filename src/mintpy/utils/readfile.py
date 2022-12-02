@@ -1178,7 +1178,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         # Read metadata file and FILE_TYPE
         metafile = metafiles[0]
-        meta_ext = os.path.splitext(metafile)[1]
+        meta_ext = os.path.splitext(metafile)[1].lower()
 
         # ignore certain meaningless file extensions
         while fext in ['.geo', '.rdr', '.full', '.wgs84', '.grd']:

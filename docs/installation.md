@@ -82,6 +82,7 @@ conda install -c conda-forge --file ~/tools/MintPy/requirements.txt
 
 ```bash
 conda env create -f ~/tools/MintPy/docs/environment.yml
+# run "mamba install isce2" if you use ISCE-2
 conda activate mintpy
 ```
 </details>
@@ -89,27 +90,17 @@ conda activate mintpy
 #### c. Install MintPy ####
 
 <details open>
-<summary>Install MintPy with pip in development mode [recommended]:</summary>
+<summary>via pip [recommended]</summary>
 
-The development mode allows one to install the package without copying files to your interpreter directory (e.g. the `site-packages` directory), thus, one could "edit" the source code and have changes take effect immediately without having to rebuild and reinstall.
+We recommend installing mintpy in the "editable" mode. This mode installs the package without copying files to your interpreter directory (e.g. the `site-packages` directory), thus, one could "edit" the source code and have changes take effect immediately without having to rebuild and reinstall.
 
 ```bash
-cd ~/tools
-python -m pip install -e MintPy
+python -m pip install -e ~/tools/MintPy
 ```
 </details>
 
 <details>
-<summary>Or install MintPy with pip:</summary>
-
-```bash
-cd ~/tools
-python -m pip install MintPy
-```
-</details>
-
-<details>
-<summary>Or simply set up the environment variables:</summary>
+<summary>via environment variables setup</summary>
 
 Add below in your source file, e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users:
 
