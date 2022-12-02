@@ -82,8 +82,9 @@ conda install -c conda-forge --file ~/tools/MintPy/requirements.txt
 
 ```bash
 conda env create -f ~/tools/MintPy/docs/environment.yml
-# run "mamba install isce2" if you use ISCE-2
 conda activate mintpy
+
+# run "mamba install isce2" if you use ISCE-2
 ```
 </details>
 
