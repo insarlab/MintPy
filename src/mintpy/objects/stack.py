@@ -1164,6 +1164,10 @@ class ifgramStack:
                 raise Exception(f"No triplets found at connection level: {conn}!")
 
         ## read data
+        # Removed the lines where a reference pixel is read. 
+        # Since no moisture change should have a naturally zero closure phase,
+        # choosing a reference point in the wrong place can lead to misinterpretations.
+        # Tests in both Central Valley and Bristol Dry lakes proved spatial referencing is not needed.
         if 'wrapPhase' in self.datasetNames:
             print('Using wrapped phase to compute closure phases')
             phase = self.read(datasetName='wrapPhase',box=box, print_msg=False)
