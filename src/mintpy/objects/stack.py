@@ -1164,21 +1164,23 @@ class ifgramStack:
                 raise Exception(f"No triplets found at connection level: {conn}!")
 
         ## read data
-        phase = self.read(box=box, print_msg=False)
-        ref_phase = self.get_reference_phase(dropIfgram=False)
-        for i in range(phase.shape[0]):
-            mask = phase[i] != 0.
-            phase[i][mask] -= ref_phase[i]
+        # Note by Yujie Zheng on Dec 2, 2022: I removed the lines for spatial referencing,
+        # because no moisture change should have a naturally zero closure phase. On the other
+        # hand, choosing a reference point in the wrong place can lead to misinterpretations.
+        # Tests in both Central Valley and Bristol Dry lakes confirms this.
+        ds_name = 'wrapPhase' if 'wrapPhase' in self.datasetNames else 'unwrapPhase'
+        print(f'reading {ds_name} to compute closure phases')
+        phase = self.read(datasetName=ds_name, box=box, print_msg=False)
 
         ## calculate the 3D complex seq closure phase
         cp_w = np.zeros((num_cp, box_len, box_wid), dtype=np.complex64)
         for i in range(num_cp):
 
-            # calculate closure phase - cp0_w
+            # calculate (un)wrapped closure phase
             idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
             cp0_w = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
 
-            # get the wrapped closure phase
+            # re-wrapping to ensure the wrapped closure phase
             cp_w[i] = np.exp(1j * cp0_w)
 
         ## post-processing
