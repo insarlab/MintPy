@@ -13,11 +13,12 @@ from mintpy.utils.arg_utils import create_argument_parser
 ############################################################
 REFERENCE="""reference:
   Wikipedia: https://en.wikipedia.org/wiki/Gaussian_blur
+  Scipy: https://docs.scipy.org/doc/scipy/reference/ndimage.html
 """
 
 EXAMPLE = """example:
- temporal_filter.py timeseries_ERA5_demErr.h5
- temporal_filter.py timeseries_ERA5_demErr.h5 -t 0.1
+  temporal_filter.py timeseries_ERA5_demErr.h5 -f gaussian -t 1
+  temporal_filter.py timeseries_ERA5_demErr.h5 -f median   -t 5
 """
 
 def create_parser(subparsers=None):
@@ -27,10 +28,14 @@ def create_parser(subparsers=None):
     parser = create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
-    parser.add_argument('timeseries_file',
-                        help='timeseries file to be smoothed.')
-    parser.add_argument('-t', '--time-win', dest='time_win', type=float, default=0.1,
-                        help='time window in years, default: 0.1 (Sigma of the assmued Gaussian distribution.)')
+    parser.add_argument('timeseries_file', help='timeseries file to be smoothed.')
+    parser.add_argument('-f', '--filter', dest='filter_type', type=str, default='median',
+                        choices={'median', 'gaussian'},
+                        help='temporal filter type (default: %(default)s).')
+    parser.add_argument('-t', '--time-win', dest='time_win', type=float, default=5,
+                        help='time window size (default: %(default)s).\n'
+                             'number of months       for gaussian filter\n'
+                             'number of acquisitions for median   filter')
     parser.add_argument('-o', '--outfile', help='Output file name.')
     return parser
 
@@ -51,7 +56,11 @@ def main(iargs=None):
 
     # run
     ts_obj = timeseries(inps.timeseries_file)
-    ts_obj.temporal_filter(time_win=inps.time_win, out_file=inps.outfile)
+    ts_obj.temporal_filter(
+        time_win=inps.time_win,
+        filter_type=inps.filter_type,
+        out_file=inps.outfile)
+
     return
 
 
