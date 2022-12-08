@@ -99,6 +99,12 @@ def cmd_line_parse(iargs=None):
     atr1 = readfile.read_attribute(inps.file[0])
     atr2 = readfile.read_attribute(inps.file[1])
 
+    # check: if input file type is supported
+    ts_ftypes = ['timeseries', 'HDFEOS']
+    ftype1, ftype2 = atr1['FILE_TYPE'], atr2['FILE_TYPE']
+    if any(x in ts_file_types for x in [ftype1, ftype2]):
+        raise Exception(f'input file types ({ftype1}, {ftype2}) contains UN-supported file types: {ts_ftypes}!')
+
     # check: if input is in geo-coordinates
     if any('X_FIRST' not in i for i in [atr1, atr2]):
         raise Exception('Not all input files are geocoded.')

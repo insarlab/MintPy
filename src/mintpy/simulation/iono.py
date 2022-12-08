@@ -73,17 +73,38 @@ def vtec2range_delay(vtec, inc_angle, freq, obs_type='phase'):
 def iono_incidence2refraction_angle(inc_angle, vtec, freq):
     """Calculate the refraction angle for the ionospheric shell.
 
-    Equation (8) in Yunjun et al. (2022, TGRS)
+    Reference:
+        Equation (8) in Yunjun et al. (2022, TGRS)
+        Equation (26) in Bohm & Schuh (2013) Chapter 2.
 
-    Parameters: inc_angle - float / np.ndarray, incidence angle in deg
-                vtec      - float, zenith TEC in TECU
+    Parameters: inc_angle - float / 1/2D np.ndarray, incidence angle in deg
+                vtec      - float / 1D np.ndarray, zenith TEC in TECU
                 freq      - float, radar carrier frequency in Hz.
-    Returns:    ref_angle - float / np.ndarray, refraction angle in deg
+    Returns:    ref_angle - float / 1/2/3D np.ndarray, refraction angle in deg
     """
-    Ne = vtec * 1e16
-    # equation (26) in Bohm & Schuh (2013) Chapter 2.
-    n_iono_group = 1 + K * Ne / freq**2
+    if isinstance(vtec, np.ndarray):
+        # only 1D array is supported
+        if vtec.ndim > 1:
+            raise ValueError(f'input vtec dimension ({vtec.ndim}) > 1!')
+
+        # tile to ensure same shape between vtec and inc_angle
+        if isinstance(inc_angle, np.ndarray) and inc_angle.shape != vtec.shape:
+            num_vtec = vtec.size
+            if inc_angle.ndim == 1:
+                vtec = np.tile(vtec.reshape(-1, 1), (1, inc_angle.size))
+                inc_angle = np.tile(inc_angle.reshape(1, -1), (num_vtec, 1))
+            elif inc_angle.ndim == 2:
+                vtec = np.tile(vtec.reshape(-1, 1, 1), (1, inc_angle.shape[0], inc_angle.shape[1]))
+                inc_angle = np.tile(inc_angle[np.newaxis, :, :], (num_vtec, 1, 1))
+            else:
+                raise ValueError(f'input inc_angle dimension ({inc_angle.ndim}) > 2!')
+
+    # Equation (26) in Bohm & Schuh (2013) Chapter 2.
+    n_iono_group = 1 + K * vtec * 1e16 / freq**2
+
+    # Equation (8) in Yunjun et al. (2022, TGRS)
     ref_angle = np.arcsin(1 / n_iono_group * np.sin(inc_angle * np.pi / 180)) * 180 / np.pi
+
     return ref_angle
 
 
