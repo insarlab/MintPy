@@ -104,14 +104,14 @@ class progressBar:
             suffix = ' '+suffix
 
         # Figure out the new percent done (round to an integer)
-        diffFromMin = np.float(self.amount - self.min)
-        percentDone = (diffFromMin / np.float(self.span)) * 100.0
-        percentDone = np.int(np.round(percentDone))
+        diffFromMin = float(self.amount - self.min)
+        percentDone = (diffFromMin / float(self.span)) * 100.0
+        percentDone = int(np.round(percentDone))
 
         # Figure out how many hash bars the percentage should be
         allFull = self.width - 2 - 18
         numHashes = (percentDone / 100.0) * allFull
-        numHashes = np.int(np.round(numHashes))
+        numHashes = int(np.round(numHashes))
 
         # Build a progress bar with an arrow of equal signs; special cases for empty and full
         if numHashes == 0:
