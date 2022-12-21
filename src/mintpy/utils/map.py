@@ -84,7 +84,7 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
         lalo_step = round_to_1(max_lalo_dist / lalo_max_num)
 
         # reduce decimal if it ends with 8/9
-        digit = np.int(np.floor(np.log10(lalo_step)))
+        digit = int(np.floor(np.log10(lalo_step)))
         if str(lalo_step)[-1] in ['8','9']:
             digit += 1
             lalo_step = round(lalo_step, digit)
@@ -94,7 +94,7 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
         distance = [(i - max_lalo_dist / lalo_max_num) ** 2 for i in lalo_step_candidate]
         lalo_step = lalo_step_candidate[distance.index(min(distance))]
 
-    digit = np.int(np.floor(np.log10(lalo_step)))
+    digit = int(np.floor(np.log10(lalo_step)))
 
     # Auto tick sequence
     lat_major = np.ceil( geo_box[3] / 10**(digit+1) ) * 10**(digit+1)

@@ -369,7 +369,7 @@ class GPS:
 
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
         ref_lon, ref_lat = float(data[0, 6]), 0.
-        e0, e_off, n0, n_off = data[0, 7:11].astype(np.float)
+        e0, e_off, n0, n_off = data[0, 7:11].astype(np.float32)
         e0 += e_off
         n0 += n_off
 

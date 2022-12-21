@@ -34,7 +34,7 @@ def usage():
 
 def yyyymmdd2years(date):
     d = dt.strptime(date, "%Y%m%d")
-    yy = np.float(d.year) + np.float(d.month-1)/12 + np.float(d.day-1)/365
+    yy = float(d.year) + float(d.month-1)/12 + float(d.day-1)/365
     return yy
 
 
