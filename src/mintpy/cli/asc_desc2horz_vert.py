@@ -102,7 +102,7 @@ def cmd_line_parse(iargs=None):
     # check: if input file type is supported
     ts_ftypes = ['timeseries', 'HDFEOS']
     ftype1, ftype2 = atr1['FILE_TYPE'], atr2['FILE_TYPE']
-    if any(x in ts_file_types for x in [ftype1, ftype2]):
+    if any(x in ts_ftypes for x in [ftype1, ftype2]):
         raise Exception(f'input file types ({ftype1}, {ftype2}) contains UN-supported file types: {ts_ftypes}!')
 
     # check: if input is in geo-coordinates
