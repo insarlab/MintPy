@@ -17,6 +17,9 @@ EXAMPLE = """example:
   image_math.py  timeseries.h5          '*'  1.5
   image_math.py  velocity.h5            '/'  2.0
   image_math.py  velocity.h5            '^'  2.0
+
+  # update isce2 offset files
+  image_math.py  azimuth_*.off '+' 0.0077 --overwrite
 """
 
 
@@ -27,9 +30,11 @@ def create_parser(subparsers=None):
     parser = create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
-    parser.add_argument('file', help='input file')
+    parser.add_argument('file', nargs='+', help='input file(s).')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name.')
+    parser.add_argument('--overwrite', '--overwrite-input', dest='overwrite', action='store_true',
+                        help='overwrite input file (disabled if -o/--output is turned on)')
     parser.add_argument('operator', choices=[
                         '+', '-', '*', '/', '^'], help='mathmatical operator')
     parser.add_argument('operand', metavar='VALUE', type=float,
@@ -41,6 +46,11 @@ def cmd_line_parse(iargs=None):
     # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # check: --overwrite vs --output
+    if inps.outfile and inps.overwrite:
+        print('-o/--output is turned ON, disable --overwrite option and continue.')
+        inps.overwrite = False
 
     return inps
 
@@ -54,7 +64,12 @@ def main(iargs=None):
     from mintpy.image_math import file_operation
 
     # run
-    file_operation(inps.file, inps.operator, inps.operand, inps.outfile)
+    num_file = len(inps.file)
+    for i, fname in enumerate(inps.file):
+        if num_file > 1:
+            print('-'*20 + f' {i+1}/{num_file} {fname}')
+        out_file = fname if inps.overwrite else inps.outfile
+        file_operation(fname, inps.operator, inps.operand, out_file)
 
 
 #######################################################################################

@@ -30,13 +30,14 @@ def data_operation(data, operator, operand):
 
 
 def file_operation(fname, operator, operand, out_file=None):
-    """Mathmathic operation of file"""
+    """Mathmathic operation of file
 
-    # Basic Info
-    atr = readfile.read_attribute(fname)
-    k = atr['FILE_TYPE']
-    print('input is '+k+' file: '+fname)
-    print(f'operation: file {operator} {operand:f}')
+    Parameters: fname     - str, path to the input file
+                operator  - str,   math operator, e.g., + - * / etc.
+                operand   - float, math operand
+                out_file  - str, path to the output file
+    Returns:    out_file  - str, path to the output file
+    """
 
     # default output filename
     if not out_file:
@@ -50,16 +51,27 @@ def file_operation(fname, operator, operand, out_file=None):
             suffix = 'divide'
         elif operator in ['^', 'pow', 'power']:
             suffix = 'pow'
-        out_file = '{}_{}{}{}'.format(os.path.splitext(fname)[0], suffix,
-                                      str(operand), os.path.splitext(fname)[1])
+        fbase, fext = os.path.splitext(fname)
+        out_file = f'{fbase}_{suffix}{operand}{fext}'
 
+    # basic info
     atr = readfile.read_attribute(fname)
-    dsNames = readfile.get_dataset_list(fname)
-    dsDict = {}
-    for dsName in dsNames:
-        data = readfile.read(fname, datasetName=dsName)[0]
+    print(f'input is {atr["PROCESSOR"]} {atr["FILE_TYPE"]} file: {fname}')
+    print(f'operation: file {operator} {operand:f}')
+
+    ds_dict = {}
+    ds_names = readfile.get_dataset_list(fname)
+    for ds_name in ds_names:
+        # read
+        data = readfile.read(fname, datasetName=ds_name)[0]
+
+        # apply math operation
         data = data_operation(data, operator, operand)
-        dsDict[dsName] = data
-    writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fname)
+
+        # save
+        ds_dict[ds_name] = data
+
+    # write
+    writefile.write(ds_dict, out_file=out_file, metadata=atr, ref_file=fname)
 
     return out_file

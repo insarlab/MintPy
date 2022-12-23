@@ -729,6 +729,17 @@ def wrap(data_in, wrap_range=[-1.*np.pi, np.pi]):
     return data
 
 
+def diff_wrapped_phase(pha1, pha2):
+    """Calculate the difference between two input wrapped phase.
+
+    Parameters: pha1     - np.ndarray, (un)wrapped phase
+                pha2     - np.ndarray / float, (un)wrapped phase
+    Returns:    pha_diff - np.ndarray, wrapped phase difference for (pha1 - pha2)
+    """
+    pha_diff = np.angle(np.exp(-1j * pha1) * np.conj(np.exp(-1j * pha2)))
+    return pha_diff
+
+
 def get_all_conn_components(mask_in, min_num_pixel=1e4):
     """Get all connected component with number of pixels larger than threshold
     Parameters: mask_in  : 2D np.array with zero as background and non-zero as foreground
