@@ -35,8 +35,8 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
                                 simulating the rigid translation of the ground (e.g., from GNSS)
                 pmm_enu_file  - str, path to the output plate motion in east, north, up direction
                 pmm_file      - str, path to the output plate motion in LOS direction
-                set_comp      - str, output PMM in the given component of interest
-                pmm_reso      - float, ground resolution for computing Plate rotation to ENU velocity (km)
+                pmm_comp      - str, output PMM in the given component of interest
+                pmm_step      - float, ground resolution for computing Plate rotation to ENU velocity (km)
     Returns:    ve/vn/vu/vlos - 2D np.ndarray, ridig plate motion in east / north / up / LOS direction
     """
 

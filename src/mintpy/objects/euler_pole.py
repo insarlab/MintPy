@@ -17,9 +17,15 @@
 #  Goudarzi, M. A., Cocard, M. & Santerre, R. (2014), EPC: Matlab software to estimate Euler
 #    pole parameters, GPS Solutions, 18, 153-162, doi: 10.1007/s10291-013-0354-4
 
-
+import os
+import collections
 import numpy as np
 import pyproj
+from shapely import geometry
+
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 
 from mintpy.constants import EARTH_RADIUS
 
@@ -371,3 +377,160 @@ def transform_xyz_enu(lat, lon, x=None, y=None, z=None, e=None, n=None, u=None):
 
     else:
         raise ValueError('Input (x,y,z) or (e,n,u) is NOT complete!')
+
+
+
+####################################  Utility for plotting  ##############################################
+# Utility for plotting the plate motion on a globe
+# check usage: https://github.com/yuankailiu/utils/blob/main/notebooks/PMM_plot.ipynb
+def load_bnds(filename, order='lalo'):
+    """Load the plate boundary text files
+    Paramters:
+        filename - filename of the boundary text file
+        order    - the order of columns, 'lalo' or 'lola'
+    Returns:
+        Bnds     - a dictionary that contains a list of vertices of the plate polygon
+    """
+    Bnds = {}
+    with open(filename) as f:
+        lines = f.readlines()
+        key, vertices = None, None
+        for line in lines:
+            if line.startswith('> ') or line.startswith('# ') or len(line.split())==1:
+                if key and vertices:
+                    Bnds[key] = np.array(vertices)
+                if   line.startswith('> '): key = line.split('> ')[1]
+                elif line.startswith('# '): key = line.split('# ')[1]
+                else: key = str(line)
+                if key.endswith('\n'):      key = key.split('\n')[0]
+                vertices = []
+            else:
+                if order == 'lalo':
+                    vert = np.array(line.split()).astype(float)
+                elif order == 'lola':
+                    vert = np.flip(np.array(line.split()).astype(float))
+                vertices.append(vert)
+    return Bnds
+
+
+def generate_sample_in_polygon(polygon, nx=10, ny=10):
+    """Make a set of points inside the defined sphericalpolygon object
+    Parameters:
+        polygon - the shapely polygon object
+        nx      - the number of points in the x (lon) direction
+        ny      - the number of points in the y (lat) direction
+    Returns:
+        sample  - tuple that contains the coordinate (lats, lons) of the generated points
+    """
+    vlats = np.array(polygon.exterior.coords)[:,0]
+    vlons = np.array(polygon.exterior.coords)[:,1]
+    lats = np.linspace(np.min(vlats), np.max(vlats), ny)
+    lons = np.linspace(np.min(vlons), np.max(vlons), nx)
+    lats, lons = np.meshgrid(lats, lons)
+    sample_candidates = np.vstack([lats.flatten(), lons.flatten()]).T
+
+    # check which points are inside the polygon
+    in_idx = np.full(len(sample_candidates), False)
+    for i, candi in enumerate(sample_candidates):
+        if polygon.contains(geometry.Point(candi[0], candi[1])):
+            in_idx[i] = True
+
+    in_idx = np.array(in_idx).reshape(lats.shape)
+    lons   = lons[in_idx]
+    lats   = lats[in_idx]
+
+    Point = collections.namedtuple('Points', 'lats lons')
+    sample = Point(lats=lats, lons=lons)
+    return sample
+
+
+def plot_map(polygon, plate_obj, center_lat=None, center_lon=None, qscale=100, unit_q=5, zoom=100, dpi=100, outfile=None, **kwargs):
+    """Plot the globe map wityh plate boundary, quivers on some points
+    Parameters:
+        polygon   - a sphericalpolygon object created from an instance of class Sphericalpolygon
+                    (https://pypi.org/project/sphericalpolygon/)
+        plate_obj - an EulerPole object created from an instance of class EulerPole
+                    (mintpy.objects.euler_pole)
+        center_lat - center the map at this latitute
+        center_lon - center the map at this longitude
+        qscale     - scaling factor of the quiver
+        unit_q     - what value of quiver legend
+        zoom       - zoom the globe to see a narrower region
+        dpi        - output figure dpi
+        outfile    - output figure name
+        kwargs     - dictionary for plotting
+
+    Returns:
+        Draw a map and save it
+    """
+    if 'c_ocean'     not in kwargs.keys():   kwargs['c_ocean']       = 'w'
+    if 'c_land'      not in kwargs.keys():   kwargs['c_land']        = 'lightgray'
+    if 'c_plate'     not in kwargs.keys():   kwargs['c_plate']       = 'mistyrose'
+    if 'lw_coast'    not in kwargs.keys():   kwargs['lw_coast']      = 0.5
+    if 'lw_pbond'    not in kwargs.keys():   kwargs['lw_pbond']      = 1
+    if 'lc_pbond'    not in kwargs.keys():   kwargs['lc_pbond']      = 'coral'
+    if 'alpha_plate' not in kwargs.keys():   kwargs['alpha_plate']   = 0.4
+    if 'grid_ls'     not in kwargs.keys():   kwargs['grid_ls']       = '--'
+    if 'grid_lw'     not in kwargs.keys():   kwargs['grid_lw']       = 0.3
+    if 'grid_lc'     not in kwargs.keys():   kwargs['grid_lc']       = 'gray'
+    if 'Nq'          not in kwargs.keys():   kwargs['Nq']            = 10
+    if 'pts'         not in kwargs.keys():   kwargs['pts']           = None
+    if 'pts_marker'  not in kwargs.keys():   kwargs['pts_marker']    = '^'
+    if 'pts_ms'      not in kwargs.keys():   kwargs['pts_ms']        = 20
+    if 'pts_mfc'     not in kwargs.keys():   kwargs['pts_mfc']       = 'r'
+    if 'pts_mec'     not in kwargs.keys():   kwargs['pts_mec']       = 'k'
+    if 'pts_mew'     not in kwargs.keys():   kwargs['pts_mew']       = 2
+
+    # center the map
+    if (center_lat is None) or (center_lon is None):
+        center_lat, center_lon = np.array(polygon.centroid)
+
+    # make a base map from cartopy
+    fig = plt.figure(dpi=dpi)
+    ax = fig.add_subplot(projection=ccrs.NearsidePerspective(center_lon, center_lat, satellite_height=6.5e7/zoom))
+    ax.set_global()
+    ax.gridlines(color=kwargs['grid_lc'], linestyle=kwargs['grid_ls'], xlocs=np.arange(-180,180,30), ylocs=np.linspace(-80,80,10), linewidth=kwargs['grid_lw'])
+    ax.add_feature(cfeature.OCEAN, color=kwargs['c_ocean'])
+    ax.add_feature(cfeature.LAND,  color=kwargs['c_land'])
+    ax.add_feature(cfeature.COASTLINE, linewidth=kwargs['lw_coast'])
+
+    # add the plate polygon
+    if polygon:
+        vlats = np.array(polygon.exterior.coords)[:,0]
+        vlons = np.array(polygon.exterior.coords)[:,1]
+        ax.plot(vlons, vlats, color=kwargs['lc_pbond'], transform=ccrs.Geodetic(), linewidth=kwargs['lw_pbond'])
+        ax.fill(vlons, vlats, color=kwargs['c_plate'],  transform=ccrs.Geodetic(), alpha=kwargs['alpha_plate'])
+
+        # compute the plate motion from Euler rotation
+        if plate_obj:
+            # select some points inside the polygon and calc PMM, ENU
+            sample = generate_sample_in_polygon(polygon, nx=kwargs['Nq'], ny=kwargs['Nq'])
+
+            ve, vn, vu = plate_obj.get_velocity_enu(lat=sample.lats, lon=sample.lons, alt=0.0, ellps=True, print_msg=True)
+            ve *= 1e3
+            vn *= 1e3
+            vu *= 1e3
+            norm = np.sqrt(ve**2 + vn**2)
+
+            # correcting for "East" further toward polar region; re-normalize ve, vn
+            ve /= np.cos(np.deg2rad(sample.lats))
+            renorm = np.sqrt(ve**2 + vn**2)/norm
+            ve /= renorm
+            vn /= renorm
+
+            # ---------- plot inplate dots, vectors --------------
+            ax.scatter(sample.lons, sample.lats, marker='.', s=20, color='k', transform=ccrs.PlateCarree())
+            q = ax.quiver(sample.lons, sample.lats, ve,  vn, transform=ccrs.PlateCarree(), scale=qscale, width=.0075, color='coral', angles="xy")
+            ax.set_title('  ', pad=10) # put an empty title for extra whitepace at the top
+            ax.quiverkey(q, X=0.3, Y=0.9, U=unit_q, label=f'{unit_q} mm/yr', labelpos='E', coordinates='figure')
+
+    # add custom points (e.g., show some points of interest)
+    if not kwargs['pts'] is None:
+        ax.scatter(kwargs['pts'][1], kwargs['pts'][0], marker=kwargs['pts_marker'], s=kwargs['pts_ms'],
+                   fc=kwargs['pts_mfc'], ec=kwargs['pts_mec'], lw=kwargs['pts_mew'], transform=ccrs.PlateCarree())
+    # save figure
+    if outfile:
+        print('save figure to file:', outfile)
+        fig.savefig(outfile, bbox_inches='tight', transparent=True, dpi=300)
+
+    plt.show()
