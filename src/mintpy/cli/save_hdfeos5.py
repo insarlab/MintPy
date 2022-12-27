@@ -88,10 +88,6 @@ def cmd_line_parse(iargs=None):
         if not os.path.isfile(fname):
             raise FileNotFoundError(fname)
 
-    # check: --subset mode in conflict with input file in radar-coordinates
-    if inps.subset and 'Y_FIRST' not in meta.keys():
-        raise SystemExit('ERROR: --subset mode is NOT supported for time-series in radar-coordinates!')
-
     return inps
 
 
