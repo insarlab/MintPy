@@ -80,6 +80,7 @@ Install the dependencies into a custom existing environment [recommended] by run
 conda install -c conda-forge --file ~/tools/MintPy/requirements.txt
 ```
 
+<p>
 <details>
 <p><summary>Or install the dependencies to a new environment named "mintpy" by running:</summary></p>
 
@@ -90,6 +91,7 @@ conda activate mintpy
 # run "mamba install isce2" if you use ISCE-2
 ```
 </details>
+</p>
 
 <h4>c. Install MintPy</h4>
 
@@ -124,23 +126,22 @@ export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}/src
 <details>
 <p><summary>Click to expand for more details</summary></p>
 
-Install Xcode with command line tools, if you have not already done so.
+<p>Install Xcode with command line tools, if you have not already done so.</p>
 
 <ul>
 <li>Install <code>Xcode</code> from App store</li>
 
-<li>Install <code>command line tools</code> within XCode and agree to the terms of license.</li>
+<li><p>Install <code>command line tools</code> within XCode and agree to the terms of license.</p></li>
 
-  ```bash
-  xcode-select --install -s /Applications/Xcode.app/Contents/Developer/
-  sudo xcodebuild -license
-  ```
+<pre><code>xcode-select --install -s /Applications/Xcode.app/Contents/Developer/
+sudo xcodebuild -license</code></pre>
 
 <li>Install <a href="https://www.xquartz.org">XQuartz</a>, then restart the terminal.</li>
 </ul>
 
-Install MintPy via conda, which is the same as the <a href="#21-install-on-linux">instruction for Linux</a>.
+<p>Install MintPy via conda, which is the same as the <a href="#21-install-on-linux">instruction for Linux</a>.</p>
 
+<p>
 <details>
 <p><summary>Or install MintPy via MacPorts</summary></p>
 
@@ -178,6 +179,7 @@ sudo -H /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
 ```
 </details>
 </details>
+</p>
 </p>
 
 ### 2.3 Install on Windows ###
