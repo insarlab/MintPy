@@ -10,7 +10,7 @@ import re
 
 import h5py
 import numpy as np
-from scipy.interpolate import RegularGridInterpolator as RGI
+from scipy.interpolate import RegularGridInterpolator
 from skimage.transform import resize
 
 from mintpy.objects import timeseries
@@ -39,11 +39,13 @@ def get_delay_geo(ztd_file, atr, cos_inc_angle):
     delay = readfile.read(ztd_file, box=pix_box)[0]
 
     # interpolate/resample into the same resolution as ts_file
-    delay = resize(delay, (length, width),
-                   order=1,
-                   mode='constant',
-                   anti_aliasing=True,
-                   preserve_range=True)
+    delay = resize(
+        delay, (length, width),
+        order=1,
+        mode='constant',
+        anti_aliasing=True,
+        preserve_range=True,
+    )
 
     # project from zenith to line-of-sight
     delay /= cos_inc_angle
@@ -69,17 +71,20 @@ def get_delay_radar(ztd_file, cos_inc_angle, pts_new):
 
     # pixel coordinates in ztd file
     lats, lons = ut.get_lat_lon(atr_ztd, dimension=1)
-    # set lats in ascending order as required by RGI
+    # set lats in ascending order as required by RegularGridInterpolator
     lats = np.flipud(lats)
     pts_ztd = ((lats.flatten(),
                 lons.flatten()))
 
     # resample in pts_new coordinates
-    RGI_func = RGI(pts_ztd, delay_ztd,
-                   method='nearest',
-                   bounds_error=False,
-                   fill_value=0)
-    delay = RGI_func(pts_new)
+    interp_func = RegularGridInterpolator(
+        pts_ztd,
+        delay_ztd,
+        method='nearest',
+        bounds_error=False,
+        fill_value=0,
+    )
+    delay = interp_func(pts_new)
     delay = delay.reshape(cos_inc_angle.shape)
 
     # project from zenith to line-of-sight
@@ -224,11 +229,13 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
 
         # write delay to file
         block = [i, i+1, 0, length, 0, width]
-        writefile.write_hdf5_block(tropo_file,
-                                   data=delay,
-                                   datasetName='timeseries',
-                                   block=block,
-                                   print_msg=False)
+        writefile.write_hdf5_block(
+            tropo_file,
+            data=delay,
+            datasetName='timeseries',
+            block=block,
+            print_msg=False,
+        )
 
         prog_bar.update(i + 1, suffix=os.path.basename(ztd_file))
     prog_bar.close()

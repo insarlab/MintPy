@@ -13,7 +13,7 @@ import warnings
 import h5py
 import numpy as np
 from scipy import ndimage
-from scipy.interpolate import RegularGridInterpolator as RGI
+from scipy.interpolate import RegularGridInterpolator
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', UserWarning)
@@ -698,7 +698,7 @@ class resample:
     ##------------------------------ resample using scipy.interpolate ------------------------------##
 
     def prepare_regular_grid_interpolator(self):
-        """Prepare aux data for RGI module"""
+        """Prepare aux data for RegularGridInterpolator module"""
 
         # radar2geo
         if 'Y_FIRST' not in self.src_meta.keys():
@@ -752,7 +752,7 @@ class resample:
     def run_regular_grid_interpolator(self, src_data, interp_method='nearest', fill_value=np.nan, print_msg=True):
         """Interpolate 2D matrix"""
         # prepare interpolation function
-        rgi_func = RGI(
+        interp_func = RegularGridInterpolator(
             self.src_pts,
             src_data,
             method=interp_method,
@@ -765,5 +765,6 @@ class resample:
         geo_data.fill(fill_value)
 
         # interpolate output matrix
-        geo_data[self.interp_mask] = rgi_func(self.dest_pts)
+        geo_data[self.interp_mask] = interp_func(self.dest_pts)
+
         return geo_data
