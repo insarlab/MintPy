@@ -880,7 +880,7 @@ def get_hdf5_dataset_attrs(fname, key='UNIT'):
 
     fext = os.path.splitext(fname)[1]
     if fext not in ['.h5', '.he5']:
-        raise ValueError(f'input file ({fname}) does not end with .h5/he5!')
+        return None
 
     # default output: empty
     attrs = {}
