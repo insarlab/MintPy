@@ -1,4 +1,4 @@
-## 1. Install the released version ##
+<h2>1. Install the released version</h2>
 
 <details open>
 <p><summary>via conda</summary></p>
@@ -19,7 +19,7 @@ Docker allows one to run MintPy in a dedicated container, which is essentially a
 docker pull ghcr.io/insarlab/mintpy:latest
 ```
 
-Check <a href="./docker.md">docker.md</a> for more details on Docker container image usage, e.g. pulling development version and running in shell or Jupyter server.
+<p>Check <a href="./docker.md">docker.md</a> for more details on Docker container image usage, e.g. pulling development version and running in shell or Jupyter server.</p>
 </details>
 
 <details>
@@ -31,16 +31,16 @@ MintPy is available in the main archive of the <a href="https://tracker.debian.o
 apt install mintpy
 ```
 
-The same procedure, in priciple, can be used in <a href="https://ubuntu.com">Ubuntu</a> and all the other <a href="https://wiki.debian.org/Derivatives/Census">Debian derivatives</a>. Check the <a href="https://salsa.debian.org/debian-gis-team/mintpy/-/blob/master/debian/README.Debian">Debian GIS Project</a> page for more detailed usage.
+<p>The same procedure, in priciple, can be used in <a href="https://ubuntu.com">Ubuntu</a> and all the other <a href="https://wiki.debian.org/Derivatives/Census">Debian derivatives</a>. Check the <a href="https://salsa.debian.org/debian-gis-team/mintpy/-/blob/master/debian/README.Debian">Debian GIS Project</a> page for more detailed usage.</p>
 </details>
 
-## 2. Install the development version ##
+<h2>2. Install the development version</h2>
 
 Note: The installation note below is tested on Linux and macOS, and is still experimental on Windows (may have bugs).
 
 MintPy is written in Python 3 and relies on several Python modules, check the <a href="https://github.com/insarlab/MintPy/blob/main/requirements.txt">requirements.txt</a> file for details. We recommend using <a href="https://docs.conda.io/en/latest/miniconda.html">conda</a> or <a href="https://www.macports.org/install.php">macports</a> to install the python environment and the prerequisite packages, because of the convenient management and default performance setting with <a href="http://markus-beuckelmann.de/blog/boosting-numpy-blas.html">numpy/scipy</a> and <a href="https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree">pyresample</a>.
 
-### 2.1 Install on Linux ###
+<h3>2.1 Install on Linux</h3>
 
 <details>
 <p><summary>Click to expand for more details</summary></p>
@@ -114,7 +114,7 @@ export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}/src
 </details>
 </details>
 
-### 2.2 Install on macOS ###
+<h3>2.2 Install on macOS</h3>
 
 <details>
 <p><summary>Click to expand for more details</summary></p>
@@ -174,7 +174,7 @@ sudo -H /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
 </details>
 </details>
 
-### 2.3 Install on Windows ###
+<h3>2.3 Install on Windows</h3>
 
 <details>
 <p><summary>Click to expand for more details</summary></p>
@@ -182,15 +182,15 @@ sudo -H /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
 Same as the <a href="#21-install-on-linux">instruction for Linux</a>, except for the "c. Install MintPy" section, only the <code>pip install</code> approaches are recommended, as the <code>path setup</code> approach is not tested.
 </details>
 
-## 3. Post-Installation Setup
+<h2>3. Post-Installation Setup</h2>
 
-#### a. ERA5 for tropospheric correction ####
+<h4>a. ERA5 for tropospheric correction</h4>
 
 Set up an account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in <a href="https://github.com/insarlab/pyaps#2-account-setup-for-era5">insarlab/PyAPS</a>.
 
 <code>WEATHER_DIR</code>: Optionally, if you defined an environment variable named <code>WEATHER_DIR</code> to contain the path to a directory, MintPy will download the GAM files into the indicated directory. Also, MintPy will look for the GAM files in the directory before downloading a new one to prevent downloading multiple copies if you work with different dataset that cover the same date/time.
 
-#### b. Dask for parallel processing ####
+<h4>b. Dask for parallel processing</h4>
 
 We recommend setting the <code>temporary-directory</code> in your <a href="https://docs.dask.org/en/stable/configuration.html">Dask configuration file</a>, e.g. <code>~/.config/dask/dask.yaml</code>, by adding the following line, to avoid the potential <a href="https://github.com/insarlab/MintPy/issues/725">workspace lock issue</a>. Check the <a href="./dask.md">dask.md</a> file for more details on parallel processing.
 
@@ -201,7 +201,7 @@ temporary-directory: /tmp  # Directory for local disk like /tmp, /scratch, or /l
 # temporary-directory: /tmp/{replace_this_with_your_user_name}
 ```
 
-#### c. Extra environment variables setup ####
+<h4>c. Extra environment variables setup</h4>
 
 We recommend setting the following environment variables, e.g. in your <code>~/.bash_profile</code> file, to avoid occasional errors with GDAL VRT and HDF5 files I/O.
 
