@@ -13,7 +13,7 @@ import warnings
 import h5py
 import numpy as np
 from scipy import ndimage
-from scipy.interpolate import RegularGridInterpolator as RGI
+from scipy.interpolate import RegularGridInterpolator
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', UserWarning)
@@ -184,20 +184,26 @@ class resample:
                     print_msg  - bool
         Returns:    dest_data  - 2D/3D np.array, resampled data
         """
+        vprint = print if print_msg else lambda *args, **kwargs: None
+
         # adjust fill_value for each source data / block
         fill_value = self.fill_value
         float_types = [np.single, np.double, np.longdouble, np.csingle, np.cdouble, np.clongdouble]
         if src_data.dtype == np.bool_:
             fill_value = False
-            if print_msg:
-                print('input source data is bool type, restrict fill_value to False.')
+            vprint('input source data is bool type, restrict fill_value to False.')
 
         elif src_data.dtype not in float_types and np.isnan(fill_value):
             fill_value = 0
-            if print_msg:
-                print('input source data is NOT float, change fill_value from NaN to 0.')
+            vprint('input source data is NOT float, change fill_value from NaN to 0.')
 
-        ## pyresample
+        # run resampling
+        kwargs = dict(
+            interp_method=self.interp_method,
+            fill_value=fill_value,
+            print_msg=print_msg,
+        )
+
         if self.software == 'pyresample':
             # move 1st/time dimension to the last
             # so that rows/cols axis are the frist, as required by pyresample
@@ -205,38 +211,31 @@ class resample:
                 src_data = np.moveaxis(src_data, 0, -1)
 
             # resample source data into target data
-            dest_data = self.run_pyresample(src_data=src_data,
-                                            src_def=self.src_def_list[box_ind],
-                                            dest_def=self.dest_def_list[box_ind],
-                                            radius=self.radius,
-                                            interp_method=self.interp_method,
-                                            fill_value=fill_value,
-                                            nprocs=self.nprocs,
-                                            print_msg=self.print_msg)
+            dest_data = self.run_pyresample(
+                src_data=src_data,
+                src_def=self.src_def_list[box_ind],
+                dest_def=self.dest_def_list[box_ind],
+                radius=self.radius,
+                nprocs=self.nprocs,
+                **kwargs,
+            )
 
             # move 1st/time dimension back
             if len(dest_data.shape) == 3:
                 dest_data = np.moveaxis(dest_data, -1, 0)
 
-        ## scipy
         else:
-            if print_msg:
-                print(f'{self.interp_method} resampling using scipy.interpolate.RegularGridInterpolator ...')
+            vprint(f'{self.interp_method} resampling using scipy.interpolate.RegularGridInterpolator ...')
             if len(src_data.shape) == 3:
                 dest_data = np.empty((src_data.shape[0], self.length, self.width), src_data.dtype)
                 prog_bar = ptime.progressBar(maxValue=src_data.shape[0], print_msg=print_msg)
                 for i in range(src_data.shape[0]):
-                    dest_data[i, :, :] = self.run_regular_grid_interpolator(src_data=src_data[i, :, :],
-                                                                            interp_method=self.interp_method,
-                                                                            fill_value=fill_value,
-                                                                            print_msg=True)
                     prog_bar.update(i+1)
+                    dest_data[i, :, :] = self.run_regular_grid_interpolator(src_data=src_data[i, :, :], **kwargs)
                 prog_bar.close()
             else:
-                dest_data = self.run_regular_grid_interpolator(src_data=src_data,
-                                                               interp_method=self.interp_method,
-                                                               fill_value=fill_value,
-                                                               print_msg=True)
+                dest_data = self.run_regular_grid_interpolator(src_data=src_data, **kwargs)
+
         return dest_data
 
 
@@ -383,15 +382,18 @@ class resample:
             self.dest_def_list = []
 
             # split dest_box (in grid)
-            self.dest_box_list = split_box2sub_boxes(box=(0, 0, self.width, self.length),
-                                                     num_split=self.num_box,
-                                                     dimension='y',
-                                                     print_msg=True)
+            # and update num_box based on the actual dest_box_list
+            self.dest_box_list = split_box2sub_boxes(
+                box=(0, 0, self.width, self.length),
+                num_split=self.num_box,
+                dimension='y',
+                print_msg=True,
+            )
+            self.num_box = len(self.dest_box_list)
 
             # dest_box --> src_box / src_def / dest_def
             for i, dest_box in enumerate(self.dest_box_list):
-                if self.num_box > 1:
-                    print(f'preparing geometry for dest_box {i+1}/{self.num_box}: {dest_box}')
+                msg = f'[{i+1}/{self.num_box}] preparing geometry for dest_box: {dest_box}'
 
                 # dest_lat/lon at pixel center
                 lat_num = dest_box[3] - dest_box[1]
@@ -410,23 +412,28 @@ class resample:
                     # reduction of swath data
                     # https://pyresample.readthedocs.io/en/latest/data_reduce.html
                     # get src_box (in swath) from lat/lon (from dest_box in grid)
-                    print('searching relevant box covering the current SNWE')
-                    flag = pr.data_reduce.get_valid_index_from_lonlat_grid(dest_lon,
-                                                                           dest_lat,
-                                                                           lut_lon,
-                                                                           lut_lat,
-                                                                           radius_of_influence=3000)
+                    flag = pr.data_reduce.get_valid_index_from_lonlat_grid(
+                        dest_lon,
+                        dest_lat,
+                        lut_lon,
+                        lut_lat,
+                        radius_of_influence=3000,
+                    )
                     idx_row, idx_col = np.where(flag)
                     src_box = (np.min(idx_col), np.min(idx_row),
                                np.max(idx_col), np.max(idx_row))
+                    msg += f' --> reduced src_box: {src_box}'
+
                 else:
                     src_box = (0, 0, lut_lat.shape[1], lut_lat.shape[0])
+                    msg += f' --> full src_box: {src_box}'
+                print(msg)
 
                 # geometry definition
-                src_def = pr.geometry.SwathDefinition(lons=lut_lon[src_box[1]:src_box[3],
-                                                                   src_box[0]:src_box[2]],
-                                                      lats=lut_lat[src_box[1]:src_box[3],
-                                                                   src_box[0]:src_box[2]])
+                src_def = pr.geometry.SwathDefinition(
+                    lons=lut_lon[src_box[1]:src_box[3], src_box[0]:src_box[2]],
+                    lats=lut_lat[src_box[1]:src_box[3], src_box[0]:src_box[2]],
+                )
                 dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
 
                 self.src_box_list.append(src_box)
@@ -642,29 +649,33 @@ class resample:
                 msg = f'{interp_method} resampling with pyresample.kd_tree '
                 msg += f'using {nprocs} CPU cores in {num_segment} segments ...'
                 print(msg)
-            dest_data = pr.kd_tree.resample_nearest(src_def,
-                                                    src_data,
-                                                    dest_def,
-                                                    radius_of_influence=radius,
-                                                    fill_value=fill_value,
-                                                    nprocs=nprocs,
-                                                    segments=num_segment,
-                                                    epsilon=0.5)
+            dest_data = pr.kd_tree.resample_nearest(
+                src_def,
+                src_data,
+                dest_def,
+                radius_of_influence=radius,
+                fill_value=fill_value,
+                nprocs=nprocs,
+                segments=num_segment,
+                epsilon=0.5,
+            )
 
         elif interp_method.endswith('linear'):
             if print_msg:
                 msg = f'{interp_method} resampling with pyresample.bilinear '
                 msg += f'using {nprocs} CPU cores ...'
                 print(msg)
-            dest_data = pr.bilinear.resample_bilinear(src_data,
-                                                      src_def,
-                                                      dest_def,
-                                                      radius=radius,
-                                                      fill_value=fill_value,
-                                                      neighbours=32,
-                                                      nprocs=nprocs,
-                                                      segments=num_segment,
-                                                      epsilon=0)
+            dest_data = pr.bilinear.resample_bilinear(
+                src_data,
+                src_def,
+                dest_def,
+                radius=radius,
+                fill_value=fill_value,
+                neighbours=32,
+                nprocs=nprocs,
+                segments=num_segment,
+                epsilon=0,
+            )
 
         # for debug
         debug_mode = False
@@ -687,7 +698,7 @@ class resample:
     ##------------------------------ resample using scipy.interpolate ------------------------------##
 
     def prepare_regular_grid_interpolator(self):
-        """Prepare aux data for RGI module"""
+        """Prepare aux data for RegularGridInterpolator module"""
 
         # radar2geo
         if 'Y_FIRST' not in self.src_meta.keys():
@@ -741,16 +752,19 @@ class resample:
     def run_regular_grid_interpolator(self, src_data, interp_method='nearest', fill_value=np.nan, print_msg=True):
         """Interpolate 2D matrix"""
         # prepare interpolation function
-        rgi_func = RGI(self.src_pts,
-                       src_data,
-                       method=interp_method,
-                       bounds_error=False,
-                       fill_value=fill_value)
+        interp_func = RegularGridInterpolator(
+            self.src_pts,
+            src_data,
+            method=interp_method,
+            bounds_error=False,
+            fill_value=fill_value,
+        )
 
         # prepare output matrix
         geo_data = np.empty((self.length, self.width), src_data.dtype)
         geo_data.fill(fill_value)
 
         # interpolate output matrix
-        geo_data[self.interp_mask] = rgi_func(self.dest_pts)
+        geo_data[self.interp_mask] = interp_func(self.dest_pts)
+
         return geo_data

@@ -816,23 +816,37 @@ def min_region_distance(mask1, mask2, display=False):
     return xy1, xy2, min_dist
 
 
-def interpolate_data(inData, outShape, interpMethod='linear'):
+def interpolate_data(in_data, out_shape, interp_method='linear'):
     """Interpolate input 2D matrix into different shape.
+
     Used to get full resolution perp baseline from ISCE coarse grid baseline file.
-    Parameters: inData : 2D array
-                outShape : tuple of 2 int in (length, width)
-                interpMethod : string, choose in [nearest, linear, cubic]
-    Returns:    outData : 2D array in outShape
+
+    Parameters: in_data       : 2D np.ndarray
+                out_shape     : tuple of 2 int in (length, width)
+                interp_method : string, choose in [nearest, linear, cubic]
+    Returns:    out_data      : 2D np.ndarray in out_shape
     """
-    from scipy.interpolate import RegularGridInterpolator as RGI
-    inShape = inData.shape
-    inPts = (np.arange(inShape[0]), np.arange(inShape[1]))
-    xx, yy = np.meshgrid(np.linspace(0, inShape[1]-1, outShape[1], endpoint=False),
-                         np.linspace(0, inShape[0]-1, outShape[0], endpoint=False))
-    outPts = np.hstack((yy.reshape(-1, 1), xx.reshape(-1, 1)))
-    outData = RGI(inPts, inData, method=interpMethod,
-                  bounds_error=False)(outPts).reshape(outShape)
-    return outData
+    from scipy.interpolate import RegularGridInterpolator
+
+    # prepare interpolation function
+    in_shape = in_data.shape
+    in_pts = (np.arange(in_shape[0]), np.arange(in_shape[1]))
+    interp_func = RegularGridInterpolator(
+        in_pts,
+        in_data,
+        method=interp_method,
+        bounds_error=False,
+    )
+
+    # prepare output coordinates
+    xx, yy = np.meshgrid(np.linspace(0, in_shape[1]-1, out_shape[1], endpoint=False),
+                         np.linspace(0, in_shape[0]-1, out_shape[0], endpoint=False))
+    out_pts = np.hstack((yy.reshape(-1, 1), xx.reshape(-1, 1)))
+
+    # run interpolation
+    out_data = interp_func(out_pts).reshape(out_shape)
+
+    return out_data
 
 
 def polygon2mask(polygon, shape):
