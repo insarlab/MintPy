@@ -127,6 +127,7 @@ def read_init_info(inps):
 
     # Map info - coordinate unit
     inps.coord_unit = atr.get('Y_UNIT', 'degrees').lower()
+    inps.lalo_digit = ut.get_lalo_digit4display(atr, coord_unit=inps.coord_unit)
     inps = view.check_map_projection(inps, metadata=atr, print_msg=inps.print_msg)
 
     # calculate multilook_num
@@ -175,10 +176,11 @@ def read_init_info(inps):
     ## initial pixel coord
     if inps.lalo:
         inps.yx = inps.coord.geo2radar(inps.lalo[0], inps.lalo[1], print_msg=False)[0:2]
-    try:
-        inps.lalo = inps.coord.radar2geo(inps.yx[0], inps.yx[1], print_msg=False)[0:2]
-    except:
-        inps.lalo = None
+    if inps.yx:
+        try:
+            inps.lalo = inps.coord.radar2geo(inps.yx[0], inps.yx[1], print_msg=False)[0:2]
+        except FileNotFoundError:
+            inps.lalo = None
 
     ## figure settings
     # Flip up-down / left-right
@@ -557,14 +559,21 @@ def fit_time_func(model, date_list, ts_dis, disp_unit='cm', G_fit=None, conf_lev
     return m_strs, ts_fit, ts_fit_lim
 
 
-def get_ts_title(y, x, coord_obj):
-    title = f'Y/X = {y}, {x}'
+def get_point_coord_str(y, x, coord_obj, lalo_digit=5):
+    """Get the string of the point coordinates.
+
+    Parameters: y / x      - int, row / column number
+                coord_obj  - mintpy.objects.coordinate object
+                lalo_digit - int, digit of the decimal place for lat/lon
+    Returns:    pts_str    - str, point coordinate string
+    """
+    coord_str = f'Y/X = {y}, {x}'
     try:
         lat, lon = coord_obj.radar2geo(y, x, print_msg=False)[0:2]
-        title += f', lat/lon = {lat:.4f}, {lon:.4f}'
-    except:
+        coord_str += f', lat/lon = {lat:.{lalo_digit}f}, {lon:.{lalo_digit}f}'
+    except FileNotFoundError:
         pass
-    return title
+    return coord_str
 
 
 def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
@@ -585,7 +594,7 @@ def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
     # TXT - point time-series and time func param
     outName = f'{inps.outfile_base}_ts.txt'
     header = f'time-series file = {inps.file[0]}\n'
-    header += f'{get_ts_title(y, x, inps.coord)}\n'
+    header += f'{get_point_coord_str(y, x, inps.coord, inps.lalo_digit)}\n'
     header += f'reference pixel: y={inps.ref_yx[0]}, x={inps.ref_yx[1]}\n' if inps.ref_yx else ''
     header += f'reference date: {inps.date_list[inps.ref_idx]}\n' if inps.ref_idx else ''
     header += 'estimated time function parameters:\n'
@@ -927,7 +936,7 @@ class timeseriesViewer():
             ax.yaxis.set_label_position("right")
 
         # title
-        title = get_ts_title(yx[0], yx[1], self.coord)
+        title = get_point_coord_str(yx[0], yx[1], self.coord, self.lalo_digit)
         title += ' (masked out)' if self.mask[y, x] == 0 else ''
         if self.disp_title:
             ax.set_title(title, fontsize=self.font_size)

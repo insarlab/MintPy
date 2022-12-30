@@ -343,8 +343,6 @@ def to_latlon(infile, x, y):
     return y, x
 
 
-
-
 def snwe_to_wkt_polygon(snwe):
     """Convert the input bounding box in SNWE into WKT format POLYGON.
 
@@ -475,6 +473,47 @@ def four_corners(atr):
     east  = west  + lon_step * width
     return south, north, west, east
 
+
+def get_lalo_digit4display(meta, coord_unit='degree'):
+    """Get the digit of the decimal place for the lat/lon info for display (e.g., at the status bar).
+
+    Parameters: meta       - dict, metadata for the following attributes:
+                             X_STEP
+                             Y_STEP
+                             RANGE_PIXEL_SIZE
+                             AZIMUTH_PIXEL_SIZE
+                coord_unit - str, coordinate unit, degree or meter
+    Returns:    digit      - int, the digit for the decimal places of lat/lon
+    """
+
+    if coord_unit.startswith('meter'):
+        digit = 2
+
+    else:
+        geo_step_keys = ['X_STEP', 'Y_STEP']
+        rdr_step_keys = ['RANGE_PIXEL_SIZE', 'AZIMUTH_PIXEL_SIZE']
+
+        # get step size in degree
+        if all(x in meta.keys() for x in geo_step_keys):
+            min_step = min([abs(float(meta[x])) for x in geo_step_keys])
+
+        elif all(x in meta.keys() for x in rdr_step_keys):
+            # default scaling for spaceborne system to ground range / azimuth
+            rg_pix_size = float(meta['RANGE_PIXEL_SIZE']) / np.cos(np.deg2rad(30))
+            az_pix_size = float(meta['AZIMUTH_PIXEL_SIZE']) * 0.9
+            min_step = min([rg_pix_size, az_pix_size]) / 108e3
+        else:
+            # default pixel size 30 m
+            min_step = 30 / 108e3
+
+        # set the decimal place one order   (precision for step-range)
+        if   min_step >= 2e-2:  digit = 3  # 110  m for >2.2 km
+        elif min_step >= 2e-3:  digit = 4  # 11   m for >220 m
+        elif min_step >= 2e-4:  digit = 5  # 1    m for >22  m
+        elif min_step >= 2e-5:  digit = 6  # 0.1  m for >2.2 m
+        else:                   digit = 7  # 0.01 m for <2.2 m
+
+    return digit
 
 
 ###################################### Orbit ###########################################

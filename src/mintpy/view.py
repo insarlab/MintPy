@@ -86,9 +86,12 @@ def update_inps_with_file_metadata(inps, metadata):
         inps.multilook = True
 
     # Colormap
-    inps.colormap = pp.auto_colormap_name(metadata, inps.colormap,
-                                          datasetName=inps.dset[0],
-                                          print_msg=inps.print_msg)
+    inps.colormap = pp.auto_colormap_name(
+        metadata,
+        inps.colormap,
+        datasetName=inps.dset[0],
+        print_msg=inps.print_msg,
+    )
 
     # Reference Point
     # Convert ref_lalo if existed, to ref_yx, and use ref_yx for the following
@@ -116,11 +119,13 @@ def update_inps_with_file_metadata(inps, metadata):
     inps = pp.read_pts2inps(inps, coord)
 
     # Unit and Wrap
-    inps.disp_unit, inps.wrap = pp.check_disp_unit_and_wrap(metadata,
-                                                            disp_unit=inps.disp_unit,
-                                                            wrap=inps.wrap,
-                                                            wrap_range=inps.wrap_range,
-                                                            print_msg=inps.print_msg)
+    inps.disp_unit, inps.wrap = pp.check_disp_unit_and_wrap(
+        metadata,
+        disp_unit=inps.disp_unit,
+        wrap=inps.wrap,
+        wrap_range=inps.wrap_range,
+        print_msg=inps.print_msg,
+    )
 
     # Map Projection via cartopy
     inps = check_map_projection(inps, metadata, print_msg=inps.print_msg)
@@ -148,9 +153,11 @@ def update_inps_with_file_metadata(inps, metadata):
 
     # Figure Title
     if not inps.fig_title:
-        inps.fig_title = pp.auto_figure_title(metadata['FILE_PATH'],
-                                              datasetNames=inps.dset,
-                                              inps_dict=vars(inps))
+        inps.fig_title = pp.auto_figure_title(
+            metadata['FILE_PATH'],
+            datasetNames=inps.dset,
+            inps_dict=vars(inps),
+        )
     vprint('figure title: '+inps.fig_title)
 
     # Figure output file name
@@ -191,15 +198,13 @@ def check_map_projection(inps, metadata, print_msg=True):
         msg = 'initiate cartopy map projection: '
         if inps.coord_unit.startswith('deg'):
             inps.map_proj_obj = ccrs.PlateCarree()
-            if print_msg:
-                print(msg + 'PlateCarree')
+            vprint(msg + 'PlateCarree')
 
         elif inps.coord_unit.startswith('meter'):
             if 'UTM_ZONE' in metadata.keys():
                 utm_zone = metadata['UTM_ZONE']
                 inps.map_proj_obj = ccrs.UTM(utm_zone)
-                if print_msg:
-                    print(msg + f'UTM zone {utm_zone}')
+                vprint(msg + f'UTM zone {utm_zone}')
 
                 # check --lalo-label (works for PlateCarree only)
                 if inps.lalo_label:
@@ -234,7 +239,12 @@ def update_data_with_plot_inps(data, metadata, inps):
             if 0 <= ref_y < data.shape[-2] and 0 <= ref_x < data.shape[-1]:
                 ref_val = data[ref_y, ref_x]
             else:
-                ref_val = readfile.read(inps.file, datasetName=inps.dset[0], box=inps.ref_box, print_msg=False)[0]
+                ref_val = readfile.read(
+                    inps.file,
+                    datasetName=inps.dset[0],
+                    box=inps.ref_box,
+                    print_msg=False,
+                )[0]
 
             # applying spatial referencing
             if not np.ma.is_masked(ref_val) and not np.isnan(ref_val):
@@ -251,7 +261,12 @@ def update_data_with_plot_inps(data, metadata, inps):
             if 0 <= ref_y < data.shape[-2] and 0 <= ref_x < data.shape[-1]:
                 ref_val = np.squeeze(data[:, ref_y, ref_x])
             elif inps.key == 'timeseries':
-                ref_val = readfile.read(inps.file, datasetName=inps.dset, box=inps.ref_box, print_msg=False)[0]
+                ref_val = readfile.read(
+                    inps.file,
+                    datasetName=inps.dset,
+                    box=inps.ref_box,
+                    print_msg=False,
+                )[0]
             else:
                 raise ValueError(f'input reference point {inps.ref_yx} is out of data coverage!')
 
@@ -271,32 +286,27 @@ def update_data_with_plot_inps(data, metadata, inps):
     (data,
      inps.disp_unit,
      inps.disp_scale,
-     inps.wrap) = pp.scale_data4disp_unit_and_rewrap(data,
-                                                     metadata=metadata,
-                                                     disp_unit=inps.disp_unit,
-                                                     wrap=inps.wrap,
-                                                     wrap_range=inps.wrap_range,
-                                                     print_msg=inps.print_msg)
+     inps.wrap) = pp.scale_data4disp_unit_and_rewrap(
+        data,
+        metadata=metadata,
+        disp_unit=inps.disp_unit,
+        wrap=inps.wrap,
+        wrap_range=inps.wrap_range,
+        print_msg=inps.print_msg,
+    )
     if inps.wrap:
         inps.vlim = inps.wrap_range
 
     # math operation
     if inps.math_operation:
         vprint(f'Apply math operation: {inps.math_operation}')
-        if inps.math_operation == 'square':
-            data = np.square(data)
-        elif inps.math_operation == 'sqrt':
-            data = np.sqrt(data)
-        elif inps.math_operation == 'reverse':
-            data *= -1.
-        elif inps.math_operation == 'inverse':
-            data = 1. / data
-        elif inps.math_operation == 'rad2deg':
-            data *= 180. / np.pi
-        elif inps.math_operation == 'deg2rad':
-            data *= np.pi / 180.
-        else:
-            raise ValueError(f'un-recognized math operation: {inps.math_operation}')
+        if   inps.math_operation == 'square' :  data = np.square(data)
+        elif inps.math_operation == 'sqrt'   :  data = np.sqrt(data)
+        elif inps.math_operation == 'reverse':  data *= -1.
+        elif inps.math_operation == 'inverse':  data = 1. / data
+        elif inps.math_operation == 'rad2deg':  data *= 180. / np.pi
+        elif inps.math_operation == 'deg2rad':  data *= np.pi / 180.
+        else: raise ValueError(f'un-recognized math operation: {inps.math_operation}')
 
     # 4. update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
@@ -352,14 +362,16 @@ def prep_slice(cmd, auto_fig=False):
         box=inps.pix_box,
         vmin=inps.mask_vmin,
         vmax=inps.mask_vmax,
-        print_msg=inps.print_msg)
+        print_msg=inps.print_msg,
+    )
 
     # read data
     data, atr = readfile.read(
         inps.file,
         datasetName=inps.dset[0],
         box=inps.pix_box,
-        print_msg=inps.print_msg)
+        print_msg=inps.print_msg,
+    )
 
     # reference in time
     if inps.ref_date:
@@ -367,7 +379,8 @@ def prep_slice(cmd, auto_fig=False):
             inps.file,
             datasetName=inps.ref_date,
             box=inps.pix_box,
-            print_msg=False)[0]
+            print_msg=False,
+        )[0]
 
     # reference in space for unwrapPhase
     if (inps.key in ['ifgramStack']
@@ -378,7 +391,8 @@ def prep_slice(cmd, auto_fig=False):
             inps.file,
             datasetName=inps.dset[0],
             box=(ref_x, ref_y, ref_x+1, ref_y+1),
-            print_msg=False)[0]
+            print_msg=False,
+        )[0]
         data[data != 0.] -= ref_data
 
     # masking
@@ -412,14 +426,14 @@ def prep_slice(cmd, auto_fig=False):
 ##################################################################################################
 def plot_slice(ax, data, metadata, inps):
     """Plot one slice of matrix
-    Parameters: ax   : matplot.pyplot axes object
-                data : 2D np.array,
+    Parameters: ax       : matplot.pyplot axes object
+                data     : 2D np.ndarray,
                 metadata : dictionary, attributes of data
-                inps : Namespace, optional, input options for display
-    Returns:    ax   : matplot.pyplot axes object
-                inps : Namespace for input options
-                im   : matplotlib.image.AxesImage object
-                cbar : matplotlib.colorbar.Colorbar object
+                inps     : Namespace, optional, input options for display
+    Returns:    ax       : matplot.pyplot axes object
+                inps     : Namespace for input options
+                im       : matplotlib.image.AxesImage object
+                cbar     : matplotlib.colorbar.Colorbar object
     Example:
         from matplotlib import pyplot as plt
         from mintpy.utils import readfile
@@ -433,10 +447,12 @@ def plot_slice(ax, data, metadata, inps):
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
-    #---------------------------  Initial a inps Namespace if no inps input -----------------------#
+    # colormap: str -> object
     if isinstance(inps.colormap, str):
         inps.colormap = pp.ColormapExt(
-            inps.colormap, cmap_lut=inps.cmap_lut, vlist=inps.cmap_vlist
+            inps.colormap,
+            cmap_lut=inps.cmap_lut,
+            vlist=inps.cmap_vlist,
         ).colormap
 
     # read DEM
@@ -445,12 +461,14 @@ def plot_slice(ax, data, metadata, inps):
             inps.dem_file,
             pix_box=inps.pix_box,
             geo_box=inps.geo_box,
-            print_msg=inps.print_msg)
+            print_msg=inps.print_msg,
+        )
 
     vprint('display data in transparency: '+str(inps.transparency))
+    num_row, num_col = data.shape
+    lalo_digit = ut.get_lalo_digit4display(metadata, coord_unit=inps.coord_unit)
 
     #----------------------- Plot in Geo-coordinate --------------------------------------------#
-    num_row, num_col = data.shape
     if (inps.geo_box
             and inps.coord_unit.startswith(('deg', 'meter'))
             and inps.fig_coord == 'geo'):
@@ -469,7 +487,8 @@ def plot_slice(ax, data, metadata, inps):
                 geo_box=inps.geo_box,
                 dem=dem,
                 inps=inps,
-                print_msg=inps.print_msg)
+                print_msg=inps.print_msg,
+            )
 
         # Plot Data
         coord = ut.coordinate(metadata)
@@ -488,10 +507,9 @@ def plot_slice(ax, data, metadata, inps):
         extent = (inps.geo_box[0], inps.geo_box[2],
                   inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
 
-        im = ax.imshow(
-            data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-            extent=extent, origin='upper', interpolation='nearest',
-            alpha=inps.transparency, animated=inps.animation, zorder=1)
+        im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+                       extent=extent, origin='upper', interpolation='nearest',
+                       alpha=inps.transparency, animated=inps.animation, zorder=1)
 
         # Scale Bar
         if inps.coord_unit.startswith('deg') and (inps.geo_box[2] - inps.geo_box[0]) > 30:
@@ -506,7 +524,8 @@ def plot_slice(ax, data, metadata, inps):
                 unit=inps.coord_unit,
                 loc=inps.scalebar,
                 labelpad=inps.scalebar_pad,
-                font_size=inps.font_size)
+                font_size=inps.font_size,
+            )
 
         # Lat Lon labels
         if inps.lalo_label:
@@ -549,25 +568,24 @@ def plot_slice(ax, data, metadata, inps):
             dem_len, dem_wid = dem.shape
 
         def format_coord(x, y):
-            msg = f'E={x:.4f}, N={y:.4f}'
+            # lat/lon
+            msg = f'E={x:.{lalo_digit}f}, N={y:.{lalo_digit}f}'
+            # value
             col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
             row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
             if 0 <= col < num_col and 0 <= row < num_row:
                 v = data[row, col]
-                if np.isnan(v) or np.ma.is_masked(v):
-                    msg += ', v=[]'
-                else:
-                    msg += f', v={v:.3f}'
+                msg += ', v=[]' if np.isnan(v) or np.ma.is_masked(v) else f', v={v:.3f}'
                 # DEM
                 if inps.dem_file:
                     dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
                     dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
                     if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
                         h = dem[dem_row, dem_col]
-                        if not np.isnan(h):
-                            msg += f', h={h:.0f}'
+                        msg += ', h=[]' if np.isnan(h) else f', h={h:.1f}'
                 # x/y
-                msg += f', x={col+inps.pix_box[0]:.0f}, y={row+inps.pix_box[1]:.0f}'
+                msg += f', x={col+inps.pix_box[0]:.0f}'
+                msg += f', y={row+inps.pix_box[1]:.0f}'
             return msg
 
         ax.format_coord = format_coord
@@ -585,12 +603,14 @@ def plot_slice(ax, data, metadata, inps):
                 geo_box=None,
                 dem=dem,
                 inps=inps,
-                print_msg=inps.print_msg)
+                print_msg=inps.print_msg,
+            )
 
         # Plot Data
         vprint('plotting Data ...')
+        # extent = (left, right, bottom, top) in data coordinates
         extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-                  inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)   #(left, right, bottom, top) in data coordinates
+                  inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
                        extent=extent, interpolation='nearest', alpha=inps.transparency, zorder=1)
         ax.tick_params(labelsize=inps.font_size)
@@ -648,24 +668,24 @@ def plot_slice(ax, data, metadata, inps):
             geom_file = None
 
         def format_coord(x, y):
+            # y/x
             msg = f'x={x:.1f}, y={y:.1f}'
+            # value
             col = int(np.rint(x - inps.pix_box[0]))
             row = int(np.rint(y - inps.pix_box[1]))
             if 0 <= col < num_col and 0 <= row < num_row:
                 v = data[row, col]
-                if np.isnan(v) or np.ma.is_masked(v):
-                    msg += ', v=[]'
-                else:
-                    msg += f', v={v:.3f}'
+                msg += ', v=[]' if np.isnan(v) or np.ma.is_masked(v) else f', v={v:.3f}'
                 # DEM
                 if inps.dem_file:
                     h = dem[row, col]
-                    if not np.isnan(h):
-                        msg += f', h={h:.0f} m'
+                    msg += ', h=[]' if np.isnan(h) else f', h={h:.1f} m'
                 # lat/lon
                 if geom_file:
-                    msg += f', lat={lats[row, col]:.4f}, lon={lons[row, col]:.4f}'
+                    msg += f', E={lons[row, col]:.{lalo_digit}f}'
+                    msg += f', N={lats[row, col]:.{lalo_digit}f}'
             return msg
+
         ax.format_coord = format_coord
 
 
