@@ -132,13 +132,26 @@ def plot_network(inps):
     # read / calculate
     inps = read_network_info(inps)
 
-    # plot settings
+    ## plot settings
+    # color maps
     inps = check_colormap(inps)
+    # figure size
+    if not inps.fig_size:
+        num_date = len(inps.dateList)
+        if num_date < 100:
+            inps.fig_size = [6, 4]
+        elif num_date < 200:
+            inps.fig_size = [8, 4]
+        else:
+            inps.fig_size = [10, 4]
+
+    # save figure
     ext = '.pdf'
     if os.path.basename(inps.file).startswith('ion'):
         ext = f'_ion{ext}'
     kwargs = dict(bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
 
+    # labels & titles
     if inps.dsetName == 'coherence':
         fig_names = [i+ext for i in ['pbaseHistory', 'coherenceHistory', 'coherenceMatrix', 'network']]
         inps.ds_name = 'Coherence'
@@ -186,7 +199,7 @@ def plot_network(inps):
             print(f'save figure to {fig_names[2]}')
 
         # Fig 3 - Coherence Matrix
-        fig, ax = plt.subplots(figsize=inps.fig_size)
+        fig, ax = plt.subplots(figsize=[max(inps.fig_size), max(inps.fig_size)])
         ax = pp.plot_coherence_matrix(
             ax,
             inps.date12List,

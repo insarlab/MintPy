@@ -472,7 +472,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
 
     if not outFile:
         if print_msg:
-            print('No lookup table info range/lat found in files.')
+            print('No lookup table (longitude or rangeCoord) found in files.')
         return None
 
     # Path Format

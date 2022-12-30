@@ -874,8 +874,8 @@ class timeseriesViewer():
             # fit time func
             m_strs, ts_fit, ts_fit_lim = fit_time_func(
                 model=self.model,
-                date_list=self.date_list,
-                ts_dis=ts_dis,
+                date_list=np.array(self.date_list)[self.ex_flag].tolist(),
+                ts_dis=ts_dis[self.ex_flag],
                 disp_unit=self.disp_unit,
                 G_fit=self.G_fit,
                 seconds=self.seconds)
