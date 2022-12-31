@@ -119,6 +119,11 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
+
     # check: --gps-comp option (not implemented for tsview yet)
     if inps.gps_component:
         msg = f'--gps-comp is not supported for {os.path.basename(__file__)}'
@@ -148,6 +153,11 @@ def cmd_line_parse(iargs=None):
             msg = 'WARNING: --yx/lalo is required for --no-show-img but NOT found! '
             msg += 'Ignore it and continue'
             print(msg)
+
+    # check: --noverbose option
+    # print tsview.py command line if --noverbose
+    if not inps.print_msg:
+        print('tsview.py', ' '.join(inps.argv))
 
     # default: -u / -c / --fig-size options
     inps.disp_unit = inps.disp_unit if inps.disp_unit else 'cm'

@@ -32,11 +32,13 @@ def read_network_info(inps):
         inps.pbaseList = stack_obj.get_perp_baseline_timeseries(dropIfgram=False)
 
         if inps.dsetName in readfile.get_dataset_list(inps.file):
-            inps.cohList = ut.spatial_average(inps.file,
-                                              datasetName=inps.dsetName,
-                                              maskFile=inps.maskFile,
-                                              saveList=True,
-                                              checkAoi=False)[0]
+            inps.cohList = ut.spatial_average(
+                inps.file,
+                datasetName=inps.dsetName,
+                maskFile=inps.maskFile,
+                saveList=True,
+                checkAoi=False,
+            )[0]
         elif inps.dsetName == 'pbase':
             inps.cohList = np.abs(stack_obj.pbaseIfgram).tolist()
 
@@ -129,36 +131,42 @@ def plot_network(inps):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
-    # read / calculate
+    ##---------- read / calculate
     inps = read_network_info(inps)
 
-    # plot settings
+    ##---------- plot settings
+    # color maps
     inps = check_colormap(inps)
-    ext = '.pdf'
-    if os.path.basename(inps.file).startswith('ion'):
-        ext = f'_ion{ext}'
+
+    # figure size
+    if not inps.fig_size:
+        num_date = len(inps.dateList)
+        if   num_date <= 100:  inps.fig_size = [ 6, 4]
+        elif num_date <= 200:  inps.fig_size = [ 8, 4]
+        elif num_date <= 300:  inps.fig_size = [10, 4]
+        else:                  inps.fig_size = [12, 4]
+
+    # save figure
     kwargs = dict(bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
 
-    if inps.dsetName == 'coherence':
-        fig_names = [i+ext for i in ['pbaseHistory', 'coherenceHistory', 'coherenceMatrix', 'network']]
-        inps.ds_name = 'Coherence'
-        inps.cbar_label = 'Average Spatial Coherence'
+    # labels in y-axis and colorbar
+    inps.ds_name, inps.cbar_label = {
+        'coherence' : ['Coherence',     'Average Spatial Coherence'],
+        'offsetSNR' : ['SNR',           'Average Spatial SNR'],
+        'tbase'     : ['Temp Baseline', 'Temp Baseline [day]'],
+        'pbase'     : ['Perp Baseline', 'Perp Baseline [m]'],
+    }[inps.dsetName]
 
-    elif inps.dsetName == 'offsetSNR':
-        fig_names = [i+ext for i in ['pbaseHistory', 'SNRHistory', 'SNRMatrix', 'network']]
-        inps.ds_name = 'SNR'
-        inps.cbar_label = 'Average Spatial SNR'
+    # figure names
+    ext = 'Ion.pdf' if os.path.basename(inps.file).startswith('ion') else '.pdf'
+    fig_names = {
+        'coherence' : [i+ext for i in ['pbaseHistory',  'coherenceHistory', 'coherenceMatrix', 'network']],
+        'offsetSNR' : [i+ext for i in ['pbaseHistory',        'SNRHistory',       'SNRMatrix', 'network']],
+        'tbase'     : [i+ext for i in ['pbaseHistory',      'tbaseHistory',     'tbaseMatrix', 'network']],
+        'pbase'     : [i+ext for i in ['pbaseHistory', 'pbaseRangeHistory',     'pbaseMatrix', 'network']],
+    }[inps.dsetName]
 
-    elif inps.dsetName == 'tbase':
-        fig_names = [i+ext for i in ['pbaseHistory', 'tbaseHistory', 'tbaseMatrix', 'network']]
-        inps.ds_name = 'Temporal Baseline'
-        inps.cbar_label = 'Temporal Baseline [day]'
-
-    elif inps.dsetName == 'pbase':
-        fig_names = [i+ext for i in ['pbaseHistory', 'pbaseRangeHistory', 'pbaseMatrix', 'network']]
-        inps.ds_name = 'Perp Baseline'
-        inps.cbar_label = 'Perp Baseline [m]'
-
+    ##---------- plot
     # Fig 1 - Baseline History
     fig, ax = plt.subplots(figsize=inps.fig_size)
     ax = pp.plot_perp_baseline_hist(
@@ -186,7 +194,7 @@ def plot_network(inps):
             print(f'save figure to {fig_names[2]}')
 
         # Fig 3 - Coherence Matrix
-        fig, ax = plt.subplots(figsize=inps.fig_size)
+        fig, ax = plt.subplots(figsize=[max(inps.fig_size), max(inps.fig_size)])
         ax = pp.plot_coherence_matrix(
             ax,
             inps.date12List,

@@ -43,7 +43,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
 ------------------ level 3 --------------------
     /objects
         resample      (utils/{utils0, ptime, readfile})
-        coord         (utils/{utils0, utils1, readfile})
+        coord         (constants, utils/{utils0, utils1, readfile})
     /simulation
         iono          (utils/{utils0, readfile})
     /utils

@@ -70,7 +70,7 @@ def create_parser(subparsers=None):
     color.add_argument('-c', '--colormap', dest='cmap_name', default='RdBu_truncate',
                        help='colormap name for the network display. Default: RdBu_truncate')
     color.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.2, 0.4, 1.0],
-                       help='normalized start/jump/end value for truncated colormap. Default: 0.2 0.4 1.0')
+                       help='normalized start/jump/end value for truncated colormap (default: %(default)s).')
 
     # Figure  Setting
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
@@ -81,14 +81,14 @@ def create_parser(subparsers=None):
     fig.add_argument('--mc', '--markercolor', dest='markercolor',
                      default='orange', help='marker color')
     fig.add_argument('--ms', '--markersize', dest='markersize',
-                     type=int, default=12, help='marker size in points')
+                     type=int, default=8, help='marker size in points (default: %(default)s).')
     fig.add_argument('--every-year', dest='every_year', type=int,
                      default=1, help='number of years per major tick on x-axis')
 
-    fig.add_argument('--dpi', dest='fig_dpi', type=int, default=150,
+    fig.add_argument('--dpi', dest='fig_dpi', type=int, default=1200,
                      help='DPI - dot per inch - for display/write')
     fig.add_argument('--figsize', dest='fig_size', type=float, nargs=2,
-                     help='figure size in inches - width and length')
+                     help='figure size in inches - width and length.')
     fig.add_argument('--notitle', dest='disp_title', action='store_false',
                      help='Do not display figure title.')
     fig.add_argument('--number', dest='number', type=str,

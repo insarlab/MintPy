@@ -11,6 +11,7 @@ from argparse import Namespace
 
 import numpy as np
 
+from mintpy.constants import EARTH_RADIUS
 from mintpy.utils import readfile, utils0 as ut0, utils1 as ut1
 
 
@@ -53,10 +54,7 @@ class coordinate:
         self.lut_x = None
 
     def open(self):
-        try:
-            self.earth_radius = float(self.src_metadata['EARTH_RADIUS'])
-        except:
-            self.earth_radius = 6371.0e3
+        self.earth_radius = float(self.src_metadata.get('EARTH_RADIUS', EARTH_RADIUS))
 
         if 'Y_FIRST' in self.src_metadata.keys():
             self.geocoded = True
@@ -192,20 +190,10 @@ class coordinate:
 
 
     def read_lookup_table(self, print_msg=True):
-        if 'Y_FIRST' in self.lut_metadata.keys():
-            self.lut_y = readfile.read(self.lookup_file[0],
-                                       datasetName='azimuthCoord',
-                                       print_msg=print_msg)[0]
-            self.lut_x = readfile.read(self.lookup_file[1],
-                                       datasetName='rangeCoord',
-                                       print_msg=print_msg)[0]
-        else:
-            self.lut_y = readfile.read(self.lookup_file[0],
-                                       datasetName='latitude',
-                                       print_msg=print_msg)[0]
-            self.lut_x = readfile.read(self.lookup_file[1],
-                                       datasetName='longitude',
-                                       print_msg=print_msg)[0]
+        ds_name_x = 'rangeCoord' if 'Y_FIRST' in self.lut_metadata.keys() else 'longitude'
+        ds_name_y = 'azimuthCoord' if 'Y_FIRST' in self.lut_metadata.keys() else 'latitude'
+        self.lut_y = readfile.read(self.lookup_file[0], datasetName=ds_name_y, print_msg=print_msg)[0]
+        self.lut_x = readfile.read(self.lookup_file[1], datasetName=ds_name_x, print_msg=print_msg)[0]
         return self.lut_y, self.lut_x
 
     def _read_geo_lut_metadata(self):
@@ -314,18 +302,22 @@ class coordinate:
 
             # search the overlap area of buffer in x/y direction and use the cross center
             if lat.size == 1:
-                az, rg = self._get_lookup_row_col(lat, lon,
-                                                  y_factor*az_step_deg,
-                                                  x_factor*rg_step_deg,
-                                                  geo_coord=True,
-                                                  debug_mode=debug_mode)
+                az, rg = self._get_lookup_row_col(
+                    lat, lon,
+                    y_factor*az_step_deg,
+                    x_factor*rg_step_deg,
+                    geo_coord=True,
+                    debug_mode=debug_mode,
+                )
             else:
                 for i in range(rg.size):
-                    az[i], rg[i] = self._get_lookup_row_col(lat[i], lon[i],
-                                                            y_factor*az_step_deg,
-                                                            x_factor*rg_step_deg,
-                                                            geo_coord=True,
-                                                            debug_mode=debug_mode)
+                    az[i], rg[i] = self._get_lookup_row_col(
+                        lat[i], lon[i],
+                        y_factor*az_step_deg,
+                        x_factor*rg_step_deg,
+                        geo_coord=True,
+                        debug_mode=debug_mode,
+                    )
             az = np.floor(az).astype(int)
             rg = np.floor(rg).astype(int)
 
@@ -378,14 +370,20 @@ class coordinate:
             lut_row = np.zeros(rg.shape)
             lut_col = np.zeros(rg.shape)
             if rg.size == 1:
-                lut_row, lut_col = self._get_lookup_row_col(az, rg, y_factor, x_factor,
-                                                            debug_mode=debug_mode)
+                lut_row, lut_col = self._get_lookup_row_col(
+                    az, rg,
+                    y_factor,
+                    x_factor,
+                    debug_mode=debug_mode,
+                )
             else:
                 for i in range(rg.size):
-                    (lut_row[i],
-                     lut_col[i]) = self._get_lookup_row_col(az[i], rg[i],
-                                                            y_factor, x_factor,
-                                                            debug_mode=debug_mode)
+                    lut_row[i], lut_col[i] = self._get_lookup_row_col(
+                        az[i], rg[i],
+                        y_factor,
+                        x_factor,
+                        debug_mode=debug_mode,
+                    )
             lat = (lut_row + 0.5) * lut.lat_step_deg + lut.lat0
             lon = (lut_col + 0.5) * lut.lon_step_deg + lut.lon0
             lat_resid = abs(y_factor * lut.lat_step_deg)
@@ -436,7 +434,7 @@ class coordinate:
         x = np.array([pix_box[0], pix_box[2], pix_box[0], pix_box[2]])
         y = np.array([pix_box[1], pix_box[1], pix_box[3], pix_box[3]])
         lat, lon, lat_res, lon_res = self.radar2geo(y, x, print_msg=print_msg)
-        buf = 2*(np.max(np.abs([lat_res, lon_res])))
+        buf = 2 * np.max(np.abs([lat_res, lon_res]))
         geo_box = (np.min(lon) - buf, np.max(lat) + buf,
                    np.max(lon) + buf, np.min(lat) - buf)
         return geo_box
