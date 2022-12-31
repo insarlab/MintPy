@@ -131,7 +131,7 @@ def plot_network(inps):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
-    # read / calculate
+    ##---------- read / calculate
     inps = read_network_info(inps)
 
     ##---------- plot settings
@@ -149,7 +149,7 @@ def plot_network(inps):
     # save figure
     kwargs = dict(bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
 
-    # labels & names
+    # labels in y-axis and colorbar
     inps.ds_name, inps.cbar_label = {
         'coherence' : ['Coherence',     'Average Spatial Coherence'],
         'offsetSNR' : ['SNR',           'Average Spatial SNR'],
@@ -157,7 +157,8 @@ def plot_network(inps):
         'pbase'     : ['Perp Baseline', 'Perp Baseline [m]'],
     }[inps.dsetName]
 
-    ext = f'Ion.pdf' if os.path.basename(inps.file).startswith('ion') else '.pdf'
+    # figure names
+    ext = 'Ion.pdf' if os.path.basename(inps.file).startswith('ion') else '.pdf'
     fig_names = {
         'coherence' : [i+ext for i in ['pbaseHistory',  'coherenceHistory', 'coherenceMatrix', 'network']],
         'offsetSNR' : [i+ext for i in ['pbaseHistory',        'SNRHistory',       'SNRMatrix', 'network']],
