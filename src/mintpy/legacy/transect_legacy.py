@@ -12,7 +12,7 @@ import sys
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.ticker import FormatStrFormatter, MultipleLocator
+from scipy import io as sio, ndimage
 
 from mintpy.utils import readfile
 
@@ -286,9 +286,9 @@ def get_transect(z, x0, y0, x1, y1, interpolation='nearest'):
 
     ## Extract the value along the line
     if interpolation.lower() == 'cubic':
-        zi = scipy.ndimage.map_coordinates(z, np.vstack((x, y)))
+        zi = ndimage.map_coordinates(z, np.vstack((x, y)))
     elif interpolation.lower() == 'bilinear':
-        zi = scipy.ndimage.map_coordinates(z, np.vstack((x, y)), order=2)
+        zi = ndimage.map_coordinates(z, np.vstack((x, y)), order=2)
     else:
         zi = z[np.rint(y).astype(np.int), np.rint(x).astype(np.int)]     # nearest neighbour
 
@@ -884,7 +884,6 @@ def main(argv):
     ############################################################################
     # save the profile data:
     if save_to_mat in ['ON', 'on', 'On', 'yes', 'y', 'YES', 'Yes']:
-        import scipy.io as sio
         matFile = 'transect.mat'
         dataset = {}
         dataset['datavec'] = transect

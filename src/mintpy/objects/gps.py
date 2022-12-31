@@ -92,9 +92,9 @@ def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
     """
     dates = np.array(sorted(list(set(dates1) & set(dates2))))
     bases = np.zeros(dates.shape, dtype=np.float64)
-    for i in range(len(dates)):
-        idx1 = np.where(dates1 == dates[i])[0][0]
-        idx2 = np.where(dates2 == dates[i])[0][0]
+    for i, date_str in enumerate(dates):
+        idx1 = np.where(dates1 == date_str)[0][0]
+        idx2 = np.where(dates2 == date_str)[0][0]
         basei = ((pos_x1[idx1] - pos_x2[idx2]) ** 2
                + (pos_y1[idx1] - pos_y2[idx2]) ** 2
                + (pos_z1[idx1] - pos_z2[idx2]) ** 2) ** 0.5

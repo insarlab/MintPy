@@ -12,7 +12,7 @@ import sys
 
 import numpy as np
 
-from mintpy.utils import arg_utils, ptime, readfile, utils as ut, writefile
+from mintpy.utils import arg_utils, readfile, utils as ut, writefile
 
 DATA_TYPE_STR2OBJ = {
     "bool"       : np.bool_,
@@ -108,7 +108,6 @@ def main(iargs=None):
         # add "date" dataset for timeseries
         if inps.dset_name and inps.dset_name == 'timeseries':
             date_list = [os.path.basename(os.path.dirname(x)) for x in inps.file]
-            date_str_format = ptime.get_date_str_format(date_list[0])
             dsDict['date'] = np.array(date_list, dtype=np.string_)
 
     # metadata

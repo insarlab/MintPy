@@ -41,7 +41,7 @@ def read_init_info(inps):
         inps.file_label = []
         for fname in inps.file:
             fbase = os.path.splitext(os.path.basename(fname))[0]
-            fbase = fbase.replace('timeseries', '')
+            fbase = fbase.replace('timeseries', 'TS')
             inps.file_label.append(fbase)
 
     # default mask file
@@ -367,7 +367,7 @@ def plot_ts_errorbar(ax, dis_ts, inps, ppar):
 
     kwargs = dict(
         fmt='-o', ms=ppar.ms, lw=0, alpha=1,
-        elinewidth=inps.edge_width, ecolor='black',
+        elinewidth=inps.edge_width,
         capsize=ppar.ms*0.5, mew=inps.edge_width,
     )
 
@@ -382,6 +382,7 @@ def plot_ts_errorbar(ax, dis_ts, inps, ppar):
             inps.ex_dates, ex_d_ts,
             yerr=inps.ex_error_ts,
             color='gray',
+            ecolor='gray',
             **kwargs,
         )
 
@@ -391,10 +392,13 @@ def plot_ts_errorbar(ax, dis_ts, inps, ppar):
         yerr=inps.error_ts,
         label=ppar.label,
         color=ppar.mfc,
+        ecolor=ppar.mfc,
         **kwargs
     )
 
-    return ax
+    handles = ax.get_legend_handles_labels()[0]
+
+    return ax, handles[-1]
 
 
 def plot_ts_scatter(ax, dis_ts, inps, ppar):
@@ -414,8 +418,8 @@ def plot_ts_scatter(ax, dis_ts, inps, ppar):
         ax.plot(inps.ex_dates, ex_d_ts, color='gray', lw=0, **kwargs)
 
     # Plot kept dates
-    ax.plot(dates, d_ts, color=ppar.mfc, label=ppar.label, lw=inps.linewidth, **kwargs)
-    return ax
+    handle, = ax.plot(dates, d_ts, color=ppar.mfc, label=ppar.label, lw=inps.linewidth, **kwargs)
+    return ax, handle
 
 
 def plot_ts_fit(ax, ts_fit, inps, ppar, m_strs=None, ts_fit_lim=None):
@@ -451,7 +455,12 @@ def plot_ts_fit(ax, ts_fit, inps, ppar, m_strs=None, ts_fit_lim=None):
         handles += [patches.Rectangle((0, 0), 1, 1, fc="white", ec="white", lw=0, alpha=0)] * len(m_strs)
         labels += [re.sub(' +', ' ', x) for x in m_strs]
 
-    if len(labels) > 0:
+    # do not print model parameters for multi files [temporarily]
+    # solutions:
+    # 1. plot multiple legends, need to find out how to layout them, otherwise they would overlap on top of each other
+    #    link: https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#multiple-legends-on-the-same-axes
+    # 2. update the same legend, by saving the handles and labels for all files
+    if len(labels) > 0 and len(inps.file) == 1:
         ax.legend(handles, labels, **kwargs)
 
     return ax
@@ -876,6 +885,7 @@ class timeseriesViewer():
         # get local Y/X coord for the subsetted and multilooked 3D data cube
         (y, x) = subset_and_multilook_yx(yx, self.pix_box, self.multilook_num)
 
+        handles, labels = [], []
         for i in range(num_file-1, -1, -1):
             # get displacement data
             ts_dis = self.ts_data[i][:, y, x]
@@ -902,12 +912,14 @@ class timeseriesViewer():
             if not np.all(np.isnan(ts_dis)):
                 ppar = argparse.Namespace()
                 ppar.label = self.file_label[i]
-                ppar.mfc = pp.mplColors[num_file - 1 - i] if self.mask[y, x] != 0 else 'gray'
+                ppar.mfc = f'C{num_file-1-i}' if self.mask[y, x] != 0 else 'gray'
                 ppar.ms = self.marker_size - ms_step * (num_file - 1 - i)
                 # use smaller marker size for very long time series
-                if self.num_date > 1e3:
-                    ppar.ms /= 10
-                self.ts_plot_func(ax, ts_dis, self, ppar)
+                ppar.ms /= 10 if self.num_date > 1e3 else 1
+
+                handle = self.ts_plot_func(ax, ts_dis, self, ppar)[1]
+                handles.append(handle)
+                labels.append(ppar.label)
 
                 # plot model prediction
                 if self.plot_model:
@@ -943,7 +955,7 @@ class timeseriesViewer():
 
         # legend
         if len(self.ts_data) > 1:
-            ax.legend()
+            ax.legend(handles, labels)
 
         # Print to terminal
         vprint('\n---------------------------------------')

@@ -182,7 +182,7 @@ def incidence_angle_ground2iono(inc_angle, iono_height=450e3):
     Returns:    inc_angle_iono - float/np.ndarray, incidence angle on the iono shell in degrees
     """
     # ignore nodata in inc_angle
-    if type(inc_angle) is np.ndarray:
+    if isinstance(inc_angle, np.ndarray):
         inc_angle[inc_angle == 0] = np.nan
 
     # deg -> rad & copy to avoid changing input variable

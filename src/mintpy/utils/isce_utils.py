@@ -74,14 +74,13 @@ def get_processor(meta_file):
 
 
 #####################################  metadata  #######################################
-def load_product(xmlname):
+def load_product(xml_name):
     """Load the product using Product Manager."""
     import isce
-    from iscesys.Component.ProductManager import ProductManager as PM
-    pm = PM()
+    from iscesys.Component.ProductManager import ProductManager
+    pm = ProductManager()
     pm.configure()
-    obj = pm.loadProduct(xmlname)
-    return obj
+    return pm.loadProduct(xml_name)
 
 
 def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=True):

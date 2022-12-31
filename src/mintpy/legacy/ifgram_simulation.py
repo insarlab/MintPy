@@ -8,8 +8,7 @@
 
 import argparse
 import random
-import sys
-from datetime import datetime as dt
+from datetime import datetime
 
 import h5py
 import numpy as np
@@ -117,10 +116,10 @@ def main(iargs=None):
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
         # Get temporal baseline in years
-        t1 = dt.strptime(m_dates[i], "%Y%m%d")
-        t2 = dt.strptime(s_dates[i], "%Y%m%d")
+        t1 = datetime.strptime(m_dates[i], "%Y%m%d")
+        t2 = datetime.strptime(s_dates[i], "%Y%m%d")
         dt = (t2 - t1)
-        dt = float(dt.days) / 365.25
+        dt = float(datetime.days) / 365.25
 
         # Simuated interferograms with unwrap error
         unw = velocity*dt*range2phase
@@ -132,7 +131,7 @@ def main(iargs=None):
             print(ifgram)
 
         gg = group.create_group(ifgram)
-        dset = gg.create_dataset(ifgram, data=unw[y0:y1, x0:x1])
+        gg.create_dataset(ifgram, data=unw[y0:y1, x0:x1])
 
         for key, value in h5[k][ifgram].attrs.items():
             gg.attrs[key] = value

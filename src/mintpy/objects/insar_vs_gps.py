@@ -268,14 +268,11 @@ class insar_vs_gps:
                     site['gps_dis']-offset,
                     yerr=site['gps_std']*3.,
                     ms=marker_size*0.2, lw=0, alpha=1., fmt='-o',
-                    elinewidth=edge_width*0.5, ecolor=pp.mplColors[0],
+                    elinewidth=edge_width*0.5, ecolor='C0',
                     capsize=marker_size*0.25, markeredgewidth=edge_width*0.5,
                     label='GPS', zorder=1)
         # InSAR
-        if site['temp_coh'] < 0.7:
-            ecolor = 'gray'
-        else:
-            ecolor = pp.mplColors[1]
+        ecolor = 'gray' if site['temp_coh'] < 0.7 else 'C1'
         insar_dis_name = [i for i in site.keys() if i.startswith('insar_dis')][0]
         ax.scatter(site['insar_datetime'],
                    site[insar_dis_name]-offset,

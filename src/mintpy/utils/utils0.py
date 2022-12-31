@@ -815,7 +815,7 @@ def get_largest_conn_component(mask_in, min_num_pixel=1e4, display=False):
     max_label = np.argmax(np.bincount(labels.flatten())[1:]) + 1
     mask_out = labels == max_label
     if display:
-        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=[15, 5])
+        _, ax = plt.subplots(nrows=1, ncols=3, figsize=[15, 5])
         ax[0].imshow(mask_in)
         ax[1].imshow(mask_out)
         ax[2].imshow(mask_in ^ mask_out)

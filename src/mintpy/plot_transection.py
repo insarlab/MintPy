@@ -218,7 +218,7 @@ class transectionViewer():
             self.ax_txn.scatter(
                 x=(txn['distance'] - min_dist) * dist_scale,
                 y=txn['value'] - self.offset[i],
-                c=pp.mplColors[i],
+                c=f'C{i}',
                 s=self.marker_size**2)
 
         y0, x0, y1, x1 = start_yx + end_yx

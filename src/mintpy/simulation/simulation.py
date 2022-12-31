@@ -84,7 +84,7 @@ def sim_variable_timeseries(num_date=100, display=False):
     ts_sim -= ts_sim[0]
 
     if display:
-        fig, ax = plt.subplots(figsize=[6, 3])
+        _, ax = plt.subplots(figsize=[6, 3])
         ax.plot(tbase, ts_sim * 100., '--')
         ax.set_xlabel('time [days]', fontsize=font_size)
         ax.set_ylabel('displacement [cm]', fontsize=font_size)
@@ -255,7 +255,7 @@ def check_board(water_mask, grid_step=100, scale=1., display=True):
     if display:
         fig, ax = plt.subplots()
         im = ax.imshow(mask)
-        plt.colorbar(im)
+        fig.colorbar(im)
         plt.show()
 
     return mask

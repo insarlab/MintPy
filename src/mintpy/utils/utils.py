@@ -380,9 +380,9 @@ def transect_lines(z, atr, lines):
     start_distance = 0
     transect['start_distance'] = []
 
-    for i in range(len(lines)):
+    for i, line in enumerate(lines):
         # read segment data
-        start_lalo, end_lalo = lines[i][0], lines[i][1]
+        start_lalo, end_lalo = line[0], line[1]
         if 'Y_FIRST' in atr.keys():
             seg = transect_lalo(z, atr, start_lalo, end_lalo)
         else:

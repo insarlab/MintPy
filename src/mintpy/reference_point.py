@@ -227,7 +227,7 @@ def select_max_coherence_yx(coh_file, mask=None, min_coh=0.85):
     """Select pixel with coherence > min_coh in random"""
     print(f'random select pixel with coherence > {min_coh}')
     print('\tbased on coherence file: '+coh_file)
-    coh, coh_atr = readfile.read(coh_file)
+    coh = readfile.read(coh_file)[0]
     if mask is not None:
         coh[mask == 0] = 0.0
     coh_mask = coh >= min_coh

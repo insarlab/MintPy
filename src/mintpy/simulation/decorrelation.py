@@ -262,7 +262,7 @@ def sample_decorrelation_phase(coherence, L, size=1, phi_num=1000, display=False
     phase = phi_dist.rvs(size=size)
 
     if display:
-        fig, ax = plt.subplots(figsize=[5,3])
+        _, ax = plt.subplots(figsize=[5,3])
         ax.hist(phase, bins=50, density=True, label='Sample\nHistogram\n(norm)')
         ax.plot(phi, phi_dist.pdf(phi), label='PDF')
         ax.plot(phi, phi_dist.cdf(phi), label='CDF')

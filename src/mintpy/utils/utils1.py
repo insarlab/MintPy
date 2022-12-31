@@ -405,10 +405,9 @@ def get_file_list(file_list, abspath=False, coord=None):
     # Get rid of None element
     file_list = [x for x in file_list if x is not None]
     file_list_out = []
-    for i in range(len(file_list)):
-        file0 = file_list[i]
-        file_list0 = glob.glob(file0)
-        file_list_out += sorted(list(set(file_list0) - set(file_list_out)))
+    for fname in file_list:
+        fnames = glob.glob(fname)
+        file_list_out += sorted(list(set(fnames) - set(file_list_out)))
 
     if abspath:
         file_list_out = [os.path.abspath(i) for i in file_list_out]
@@ -632,10 +631,8 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
         length_list.append(atr['LENGTH'])
 
     # Mode of Width and Length
-    if not mode_width:
-        mode_width = most_common(width_list)
-    if not mode_length:
-        mode_length = most_common(length_list)
+    mode_width = mode_width if mode_width else most_common(width_list)
+    mode_length = mode_length if mode_length else most_common(length_list)
 
     # Update Input List
     fname_list_out = list(fname_list)
@@ -647,11 +644,10 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
         print('The width and length of the majority of files are: %s, %s' %
               (mode_width, mode_length))
         print('But the following files have different dimensions and thus will not be loaded:')
-        for i in range(len(fname_list)):
-            if width_list[i] != mode_width or length_list[i] != mode_length:
-                print('%s    width: %s  length: %s' %
-                      (fname_list[i], width_list[i], length_list[i]))
-                fname_list_out.remove(fname_list[i])
+        for fname, length, width in zip(fname_list, length_list, width_list):
+            if width != mode_width or length != mode_length:
+                print(f'{fname}    width: {width}  length: {length}')
+                fname_list_out.remove(fname)
         print('\nNumber of files left: '+str(len(fname_list_out)))
         print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
