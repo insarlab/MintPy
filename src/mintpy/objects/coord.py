@@ -90,15 +90,15 @@ class coordinate:
         # convert coordinates
         coord_type = coord_type.lower()
         coord_out = []
-        for i in range(len(coord_in)):
+        for coord_i in coord_in:
             # plus 0.01 to be more robust in practice
             if coord_type.startswith('lat'):
-                coord = int(np.floor((coord_in[i] - self.lat0) / self.lat_step + 0.01))
+                coord_o = int(np.floor((coord_i - self.lat0) / self.lat_step + 0.01))
             elif coord_type.startswith('lon'):
-                coord = int(np.floor((coord_in[i] - self.lon0) / self.lon_step + 0.01))
+                coord_o = int(np.floor((coord_i - self.lon0) / self.lon_step + 0.01))
             else:
                 raise ValueError('Unrecognized coordinate type: '+coord_type)
-            coord_out.append(coord)
+            coord_out.append(coord_o)
 
         # output format
         if len(coord_out) == 1:

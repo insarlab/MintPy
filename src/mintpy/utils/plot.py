@@ -33,16 +33,18 @@ max_figsize_height = 8.0       # max figure size in vertical direction in inch
 
 # default color names in matplotlib
 # ref: https://matplotlib.org/users/dflt_style_changes.html
-mplColors = ['#1f77b4',
-             '#ff7f0e',
-             '#2ca02c',
-             '#d62728',
-             '#9467bd',
-             '#8c564b',
-             '#e377c2',
-             '#7f7f7f',
-             '#bcbd22',
-             '#17becf']
+MPL_COLORS = [
+    '#1f77b4',  # C0
+    '#ff7f0e',  # C1
+    '#2ca02c',  # ...
+    '#d62728',
+    '#9467bd',
+    '#8c564b',
+    '#e377c2',
+    '#7f7f7f',
+    '#bcbd22',
+    '#17becf',
+]
 
 
 ########################################### Parser utilities ##############################################

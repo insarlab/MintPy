@@ -11,7 +11,6 @@ import itertools
 import os
 import sys
 
-import h5py
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
@@ -567,20 +566,18 @@ def threshold_coherence_based_mst(date12_list, coh_list):
     [s_idx_list, m_idx_list] = [date_idx_array.tolist()
                                 for date_idx_array in sparse.find(mst_mat_csr)[0:2]]
     mst_date12_list = []
-    for i in range(len(m_idx_list)):
-        idx = sorted([m_idx_list[i], s_idx_list[i]])
+    for m_idx, s_idx in zip(m_idx_list, s_idx_list):
+        idx = sorted([m_idx, s_idx])
         date12 = date6_list[idx[0]]+'-'+date6_list[idx[1]]
         mst_date12_list.append(date12)
     return mst_date12_list
 
 
 def pair_sort(pairs):
-    for idx in range(len(pairs)):
-        if pairs[idx][0] > pairs[idx][1]:
-            index1 = pairs[idx][1]
-            index2 = pairs[idx][0]
-            pairs[idx][0] = index1
-            pairs[idx][1] = index2
+    for i, pair in enumerate(pairs):
+        if pair[0] > pair[1]:
+            pairs[i][0] = pair[1]
+            pairs[i][1] = pair[0]
     pairs = sorted(pairs)
     return pairs
 

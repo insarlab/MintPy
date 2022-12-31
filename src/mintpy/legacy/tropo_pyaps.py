@@ -6,19 +6,17 @@
 ############################################################
 
 
+import argparse
 import os
 import re
-import subprocess
 import sys
+
+import numpy as np
 
 try:
     import pyaps as pa
 except ImportError:
     raise ImportError('Cannot import pyaps!')
-
-import argparse
-
-import numpy as np
 
 from mintpy.objects import geometry, timeseries
 from mintpy.utils import ptime, readfile, utils as ut, writefile
@@ -511,9 +509,11 @@ def main(iargs=None):
         get_delay_timeseries(inps, atr)
 
     if atr and atr['FILE_TYPE'] == 'timeseries':
-        inps.outfile = correct_timeseries(inps.timeseries_file,
-                                          inps.trop_file,
-                                          out_file=inps.outfile)
+        inps.outfile = correct_timeseries(
+            inps.timeseries_file,
+            inps.trop_file,
+            inps.outfile,
+        )
     else:
         print('No input timeseries file, skip correcting tropospheric delays.')
 

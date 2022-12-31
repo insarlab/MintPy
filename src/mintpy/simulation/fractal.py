@@ -174,7 +174,7 @@ def get_power_spectral_density(data, resolution=60., freq0=1e-3, display=False, 
 
     # calculate slopes from spectrum
     p0, beta = power_slope(freq, psd1d, freq0=freq0)
-    D2 = (7. - beta + 1.) / 2.
+    # D2 = (7. - beta + 1.) / 2.
 
     if display:
         ax = axs[1]

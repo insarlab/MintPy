@@ -287,9 +287,8 @@ def skip_files_with_inconsistent_size(dsPathDict, pix_box=None, dsName='unwrapPh
         dsNames = list(dsPathDict.keys())
         date12_list = [atr['DATE12'] for atr in atr_list]
         num_drop = 0
-        for i in range(len(date12_list)):
-            if length_list[i] != common_length or width_list[i] != common_width:
-                date12 = date12_list[i]
+        for date12, length, width in zip(date12_list, length_list, width_list):
+            if length != common_length or width != common_width:
                 dates = ptime.yyyymmdd(date12.split('-'))
                 # update file list for all datasets
                 for dsName in dsNames:
@@ -297,7 +296,7 @@ def skip_files_with_inconsistent_size(dsPathDict, pix_box=None, dsName='unwrapPh
                               if all(d[2:8] in i for d in dates)]
                     if len(fnames) > 0:
                         dsPathDict[dsName].remove(fnames[0])
-                msg += f'\n\t{date12}\t({length_list[i]}, {width_list[i]})'
+                msg += f'\n\t{date12}\t({length}, {width})'
                 num_drop += 1
 
         msg += '\n'+'-'*30
