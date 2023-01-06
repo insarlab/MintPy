@@ -184,7 +184,7 @@ def interp_3d_maps(tec_maps, mins, lats, lons, utc_min, lat, lon, interp_method=
             tec_val = interpolate.interpn(
                 points=(mins, np.flip(lats), lons),
                 values=np.flip(tec_maps, axis=1),
-                xi=(utc_min, lat, lon),
+                xi=np.array([utc_min, lat, lon]),
                 method='linear',
             )
 
