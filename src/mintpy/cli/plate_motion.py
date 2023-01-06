@@ -58,8 +58,8 @@ REFERENCE = """reference:
 
 EXAMPLE = """example:
   # Use build-in plate motion model of Table 1 from Altamimi et al. (2017)
-  plate_motion.py -g inputs/geometryGeo.h5   --plate ARAB
-  plate_motion.py -g inputs/geometryRadar.h5 --plate EURA
+  plate_motion.py -g inputs/geometryGeo.h5   --plate Arabia
+  plate_motion.py -g inputs/geometryRadar.h5 --plate Eurasia
 
   # Cartesian form of Euler pole rotation in [wx, wy, wz] in unit of mas/year [milli arc second per year]
   # e.g., Arabia plate in ITRF14-PMM (Table 1 in Altamimi et al., 2017)
