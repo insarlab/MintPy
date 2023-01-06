@@ -17,15 +17,15 @@
 #  Goudarzi, M. A., Cocard, M. & Santerre, R. (2014), EPC: Matlab software to estimate Euler
 #    pole parameters, GPS Solutions, 18, 153-162, doi: 10.1007/s10291-013-0354-4
 
-import os
 import collections
+import os
+
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import matplotlib.pyplot as plt
 import numpy as np
 import pyproj
 from shapely import geometry
-
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 
 from mintpy.constants import EARTH_RADIUS
 
@@ -463,23 +463,24 @@ def plot_map(polygon, plate_obj, center_lat=None, center_lon=None, qscale=100, u
     Returns:
         Draw a map and save it
     """
-    if 'c_ocean'     not in kwargs.keys():   kwargs['c_ocean']       = 'w'
-    if 'c_land'      not in kwargs.keys():   kwargs['c_land']        = 'lightgray'
-    if 'c_plate'     not in kwargs.keys():   kwargs['c_plate']       = 'mistyrose'
-    if 'lw_coast'    not in kwargs.keys():   kwargs['lw_coast']      = 0.5
-    if 'lw_pbond'    not in kwargs.keys():   kwargs['lw_pbond']      = 1
-    if 'lc_pbond'    not in kwargs.keys():   kwargs['lc_pbond']      = 'coral'
-    if 'alpha_plate' not in kwargs.keys():   kwargs['alpha_plate']   = 0.4
-    if 'grid_ls'     not in kwargs.keys():   kwargs['grid_ls']       = '--'
-    if 'grid_lw'     not in kwargs.keys():   kwargs['grid_lw']       = 0.3
-    if 'grid_lc'     not in kwargs.keys():   kwargs['grid_lc']       = 'gray'
-    if 'Nq'          not in kwargs.keys():   kwargs['Nq']            = 10
-    if 'pts'         not in kwargs.keys():   kwargs['pts']           = None
-    if 'pts_marker'  not in kwargs.keys():   kwargs['pts_marker']    = '^'
-    if 'pts_ms'      not in kwargs.keys():   kwargs['pts_ms']        = 20
-    if 'pts_mfc'     not in kwargs.keys():   kwargs['pts_mfc']       = 'r'
-    if 'pts_mec'     not in kwargs.keys():   kwargs['pts_mec']       = 'k'
-    if 'pts_mew'     not in kwargs.keys():   kwargs['pts_mew']       = 2
+    kwargs['c_ocean']       = kwargs.get('c_ocean',     'w')
+    kwargs['c_land']        = kwargs.get('c_land',      'lightgray')
+    kwargs['c_plate']       = kwargs.get('c_plate',     'mistyrose')
+    kwargs['lw_coast']      = kwargs.get('lw_coast',    0.5)
+    kwargs['lw_pbond']      = kwargs.get('lw_pbond',    1)
+    kwargs['lc_pbond']      = kwargs.get('lc_pbond',    'coral')
+    kwargs['alpha_plate']   = kwargs.get('alpha_plate', 0.4)
+    kwargs['grid_ls']       = kwargs.get('grid_ls',     '--')
+    kwargs['grid_lw']       = kwargs.get('grid_lw',     0.3)
+    kwargs['grid_lc']       = kwargs.get('grid_lc',     'gray')
+    kwargs['Nq']            = kwargs.get('Nq', 10)
+    kwargs['pts']           = kwargs.get('pts',         None)
+    kwargs['pts_marker']    = kwargs.get('pts_marker',  '^')
+    kwargs['pts_ms']        = kwargs.get('pts_ms',      20)
+    kwargs['pts_mfc']       = kwargs.get('pts_mfc',     'r')
+    kwargs['pts_mec']       = kwargs.get('pts_mec',     'k')
+    kwargs['pts_mew']       = kwargs.get('pts_mew',     1)
+
 
     # center the map
     if (center_lat is None) or (center_lon is None):
