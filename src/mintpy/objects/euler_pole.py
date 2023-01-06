@@ -383,14 +383,40 @@ def transform_xyz_enu(lat, lon, x=None, y=None, z=None, e=None, n=None, u=None):
 ####################################  Utility for plotting  ##############################################
 # Utility for plotting the plate motion on a globe
 # check usage: https://github.com/yuankailiu/utils/blob/main/notebooks/PMM_plot.ipynb
-def load_bnds(filename, order='lalo'):
+
+def read_plate_attributes(filename):
+    """read the plate names and abbreviated names
+    Parameters:
+        filename - filename of the csv file
+    Returns:
+        pDict    - a dictionary that contains abbreviations and Euler pole attributes (not used)
+    """
+    pDict = {}
+    with open(filename) as f:
+        lines = f.readlines()
+        for line in lines:
+            if line.startswith('Plate,'):
+                continue
+            key  = line.split('\n')[0]
+            name = key.split(',')[0]
+            abbv = key.split(',')[1]
+            lat  = key.split(',')[2]
+            lon  = key.split(',')[3]
+            rate = key.split(',')[4]
+            pDict[abbv] = (name, lat, lon, rate)
+    return pDict
+
+
+def read_plate_outlines(filename, order='lola'):
     """Load the plate boundary text files
     Paramters:
         filename - filename of the boundary text file
-        order    - the order of columns, 'lalo' or 'lola'
+        order    - the order of columns, 'lalo' or 'lola', default: (lola)
     Returns:
-        Bnds     - a dictionary that contains a list of vertices of the plate polygon
+        Bnds     - a dictionary that contains a list of vertices of the plate polygon (lat, lon)
     """
+    datapath = os.path.dirname(filename)
+    pDict = read_plate_attributes(os.path.join(datapath,'nnr.csv'))    # read all plate abbreviated names
     Bnds = {}
     with open(filename) as f:
         lines = f.readlines()
@@ -398,11 +424,16 @@ def load_bnds(filename, order='lalo'):
         for line in lines:
             if line.startswith('> ') or line.startswith('# ') or len(line.split())==1:
                 if key and vertices:
-                    Bnds[key] = np.array(vertices)
-                if   line.startswith('> '): key = line.split('> ')[1]
-                elif line.startswith('# '): key = line.split('# ')[1]
-                else: key = str(line)
-                if key.endswith('\n'):      key = key.split('\n')[0]
+                    name = pDict[key][0]
+                    Bnds[name] = np.array(vertices)
+                if   line.startswith('> '):
+                    key = line.split('> ')[1]
+                elif line.startswith('# '):
+                    key = line.split('# ')[1]
+                else:
+                    key = str(line)
+                if key.endswith('\n'):
+                    key = key.split('\n')[0]
                 vertices = []
             else:
                 if order == 'lalo':
