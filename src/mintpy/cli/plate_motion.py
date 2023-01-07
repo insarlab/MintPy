@@ -109,8 +109,7 @@ def create_parser(subparsers=None):
     pmm = parser.add_argument_group('plate motion model')
     pmg = pmm.add_mutually_exclusive_group(required=True)
     pmg.add_argument('--plate', dest='plate_name', type=str, choices=ITRF2014_PMM.keys(), default=None,
-                     help='Tectonic plate in ITRF14 (Table 1 in Altamimi et al., 2017) as below:\n' +
-                          '\n'.join(f'{key} for {val.name}' for key, val in ITRF2014_PMM.items()))
+                     help='Tectonic plate in ITRF14 (Table 1 in Altamimi et al., 2017).')
     pmg.add_argument('--om-cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
                      help='Cartesian form of Euler Pole rotation (unit: mas/yr) (default: %(default)s).')
     pmg.add_argument('--om-sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
