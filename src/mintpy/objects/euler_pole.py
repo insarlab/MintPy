@@ -27,12 +27,19 @@ import numpy as np
 import pyproj
 from shapely import geometry
 
+import mintpy
+from mintpy.cli.plate_motion import GSRM_PMM, MORVEL56_PMM
 from mintpy.constants import EARTH_RADIUS
 
 # global variables
 MAS2RAD = np.pi / 3600000 / 180    # 1 mas (milli arc second) = x radian
 MASY2DMY = 1e6 / 3600000           # 1 mas per year = x degree per million year
 
+# path for plate boundary files
+PLATE_BOUNDARY_FILE = {
+    'GSRM'     : os.path.join(mintpy.__path__[0], 'data/plate_boundary/GSRM/GSRM_plate_outlines.gmt'),
+    'MORVEL56' : os.path.join(mintpy.__path__[0], 'data/plate_boundary/MORVEL56/All_boundaries'),
+}
 
 ####################################  EulerPole class begin  #############################################
 # Define the Euler pole class
@@ -385,7 +392,7 @@ def transform_xyz_enu(lat, lon, x=None, y=None, z=None, e=None, n=None, u=None):
 # check usage: https://github.com/yuankailiu/utils/blob/main/notebooks/PMM_plot.ipynb
 
 def read_plate_attributes(filename):
-    """read the plate names and abbreviated names
+    """read the plate names and abbreviated names (obsolete)
     Parameters:
         filename - filename of the csv file
     Returns:
@@ -415,8 +422,14 @@ def read_plate_outlines(filename, order='lola'):
     Returns:
         Bnds     - a dictionary that contains a list of vertices of the plate polygon (lat, lon)
     """
-    datapath = os.path.dirname(filename)
-    pDict = read_plate_attributes(os.path.join(datapath,'nnr.csv'))    # read all plate abbreviated names
+    datatype = filename.split('data/plate_boundary/')[-1].split('/')[0]
+    pDict = {}
+    if 'GSRM' in datatype:
+        for key, val in GSRM_PMM.items():
+            pDict[val.Abbrev] = key
+    elif 'MORVEL56' in datatype:
+        for key, val in MORVEL56_PMM.items():
+            pDict[val.Abbrev] = key
     Bnds = {}
     with open(filename) as f:
         lines = f.readlines()
@@ -424,7 +437,7 @@ def read_plate_outlines(filename, order='lola'):
         for line in lines:
             if line.startswith('> ') or line.startswith('# ') or len(line.split())==1:
                 if key and vertices:
-                    name = pDict[key][0]
+                    name = pDict[key]
                     Bnds[name] = np.array(vertices)
                 if   line.startswith('> '):
                     key = line.split('> ')[1]
