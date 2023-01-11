@@ -9,8 +9,13 @@
 import os
 import sys
 
-from mintpy.object.euler_pole import ITRF2014_PMM
 from mintpy.utils.arg_utils import create_argument_parser
+
+ITRF2014_PMM_NAMES = [
+    'Antartica',  'Arabia',       'Australia',    'Eurasia',
+    'India',      'Nazca',        'NorthAmerica', 'Nubia',
+    'Pacific',    'SouthAmerica', 'Somalia'
+]
 
 #########################################  Usage  ##############################################
 REFERENCE = """reference:
@@ -83,7 +88,7 @@ def create_parser(subparsers=None):
     # plate motion configurations
     pmm = parser.add_argument_group('plate motion model')
     pmg = pmm.add_mutually_exclusive_group(required=True)
-    pmg.add_argument('--plate', dest='plate_name', type=str, choices=ITRF2014_PMM.keys(), default=None,
+    pmg.add_argument('--plate', dest='plate_name', type=str, choices=ITRF2014_PMM_NAMES, default=None,
                      help='Tectonic plate in ITRF14 (Table 1 in Altamimi et al., 2017).')
     pmg.add_argument('--om-cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
                      help='Cartesian form of Euler Pole rotation (unit: mas/yr) (default: %(default)s).')
@@ -110,14 +115,6 @@ def cmd_line_parse(iargs=None):
     if inps.vel_file and not inps.cor_vel_file:
         vbase = os.path.splitext(inps.vel_file)[0]
         inps.cor_vel_file = os.path.abspath(f'{vbase}_ITRF14.h5')
-
-    # check: --plate option (and convert to --om-cart)
-    if inps.plate_name:
-        plate = ITRF2014_PMM[inps.plate_name]
-        inps.omega_cart = [plate.omega_x, plate.omega_y, plate.omega_z]
-        msg = f'get rotation parameters for {inps.plate_name} plate from Table 1 in Altamimi et al. (2017): '
-        msg += f'wx, wy, wz = {plate.omega_x}, {plate.omega_y}, {plate.omega_z} mas/yr'
-        print(msg)
 
     return inps
 
