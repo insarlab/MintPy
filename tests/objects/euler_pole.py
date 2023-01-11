@@ -6,8 +6,7 @@
 import collections
 import math
 
-from mintpy.cli.plate_motion import ITRF2014_PMM
-from mintpy.objects.euler_pole import MASY2DMY, EulerPole
+from mintpy.objects.euler_pole import ITRF2014_PMM, MASY2DMY, EulerPole
 
 # validation against the UNAVCO Plate Motion Calculator
 # https://www.unavco.org/software/geodetic-utilities/plate-motion-calculator/plate-motion-calculator.html
