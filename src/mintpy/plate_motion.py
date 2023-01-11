@@ -16,7 +16,7 @@ import numpy as np
 from skimage.transform import resize
 
 from mintpy.diff import diff_file
-from mintpy.objects.euler_pole import EulerPole
+from mintpy.objects.euler_pole import ITRF2014_PMM, EulerPole
 from mintpy.objects.resample import resample
 from mintpy.utils import readfile, utils as ut, writefile
 
