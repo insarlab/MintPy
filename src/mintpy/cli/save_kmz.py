@@ -60,8 +60,9 @@ def create_parser(subparsers=None):
 
     # data
     parser.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('MIN', 'MAX'), type=float,
-                        help='Y/value limits for plotting.')
-    parser.add_argument('-u', dest='disp_unit', metavar='UNIT', help='unit for display.')
+                        help='Y/value limits in the unit of {-u/--unit} for plotting.')
+    parser.add_argument('-u','--unit', dest='disp_unit', metavar='UNIT', default='cm/year',
+                        help='unit for display (default: %(default)s).')
     parser.add_argument('-c', '--cm', '--colormap', dest='cmap_name', default='jet',
                         help='Colormap for plotting (default: %(default)s), such as jet, RdBu, etc.\n'
                              'More details at https://mintpy.readthedocs.io/en/latest/api/colormaps/')

@@ -395,10 +395,11 @@ def alos2_acquisition_modes():
     '''
 
     spotlightModes = ['SBS']
+    # StripMap: Ultrafine [3 m], High sensitive [6 m], Fine [10 m]
     stripmapModes = ['UBS', 'UBD', 'HBS', 'HBD', 'HBQ', 'FBS', 'FBD', 'FBQ']
     scansarNominalModes = ['WBS', 'WBD', 'WWS', 'WWD']
     scansarWideModes = ['VBS', 'VBD']
-    scansarModes = ['WBS', 'WBD', 'WWS', 'WWD', 'VBS', 'VBD']
+    scansarModes = scansarNominalModes + scansarWideModes
 
     return (spotlightModes, stripmapModes, scansarNominalModes, scansarWideModes, scansarModes)
 

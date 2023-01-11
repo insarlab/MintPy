@@ -1148,6 +1148,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         inps.gps_component = None
         vprint(f'WARNING: --gps-comp is not implemented for {k} file yet, set --gps-comp = None and continue')
 
+    plot_kwargs = dict(s=inps.gps_marker_size**2, edgecolors='k', lw=0.5, zorder=10)
     if inps.gps_component:
         # plot GPS velocity/displacement along LOS direction
         vprint('-'*30)
@@ -1209,28 +1210,12 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
             if not np.isnan(obs):
                 color = cmap( (obs - vmin) / (vmax - vmin) )
-                ax.scatter(
-                    lon,
-                    lat,
-                    color=color,
-                    s=inps.gps_marker_size**2,
-                    edgecolors='k',
-                    lw=0.5,
-                    zorder=10,
-                )
+                ax.scatter(lon, lat, color=color, **plot_kwargs)
 
     else:
         # plot GPS locations only
         vprint('showing GPS locations')
-        ax.scatter(
-            site_lons,
-            site_lats,
-            s=inps.gps_marker_size**2,
-            color='w',
-            edgecolors='k',
-            lw=0.5,
-            zorder=10,
-        )
+        ax.scatter(site_lons, site_lats, color='w', **plot_kwargs)
 
     # plot GPS label
     if inps.disp_gps_label:
