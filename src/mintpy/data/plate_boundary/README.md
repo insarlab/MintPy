@@ -21,10 +21,7 @@ unzip -p NnrMRVL_PltBndsLatLon.zip All_boundaries >MORVEL/plate_outlines.gmt
 
 ### References
 
-+ Argus, D. F., Gordon, R. G., & DeMets, C. (2011). Geologically current motion of 56 plates relative to the no-net-rotation reference frame. _Geochemistry, Geophysics, Geosystems, 12_(11). https://doi.org/10.1029/2011GC003751
-
-+ Bird, P. (2003). An updated digital model of plate boundaries. _Geochemistry, Geophysics, Geosystems, 4_(3). https://doi.org/10.1029/2001GC000252
-
-+ DeMets, C., Gordon, R. G., & Argus, D. F. (2010). Geologically current plate motions. _Geophysical journal international, 181_(1), 1-80. https://doi.org/10.1111/j.1365-246X.2009.04491.x
-
-+ Kreemer, C., Blewitt, G., & Klein, E. C. (2014). A geodetic plate motion and Global Strain Rate Model. _Geochemistry, Geophysics, Geosystems, 15_(10), 3849-3889. https://doi.org/10.1002/2014GC005407
++   Argus, D. F., Gordon, R. G., & DeMets, C. (2011). Geologically current motion of 56 plates relative to the no-net-rotation reference frame. _Geochemistry, Geophysics, Geosystems, 12_(11). https://doi.org/10.1029/2011GC003751
++   Bird, P. (2003). An updated digital model of plate boundaries. _Geochemistry, Geophysics, Geosystems, 4_(3). https://doi.org/10.1029/2001GC000252
++   DeMets, C., Gordon, R. G., & Argus, D. F. (2010). Geologically current plate motions. _Geophysical journal international, 181_(1), 1-80. https://doi.org/10.1111/j.1365-246X.2009.04491.x
++   Kreemer, C., Blewitt, G., & Klein, E. C. (2014). A geodetic plate motion and Global Strain Rate Model. _Geochemistry, Geophysics, Geosystems, 15_(10), 3849-3889. https://doi.org/10.1002/2014GC005407
