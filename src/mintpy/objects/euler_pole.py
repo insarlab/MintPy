@@ -36,8 +36,8 @@ MASY2DMY = 1e6 / 3600000           # 1 mas per year = x degree per million year
 
 #################################  Plate boundary files  #######################################
 PLATE_BOUNDARY_FILE = {
-    'GSRM'     : os.path.join(mintpy.__path__[0], 'data/plate_boundary/GSRM/GSRM_plate_outlines.gmt'),
-    'MORVEL56' : os.path.join(mintpy.__path__[0], 'data/plate_boundary/MORVEL56/All_boundaries'),
+    'GSRM'   : os.path.join(mintpy.__path__[0], 'data/plate_boundary/GSRM/plate_outlines.gmt'),
+    'MORVEL' : os.path.join(mintpy.__path__[0], 'data/plate_boundary/MORVEL/plate_outlines.gmt'),
 }
 
 #################################  Plate Motion Models  ########################################
@@ -71,7 +71,7 @@ PMM_UNIT = {
 # 2). GSRMv2.1 defined in Kreemer et al. (2014)
 # (unit: Lat: °N; Lon: °E; omega: °/Ma)
 Tag = collections.namedtuple('Tag', 'Abbrev Lat Lon omega')
-GSRM_PMM = {
+GSRM_V21_PMM = {
     'Africa'          : Tag('AF'  , 49.66   ,  -78.08   , 0.285),
     'Amur'            : Tag('AM'  , 61.64   ,  -101.29  , 0.287),
     'Antarctica'      : Tag('AN'  , 60.08   ,  -120.14  , 0.234),
@@ -125,10 +125,10 @@ GSRM_PMM = {
 }
 
 
-# 3). MORVEL56 defined in DeMets et al. (2010)
+# 3). NNR-MORVEL56 defined in Argus et al. (2011)
 # (unit: Lat: °N; Lon: °E; omega: °/Ma)
 Tag = collections.namedtuple('Tag', 'Abbrev Lat Lon omega')
-MORVEL56_PMM = {
+NNR_MORVEL56_PMM = {
     'Amur'            : Tag('AM'  , 63.17   , -122.82   , 0.297),
     'Antarctica'      : Tag('AN'  , 65.42   , -118.11   , 0.250),
     'Arabia'          : Tag('AR'  , 48.88   , -8.49     , 0.559),
@@ -550,10 +550,10 @@ def read_plate_outlines(filename, order='lola'):
     datatype = filename.split('data/plate_boundary/')[-1].split('/')[0]
     pDict = {}
     if 'GSRM' in datatype:
-        for key, val in GSRM_PMM.items():
+        for key, val in GSRM_V21_PMM.items():
             pDict[val.Abbrev.upper()] = key
     elif 'MORVEL56' in datatype:
-        for key, val in MORVEL56_PMM.items():
+        for key, val in NNR_MORVEL56_PMM.items():
             if val.Abbrev == 'nb': val.Abbrev = 'nu'    # replace duplicate capitalized abbv for 'Nubia'
             pDict[val.Abbrev.upper()] = key
     Bnds = {}
