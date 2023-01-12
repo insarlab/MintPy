@@ -11,7 +11,7 @@ import sys
 
 from mintpy.utils.arg_utils import create_argument_parser
 
-ITRF2014_PMM_NAMES = [
+ITRF2014_PMM_PLATES = [
     'Antartica',  'Arabia',       'Australia',    'Eurasia',
     'India',      'Nazca',        'NorthAmerica', 'Nubia',
     'Pacific',    'SouthAmerica', 'Somalia'
@@ -88,8 +88,8 @@ def create_parser(subparsers=None):
     # plate motion configurations
     pmm = parser.add_argument_group('plate motion model')
     pmg = pmm.add_mutually_exclusive_group(required=True)
-    pmg.add_argument('--plate', dest='plate_name', type=str, choices=ITRF2014_PMM_NAMES, default=None,
-                     help='Tectonic plate in ITRF14 (Table 1 in Altamimi et al., 2017).')
+    pmg.add_argument('--plate', dest='plate_name', type=str, choices=ITRF2014_PMM_PLATES, default=None,
+                     help='Tectonic plate in ITRF2014-PMM (Table 1 in Altamimi et al., 2017) (default: %(default)s).')
     pmg.add_argument('--om-cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
                      help='Cartesian form of Euler Pole rotation (unit: mas/yr) (default: %(default)s).')
     pmg.add_argument('--om-sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
