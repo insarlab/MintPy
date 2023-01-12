@@ -562,7 +562,7 @@ def read_plate_outline(pmm_name='GSRM'):
 
     else:
         msg = f'Un-recognized plate motion model: {pmm_name}!'
-        msg += f'\nAvailable models: GSRM, MORVEL.'
+        msg += '\nAvailable models: GSRM, MORVEL.'
         raise ValueError(msg)
 
     # plate boundary file
