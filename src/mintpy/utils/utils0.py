@@ -1073,41 +1073,47 @@ def print_command_line(script_name, args):
 
 #################################### Math / Statistics ###################################
 def median_abs_deviation(data, center=None, scale=0.67449):
-    """Compute the median absolute deviation of the data along the LAST axis.
+    """Compute the median absolute deviation (MAD) of the data along the LAST axis.
 
-    This function is also included as:
-        scipy.stats.median_abs_deviation() in scipy v1.5.0
-            https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.median_abs_deviation.html
-        statsmodels.robust.mad() in statsmodels
-            https://www.statsmodels.org/dev/generated/statsmodels.robust.scale.mad.html
+    This function is also available in the following packages:
+    + statsmodels.robust.mad()
+      https://www.statsmodels.org/dev/generated/statsmodels.robust.scale.mad.html
+    + scipy.stats.median_abs_deviation() since v1.5.0
+      https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.median_abs_deviation.html
 
-    The differences are:
-        1. scipy: out = out / scale while mintpy: out = out * scale
-        2. scipy propagates nan by default, while mintpy omit nan by default.
+    The implementation here is preferrred because we would like to:
+    1. omit the NaN value in the data for the median and MAD calculation
+    2. scale the returned value to be comparable with standard deviation (STD)
+       for easy interpretation with 1/2/3-sigma rule.
+    While statsmodels could not handle the NaN value in the data; and scipy does not hebave
+    as desired in the default setting (propagate nan and do not scale).
 
     The following two are equivalent for a 2D np.ndarray X:
-        mintpy.utils.utils0.median_abs_deviation(X)
-        scipy.stats.median_abs_deviation(X, axis=-1, center=np.nanmedian, scale=1./0.67449, nan_policy='omit')
+    + mintpy.utils.utils0.median_abs_deviation(X)
+    + scipy.stats.median_abs_deviation(X, axis=-1, center=np.nanmedian, scale=0.67449, nan_policy='omit')
 
     Parameters: data   - 1/2D np.ndarray, input array
                 center - 0/1D np.ndarray or None
                 scale  - float, the normalization constant
     Returns:    mad    - 0/1D np.ndarray
     """
-    # compute MAD over 1/2D matrix only
+    # check input: compute MAD over 1/2D matrix only
     data = np.array(data)
     if data.ndim > 2:
         ntime = data.shape[0]
         data = data.reshape(ntime, -1)
 
-    # default center value: median
+    # calculate the center value: median along the last axis
     if center is None:
         center = np.nanmedian(data, axis=-1)
 
-    # calculation
-    if data.ndim == 2:
-        center = np.tile(center.reshape(-1,1), (1, data.shape[1]))
+        # replicate center matrix for 2D matrix calculation later on
+        if data.ndim == 2:
+            center = np.tile(center.reshape(-1, 1), (1, data.shape[1]))
+
+    # calculate median absolute deviation
     mad = np.nanmedian(np.abs(data - center), axis=-1) / scale
+
     return mad
 
 
