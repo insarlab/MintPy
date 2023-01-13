@@ -1107,7 +1107,7 @@ def median_abs_deviation(data, center=None, scale=0.67449):
     # calculation
     if data.ndim == 2:
         center = np.tile(center.reshape(-1,1), (1, data.shape[1]))
-    mad = np.nanmedian(np.abs(data - center), axis=-1) * scale
+    mad = np.nanmedian(np.abs(data - center), axis=-1) / scale
     return mad
 
 
