@@ -1081,7 +1081,7 @@ def median_abs_deviation(data, center=None, scale=0.67449):
     + scipy.stats.median_abs_deviation() since v1.5.0
       https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.median_abs_deviation.html
 
-    The implementation here is preferrred because we would like to:
+    The implementation here is preferred because we would like to:
     1. omit the NaN value in the data for the median and MAD calculation
     2. scale the returned value to be comparable with standard deviation (STD)
        for easy interpretation with 1/2/3-sigma rule.
