@@ -35,8 +35,8 @@ MASY2DMY = 1e6 / 3600000           # 1 mas per year = x degree per million year
 
 #################################  Plate boundary files  #######################################
 PLATE_BOUNDARY_FILE = {
-    'GSRM'   : os.path.join(mintpy.__path__[0], 'data/plate_boundary/GSRM/plate_outlines.gmt'),
-    'MORVEL' : os.path.join(mintpy.__path__[0], 'data/plate_boundary/MORVEL/plate_outlines.gmt'),
+    'GSRM'   : os.path.join(mintpy.__path__[0], 'data/plate_boundary/GSRM/plate_outlines.lola'),
+    'MORVEL' : os.path.join(mintpy.__path__[0], 'data/plate_boundary/MORVEL/plate_outlines.lalo'),
 }
 
 #################################  Plate Motion Models  ########################################
@@ -542,7 +542,7 @@ def transform_xyz_enu(lat, lon, x=None, y=None, z=None, e=None, n=None, u=None):
 # check usage: https://github.com/yuankailiu/utils/blob/main/notebooks/PMM_plot.ipynb
 # Later will be moved to a separate script `plot_utils.py` in plate motion package
 
-def read_plate_outline(pmm_name='GSRM'):
+def read_plate_outline(pmm_name='GSRM', plate=None):
     """Read the plate boundaries for the given plate motion model.
 
     Paramters: pmm_name - str, plate motion (model) name
@@ -553,12 +553,10 @@ def read_plate_outline(pmm_name='GSRM'):
     if 'GSRM' in pmm_name:
         pmm_name = 'GSRM'
         pmm_dict = GSRM_V21_PMM
-        coord_order = 'lola'
 
     elif 'MORVEL' in pmm_name:
         pmm_name = 'MORVEL'
         pmm_dict = NNR_MORVEL56_PMM
-        coord_order = 'lalo'
 
     else:
         msg = f'Un-recognized plate motion model: {pmm_name}!'
@@ -567,34 +565,40 @@ def read_plate_outline(pmm_name='GSRM'):
 
     # plate boundary file
     plate_boundary_file = PLATE_BOUNDARY_FILE[pmm_name]
+    coord_order = os.path.basename(plate_boundary_file).split('.')[-1]
 
     # dict to convert plate abbreviation to name
     plate_abbrev2name = {}
     for key, val in pmm_dict.items():
         plate_abbrev2name[val.Abbrev.upper()] = key
 
-    # read GMT file
+    # read the plate outlines file, save them to a dictionary {plate_A: [vertices], ..., ..., ...}
     outlines = {}
     with open(plate_boundary_file) as f:
         lines = f.readlines()
         key, vertices = None, None
+        # loop over lines to read
         for line in lines:
+            # whether we meet a new plate name abbreviation
             if line.startswith('> ') or line.startswith('# ') or len(line.split()) == 1:
+                # whether to add the previous plate to the dictionary
                 if key and vertices:
                     plate_name = plate_abbrev2name[key]
                     outlines[plate_name] = np.array(vertices)
-
-                if   line.startswith('> '):
+                # identify the new plate name abbreviation
+                if line.startswith('> '):
                     key = line.split('> ')[1]
                 elif line.startswith('# '):
                     key = line.split('# ')[1]
                 else:
                     key = str(line)
-
+                # remove the line change string
                 if key.endswith('\n'):
                     key = key.split('\n')[0]
+                # new vertices for the new plate
                 vertices = []
 
+            # get plate outline vertices
             else:
                 if coord_order == 'lalo':
                     vert = np.array(line.split()).astype(float)
@@ -602,7 +606,13 @@ def read_plate_outline(pmm_name='GSRM'):
                     vert = np.flip(np.array(line.split()).astype(float))
                 vertices.append(vert)
 
-    return outlines
+    # outline of a specific plate
+    if plate is not None:
+        outline = outlines[plate]
+    else:
+        outline = outlines
+
+    return outline
 
 
 def plot_plate_motion(plate_boundary, epole_obj, center_lalo=None, qscale=200, qunit=50,
@@ -627,7 +637,7 @@ def plot_plate_motion(plate_boundary, epole_obj, center_lalo=None, qscale=200, q
         epole_obj = euler_pole.EulerPole(wx=plate_pmm.omega_x, wy=plate_pmm.omega_y, wz=plate_pmm.omega_z)
 
         # read plate boundary
-        plate_boundary = geometry.Polygon(euler_pole.read_plate_outline('GSRM')['Arabia'])
+        plate_boundary = geometry.Polygon(euler_pole.read_plate_outline('GSRM', 'Arabia'))
 
         # plot plate motion
         fig, ax = euler_pole.plot_plate_motion(plate_boundary, epole_obj)

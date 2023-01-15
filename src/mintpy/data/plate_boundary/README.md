@@ -6,7 +6,7 @@ The Global Strain Rate Map (GSRM) version 2.1 (http://geodesy.unr.edu/GSRM/) is 
 
 ```bash
 mkdir -p GSRM
-wget http://geodesy.unr.edu/GSRM/GSRM_plate_outlines.gmt -O GSRM/plate_outlines.gmt
+wget http://geodesy.unr.edu/GSRM/GSRM_plate_outlines.gmt -O GSRM/plate_outlines.lola
 ```
 
 ### MORVEL
@@ -16,7 +16,7 @@ The Mid-Ocean Ridge VELocity (MORVEL) (http://www.geology.wisc.edu/~chuck/MORVEL
 ```bash
 mkdir -p MORVEL
 wget http://www.geology.wisc.edu/~chuck/MORVEL/NnrMRVL_PltBndsLatLon.zip
-unzip -p NnrMRVL_PltBndsLatLon.zip All_boundaries >MORVEL/plate_outlines.gmt
+unzip -p NnrMRVL_PltBndsLatLon.zip All_boundaries >MORVEL/plate_outlines.lalo
 ```
 
 ### References
