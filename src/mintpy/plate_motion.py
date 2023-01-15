@@ -16,7 +16,7 @@ import numpy as np
 from skimage.transform import resize
 
 from mintpy.diff import diff_file
-from mintpy.objects.euler_pole import EulerPole
+from mintpy.objects.euler_pole import ITRF2014_PMM, EulerPole
 from mintpy.objects.resample import resample
 from mintpy.utils import readfile, utils as ut, writefile
 
@@ -35,8 +35,8 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
                                 simulating the rigid translation of the ground (e.g., from GNSS)
                 pmm_enu_file  - str, path to the output plate motion in east, north, up direction
                 pmm_file      - str, path to the output plate motion in LOS direction
-                set_comp      - str, output PMM in the given component of interest
-                pmm_reso      - float, ground resolution for computing Plate rotation to ENU velocity (km)
+                pmm_comp      - str, output PMM in the given component of interest
+                pmm_step      - float, ground resolution for computing Plate rotation to ENU velocity (km)
     Returns:    ve/vn/vu/vlos - 2D np.ndarray, ridig plate motion in east / north / up / LOS direction
     """
 
@@ -169,6 +169,14 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
 ################################################################################################
 def run_plate_motion(inps):
     """Calculate and/or correct for the rigid motion from tectonic plates."""
+
+    # check: --plate option (convert plate_name to omega_cart)
+    if inps.plate_name:
+        plate = ITRF2014_PMM[inps.plate_name]
+        inps.omega_cart = [plate.omega_x, plate.omega_y, plate.omega_z]
+        msg = f'get rotation parameters for {inps.plate_name} plate from Table 1 in Altamimi et al. (2017): '
+        msg += f'wx, wy, wz = {plate.omega_x}, {plate.omega_y}, {plate.omega_z} mas/yr'
+        print(msg)
 
     # calculate plate motion
     calc_plate_motion(

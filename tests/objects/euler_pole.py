@@ -6,8 +6,7 @@
 import collections
 import math
 
-from mintpy.cli.plate_motion import ITRF2014_PMM
-from mintpy.objects.euler_pole import MASY2DMY, EulerPole
+from mintpy.objects.euler_pole import ITRF2014_PMM, MASY2DMY, EulerPole
 
 # validation against the UNAVCO Plate Motion Calculator
 # https://www.unavco.org/software/geodetic-utilities/plate-motion-calculator/plate-motion-calculator.html
@@ -17,9 +16,9 @@ from mintpy.objects.euler_pole import MASY2DMY, EulerPole
 # unit:                              deg deg mm/yr   deg   mm/yr mm/yr
 Tag = collections.namedtuple('Tag', 'lat lon speed azimuth vel_n vel_e')
 POINT_PM = {
-    'AUST' : Tag(-24,  132,  67.56,  28.94,  59.12,  32.69),
-    'EURA' : Tag( 27,   62,  28.85,  79.21,   5.40,  28.34),
-    'ARAB' : Tag( 18,   48,  46.51,  50.92,  29.32,  36.11),
+    'Australia' : Tag(-24,  132,  67.56,  28.94,  59.12,  32.69),
+    'Eurasia'   : Tag( 27,   62,  28.85,  79.21,   5.40,  28.34),
+    'Arabia'    : Tag( 18,   48,  46.51,  50.92,  29.32,  36.11),
 }
 PLATE_NAMES = POINT_PM.keys()
 

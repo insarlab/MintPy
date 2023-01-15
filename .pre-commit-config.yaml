@@ -12,6 +12,7 @@ repos:
       - id: check-added-large-files
         args: ['--maxkb=20']
         exclude_types: [image]
+        exclude: src/mintpy/data/plate_boundary
       - id: check-ast
       - id: check-case-conflict
       - id: check-docstring-first
