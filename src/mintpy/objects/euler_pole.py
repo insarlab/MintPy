@@ -542,11 +542,13 @@ def transform_xyz_enu(lat, lon, x=None, y=None, z=None, e=None, n=None, u=None):
 # check usage: https://github.com/yuankailiu/utils/blob/main/notebooks/PMM_plot.ipynb
 # Later will be moved to a separate script `plot_utils.py` in plate motion package
 
-def read_plate_outline(pmm_name='GSRM', plate=None):
+def read_plate_outline(pmm_name='GSRM', plate_name=None):
     """Read the plate boundaries for the given plate motion model.
 
-    Paramters: pmm_name - str, plate motion (model) name
-    Returns:   outlines - dict, a dictionary that contains a list of vertices of the plate polygon (lat, lon)
+    Paramters: pmm_name   - str, plate motion (model) name
+               plate_name - str, plate name of interest, return all plates if None
+    Returns:   outline    - dict, a dictionary that contains lists of vertices in lat/lon for all plates
+                            OR shapely.geometry.polygon.Polygon object, boundary of the given "plate".
     """
 
     # check input
@@ -566,6 +568,8 @@ def read_plate_outline(pmm_name='GSRM', plate=None):
     # plate boundary file
     plate_boundary_file = PLATE_BOUNDARY_FILE[pmm_name]
     coord_order = os.path.basename(plate_boundary_file).split('.')[-1]
+    if coord_order not in ['lalo', 'lola']:
+        raise ValueError(f'Can NOT recognize the lat/lon order from the file extension: .{coord_order}!')
 
     # dict to convert plate abbreviation to name
     plate_abbrev2name = {}
@@ -583,8 +587,8 @@ def read_plate_outline(pmm_name='GSRM', plate=None):
             if line.startswith('> ') or line.startswith('# ') or len(line.split()) == 1:
                 # whether to add the previous plate to the dictionary
                 if key and vertices:
-                    plate_name = plate_abbrev2name[key]
-                    outlines[plate_name] = np.array(vertices)
+                    pname = plate_abbrev2name[key]
+                    outlines[pname] = np.array(vertices)
                 # identify the new plate name abbreviation
                 if line.startswith('> '):
                     key = line.split('> ')[1]
@@ -600,15 +604,21 @@ def read_plate_outline(pmm_name='GSRM', plate=None):
 
             # get plate outline vertices
             else:
-                if coord_order == 'lalo':
-                    vert = np.array(line.split()).astype(float)
-                elif coord_order == 'lola':
-                    vert = np.flip(np.array(line.split()).astype(float))
+                vert = np.array(line.split()).astype(float)
+                if coord_order == 'lola':
+                    vert = np.flip(vert)
                 vertices.append(vert)
 
     # outline of a specific plate
-    if plate is not None:
-        outline = outlines[plate]
+    if plate_name:
+        if plate_name not in plate_abbrev2name.values():
+            plate_abbrev = pmm_dict[plate_name].Abbrev
+            raise ValueError(f'Can NOT found plate {plate_name} ({plate_abbrev}) in file: {plate_boundary_file}!')
+
+        # convert list into shapely polygon object
+        # for easy use
+        outline = geometry.Polygon(outlines[plate_name])
+
     else:
         outline = outlines
 
@@ -637,7 +647,7 @@ def plot_plate_motion(plate_boundary, epole_obj, center_lalo=None, qscale=200, q
         epole_obj = euler_pole.EulerPole(wx=plate_pmm.omega_x, wy=plate_pmm.omega_y, wz=plate_pmm.omega_z)
 
         # read plate boundary
-        plate_boundary = geometry.Polygon(euler_pole.read_plate_outline('GSRM', 'Arabia'))
+        plate_boundary = euler_pole.read_plate_outline('GSRM', 'Arabia')
 
         # plot plate motion
         fig, ax = euler_pole.plot_plate_motion(plate_boundary, epole_obj)
