@@ -931,13 +931,17 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     return ax, coh_mat, im
 
 
-def plot_num_triplet_with_nonzero_integer_ambiguity(fname, display=False, font_size=12, fig_size=[9,3]):
+def plot_num_triplet_with_nonzero_integer_ambiguity(fname, disp_fig=False, font_size=12, fig_size=[9,3]):
     """Plot the histogram for the number of triplets with non-zero integer ambiguity.
 
     Fig. 3d-e in Yunjun et al. (2019, CAGEO).
 
     Parameters: fname - str, path to the numTriNonzeroIntAmbiguity.h5 file.
     """
+
+    # matplotlib backend setting
+    if not disp_fig:
+        plt.switch_backend('Agg')
 
     # read data
     data, atr = readfile.read(fname)
@@ -983,7 +987,7 @@ def plot_num_triplet_with_nonzero_integer_ambiguity(fname, display=False, font_s
     print('plot and save figure to file', out_fig)
     fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
 
-    if display:
+    if disp_fig:
         plt.show()
     else:
         plt.close(fig)
@@ -1002,6 +1006,10 @@ def plot_timeseries_rms(rms_file, cutoff=3, out_fig=None, disp_fig=True,
                 cutoff   - float, cutoff value of MAD outlier detection
                 fig_size - list of 2 float, figure size in inch
     """
+
+    # matplotlib backend setting
+    if not disp_fig:
+        plt.switch_backend('Agg')
 
     # read date / RMS info from text file
     fc = np.loadtxt(rms_file, dtype=bytes).astype(str)
