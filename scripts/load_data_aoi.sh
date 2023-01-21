@@ -62,7 +62,7 @@ subset_opt=" --lat $S $N --lon $W $E"
 
 echo "subset - DEM"
 src_file=$inputs_dir_src"/../../../DEM/gsi10m.dem.wgs84"   #adjust filename for specific dataset
-dst_file=$inputs_dir_dst"/gsi10m.dem.wgs84"                #adjust filename for specific dataset
+dst_file=$inputs_dir_dst"/gsi10m.h5"                       #adjust filename for specific dataset
 echo "subset.py $src_file -o $dst_file $subset_opt"
 subset.py $src_file -o $dst_file $subset_opt
 
