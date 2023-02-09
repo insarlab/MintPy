@@ -26,7 +26,7 @@ jobs:
             ${HOME}/tools/miniconda3/bin/conda init bash
             # add conda-forge channel and install mamba
             ${HOME}/tools/miniconda3/bin/conda config --add channels conda-forge
-            ${HOME}/tools/miniconda3/bin/conda config --set channel_priority strict
+            #${HOME}/tools/miniconda3/bin/conda config --set channel_priority strict
             ${HOME}/tools/miniconda3/bin/conda install --yes mamba
             cat ${HOME}/.condarc
             # modify/export env var PATH to BASH_ENV to be shared across run steps
