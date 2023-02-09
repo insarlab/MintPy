@@ -100,7 +100,7 @@ def run_geocode(inps):
         for dsName in dsNames:
 
             if not hdf5_file:
-                dsDict[dsName] = np.zeros((res_obj.length, res_obj.width))
+                dsDict[dsName] = np.zeros((res_obj.length, res_obj.width), dtype=atr['DATA_TYPE'])
 
             # loop for block-by-block IO
             for i in range(res_obj.num_box):
