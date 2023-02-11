@@ -118,7 +118,7 @@ def asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, horz_az_angle=-90, ste
         dhorz = dhv[0, :].reshape(length, width)
         dvert = dhv[1, :].reshape(length, width)
 
-    # 2D incidence / azimuth angle --> invert window-by-window
+    # 2D incidence / azimuth angle --> invert [window-by-window to speed up]
     elif los_inc_angle.ndim == 3:
         num_row = np.ceil(length / step).astype(int)
         num_col = np.ceil(width / step).astype(int)
