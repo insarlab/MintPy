@@ -147,6 +147,11 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', margin=[0,
     lks_y = int(lks_y)
     lks_x = int(lks_x)
 
+    # use GDAL if input is VRT file
+    if infile.endswith('.vrt'):
+        outfile = multilook_gdal(infile, lks_y, lks_x, outfile)
+        return outfile
+
     # input file info
     atr = readfile.read_attribute(infile)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
@@ -265,3 +270,50 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', margin=[0,
             writefile.write_isce_xml(atr, outfile)
 
     return outfile
+
+
+def multilook_gdal(in_file, lks_y, lks_x, out_file=None):
+    """Apply multilooking via gdal_translate.
+
+    Parameters: in_file  - str, path to the input GDAL VRT file
+                lks_y/x  - int, number of looks in Y/X direction
+                out_file - str, path to the output data file
+    Returns:    out_file - str, path to the output data file
+    """
+    print('apply multilooking via gdal.Translate ...')
+    from osgeo import gdal
+
+    # default output file name
+    if not out_file:
+        if in_file.endswith('.rdr.full.vrt'):
+            out_file = in_file[:-9]
+        elif in_file.endswith('.rdr.vrt'):
+            out_file = in_file[:-4] + '.mli'
+        else:
+            raise ValueError(f'un-recognized ISCE VRT file ({in_file})!')
+    print(f'input : {in_file}')
+    print(f'output: {out_file}')
+
+    ds = gdal.Open(in_file, gdal.GA_ReadOnly)
+    in_wid = ds.RasterXSize
+    in_len = ds.RasterYSize
+
+    out_wid = int(in_wid / lks_x)
+    out_len = int(in_len / lks_y)
+    src_wid = out_wid * lks_x
+    src_len = out_len * lks_y
+
+    # link: https://stackoverflow.com/questions/68025043/adding-a-progress-bar-to-gdal-translate
+    options_str = f'-of ENVI -a_nodata 0 -outsize {out_wid} {out_len} -srcwin 0 0 {src_wid} {src_len} '
+    gdal.Translate(out_file, ds, options=options_str, callback=gdal.TermProgress_nocb)
+
+    # generate GDAL .vrt file
+    dso = gdal.Open(out_file, gdal.GA_ReadOnly)
+    gdal.Translate(out_file+'.vrt', dso, options=gdal.TranslateOptions(format='VRT'))
+
+    # generate ISCE .xml file
+    if not os.path.isfile(out_file+'.xml'):
+        from isce.applications.gdal2isce_xml import gdal2isce_xml
+        gdal2isce_xml(out_file+'.vrt')
+
+    return out_file

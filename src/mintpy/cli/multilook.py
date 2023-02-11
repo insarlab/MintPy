@@ -12,8 +12,9 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ##################################################################################################
 EXAMPLE = """example:
-  multilook.py  velocity.h5  -r 15 -a 15
-  multilook.py  srtm30m.dem  -r 10 -a 10  -o srtm30m_300m.dem
+  multilook.py velocity.h5 -r 15 -a 15
+  multilook.py srtm30m.dem -x 10 -y 10 -o srtm300m.dem
+  multilook.py lat.rdr.full.vrt lon.rdr.full.vrt -x 9 -y 3
 
   # Ignore / skip marginal pixels
   multilook.py ../../geom_reference/hgt.rdr.full -r 300 -a 100 --margin 58 58 58 58 -o hgt.rdr

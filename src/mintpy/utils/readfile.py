@@ -698,7 +698,7 @@ def get_slice_list(fname, no_complex=False):
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
     # ignore certain meaningless file extensions
-    while fext in ['.geo', '.rdr', '.full', '.wgs84', '.grd']:
+    while fext in ['.geo', '.rdr', '.full', '.mli', '.wgs84', '.grd']:
         fbase, fext = os.path.splitext(fbase)
     fext = fext if fext else fbase
 
@@ -789,12 +789,12 @@ def get_slice_list(fname, no_complex=False):
             else:
                 slice_list = ['complex']
 
-        elif fbase.startswith('off') and fext in ['.bip'] and num_band == 2:
-            # ampcor offset file
+        elif 'offset' in fbase and num_band == 2:
+            # ampcor offset file, e.g. offset.bip, dense_offsets.bil
             slice_list = ['azimuthOffset', 'rangeOffset']
 
-        elif fbase.startswith('off') and fname.endswith('cov.bip') and num_band == 3:
-            # ampcor offset covariance file
+        elif 'offset' in fbase and '_cov' in fbase and num_band == 3:
+            # ampcor offset covariance file, e.g. offset_cov.bip, dense_offsets_cov.bil
             slice_list = ['azimuthOffsetVar', 'rangeOffsetVar', 'offsetCovar']
 
         elif fext in ['.lkv']:
@@ -1181,7 +1181,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         meta_ext = os.path.splitext(metafile)[1].lower()
 
         # ignore certain meaningless file extensions
-        while fext in ['.geo', '.rdr', '.full', '.wgs84', '.grd']:
+        while fext in ['.geo', '.rdr', '.full', '.mli', '.wgs84', '.grd']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
