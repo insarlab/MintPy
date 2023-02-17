@@ -424,6 +424,200 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
     dsAmp = None
     return outfile
 
+# OPTIONAL - ARIA corrections troposphereTotal, ionosphere, solidearthtides
+def write_correction(outfile, corrStack, box=None, 
+                     xstep=1, ystep=1, mli_method='nearest'):
+    """Write corrections to object ifgramStack HDF5 file from stack VRT files
+       Correction layers are in a form of differential observations for each interferometric pair
+
+       ARIA correction layers:
+            troposhereTotal : models GMAO, HRRR, HRES, ERA5 '/science/grids/corrections/external/troposphere/'
+            ionosphere '/science/grids/corrections/derived/ionosphere/ionosphere'
+            solidEarthTides '/science/grids/corrections/derived/solidearthtides/'
+    """
+
+    print('-'*50)
+    max_digit = len(os.path.basename(str(corrStack)))
+    if corrStack is not None:
+        print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(corrStack), w=max_digit))
+
+    dsCor = gdal.Open(corrStack, gdal.GA_ReadOnly)
+    # get the layer name (for tropo this will get the model name)
+    layer = dsCor.GetRasterBand(1).GetMetadataDomainList()[0]
+
+    # extract NoDataValue (from the last */date2_date1.vrt file for example)
+    ds = gdal.Open(dsCor.GetFileList()[-1], gdal.GA_ReadOnly)
+    noDataValue = ds.GetRasterBand(1).GetNoDataValue()
+    print(f'grab NoDataValue for  {layer}: {noDataValue:<5} and convert to 0.')
+
+    # sort the order of correction layer pairs based on date1_date2 with date1 < date2
+    nPairs = dsCor.RasterCount
+    d12BandDict = {}
+    for ii in range(nPairs):
+        bnd = dsCor.GetRasterBand(ii+1)
+        d12 = bnd.GetMetadata(layer)["Dates"]
+        d12 = sorted(d12.split("_"))
+        d12 = f'{d12[0]}_{d12[1]}'
+        d12BandDict[d12] = ii+1
+    d12List = sorted(d12BandDict.keys())
+    print(f'number of {layer} pairs: {len(d12List)}')
+
+    # box to gdal arguments
+    # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
+    if box is not None:
+        kwargs = dict(
+            xoff=box[0],
+            yoff=box[1],
+            win_xsize=box[2]-box[0],
+            win_ysize=box[3]-box[1])
+    else:
+        kwargs = dict()
+
+    if xstep * ystep > 1:
+        msg = f'apply {xstep} x {ystep} multilooking/downsampling via {mli_method} to {layer}'
+        print(msg)
+    print(f'writing data to HDF5 file {outfile} with a mode ...')
+    with h5py.File(outfile, "a") as f:
+
+        prog_bar = ptime.progressBar(maxValue=nPairs)
+        for ii in range(nPairs):
+            d12 = d12List[ii]
+            bndIdx = d12BandDict[d12]
+            prog_bar.update(ii+1, suffix=f'{d12} {ii+1}/{nPairs}')
+
+            f["date"][ii,0] = d12.split("_")[0].encode("utf-8")
+            f["date"][ii,1] = d12.split("_")[1].encode("utf-8")
+            f["dropIfgram"][ii] = True
+
+            bnd = dsCor.GetRasterBand(bndIdx)
+            data = bnd.ReadAsArray(**kwargs)
+            data = multilook_data(data, ystep, xstep, method=mli_method)
+            data[data == noDataValue] = 0         #assign pixel with no-data to 0
+            data[np.isnan(data)] = 0              #assign nan pixel to 0
+            data *= -1.0                          #date2_date1 -> date1_date2
+            f["unwrapPhase"][ii,:,:] = data       
+            # NOTE: ifgramStack accepts only 'unwrapPhase', 'rangeOffset', 'azimuthOffset'
+            #                   if changed to different layer name, changes need be be done in
+            #                   stack.py line: 782
+            #                   reference_point.py line: 45
+            #                   ifgram_inversion.py line 651
+            #                   add option to recognize the layer
+
+            bperp = float(bnd.GetMetadata(str(layer))["perpendicularBaseline"])
+            bperp *= -1.0                         #date2_date1 -> date1_date2
+            f["bperp"][ii] = bperp
+
+        prog_bar.close()
+
+        # add MODIFICATION_TIME metadata to each 3D dataset
+        for dsName in ['unwrapPhase']:
+            f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
+
+    print(f'finished writing to HD5 file: {outfile}')
+    ds = None
+    dsCor = None
+
+    return outfile
+
+def invert_diff_corrections(input_filename, output_filename, dataset,
+                            cluster = None, num_workers = '4', waterMask=None,
+                            maskDataset = None, maskThreshold = 0.4):
+    '''
+    Invert differential ARIA correction layers to get correction for SAR acquistion dates
+        - the inversion gives corrections relative to the REF_DATE (typically the first acquisition)
+
+    NOTE: 1.the inversion network needs to be connected, otherwise inversion will give wrong estimates 
+            for the isolated clusters
+          2. each SAR date needs to have min two datasets with that date to have min_degree of freedom >=2
+            otherwise inversion will give wrong estimates for those dates
+    '''
+    
+    # create inps dummy
+    class dummy():
+        pass
+    
+    # PREPARE INPUT OBJECT
+    inps = dummy()
+     # input
+    inps.ifgramStackFile = input_filename 
+    inps.obsDatasetName = 'unwrapPhase' #only this available for use at the moment
+    inps.skip_ref = False
+
+    # solver
+    inps.minNormVelocity = False
+    inps.minRedundancy = 1.0 
+    # Note: minRedun set to 2.0 gives wrong estim, and dask has some errors
+    inps.weightFunc = 'no'
+    inps.calcCov = False
+
+    # mask
+    inps.waterMaskFile = waterMask
+    inps.maskDataset = maskDataset
+    inps.maskThreshold = maskThreshold
+
+    # cluster - Expose / leave None for now
+    inps.cluster = cluster
+    inps.maxMemory = 2
+    inps.numWorker = num_workers
+    inps.config = 'local' #not sure what to put here
+
+    # outputs
+    #Avoid setting 'no' for invQualityFile 
+    #self.invQualityFile = 'modelTempCoh.h5' # not needed, maybe leave it to avoid dask outout issues
+    inps.invQualityFile = 'modelTempCoh.h' 
+    inps.numInvFile = 'numInvModel.h5'
+    inps.tsFile = output_filename
+
+    ### INVERSION
+    from mintpy.utils import readfile
+    from mintpy.cli import reference_point
+    from mintpy.ifgram_inversion import run_ifgram_inversion
+    
+    # remove if exists
+    try:
+        os.remove(inps.tsFile)
+        print('Delete existing file')
+    except FileNotFoundError:
+        print("File is not present in the system.")
+
+    # 1. get reference pixel
+
+    reference_point.main([inps.ifgramStackFile])
+
+    # 2. invert differential model obs
+    run_ifgram_inversion(inps)
+
+    # 3. compensate for range2phase conversion as not needed for models
+    if dataset.startswith(('tropo', 'set')):
+        print('Return back units to original')
+        data, metadata = readfile.read(inps.tsFile, datasetName='timeseries')
+        phase2range = -1 * float(metadata['WAVELENGTH']) / (4.*np.pi)
+        
+        #Replace values
+        with h5py.File(inps.tsFile, 'r+') as f:
+            f['timeseries'][:] = data / phase2range
+    
+    # 4. clean up uncessary files
+    os.remove(inps.invQualityFile)
+    os.remove(inps.numInvFile)
+
+
+def get_correction_layer(correction_filename):
+    ds = gdal.Open(correction_filename, gdal.GA_ReadOnly)
+    # get the layer name (for tropo this will get the model name)
+    layer_name = ds.GetRasterBand(1).GetMetadataDomainList()[0]
+
+    # Get type of correction
+    if layer_name in ['GMAO', 'HRES', 'HRRR', "ERA5"]:
+        layer_type = 'tropo'
+    else:
+        # ionosphere, solid earth tides
+        layer_type = layer_name
+    
+    #close
+    ds = None
+    
+    return layer_name, layer_type
 
 ####################################################################################
 def load_aria(inps):
@@ -519,6 +713,53 @@ def load_aria(inps):
             xstep=inps.xstep,
             ystep=inps.ystep,
         )
+
+    ########## output file 3 - correction layers
+    correction_layers = [inps.tropoFile, inps.ionoFile, inps.setFile]
+
+    # define correction dataset structure for ifgramStack
+    # is it already resampled??
+    ds_name_dict = {
+        "date"             : (np.dtype('S8'), (num_pair, 2)),
+        "dropIfgram"       : (np.bool_,       (num_pair,)),
+        "bperp"            : (np.float32,     (num_pair,)),
+        "unwrapPhase"      : (np.float32,     (num_pair, length, width)),
+    }
+    meta['FILE_TYPE'] = 'ifgramStack'
+
+    # Loop thourgh defined correction layers
+    for layer in correction_layers:
+        if layer:
+            layer_name, layer_type = get_correction_layer(layer)
+            writefile.layout_hdf5(
+                f'./inputs/d{layer_name}.h5',
+                ds_name_dict,
+                metadata=meta,
+                compression=inps.compression,
+                )
+            
+            # write data to disk
+            write_correction(
+                f'./inputs/d{layer_name}.h5',
+                corrStack=layer,  
+                box=box,
+                xstep=inps.xstep,
+                ystep=inps.ystep,
+                )
+
+
+            # invert layer to get correction
+            # for SAR acquistion dates
+            invert_diff_corrections(f'./inputs/d{layer_name}.h5',
+                                    f'./inputs/{layer_name}.h5',
+                                    layer_type,
+                                    cluster=inps.cluster,
+                                    num_workers=inps.num_workers,
+                                    waterMask = None,
+                                    maskDataset = None,
+                                    maskThreshold = 0.4)
+
+
 
     print('-'*50)
 

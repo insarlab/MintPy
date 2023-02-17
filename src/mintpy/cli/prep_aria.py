@@ -49,7 +49,8 @@ EXAMPLE = """example:
   prep_aria.py -t SanFranSenDT42.txt
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt'
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' -a '../azimuthAngle/*.vrt' -w ../mask/watermask.msk
-
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' -tropo '../stack/troposphereTotal/GMAO_stack.vrt' -ion '../stack/ionStack.vrt'
+  
   # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
   # reference: https://github.com/aria-tools/ARIA-tools
   ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
@@ -106,6 +107,20 @@ def create_parser(subparsers=None):
                       help='Name of the azimuth angle file.')
     geom.add_argument('-w','--water-mask', dest='waterMaskFile', type=str,
                       help='Name of the water mask file')
+    
+    # correction layers: troposphereTotal, ionosphere, solidEarthTides
+    corr = parser.add_argument_group('corrections')
+    corr.add_argument('-ct', '--tropo', dest='tropoFile', type=str,
+                      help='Name of the Troposhere Delay stack file', default=None)
+    corr.add_argument('-ci', '--ion', dest='ionoFile', type=str,
+                    help='Name of the Ionosphere Delay stack file', default=None)
+    corr.add_argument('-cs', '--set', dest='setFile', type=str,
+                    help='Name of the Solid Earth Tides stack file', default=None)
+    corr.add_argument('--cluster', dest='cluster', type=str, choices={'local', 'pbs', None},
+                    help='Parallelize inversion of correction layers w Dask', default=None)
+    corr.add_argument('-n', '--num-workers', dest='num_workers', type=str,
+                    help='Dask number of workers', default='2')
+
     return parser
 
 
