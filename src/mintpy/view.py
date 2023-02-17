@@ -1057,8 +1057,12 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # slow reading with one 2D matrix at a time
     else:
         vprint('reading data as a list of 2D matrices ...')
+        kwargs['print_msg'] = False
         prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
         for i in range(i_start, i_end):
+            prog_bar.update(i - i_start + 1, suffix=inps.dset[i].split('/')[-1])
+
+            # read 2D matrix
             d = readfile.read(inps.file, datasetName=inps.dset[i], **kwargs)[0]
 
             # reference pixel info for unwrapPhase
@@ -1068,8 +1072,6 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
             # save the matrix
             data[i - i_start, :, :] = d
-
-            prog_bar.update(i - i_start + 1, suffix=inps.dset[i].split('/')[-1])
         prog_bar.close()
 
     # ref_date for timeseries
@@ -1284,13 +1286,16 @@ def plot_figure(j, inps, metadata):
     prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
     for i in range(i_start, i_end):
         idx = i - i_start
+        prog_bar.update(idx+1, suffix=inps.dset[i].split('/')[-1])
+
+        # plot subplot
         im = plot_subplot4figure(
             i, inps,
             ax=axs[idx],
             data=data[idx, :, :],
             metadata=metadata)
 
-        # colorbar for each subplot
+        # add colorbar for each subplot
         if inps.disp_cbar and not inps.vlim:
             cbar = fig.colorbar(im, ax=axs[idx], pad=0.03, shrink=0.5, aspect=30, orientation='vertical')
 
@@ -1298,8 +1303,6 @@ def plot_figure(j, inps, metadata):
             data_unit = readfile.read_attribute(inps.file, datasetName=inps.dset[i]).get('UNIT', None)
             if data_unit:
                 cbar.set_label(data_unit)
-
-        prog_bar.update(idx+1, suffix=inps.dset[i].split('/')[-1])
     prog_bar.close()
     del data
 
