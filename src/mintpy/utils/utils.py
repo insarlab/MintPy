@@ -303,7 +303,7 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
     # for nearest neighbor sampling, use indexing directly
     # for other interpolation, use scipy.ndimage.map_coordinates
     if interpolation == 'nearest':
-        z_line = z[np.rint(ys).astype(np.int), np.rint(xs).astype(np.int)]
+        z_line = z[np.rint(ys).astype(int), np.rint(xs).astype(int)]
 
     else:
         # interpolation name to order
