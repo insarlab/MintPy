@@ -97,7 +97,7 @@ def read_init_info(inps):
 
         # read error file
         error_fc = np.loadtxt(inps.error_file, dtype=bytes).astype(str)
-        inps.error_ts = error_fc[:, 1].astype(np.float)*inps.unit_fac
+        inps.error_ts = error_fc[:, 1].astype(np.float32)*inps.unit_fac
 
         # update error file with exlcude date
         if inps.ex_date_list:
