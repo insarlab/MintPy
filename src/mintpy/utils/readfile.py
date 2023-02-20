@@ -694,14 +694,7 @@ def get_slice_list(fname, no_complex=False):
     Returns:    slice_list - list(str), list of names for 2D matrices
     """
 
-    # grab fbase/fext
-    fbase, fext = os.path.splitext(os.path.basename(fname))
-    fext = fext.lower()
-    # ignore certain meaningless file extensions
-    while fext in ['.geo', '.rdr', '.full', '.mli', '.wgs84', '.grd']:
-        fbase, fext = os.path.splitext(fbase)
-    fext = fext if fext else fbase
-
+    fbase, fext = _get_file_base_and_ext(fname)
     atr = read_attribute(fname)
     ftype = atr['FILE_TYPE']
 
@@ -767,7 +760,7 @@ def get_slice_list(fname, no_complex=False):
 
             # special order for velocity / time func file
             if ftype == 'velocity':
-                slice_list = sort_dataset_list4velocity(slice_list)
+                slice_list = _sort_dataset_list4velocity(slice_list)
 
     # Binary Files
     else:
@@ -838,7 +831,7 @@ def get_dataset_list(fname, datasetName=None):
 
         # special order for velocity / time func file
         if atr['FILE_TYPE'] == 'velocity':
-            ds_list = sort_dataset_list4velocity(ds_list)
+            ds_list = _sort_dataset_list4velocity(ds_list)
 
     else:
         ds_list = get_slice_list(fname)
@@ -846,7 +839,7 @@ def get_dataset_list(fname, datasetName=None):
     return ds_list
 
 
-def sort_dataset_list4velocity(ds_list_in):
+def _sort_dataset_list4velocity(ds_list_in):
     """Sort the dataset list for velocity file type.
 
     1. time func datasets [required]: velocity
@@ -912,7 +905,11 @@ def get_hdf5_compression(fname):
 
 
 def get_no_data_value(fname):
-    """Grab the NO_DATA_VALUE of the input file."""
+    """Grab the NO_DATA_VALUE of the input file.
+
+    Parameters: fname - str, path to the data file
+    Returns:    val   - number, no data value
+    """
     val = read_attribute(fname).get('NO_DATA_VALUE', None)
     val = str(val).lower()
 
@@ -923,6 +920,26 @@ def get_no_data_value(fname):
     else:
         raise ValueError(f'Un-recognized no-data-value type: {val}')
     return val
+
+
+def _get_file_base_and_ext(fname):
+    """Grab the meaningful file basename and extension.
+
+    Parameters: fname - str, path to the (meta)data file
+    Returns:    fbase - str, file basename
+                fext  - str, file extension in lower case
+    """
+
+    fbase, fext = os.path.splitext(os.path.basename(fname))
+    fext = fext.lower()
+
+    # ignore certain meaningless file extensions
+    while fext in ['.geo', '.rdr', '.full', '.mli', '.wgs84', '.grd']:
+        fbase, fext = os.path.splitext(fbase)
+    # set fext to fbase if nothing left
+    fext = fext if fext else fbase
+
+    return fbase, fext
 
 
 #########################################################################
@@ -1181,10 +1198,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         meta_ext = os.path.splitext(metafile)[1].lower()
 
         # ignore certain meaningless file extensions
-        while fext in ['.geo', '.rdr', '.full', '.mli', '.wgs84', '.grd']:
-            fbase, fext = os.path.splitext(fbase)
-        if not fext:
-            fext = fbase
+        fbase, fext = _get_file_base_and_ext(fname)
 
         if meta_ext == '.rsc':
             atr.update(read_roipac_rsc(metafile))
@@ -1259,41 +1273,68 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         else:
             atr['UNIT'] = '1'
 
-    # NO_DATA_VALUE
-    no_data_value = atr.get('NO_DATA_VALUE', None)
-    atr['NO_DATA_VALUE'] = str(no_data_value).lower()
-
     # FILE_PATH
     if 'FILE_PATH' in atr.keys() and 'OG_FILE_PATH' not in atr.keys():
         # need to check original source file to successfully subset legacy-sensor products
         atr['OG_FILE_PATH'] = atr['FILE_PATH']
     atr['FILE_PATH'] = os.path.abspath(fname)
 
+    # NO_DATA_VALUE
+    atr['NO_DATA_VALUE'] = auto_no_data_value(atr)
+
     atr = standardize_metadata(atr)
 
     return atr
 
 
-def standardize_metadata(metaDictIn, standardKeys=STD_METADATA_KEYS):
-    """Convert metadata input ROI_PAC/MintPy format (for metadata with the same values)."""
+def auto_no_data_value(meta):
+    """Get default no-data-value for the given file's metadata.
+
+    Parameters: meta          - dict, metadata
+    Returns:    no_data_value - str, no data value in lower case string
+    """
+
+    if 'NO_DATA_VALUE' in meta.keys():
+        no_data_value = meta['NO_DATA_VALUE']
+
+    else:
+        processor = meta['PROCESSOR']
+        fname = meta['FILE_PATH']
+        fbase, fext = _get_file_base_and_ext(fname)
+        num_band = int(meta.get('BANDS', 0))
+
+        # known file types
+        # isce2: dense offsets from topsApp.py
+        if processor == 'isce' and fbase.endswith('dense_offsets') and fext == '.bil' and num_band == 2:
+            no_data_value = -10000
+
+        else:
+            # default value for unknown file types
+            no_data_value = None
+
+    return str(no_data_value).lower()
+
+
+def standardize_metadata(in_meta, standard_keys=STD_METADATA_KEYS):
+    """Convert metadata into ROI_PAC/MintPy format (for metadata with the same values)."""
 
     # make a copy
-    metaDict = dict()
-    for key, value in iter(metaDictIn.items()):
-        metaDict[key] = value
+    out_meta = dict()
+    for key, value in iter(in_meta.items()):
+        out_meta[key] = value
 
     # get potential keys to match
-    in_keys = [i for i in metaDict.keys() if i not in standardKeys.keys()]
-    std_keys = [i for i in standardKeys.keys() if i not in metaDict.keys()]
+    in_keys = [i for i in out_meta.keys() if i not in standard_keys.keys()]
+    std_keys = [i for i in standard_keys.keys() if i not in out_meta.keys()]
 
     # loop to find match and assign values
     for std_key in std_keys:
-        cand_keys = standardKeys[std_key]
+        cand_keys = standard_keys[std_key]
         cand_keys = [i for i in cand_keys if i in in_keys]
         if len(cand_keys) > 0:
-            metaDict[std_key] = metaDict[cand_keys[0]]
+            out_meta[std_key] = out_meta[cand_keys[0]]
 
-    return metaDict
+    return out_meta
 
 
 #########################################################################
@@ -1396,13 +1437,13 @@ def read_gamma_par(fname, delimiter=':', skiprows=3):
             value = str.replace(c[1], '\n', '').split("#")[0].split()[0].strip()
             parDict[key] = value
 
-    parDict = attribute_gamma2roipac(parDict)
+    parDict = _attribute_gamma2roipac(parDict)
     parDict = standardize_metadata(parDict)
 
     return parDict
 
 
-def attribute_gamma2roipac(par_dict_in):
+def _attribute_gamma2roipac(par_dict_in):
     """Convert Gamma metadata into ROI_PAC/MintPy format."""
     par_dict = dict()
     for key, value in iter(par_dict_in.items()):
@@ -1645,13 +1686,13 @@ def read_gmtsar_prm(fname, delimiter='='):
         value = c[1].replace('\n', '').strip()
         prmDict[key] = value
 
-    prmDict = attribute_gmtsar2roipac(prmDict)
+    prmDict = _attribute_gmtsar2roipac(prmDict)
     prmDict = standardize_metadata(prmDict)
 
     return prmDict
 
 
-def attribute_gmtsar2roipac(prm_dict_in):
+def _attribute_gmtsar2roipac(prm_dict_in):
     """Convert GMTSAR metadata into ROI_PAC/MintPy format (for metadata with different values)."""
     prm_dict = dict()
     for key, value in iter(prm_dict_in.items()):
