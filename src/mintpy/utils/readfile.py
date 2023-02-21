@@ -1306,7 +1306,7 @@ def auto_no_data_value(meta):
         # known file types
         # isce2: dense offsets from topsApp.py
         if processor == 'isce' and fbase.endswith('dense_offsets') and fext == '.bil' and num_band == 2:
-            no_data_value = -10000
+            no_data_value = -10000.
 
         else:
             # default value for unknown file types
@@ -1550,6 +1550,13 @@ def read_isce_xml(fname):
         meta = root.find("./PAMRasterBand/NoDataValue")
         if meta is not None:
             xmlDict['NoDataValue'] = meta.text
+
+    # configeration file, e.g. topsApp.xml
+    elif root.tag.endswith('App'):
+        for child in root[0].findall('property'):
+            key = child.get('name').lower()
+            value = child.find('value')
+            xmlDict[key] = value.text if value is not None else child.text
 
     # standardize metadata keys
     xmlDict = standardize_metadata(xmlDict)
