@@ -2002,7 +2002,7 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
 
 ############################  Read GMT Faults  ################################
 
-def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
+def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10, print_msg=True):
     """Read GMT lonlat file into list of 2D np.ndarray.
 
     Parameters: ll_file  - str, path to the GMT lonlat file
@@ -2044,11 +2044,13 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
         lines = lines[:1000]
 
     # loop to extract/organize the data into list of arrays
+    faults, fault = [], []
     num_line = len(lines)
-    faults = []
-    fault = []
-    prog_bar = ptime.progressBar(maxValue=num_line)
+    print_msg = False if num_line < 5000 else print_msg
+    prog_bar = ptime.progressBar(maxValue=num_line, print_msg=print_msg)
     for i, line in enumerate(lines):
+        prog_bar.update(i+1, every=1000, suffix=f'line {i+1} / {num_line}')
+
         line = line.strip().replace('\n','').replace('\t', ' ')
         if line.startswith('>'):
             fault = []
@@ -2075,9 +2077,8 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
 
             if fault is not None:
                 faults.append(fault)
-
-        prog_bar.update(i+1, every=1000, suffix=f'line {i+1} / {num_line}')
     prog_bar.close()
+
     return faults
 
 

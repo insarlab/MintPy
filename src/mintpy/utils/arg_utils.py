@@ -260,6 +260,8 @@ def add_mask_argument(parser):
 def add_map_argument(parser):
     """Argument group parser for map options"""
     mapg = parser.add_argument_group('Map', 'for one subplot in geo-coordinates only')
+
+    # coastline
     mapg.add_argument('--coastline', dest='coastline', type=str, choices={'10m', '50m', '110m'},
                       help="Draw coastline with specified resolution (default: %(default)s).\n"
                            "This will enable --lalo-label option.\n"
@@ -268,6 +270,13 @@ def add_map_argument(parser):
     mapg.add_argument('--coastline-lw', '--coastline-linewidth', dest='coastline_linewidth',
                       metavar='NUM', type=float, default=1,
                       help='Coastline linewidth (default: %(default)s).')
+
+    # faultline
+    mapg.add_argument('--faultline', dest='faultline_file', type=str,
+                      help='Draw fault line using specified GMT lonlat file.')
+    mapg.add_argument('--faultline-lw', '--faultline-linewidth', dest='faultline_linewidth',
+                      metavar='NUM', type=float, default=0.5,
+                      help='Faultline linewidth (default: %(default)s).')
 
     # lalo label
     mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',

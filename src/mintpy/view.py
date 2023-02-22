@@ -474,6 +474,10 @@ def plot_slice(ax, data, metadata, inps):
             and inps.fig_coord == 'geo'):
         vprint('plot in geo-coordinate')
 
+        # extent info for matplotlib.imshow and other functions
+        extent = (inps.geo_box[0], inps.geo_box[2], inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
+        SNWE = (inps.geo_box[3], inps.geo_box[1], inps.geo_box[0], inps.geo_box[2])
+
         # Draw coastline using cartopy resolution parameters
         if inps.coastline:
             vprint(f'draw coast line with resolution: {inps.coastline}')
@@ -504,12 +508,19 @@ def plot_slice(ax, data, metadata, inps):
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False
 
-        extent = (inps.geo_box[0], inps.geo_box[2],
-                  inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
-
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
                        extent=extent, origin='upper', interpolation='nearest',
                        alpha=inps.transparency, animated=inps.animation, zorder=1)
+
+        # Draw faultline using GMT lonlat file
+        if inps.faultline_file:
+            pp.plot_faultline(
+                ax=ax,
+                faultline_file=inps.faultline_file,
+                SNWE=SNWE,
+                linewidth=inps.faultline_linewidth,
+                print_msg=inps.print_msg,
+            )
 
         # Scale Bar
         if inps.coord_unit.startswith('deg') and (inps.geo_box[2] - inps.geo_box[0]) > 30:
@@ -519,7 +530,7 @@ def plot_slice(ax, data, metadata, inps):
         if inps.disp_scalebar:
             vprint(f'plot scale bar: {inps.scalebar}')
             pp.draw_scalebar(
-                ax,
+                ax=ax,
                 geo_box=inps.geo_box,
                 unit=inps.coord_unit,
                 loc=inps.scalebar,
@@ -530,7 +541,7 @@ def plot_slice(ax, data, metadata, inps):
         # Lat Lon labels
         if inps.lalo_label:
             pp.draw_lalo_label(
-                ax,
+                ax=ax,
                 geo_box=inps.geo_box,
                 lalo_step=inps.lalo_step,
                 lalo_loc=inps.lalo_loc,
