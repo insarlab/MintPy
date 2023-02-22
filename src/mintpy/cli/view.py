@@ -40,6 +40,9 @@ EXAMPLE = """example:
   view.py geo_velocity_msk.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
   view.py geo_timeseries_ERA5_ramp_demErr.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
 
+  # Faults
+  view.py filt_dense_offsets.bil range --faultline simple_fault_confident.lonlat
+
   # Save and Output
   view.py velocity.h5 --save
   view.py velocity.h5 --nodisplay
