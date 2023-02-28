@@ -22,4 +22,4 @@ pyresample
 pysolid
 rich
 scikit-image
-scipy<1.10    # avoid scipy.interpolate error [temporary]
+scipy
