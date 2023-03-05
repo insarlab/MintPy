@@ -1,12 +1,12 @@
 [![Language](https://img.shields.io/badge/python-3.6%2B-blue.svg?style=flat-square)](https://www.python.org/)
-[![Docs Status](https://readthedocs.org/projects/mintpy/badge/?color=green&version=latest&style=flat-square)](https://mintpy.readthedocs.io/?badge=latest)
-[![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?logo=circleci&label=test&style=flat-square)](https://circleci.com/gh/insarlab/MintPy)
-[![Docker Status](https://img.shields.io/github/actions/workflow/status/insarlab/MintPy/build-docker.yml?label=docker&style=flat-square)](https://github.com/insarlab/MintPy/pkgs/container/mintpy)
-[![Version](https://img.shields.io/github/v/release/insarlab/MintPy?color=brightgreen&label=version&style=flat-square)](https://github.com/insarlab/MintPy/releases)
-[![Conda Download](https://img.shields.io/conda/dn/conda-forge/mintpy?color=green&style=flat-square)](https://anaconda.org/conda-forge/mintpy)
-[![License](https://img.shields.io/badge/license-GPLv3+-yellow.svg?style=flat-square)](https://github.com/insarlab/MintPy/blob/main/LICENSE)
+[![Docs Status](https://readthedocs.org/projects/mintpy/badge/?version=latest&style=flat-square)](https://mintpy.readthedocs.io/?badge=latest)
+[![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?logo=circleci&label=tests&style=flat-square)](https://circleci.com/gh/insarlab/MintPy)
+[![Docker Status](https://img.shields.io/github/actions/workflow/status/insarlab/MintPy/build-docker.yml?label=docker&style=flat-square&logo=docker&logoColor=white)](https://github.com/insarlab/MintPy/pkgs/container/mintpy)
+[![Conda Download](https://img.shields.io/conda/dn/conda-forge/mintpy?color=green&style=flat-square&label=conda%20downloads)](https://anaconda.org/conda-forge/mintpy)
+[![Version](https://img.shields.io/github/v/release/insarlab/MintPy?color=yellow&label=version&style=flat-square)](https://github.com/insarlab/MintPy/releases)
 [![Forum](https://img.shields.io/badge/forum-Google%20Groups-orange.svg?style=flat-square)](https://groups.google.com/g/mintpy)
-[![Citation](https://img.shields.io/badge/doi-10.1016%2Fj.cageo.2019.104331-blue?style=flat-square)](https://doi.org/10.1016/j.cageo.2019.104331)
+[![License](https://img.shields.io/badge/license-GPLv3+-blue.svg?style=flat-square)](https://github.com/insarlab/MintPy/blob/main/LICENSE)
+[![Citation](https://img.shields.io/badge/DOI-10.1016%2Fj.cageo.2019.104331-blue?style=flat-square)](https://doi.org/10.1016/j.cageo.2019.104331)
 
 ## MintPy ##
 
