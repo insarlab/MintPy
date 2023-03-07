@@ -25,16 +25,16 @@ This is research code provided to you "as is" with NO WARRANTIES OF CORRECTNESS.
 MintPy reads a stack of interferograms (unwrapped interferograms, coherence and connected components from SNAPHU if available) and the geometry files (DEM, lookup table, incidence angle, etc.). You need to give the [path to where the files are](dir_structure.md) and MintPy takes care of the rest!
 
 ```bash
-smallbaselineApp.py                         #run with default template 'smallbaselineApp.cfg'
-smallbaselineApp.py <custom_template>       #run with default and custom templates
-smallbaselineApp.py -h / --help             #help
-smallbaselineApp.py -H                      #print    default template options
-smallbaselineApp.py -g                      #generate default template if it does not exist
-smallbaselineApp.py -g <custom_template>    #generate/update default template based on custom template
+smallbaselineApp.py                         # run with default template 'smallbaselineApp.cfg'
+smallbaselineApp.py <custom_template>       # run with default and custom templates
+smallbaselineApp.py -h / --help             # help
+smallbaselineApp.py -H                      # print    default template options
+smallbaselineApp.py -g                      # generate default template if it does not exist
+smallbaselineApp.py -g <custom_template>    # generate/update default template based on custom template
 
 # Run with --start/stop/dostep options
-smallbaselineApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity' only
-smallbaselineApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
+smallbaselineApp.py GalapagosSenDT128.txt --dostep velocity  # run step 'velocity' only
+smallbaselineApp.py GalapagosSenDT128.txt --end load_data    # end run after step 'load_data'
 ```
 
 Inside smallbaselineApp.py, it reads the unwrapped interferograms, references all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates the temporal coherence to evaluate the quality of inversion, corrects local oscillator drift (for Envisat only), corrects stratified tropospheric delay (using global atmospheric models or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity.
@@ -57,14 +57,14 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/FernandinaSenDT128.txt
 Results are plotted in **./pic** folder. To explore more data information and visualization, try the following scripts:
 
 ```bash
-info.py                    #check HDF5 file structure and metadata
-view.py                    #2D map view
-tsview.py                  #1D point time-series (interactive)
-plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
-plot_network.py            #plot network configuration of the dataset
-plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
-save_kmz.py                #generate Google Earth KMZ file in points or raster image
-save_kmz_timeseries.py     #generate Google Earth KMZ file in points for time-series (interactive)
+info.py                    # check HDF5 file structure and metadata
+view.py                    # 2D map view
+tsview.py                  # 1D point time-series (interactive)
+plot_coherence_matrix.py   # plot coherence matrix for one pixel (interactive)
+plot_network.py            # plot network configuration of the dataset
+plot_transection.py        # plot 1D profile along a line of a 2D matrix (interactive)
+save_kmz.py                # generate Google Earth KMZ file in points or raster image
+save_kmz_timeseries.py     # generate Google Earth KMZ file in points for time-series (interactive)
 ```
 
 #### 2.2 Customized processing recipe ####

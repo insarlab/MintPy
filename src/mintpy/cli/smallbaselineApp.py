@@ -42,8 +42,8 @@ EXAMPLE = """example:
   smallbaselineApp.py --plot                  # plot results w/o run [to populate the 'pic' folder after failed runs]
 
   # step processing with --start/stop/dostep options
-  smallbaselineApp.py GalapagosSenDT128.template --dostep velocity  # run at step 'velocity' only
-  smallbaselineApp.py GalapagosSenDT128.template --end load_data    # end after step 'load_data'
+  smallbaselineApp.py GalapagosSenDT128.txt --dostep velocity  # run step 'velocity' only
+  smallbaselineApp.py GalapagosSenDT128.txt --end load_data    # end run after step 'load_data'
 """
 
 
