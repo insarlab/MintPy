@@ -24,6 +24,7 @@ def read_template2inps(templateFile, inps):
     keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
     for key in keyList:
         value = template[prefix+key]
+        # false/none values are valid inputs, thus, should be passed here without an if check
         if key in ['maskFile', 'deramp']:
             inpsDict[key] = value
         elif key in ['cutoff']:

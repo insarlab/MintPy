@@ -61,6 +61,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                                                           'maskTempCoh.h5')[:2]
     """
     # Intermediate files name
+    # ramp_type can sometimes be False, thus, should be treated the same as "no"
     if not ramp_type or ramp_type == 'no':
         print('No ramp removal')
         deramped_file = timeseries_resid_file
@@ -112,6 +113,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         rms_list, date_list = ut.get_residual_rms('timeseriesResidual.h5', 'maskTempCoh.h5')
     """
     # Intermediate files name
+    # ramp_type can sometimes be False, thus, should be treated the same as "no"
     if not ramp_type or ramp_type == 'no':
         print('No ramp removal')
         deramped_file = timeseries_resid_file
