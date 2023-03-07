@@ -61,7 +61,8 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                                                           'maskTempCoh.h5')[:2]
     """
     # Intermediate files name
-    if ramp_type == 'no':
+    # ramp_type can sometimes be False, thus, should be treated the same as "no"
+    if not ramp_type or ramp_type == 'no':
         print('No ramp removal')
         deramped_file = timeseries_resid_file
     else:
@@ -69,7 +70,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     std_file = os.path.splitext(deramped_file)[0]+'_std.txt'
 
     # Get residual std text file
-    if run_or_skip(out_file=std_file, in_file=[deramped_file, mask_file], readable=False) == 'run':
+    if run_or_skip(out_file=std_file, in_file=[timeseries_resid_file, mask_file], readable=False) == 'run':
         if run_or_skip(out_file=deramped_file, in_file=timeseries_resid_file) == 'run':
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
@@ -112,7 +113,8 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         rms_list, date_list = ut.get_residual_rms('timeseriesResidual.h5', 'maskTempCoh.h5')
     """
     # Intermediate files name
-    if ramp_type == 'no':
+    # ramp_type can sometimes be False, thus, should be treated the same as "no"
+    if not ramp_type or ramp_type == 'no':
         print('No ramp removal')
         deramped_file = timeseries_resid_file
     else:
@@ -122,7 +124,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     rms_file = os.path.join(fdir, f'rms_{fbase}.txt')
 
     # Get residual RMS text file
-    if run_or_skip(out_file=rms_file, in_file=[deramped_file, mask_file], readable=False) == 'run':
+    if run_or_skip(out_file=rms_file, in_file=[timeseries_resid_file, mask_file], readable=False) == 'run':
         if run_or_skip(out_file=deramped_file, in_file=timeseries_resid_file) == 'run':
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
