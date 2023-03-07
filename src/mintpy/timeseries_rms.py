@@ -24,11 +24,10 @@ def read_template2inps(templateFile, inps):
     keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
     for key in keyList:
         value = template[prefix+key]
-        if value:
-            if key in ['maskFile', 'deramp']:
-                inpsDict[key] = value
-            elif key in ['cutoff']:
-                inpsDict[key] = float(value)
+        if key in ['maskFile', 'deramp']:
+            inpsDict[key] = value
+        elif key in ['cutoff']:
+            inpsDict[key] = float(value)
     return inps
 
 
