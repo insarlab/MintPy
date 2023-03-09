@@ -115,7 +115,7 @@ python -m pip install -e ~/tools/MintPy
 <details>
 <p><summary>via path setup</summary></p>
 
-Add below in your source file, e.g. <code>~/.bash_profile</code> for <em>bash</em> users or <code>~/.cshrc</code> for <em>csh/tcsh</em> users:
+Add below in your source file, e.g. <code>\~/.bash_profile</code> for <em>bash</em> users or <code>\~/.cshrc</code> for <em>csh/tcsh</em> users:
 
 ```bash
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi

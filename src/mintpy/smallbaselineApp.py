@@ -1081,15 +1081,15 @@ class TimeSeriesAnalysis:
 
         # message for more visualization scripts
         msg = """Explore more info & visualization options with the following scripts:
-        info.py                    #check HDF5 file structure and metadata
-        view.py                    #2D map view
-        tsview.py                  #1D point time-series (interactive)
-        transect.py                #1D profile (interactive)
-        plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
-        plot_network.py            #plot network configuration of the dataset
-        plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
-        save_kmz.py                #generate Google Earth KMZ file in raster image
-        save_kmz_timeseries.py     #generate Google Earth KMZ file in points for time-series (interactive)
+        info.py                    # check HDF5 file structure and metadata
+        view.py                    # 2D map view
+        tsview.py                  # 1D point time-series (interactive)
+        transect.py                # 1D profile (interactive)
+        plot_coherence_matrix.py   # plot coherence matrix for one pixel (interactive)
+        plot_network.py            # plot network configuration of the dataset
+        plot_transection.py        # plot 1D profile along a line of a 2D matrix (interactive)
+        save_kmz.py                # generate Google Earth KMZ file in raster image
+        save_kmz_timeseries.py     # generate Google Earth KMZ file in points for time-series (interactive)
         """
         if print_aux:
             print(msg)

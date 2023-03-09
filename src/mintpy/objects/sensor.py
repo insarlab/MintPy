@@ -235,6 +235,18 @@ KSAT5 = {
     'ground_range_pixel_size'    : 2.7,       # m
 }
 
+# ICEYE SAR constellation
+# from Table 2.1 in ICEYE SAR Product Guide at:
+# https://earth.esa.int/eogateway/documents/20142/37627/ICEYE-SAR-Product-Guide-V4.pdf
+ICEYE = {
+    'carrier_frequency'          : 9.65e9,          # Hz
+    'altitude'                   : 570e3,           # m
+    'antenna_length'             : 3.2,             # m
+    'antenna_width'              : 0.4,             # m
+    'pulse_repetition_frequency' : [2e3, 10e3],     # Hz
+    'chirp_bandwidth'            : [37.6e6, 299e6], # Hz
+}
+
 
 ##--------------------  C-band  --------------------##
 
@@ -325,6 +337,7 @@ SEASAT = {
     'carrier_frequency'          : 1.275e9,   # Hz
     'altitude'                   : 787e3,     # m, mean value
     'antenna_length'             : 10.74,     # m
+    'antenna_width'              : 2.16,      # m
     'pulse_repetition_frequency' : 1555,      # Hz, 1463-1647
     'chirp_bandwidth'            : 19e6,      # Hz
 }
@@ -412,6 +425,7 @@ SENSOR_DICT = {
     'tsx'   : TSX,
     'csk'   : CSK,
     'ksat5' : KSAT5,
+    'iceye' : ICEYE,
     # C-band
     'ers'   : ERS,
     'env'   : ENV,
