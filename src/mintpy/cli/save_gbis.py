@@ -26,7 +26,7 @@ EXAMPLE = """example:
   save_gbis.py 20150223_20161031_msk.unw -g inputs/geometryGeo.h5 -o Alos2DT23_20150223_20161031.mat
   save_gbis.py 20150223_20161031_msk.unw -g inputs/geometryGeo.h5 --out-dir ../Model/data --ellipsoid2geoid
 
-  #for non-veloicty dataset, e.g. step or annualAmplitude
+  #for non-velocity dataset, e.g. step or annualAmplitude
   save_gbis.py velocity.h5 step20080221    -o AlosDT73_step20080221.mat
   save_gbis.py velocity.h5 annualAmplitude -o AlosDT73_annualAmplitude.mat
 """
