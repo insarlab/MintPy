@@ -191,9 +191,8 @@ def main(iargs=None):
 
     # run
     view_cmd = get_view_cmd(iargs)
-
-    obj = transectionViewer(iargs=iargs)
-    obj.configure(inps, view_cmd)
+    obj = transectionViewer(inps, view_cmd)
+    obj.open()
     obj.plot()
     obj.fig.canvas.mpl_disconnect(obj.cid)
 
