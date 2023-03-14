@@ -663,7 +663,7 @@ def en2az(v_e, v_n, orb_az_angle):
                 v_n          - np.ndarray or float, displacement in north-south direction, north as positive
                 orb_az_angle - np.ndarray or float, azimuth angle of the SAR platform along track/orbit direction
                                measured from the north with anti-clockwise direction as positive, in the unit of degrees
-                               orb_az_angle = los_az_angle + 90 for right-looking radar.
+                               orb_az_angle = los_az_angle - 90 for right-looking radar.
     Returns:    v_az         - np.ndarray or float, displacement in azimuth direction,
                                motion along flight direction as positive
     """
