@@ -791,6 +791,8 @@ def load_aria(inps):
                 phase2range = float(meta['WAVELENGTH']) / (4.*np.pi)
                 ts_arr[ii,:,:] = bnd_arr * phase2range
             ds = None
+            # mask nodata
+            ts_arr[ts_arr == 0] = np.nan
 
             # adjust attribute
             meta['FILE_TYPE'] = 'timeseries'
