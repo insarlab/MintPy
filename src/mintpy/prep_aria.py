@@ -5,6 +5,7 @@
 ############################################################
 
 
+import datetime as dt
 import os
 import time
 
@@ -715,50 +716,103 @@ def load_aria(inps):
         )
 
     ########## output file 3 - correction layers
-    correction_layers = [inps.tropoFile, inps.ionoFile, inps.setFile]
 
-    # define correction dataset structure for ifgramStack
-    # is it already resampled??
-    ds_name_dict = {
-        "date"             : (np.dtype('S8'), (num_pair, 2)),
-        "dropIfgram"       : (np.bool_,       (num_pair,)),
-        "bperp"            : (np.float32,     (num_pair,)),
-        "unwrapPhase"      : (np.float32,     (num_pair, length, width)),
-    }
-    meta['FILE_TYPE'] = 'ifgramStack'
+    # Invert Iono stack and write out cube
+    if inps.ionoFile:
+        # define correction dataset structure for ifgramStack
+        ds_name_dict = {
+            'date'             : (np.dtype('S8'), (num_pair, 2)),
+            'dropIfgram'       : (np.bool_,       (num_pair,)),
+            'bperp'            : (np.float32,     (num_pair,)),
+            'unwrapPhase'      : (np.float32,     (num_pair, length, width)),
+        }
+        meta['FILE_TYPE'] = 'ifgramStack'
 
-    # Loop thourgh defined correction layers
+        layer_name, layer_type = get_correction_layer(inps.ionoFile)
+        writefile.layout_hdf5(
+            f'./inputs/d{layer_name}.h5',
+            ds_name_dict,
+            metadata=meta,
+            compression=inps.compression,
+            )
+            
+        # write data to disk
+        write_correction(
+            f'./inputs/d{layer_name}.h5',
+            corrStack=inps.ionoFile,  
+            box=box,
+            xstep=inps.xstep,
+            ystep=inps.ystep,
+            )
+
+
+        # invert layer to get correction
+        # for SAR acquistion dates
+        invert_diff_corrections(f'./inputs/d{layer_name}.h5',
+                                f'./inputs/{layer_name}.h5',
+                                layer_type,
+                                cluster=inps.cluster,
+                                num_workers=inps.num_workers,
+                                waterMask = None,
+                                maskDataset = None,
+                                maskThreshold = 0.4)
+
+    # Loop through other correction layers also provided as epochs
+    correction_layers = [inps.tropoFile, inps.setFile]
     for layer in correction_layers:
         if layer:
+            # get name and type
             layer_name, layer_type = get_correction_layer(layer)
-            writefile.layout_hdf5(
-                f'./inputs/d{layer_name}.h5',
-                ds_name_dict,
-                metadata=meta,
-                compression=inps.compression,
-                )
-            
-            # write data to disk
-            write_correction(
-                f'./inputs/d{layer_name}.h5',
-                corrStack=layer,  
-                box=box,
-                xstep=inps.xstep,
-                ystep=inps.ystep,
-                )
 
+            # open raster
+            ds = gdal.Open(layer, gdal.GA_ReadOnly)
 
-            # invert layer to get correction
-            # for SAR acquistion dates
-            invert_diff_corrections(f'./inputs/d{layer_name}.h5',
-                                    f'./inputs/{layer_name}.h5',
-                                    layer_type,
-                                    cluster=inps.cluster,
-                                    num_workers=inps.num_workers,
-                                    waterMask = None,
-                                    maskDataset = None,
-                                    maskThreshold = 0.4)
+            # get times and arrays
+            date_list = []
+            dt_objs = []
+            num_dates = ds.RasterCount
+            ts_arr = np.zeros((num_dates, length, width), dtype=np.float32)
+            for ii in range(num_dates):
+                # read band
+                bnd = ds.GetRasterBand(ii+1)
+                bnd_arr = bnd.ReadAsArray()
+                bnd_name = bnd.GetMetadataDomainList()[0]
+                d12 = bnd.GetMetadata(bnd_name)['Dates']
+                utc = bnd.GetMetadata(bnd_name)['UTCTime (HH:MM:SS.ss)']
+                # set time
+                utc = time.strptime(utc, "%H:%M:%S.%f")
+                center_line_utc = utc.tm_hour*3600.0 + \
+                                  utc.tm_min*60.0 + utc.tm_sec
+                utc_sec = dt.timedelta(seconds=float(center_line_utc))
+                dt_obj = dt.datetime.strptime(d12, '%Y%m%d') + utc_sec
+                date_list.append(d12)
+                dt_objs.append(dt_obj)
+                # set array
+                phase2range = float(meta['WAVELENGTH']) / (4.*np.pi)
+                ts_arr[ii,:,:] = bnd_arr * phase2range
+            ds = None
 
+            # adjust attribute
+            meta['FILE_TYPE'] = 'timeseries'
+            meta['DATA_TYPE'] = 'float32'
+            meta['UNIT'] = 'm'
+            for key in ['REF_Y', 'REF_X', 'REF_DATE']:
+                if key in meta.keys():
+                    meta.pop(key)
+
+            # define correction dataset structure for timeseries
+            ds_name_dict = {
+                'timeseries' : ts_arr,
+                'date'       : np.array(date_list, dtype=np.string_),
+                'sensingMid' : np.array(
+                               [i.strftime('%Y%m%dT%H%M%S') for i in dt_objs],
+                               dtype=np.string_),
+            }
+
+            # write
+            writefile.write(ds_name_dict, 
+                            out_file=f'./inputs/{layer_name}.h5',
+                            metadata=meta)
 
 
     print('-'*50)
