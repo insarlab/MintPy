@@ -62,7 +62,7 @@ class transectionViewer():
             plt.switch_backend('Agg')
 
         # copy inps from view.py to self object
-        self.data_img, atr, view_inps = view.prep_slice(self.view_cmd)
+        self.data_img, self.atr, view_inps = view.prep_slice(self.view_cmd)
         for key, value in view_inps.__dict__.items():
             # do not update the following setting from view.py
             if key not in ['file', 'dset', 'fig_size']:
