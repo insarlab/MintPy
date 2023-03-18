@@ -75,6 +75,11 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
+
     # default: auxiliary file paths (velocity and template)
     mintpy_dir = os.path.dirname(os.path.dirname(inps.ifgram_file))
     if not inps.img_file:
@@ -106,8 +111,8 @@ def main(iargs=None):
     from mintpy.plot_coherence_matrix import coherenceMatrixViewer
 
     # run
-    obj = coherenceMatrixViewer(iargs=iargs)
-    obj.configure(inps)
+    obj = coherenceMatrixViewer(inps)
+    obj.open()
     obj.plot()
     obj.fig.canvas.mpl_disconnect(obj.cid)
 
