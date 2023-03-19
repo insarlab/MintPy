@@ -64,6 +64,9 @@ def create_parser(subparsers=None):
                         help='number of looks in azimuth direction, for multilooking applied after fringe processing.\n'
                              'Only impacts metadata. (default: %(default)s).')
 
+    parser.add_argument('--water_mask', default=None,
+                        help='path to radarcoded water mask to create in geometry.')
+
     parser.add_argument('--geom-only', action='store_true',
                         help='Only create the geometry file (useful for geocoding a watermask).')
 
