@@ -5,12 +5,12 @@
 ############################################################
 
 
-import datetime as dt
 import os
 import time
 
 import h5py
 import numpy as np
+import datetime as dt
 
 try:
     from osgeo import gdal
@@ -297,7 +297,7 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
             # write
             f['waterMask'][:,:] = water_mask
 
-    print(f'finished writing to HD5 file: {outfile}')
+    print(f'finished writing to HD5 file: {outfile}\n')
     return outfile
 
 
@@ -418,32 +418,28 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
         for dsName in ['unwrapPhase','coherence','connectComponent']:
             f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
 
-    print(f'finished writing to HD5 file: {outfile}')
+    print(f'finished writing to HD5 file: {outfile}\n')
     dsUnw = None
     dsCoh = None
     dsComp = None
     dsAmp = None
     return outfile
 
+
 # OPTIONAL - ARIA corrections troposphereTotal, ionosphere, solidearthtides
-def write_correction(outfile, corrStack, box=None, 
+def write_iono_stack(outfile, ionStack, box=None, 
                      xstep=1, ystep=1, mli_method='nearest'):
-    """Write corrections to object ifgramStack HDF5 file from stack VRT files
-       Correction layers are in a form of differential observations for each interferometric pair
-
-       ARIA correction layers:
-            troposhereTotal : models GMAO, HRRR, HRES, ERA5 '/science/grids/corrections/external/troposphere/'
-            ionosphere '/science/grids/corrections/derived/ionosphere/ionosphere'
-            solidEarthTides '/science/grids/corrections/derived/solidearthtides/'
+    """Write ionospheric corrections to object ifgramStack HDF5 file from stack VRT files
+       Ionospheric layer is in a form of differential observations for each interferometric pair
+       ARIA_GUNW_NC_PATH : ionosphere '/science/grids/corrections/derived/ionosphere/ionosphere'
     """
-
     print('-'*50)
-    max_digit = len(os.path.basename(str(corrStack)))
-    if corrStack is not None:
-        print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(corrStack), w=max_digit))
+    max_digit = len(os.path.basename(str(ionStack)))
+    if ionStack is not None:
+        print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(ionStack), w=max_digit))
 
-    dsCor = gdal.Open(corrStack, gdal.GA_ReadOnly)
-    # get the layer name (for tropo this will get the model name)
+    dsCor = gdal.Open(ionStack, gdal.GA_ReadOnly)
+    # get the layer name 
     layer = dsCor.GetRasterBand(1).GetMetadataDomainList()[0]
 
     # extract NoDataValue (from the last */date2_date1.vrt file for example)
@@ -514,11 +510,108 @@ def write_correction(outfile, corrStack, box=None,
         for dsName in ['unwrapPhase']:
             f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
 
-    print(f'finished writing to HD5 file: {outfile}')
+    print(f'finished writing to HD5 file: {outfile}\n')
     ds = None
     dsCor = None
 
     return outfile
+
+
+def write_model_stack(outfile, corrStack, box=None, 
+                      xstep=1, ystep=1, mli_method='nearest'): 
+        """Write SET and TropsphericDelay corrections to HDF5 file from stack VRT files
+         Correction layers are stored for each SAR acquisition date
+
+        ARIA_GUNW_NC_PATH:
+        troposhereTotal : models GMAO, HRRR, HRES, ERA5 '/science/grids/corrections/external/troposphere/'
+        solidEarthTides '/science/grids/corrections/derived/solidearthtides/'
+        """
+
+        print('-'*50)
+        max_digit = len(os.path.basename(str(corrStack)))
+
+        if corrStack is not None:
+            print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(corrStack), w=max_digit))
+
+        # open raster
+        dsCor = gdal.Open(corrStack, gdal.GA_ReadOnly)
+        # extract NoDataValue (from the last date.vrt file for example)
+        ds = gdal.Open(dsCor.GetFileList()[-1], gdal.GA_ReadOnly)
+        noDataValue = ds.GetRasterBand(1).GetNoDataValue()
+        ds = None
+
+        # get the layer name (for tropo this will get the model name)
+        layer = dsCor.GetRasterBand(1).GetMetadataDomainList()[0]
+
+        # Get the wavelength. need to convert radians to meters
+        wavelength = np.float64(dsCor.GetRasterBand(1).GetMetadata(layer)["Wavelength (m)"])
+        phase2range = -1 * wavelength / (4.*np.pi)
+
+        # get model dates and time
+        nDate = dsCor.RasterCount
+        dateDict = {}
+        sensingDict = {}
+        for ii in range(nDate):
+            bnd = dsCor.GetRasterBand(ii+1)
+            date = bnd.GetMetadata(layer)["Dates"]
+            utc = dt.datetime.strptime(date + ',' + \
+                                       bnd.GetMetadata(layer)["UTCTime (HH:MM:SS.ss)"],
+                                       "%Y%m%d,%H:%M:%S.%f")
+            dateDict[date] = ii+1
+            sensingDict[ii+1] = str(utc)
+        dateList = sorted(dateDict.keys())
+        print(f'number of {layer} datasets: {len(dateList)}')
+
+        # box to gdal arguments
+        # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
+        if box is not None:
+            kwargs = dict(
+                xoff=box[0],
+                yoff=box[1],
+                win_xsize=box[2]-box[0],
+                win_ysize=box[3]-box[1])
+        else:
+            kwargs = dict()
+
+        if xstep * ystep > 1:
+            msg = f'apply {xstep} x {ystep} multilooking/downsampling via {mli_method} to {layer}'
+            print(msg)
+
+        print(f'writing data to HDF5 file {outfile} with a mode ...')
+        with h5py.File(outfile, "a") as f:
+            prog_bar = ptime.progressBar(maxValue=nDate)
+            for ii in range(nDate):
+                    date = dateList[ii]
+                    bndIdx = dateDict[date]
+                    utc = sensingDict[bndIdx] 
+                    prog_bar.update(ii+1, suffix=f'{date} {ii+1}/{nDate}')
+
+                    f["date"][ii] = date.encode("utf-8")
+                    f["sensingMid"][ii] = utc.encode("utf-8")
+
+                    bnd = dsCor.GetRasterBand(bndIdx)
+                    data = bnd.ReadAsArray(**kwargs)
+                    data = multilook_data(data, ystep, xstep, method=mli_method)
+                    data[data == noDataValue] = 0         #assign pixel with no-data to 0
+                    data[np.isnan(data)] = 0              #assign nan pixel to 0
+                    f["timeseries"][ii,:,:] = data * phase2range 
+
+            prog_bar.close()
+
+            # add MODIFICATION_TIME metadata to each 3D dataset
+            for dsName in ['timeseries']:
+                f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
+
+        print(f'finished writing to HD5 file: {outfile}\n')
+        dsCor = None
+
+        return outfile     
+
+
+def get_number_of_epochs(vrtfile):
+    ds = gdal.Open(vrtfile, gdal.GA_ReadOnly)
+
+    return ds.RasterCount
 
 def invert_diff_corrections(input_filename, output_filename, dataset,
                             cluster = None, num_workers = '4', waterMask=None,
@@ -717,6 +810,7 @@ def load_aria(inps):
 
     ########## output file 3 - correction layers
 
+    # 3.1 - ionosphere
     # Invert Iono stack and write out cube
     if inps.ionoFile:
         # define correction dataset structure for ifgramStack
@@ -729,98 +823,79 @@ def load_aria(inps):
         meta['FILE_TYPE'] = 'ifgramStack'
 
         layer_name, layer_type = get_correction_layer(inps.ionoFile)
-        writefile.layout_hdf5(
-            f'./inputs/d{layer_name}.h5',
-            ds_name_dict,
-            metadata=meta,
-            compression=inps.compression,
-            )
-            
-        # write data to disk
-        write_correction(
-            f'./inputs/d{layer_name}.h5',
-            corrStack=inps.ionoFile,  
-            box=box,
-            xstep=inps.xstep,
-            ystep=inps.ystep,
-            )
 
+        if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[0]) == 'run':
+            writefile.layout_hdf5(
+                f'{out_dir}/d{layer_name}.h5',
+                ds_name_dict,
+                metadata=meta,
+                compression=inps.compression,
+                )
+                
+            # write data to disk
+            write_iono_stack(
+                f'{out_dir}/d{layer_name}.h5',
+                ionStack=inps.ionoFile,  
+                box=box,
+                xstep=inps.xstep,
+                ystep=inps.ystep,
+                )
 
-        # invert layer to get correction
-        # for SAR acquistion dates
-        invert_diff_corrections(f'./inputs/d{layer_name}.h5',
-                                f'./inputs/{layer_name}.h5',
-                                layer_type,
-                                cluster=inps.cluster,
-                                num_workers=inps.num_workers,
-                                waterMask = None,
-                                maskDataset = None,
-                                maskThreshold = 0.4)
-
+            # invert layer to get ionosphere phase delay 
+            # on SAR acquistion dates
+            invert_diff_corrections(f'{out_dir}/d{layer_name}.h5',
+                                    f'{out_dir}/{layer_name}.h5',
+                                    layer_type,
+                                    cluster=inps.cluster,
+                                    num_workers=inps.num_workers,
+                                    waterMask = None,
+                                    maskDataset = None,
+                                    maskThreshold = 0.4)
+        
+    # 3.2 - model based corrections: SolidEarthTides and Troposphere 
     # Loop through other correction layers also provided as epochs
+
     correction_layers = [inps.tropoFile, inps.setFile]
     for layer in correction_layers:
         if layer:
             # get name and type
             layer_name, layer_type = get_correction_layer(layer)
+            num_dates = get_number_of_epochs(layer)
 
-            # open raster
-            ds = gdal.Open(layer, gdal.GA_ReadOnly)
-
-            # get times and arrays
-            date_list = []
-            dt_objs = []
-            num_dates = ds.RasterCount
-            ts_arr = np.zeros((num_dates, length, width), dtype=np.float32)
-            for ii in range(num_dates):
-                # read band
-                bnd = ds.GetRasterBand(ii+1)
-                bnd_arr = bnd.ReadAsArray()
-                bnd_name = bnd.GetMetadataDomainList()[0]
-                d12 = bnd.GetMetadata(bnd_name)['Dates']
-                utc = bnd.GetMetadata(bnd_name)['UTCTime (HH:MM:SS.ss)']
-                # set time
-                utc = time.strptime(utc, "%H:%M:%S.%f")
-                center_line_utc = utc.tm_hour*3600.0 + \
-                                  utc.tm_min*60.0 + utc.tm_sec
-                utc_sec = dt.timedelta(seconds=float(center_line_utc))
-                dt_obj = dt.datetime.strptime(d12, '%Y%m%d') + utc_sec
-                date_list.append(d12)
-                dt_objs.append(dt_obj)
-                # set array
-                phase2range = float(meta['WAVELENGTH']) / (4.*np.pi)
-                ts_arr[ii,:,:] = bnd_arr * phase2range
-            ds = None
-            # mask nodata
-            ts_arr[ts_arr == 0] = np.nan
-
-            # adjust attribute
             meta['FILE_TYPE'] = 'timeseries'
-            meta['DATA_TYPE'] = 'float32'
             meta['UNIT'] = 'm'
+            meta['DATA_TYPE'] = 'float32'
             for key in ['REF_Y', 'REF_X', 'REF_DATE']:
                 if key in meta.keys():
                     meta.pop(key)
 
             # define correction dataset structure for timeseries
             ds_name_dict = {
-                'timeseries' : ts_arr,
-                'date'       : np.array(date_list, dtype=np.string_),
-                'sensingMid' : np.array(
-                               [i.strftime('%Y%m%dT%H%M%S') for i in dt_objs],
-                               dtype=np.string_),
+            'date'           : (np.dtype('S8'),  (num_dates, )),
+            'sensingMid'     : (np.dtype('S15'), (num_dates, )),
+            'timeseries'     : (np.float32,      (num_dates, length, width)),
             }
 
-            # write
-            writefile.write(ds_name_dict, 
-                            out_file=f'./inputs/{layer_name}.h5',
-                            metadata=meta)
+            if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[0]) == 'run':
+                writefile.layout_hdf5(
+                    f'{out_dir}/{layer_name}.h5',
+                    ds_name_dict,
+                    metadata=meta,
+                    compression=inps.compression,
+                    )
 
-
+                # write data to disk
+                write_model_stack(
+                    f'{out_dir}/{layer_name}.h5',
+                    corrStack=layer,  
+                    box=box,
+                    xstep=inps.xstep,
+                    ystep=inps.ystep,
+                    ) 
     print('-'*50)
 
     # used time
     m, s = divmod(time.time() - start_time, 60)
     print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
-    return
+

@@ -49,7 +49,7 @@ EXAMPLE = """example:
   prep_aria.py -t SanFranSenDT42.txt
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt'
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' -a '../azimuthAngle/*.vrt' -w ../mask/watermask.msk
-  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' -tropo '../stack/troposphereTotal/GMAO_stack.vrt' -ion '../stack/ionStack.vrt'
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' --tropo '../stack/troposphereTotal/GMAO_stack.vrt' --iono '../stack/ionStack.vrt'
   
   # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
   # reference: https://github.com/aria-tools/ARIA-tools
@@ -112,7 +112,7 @@ def create_parser(subparsers=None):
     corr = parser.add_argument_group('corrections')
     corr.add_argument('-ct', '--tropo', dest='tropoFile', type=str,
                       help='Name of the Troposhere Delay stack file', default=None)
-    corr.add_argument('-ci', '--ion', dest='ionoFile', type=str,
+    corr.add_argument('-ci', '--iono', dest='ionoFile', type=str,
                     help='Name of the Ionosphere Delay stack file', default=None)
     corr.add_argument('-cs', '--set', dest='setFile', type=str,
                     help='Name of the Solid Earth Tides stack file', default=None)
