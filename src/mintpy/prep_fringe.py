@@ -92,9 +92,6 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # in case meta_file is input as wildcard
-    inps.metaFile = sorted(glob.glob(inps.metaFile))[0]
-
     return inps
 
 
