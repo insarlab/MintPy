@@ -238,7 +238,7 @@ def prepare_ps_mask(outfile, infile, metadata, box=None):
     return outfile
 
 
-def prepare_geometry(outfile, geom_dir, box, metadata, path_water_mask=None):
+def prepare_geometry(outfile, geom_dir, box, metadata, water_mask_file=None):
     print('-'*50)
     print(f'preparing geometry file: {outfile}')
 
@@ -254,13 +254,8 @@ def prepare_geometry(outfile, geom_dir, box, metadata, path_water_mask=None):
         'azimuthAngle'   : os.path.join(geom_dir, 'los.rdr.full'),
         'shadowMask'     : os.path.join(geom_dir, 'shadowMask.rdr.full'),
     }
-
-    if path_water_mask is not None:
-        if not os.path.exists(path_water_mask):
-            print (f'WARNING: path_mask at: {path_water_mask} not found')
-        else:
-            fDict['waterMask'] = path_water_mask
-
+    if water_mask_file:
+        fDict['waterMask'] = water_mask_file
 
     # initiate dsDict
     dsDict = {}
@@ -407,9 +402,10 @@ def load_fringe(inps):
     prepare_geometry(
         outfile=geom_file,
         geom_dir=geom_src_dir,
-        box=src_box,
         metadata=meta,
-        path_water_mask=inps.water_mask)
+        box=src_box,
+        water_mask_file=inps.water_mask_file,
+    )
 
     if inps.geom_only:
         return ts_file, tcoh_file, ps_mask_file, geom_file
