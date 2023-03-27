@@ -238,7 +238,7 @@ def prepare_ps_mask(outfile, infile, metadata, box=None):
     return outfile
 
 
-def prepare_geometry(outfile, geom_dir, box, metadata, water_mask_file=None):
+def prepare_geometry(outfile, geom_dir, metadata, box, water_mask_file=None):
     print('-'*50)
     print(f'preparing geometry file: {outfile}')
 
