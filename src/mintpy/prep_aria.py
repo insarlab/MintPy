@@ -545,7 +545,7 @@ def write_model_stack(outfile, corrStack, box=None,
 
         # Get the wavelength. need to convert radians to meters
         wavelength = np.float64(dsCor.GetRasterBand(1).GetMetadata(layer)["Wavelength (m)"])
-        phase2range = -1 * wavelength / (4.*np.pi)
+        phase2range = wavelength / (4.*np.pi)
 
         # get model dates and time
         nDate = dsCor.RasterCount
@@ -854,8 +854,10 @@ def load_aria(inps):
         
     # 3.2 - model based corrections: SolidEarthTides and Troposphere 
     # Loop through other correction layers also provided as epochs
-
-    correction_layers = [inps.tropoFile, inps.setFile]
+    # handle multiple tropo stacks (if specified)
+    if inps.tropoFile is None:
+         inps.tropoFile = [None]
+    correction_layers = inps.tropoFile + [inps.setFile]
     for layer in correction_layers:
         if layer:
             # get name and type
@@ -878,7 +880,7 @@ def load_aria(inps):
 
             if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[0]) == 'run':
                 writefile.layout_hdf5(
-                    f'{out_dir}/{layer_name}.h5',
+                    f'{out_dir}/{layer_name}_ARIA.h5',
                     ds_name_dict,
                     metadata=meta,
                     compression=inps.compression,
@@ -886,7 +888,7 @@ def load_aria(inps):
 
                 # write data to disk
                 write_model_stack(
-                    f'{out_dir}/{layer_name}.h5',
+                    f'{out_dir}/{layer_name}_ARIA.h5',
                     corrStack=layer,  
                     box=box,
                     xstep=inps.xstep,

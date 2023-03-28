@@ -161,10 +161,14 @@ def cmd_line_parse(iargs = None):
         # search for wildcard pattern
         fnames = glob.glob(iDict[key]) if iDict[key] else []
 
-        # user the first element if more than one exist
+        # return the first element if more than one exist
+        # except for tropo, for which multiple inputs could be passed
         if len(fnames) > 0:
-            iDict[key] = fnames[0]
-            print('{k:<{w}} : {f}'.format(k=key, w=max_digit, f=fnames[0]))
+            if 'tropo' not in key:
+                iDict[key] = fnames[0]
+            else:
+                iDict[key] = fnames
+            print('{k:<{w}} : {f}'.format(k=key, w=max_digit, f=iDict[key]))
 
         elif key in required_ds_keys:
             # raise exception if any required DS is missing
