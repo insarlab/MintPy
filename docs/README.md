@@ -10,7 +10,7 @@
 
 ## MintPy ##
 
-The Miami INsar Time-series software in PYthon (MintPy as /mɪnt paɪ/) is an open-source package for Interferometric Synthetic Aperture Radar (InSAR) time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), [ARIA](https://github.com/aria-tools/ARIA-tools), [FRInGE](https://github.com/isce-framework/fringe), [HyP3](https://hyp3-docs.asf.alaska.edu/), [GMTSAR](https://github.com/gmtsar/gmtsar), [SNAP](http://step.esa.int/), [GAMMA](https://www.gamma-rs.ch/no_cache/software.html) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement in line-of-sight direction. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
+The Miami INsar Time-series software in PYthon (MintPy as /mɪnt paɪ/) is an open-source package for Interferometric Synthetic Aperture Radar (InSAR) time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), [ARIA](https://github.com/aria-tools/ARIA-tools), [FRInGE](https://github.com/isce-framework/fringe), [HyP3](https://hyp3-docs.asf.alaska.edu/), [GMTSAR](https://github.com/gmtsar/gmtsar), [SNAP](http://step.esa.int/), [GAMMA](https://www.gamma-rs.ch/software) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement in line-of-sight direction. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
 
 This package was called PySAR before version 1.1.1. For version 1.1.2 and onward, we use MintPy instead.
 
@@ -39,7 +39,7 @@ smallbaselineApp.py GalapagosSenDT128.txt --end load_data    # end run after ste
 
 Inside smallbaselineApp.py, it reads the unwrapped interferograms, references all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates the temporal coherence to evaluate the quality of inversion, corrects local oscillator drift (for Envisat only), corrects stratified tropospheric delay (using global atmospheric models or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity.
 
-Configuration parameters for each step are initiated with default values in a customizable text file [**smallbaselineApp.cfg**](../mintpy/defaults/smallbaselineApp.cfg).
+Configuration parameters for each step are initiated with default values in a customizable text file [**smallbaselineApp.cfg**](../src/mintpy/defaults/smallbaselineApp.cfg).
 
 #### [Example](./demo_dataset.md) on Fernandina volcano, Galápagos with Sentinel-1 data ####
 
@@ -73,7 +73,7 @@ MintPy is a toolbox with individual utility scripts. Simply run the script with 
 
 #### 2.3 Build on top of `mintpy` module ####
 
-MintPy is modulized in Python with utilities classes and functions and well commented in the code level. Users who are familiar with Python could build their own functions and modules on top of [`mintpy.objects`](../mintpy/objects) and [`mintpy.utils`](../mintpy/utils). However, we don't have a complete API document website yet (maybe you can contribute this!). Below is an example of reading the 3D matrix of displacement time-series from an HDF5 file.
+MintPy is modulized in Python with utilities classes and functions and well commented in the code level. Users who are familiar with Python could build their own functions and modules on top of [`mintpy.objects`](../src/mintpy/objects) and [`mintpy.utils`](../src/mintpy/utils). However, we don't have a complete API document website yet (maybe you can contribute this!). Below is an example of reading the 3D matrix of displacement time-series from an HDF5 file.
 
 ```python
 from mintpy.utils import readfile
@@ -110,6 +110,6 @@ _This disclaimer was adapted from the [MetPy project](https://github.com/Unidata
 
 ### 6. Citing this work ###
 
-Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [arXiv](https://eartharxiv.org/9sz6m/), [data](https://zenodo.org/record/4743058), [notebooks](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy).
+Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [arXiv](https://eartharxiv.org/9sz6m/), [data](https://doi.org/10.5281/zenodo.3464190), [notebooks](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy).
 
 In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../mintpy/defaults/smallbaselineApp.cfg) and listed in the [references.md file](./references.md).

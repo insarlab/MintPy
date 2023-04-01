@@ -244,7 +244,8 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
         for i in range(num_label):
             common_reg = common_regions[i]
             # sample_coords
-            idx = sorted(np.random.choice(common_reg.area, num_sample, replace=False))
+            rng = np.random.default_rng()
+            idx = sorted(rng.choice(int(common_reg.area), num_sample, replace=False))
             common_reg.sample_coords = common_reg.coords[idx, :].astype(int)
 
             # solve for int_ambiguity

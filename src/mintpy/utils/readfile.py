@@ -40,7 +40,7 @@ STD_METADATA_KEYS = {
     'AZIMUTH_PIXEL_SIZE' : ['azimuthPixelSize', 'azimuth_pixel_spacing', 'az_pixel_spacing', 'azimuth_spacing'],
     'RANGE_PIXEL_SIZE'   : ['rangePixelSize', 'range_pixel_spacing', 'rg_pixel_spacing', 'range_spacing'],
     'CENTER_LINE_UTC'    : ['center_time'],
-    'DATA_TYPE'          : ['dataType', 'data_type'],
+    'DATA_TYPE'          : ['dataType', 'data_type', 'image_format'],
     'EARTH_RADIUS'       : ['earthRadius', 'earth_radius_below_sensor', 'earth_radius'],
     'HEADING'            : ['HEADING_DEG', 'heading', 'centre_heading'],
     'HEIGHT'             : ['altitude', 'SC_height'],
@@ -167,6 +167,10 @@ DATA_TYPE_NUMPY2ISCE = {
     'complex64': 'CFLOAT',
 }
 
+# 4 - GAMMA
+DATA_TYPE_GAMMA2NUMPY = {
+    'fcomplex' : 'float64',
+}
 
 # single file (data + attributes) supported by GDAL
 GDAL_FILE_EXTS = ['.tiff', '.tif', '.grd']
@@ -516,14 +520,8 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # ISCE
     if processor in ['isce']:
         # convert default short name for data type from ISCE
-        data_type_dict = {
-            'byte': 'int8',
-            'float': 'float32',
-            'double': 'float64',
-            'cfloat': 'complex64',
-        }
-        if data_type in data_type_dict.keys():
-            data_type = data_type_dict[data_type]
+        if data_type in DATA_TYPE_ISCE2NUMPY.keys():
+            data_type = DATA_TYPE_ISCE2NUMPY[data_type]
 
         ftype = atr['FILE_TYPE'].lower().replace('.', '')
         if ftype in ['unw', 'cor', 'ion']:
@@ -613,22 +611,25 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         interleave = 'BIL'
         byte_order = atr.get('BYTE_ORDER', 'big-endian')
 
-        data_type = 'float32'
+        # convert default short name for data type from GAMMA
+        if data_type in DATA_TYPE_GAMMA2NUMPY.keys():
+            data_type = DATA_TYPE_GAMMA2NUMPY[data_type]
+
         if fext in ['.unw', '.cor', '.hgt_sim', '.dem', '.amp', '.ramp']:
             pass
 
         elif fext in ['.int']:
-            data_type = 'complex64'
+            data_type = data_type if 'DATA_TYPE' in atr.keys() else 'complex64'
 
         elif fext in ['.utm_to_rdc']:
-            data_type = 'float32'
+            data_type = data_type if 'DATA_TYPE' in atr.keys() else 'float32'
             interleave = 'BIP'
             num_band = 2
             if datasetName and datasetName.startswith(('az', 'azimuth')):
                 band = 2
 
         elif fext == '.slc':
-            data_type = 'complex32'
+            data_type = data_type if 'DATA_TYPE' in atr.keys() else 'complex32'
             cpx_band = 'magnitude'
 
         elif fext in ['.mli']:
