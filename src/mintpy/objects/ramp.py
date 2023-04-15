@@ -11,6 +11,7 @@ import numpy as np
 
 # duplicated in mintpy.cli.remove_ramp
 RAMP_LIST = [
+    'constant',
     'linear',
     'linear_range',
     'linear_azimuth',
@@ -92,6 +93,8 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
         G = np.hstack((xx**2, xx, ones))
     elif ramp_type == 'quadratic_azimuth':
         G = np.hstack((yy**2, yy, ones))
+    elif ramp_type == 'constant'
+        G = np.hstack((ones))
     else:
         raise ValueError(f'un-recognized ramp type: {ramp_type}')
 
