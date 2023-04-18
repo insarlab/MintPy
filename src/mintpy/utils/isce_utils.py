@@ -1095,3 +1095,58 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
     print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
     return unw_file
+
+
+def unwrap_icu(int_file, unw_file):
+    """Unwrap interferograms using ICU via isce2.
+
+    Modified from ISCE-2/topsStack/unwrap.py.
+    Parameters: int_file - str, path of   wrapped interferogram
+                unw_file - str, path of unwrapped interferogram
+    Returns:    unw_file - str, path of unwrapped interferogram
+    """
+    import isce
+    import isceobj
+    from mroipac.icu.Icu import Icu
+
+    start_time = time.time()
+
+    # get width
+    img = isceobj.Image.createImage()
+    img.load(int_file + '.xml')
+    width = img.getWidth()
+
+    # create image object for .int file
+    int_img = isceobj.Image.createIntImage()
+    int_img.initImage(int_file, 'read', width)
+    int_img.createImage()
+
+    # create image object for .unw file
+    unw_img = isceobj.Image.createImage()
+    unw_img.setFilename(unw_file)
+    unw_img.setWidth(width)
+    unw_img.imageType = 'unw'
+    unw_img.bands = 2
+    unw_img.scheme = 'BIL'
+    unw_img.dataType = 'FLOAT'
+    unw_img.setAccessMode('write')
+    unw_img.createImage()
+
+    # run ICU
+    icu_obj = Icu()
+    icu_obj.filteringFlag = False
+    icu_obj.useAmplitudeFalg = False
+    icu_obj.singlePatch = True
+    icu_obj.initCorrThresdhold = 0.1
+    icu_obj.icu(intImage=int_img, unwImage=unw_img)
+
+    int_img.finalizeImage()
+    unw_img.finalizeImage()
+    unw_img.renderHdr()
+    unw_img.renderVRT()
+
+    # time usage
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+
+    return unw_file

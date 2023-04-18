@@ -162,7 +162,9 @@ def update_inps_with_file_metadata(inps, metadata):
 
     # Figure output file name
     if not inps.outfile:
-        inps.outfile = [f'{inps.fig_title}{inps.fig_ext}']
+        # ignore whitespaces in the filename
+        fbase = inps.fig_title.replace(' ', '')
+        inps.outfile = [f'{fbase}{inps.fig_ext}']
 
     inps = update_figure_setting(inps)
     return inps
