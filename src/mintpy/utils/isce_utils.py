@@ -1147,6 +1147,6 @@ def unwrap_icu(int_file, unw_file):
 
     # time usage
     m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
     return unw_file
