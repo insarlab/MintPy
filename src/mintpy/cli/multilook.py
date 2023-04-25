@@ -14,9 +14,12 @@ from mintpy.utils.arg_utils import create_argument_parser
 EXAMPLE = """example:
   multilook.py velocity.h5 -r 15 -a 15
   multilook.py srtm30m.dem -x 10 -y 10 -o srtm300m.dem
+  multilook.py filt_fine.int -r 2 -a 2 -o filt_fine_mli.int
+
+  # support GDAL VRT file from ISCE2 as input
   multilook.py lat.rdr.full.vrt lon.rdr.full.vrt -x 9 -y 3
 
-  # generate multilooked lookup table (lat/lon.rdr) for dense offsets
+  # --off-file option: use as reference to adjust for the irregular size from isce2 dense offsets
   multilook.py lat.rdr.full.vrt -x 128 -y 64 -o lat.rdr.mli --off-file dense_offsets.bil
   multilook.py ../../geom_reference/lat.rdr.full -x 300 -y 100 -o lat.rdr --off-file offset.bip
 """
