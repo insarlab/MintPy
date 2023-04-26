@@ -285,22 +285,22 @@ The corresponding template options for `load_data`:
 
 ```cfg
 mintpy.load.processor        = isce
-##NOTE: 150408 is the reference date of alosStack processing.
-##      (parameter "reference date of the stack" of alosStack input xml file)
+## NOTE: 150408 is the reference date of alosStack processing.
+##       (parameter "reference date of the stack" of alosStack input xml file)
 ##---------for ISCE only:
-mintpy.load.metaFile         = $DATA_DIR/NCalAlos2DT169/pairs/*-*/150408.track.xml
+mintpy.load.metaFile         = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/150408.track.xml
 mintpy.load.baselineDir      = $DATA_DIR/NCalAlos2DT169/baseline
 ##---------interferogram datasets:
 mintpy.load.unwFile          = $DATA_DIR/NCalAlos2DT169/pairs/*-*/insar/filt_*-*_5rlks_28alks.unw
 mintpy.load.corFile          = $DATA_DIR/NCalAlos2DT169/pairs/*-*/insar/*-*_5rlks_28alks.cor
 mintpy.load.connCompFile     = $DATA_DIR/NCalAlos2DT169/pairs/*-*/insar/filt_*-*_5rlks_28alks.unw.conncomp
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.hgt
-mintpy.load.lookupYFile      = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.lat
-mintpy.load.lookupXFile      = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.lon
-mintpy.load.incAngleFile     = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.los
-mintpy.load.azAngleFile      = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.los
-mintpy.load.waterMaskFile    = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.wbd
+mintpy.load.demFile          = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.hgt
+mintpy.load.lookupYFile      = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.lat
+mintpy.load.lookupXFile      = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.lon
+mintpy.load.incAngleFile     = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.los
+mintpy.load.azAngleFile      = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.los
+mintpy.load.waterMaskFile    = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.wbd
 ```
 
 ### ARIA from [ARIA-tools](https://github.com/aria-tools/ARIA-tools) ###

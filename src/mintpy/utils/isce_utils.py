@@ -48,21 +48,21 @@ def get_processor(meta_file):
     """
     meta_dir = os.path.dirname(meta_file)
     tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
+    alos_meta_file = os.path.join(meta_dir, '*.track.xml')
     stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.db', 'data.dat', 'data']]
-    alosStack_meta_frame_files = glob.glob(os.path.join(meta_dir, 'f1_*', '*.frame.xml'))
 
     processor = None
     if len(glob.glob(tops_meta_file)) > 0:
         # topsStack
         processor = 'tops'
 
+    elif len(glob.glob(alos_meta_file)) > 0:
+        # alosStack / alos2App
+        processor = 'alosStack'
+
     elif any(os.path.isfile(i) for i in stripmap_meta_files):
         # stripmapStack
         processor = 'stripmap'
-
-    elif alosStack_meta_frame_files != []:
-        # alosStack
-        processor = 'alosStack'
 
     elif meta_file.endswith('.xml'):
         # stripmapApp
@@ -290,6 +290,12 @@ def extract_alosStack_metadata(meta_file, geom_dir):
     import isce
     import isceobj
     from isceobj.Planet.Planet import Planet
+
+    # default geom_dir
+    if not geom_dir:
+        geom_dir_cand = os.path.join(os.path.dirname(meta_file), 'insar')
+        if os.path.isdir(geom_dir_cand):
+            geom_dir = geom_dir_cand
 
     track = load_track(os.path.dirname(meta_file), dateStr=os.path.basename(meta_file).strip('.track.xml'))
     rlooks, alooks, width, length = extract_image_size_alosStack(geom_dir)
@@ -764,6 +770,8 @@ def get_full_resolution(meta_file):
     # calculate the full azimuth/range ground resolution
     az_pixel_size = float(meta['AZIMUTH_PIXEL_SIZE'])  #azimuth pixel size on the orbit
     rg_pixel_size = float(meta['RANGE_PIXEL_SIZE'])    #range   pixel size in LOS direction
+    az_pixel_size /= int(meta.get('ALOOKS', 1))
+    rg_pixel_size /= int(meta.get('RLOOKS', 1))
 
     height = float(meta['HEIGHT'])
     inc_angle = ut.incidence_angle(meta, dimension=0)
