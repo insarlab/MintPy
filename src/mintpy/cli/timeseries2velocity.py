@@ -160,7 +160,7 @@ def cmd_line_parse(iargs=None):
     if inps.polynomial < 0:
         raise ValueError(f'--polynomial ({inps.polynomial}) can NOT be smaller than zero!')
     if inps.polyline and inps.polynomial == 0:
-        raise ValueError(f'--polyline is NOT supported when --polynomial is zero!')
+        raise ValueError('--polyline is NOT supported when --polynomial is zero!')
 
     # default: sort --step / --polyline option
     inps.stepDate = sorted(inps.stepDate)
