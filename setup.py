@@ -29,7 +29,7 @@ setup(
     url="https://github.com/insarlab/MintPy",
     download_url=(f"https://github.com/insarlab/MintPy/archive/v{version}.tar.gz"),
     author="Zhang Yunjun, Heresh Fattahi",
-    author_email="yunjunzgeo@gmail.com",
+    author_email="yunjunz@outlook.com",
     license="GPL-3.0-or-later",
     license_files=("LICENSE",),
 

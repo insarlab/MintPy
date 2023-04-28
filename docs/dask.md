@@ -5,7 +5,7 @@ Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-b
 + **local cluster:** on a single machine (laptop or computing node) with multiple CPU cores, suitable for laptops, local cluster/stations and distributed High Performance Cluster (HPC). No job scheduler is required.
 + **non-local cluster:** on a distributed HPC with job scheduler installed, including PBS, LSF and SLURM.
 
-Below is a brief description of the required options and recommended best practices for each cluster/scheduler.
+[Here](https://github.com/2gotgrossman/dask-rsmas-presentation) is an entry-level presentation on parallel computing using Dask by David Grossman. Below we brief describe for each cluster/scheduler the required options and recommended best practices.
 
 ## 1. local cluster ##
 
