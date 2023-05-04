@@ -183,20 +183,22 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     return mat, atr, mat11, mat22, mat_diff
 
 
-def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
+def plot_stitch(mat11, mat22, mat, mat_diff, unit=1, vmin=None, vmax=None, cmap=None, out_fig=None):
     """plot stitching result"""
 
     # plot settings
     titles = ['file 1', 'file 2', 'stitched', 'difference']
     mat_mli = multilook_data(mat, 20, 20, method='mean')
-    vmin = np.nanmin(mat_mli)
-    vmax = np.nanmax(mat_mli)
+    if not vmin and not vmax:
+        vmin = np.nanmin(mat_mli)
+        vmax = np.nanmax(mat_mli)
+
     fig_size = pp.auto_figure_size(ds_shape=mat.shape, scale=1.4, disp_cbar=True, print_msg=True)
 
     # plot
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=fig_size, sharex=True, sharey=True)
     for ax, data, title in zip(axs.flatten(), [mat11, mat22, mat, mat_diff], titles):
-        im = ax.imshow(data, vmin=vmin, vmax=vmax, interpolation='nearest')
+        im = ax.imshow(data * unit, vmin=vmin, vmax=vmax, cmap=cmap, interpolation='nearest')
         ax.set_title(title, fontsize=12)
         ax.tick_params(which='both', direction='in', labelsize=12, left=True, right=True, top=True, bottom=True)
     fig.tight_layout()
@@ -213,7 +215,7 @@ def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
     return
 
 
-def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_value=None):
+def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_value=None, unit=1, vmin=None, vmax=None, cmap=None):
     """Stitch all input files into one
     """
     fext = os.path.splitext(fnames[0])[1]
@@ -280,7 +282,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
                 print('plot stitching & shifting result ...')
                 suffix = f'{i}{i+1}'
                 out_fig = f'{os.path.splitext(out_file)[0]}_{suffix}.png'
-                plot_stitch(mat11, mat22, mat, mat_diff, out_fig=out_fig)
+                plot_stitch(mat11, mat22, mat, mat_diff, unit, vmin, vmax, cmap, out_fig=out_fig)
 
         dsDict[ds_name_out] = mat
 
