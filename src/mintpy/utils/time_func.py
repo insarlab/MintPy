@@ -118,7 +118,7 @@ def inps2model(inps, date_list=None, print_msg=True):
         # check 1 - min/max limit
         for d_start in inps.polyline:
             if not (ymin < ptime.yyyymmdd2years(d_start) < ymax):
-                raise ValueError(f'input step date ({d_start}) exceeds date limit: ({dmin} / {dmax})!')
+                raise ValueError(f'input polyline date ({d_start}) exceeds date limit: ({dmin} / {dmax})!')
 
     for func_name, strs_list in zip(['exp', 'log'], [inps.exp, inps.log]):
         func_dict = dict()
