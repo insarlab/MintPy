@@ -119,6 +119,7 @@ DATA_TYPE_NUMPY2ENVI = {
 }
 
 # 2 - GDAL
+# link: https://gdal.org/api/raster_c_api.html#_CPPv412GDALDataType
 DATA_TYPE_GDAL2NUMPY = {
     1 : 'uint8',
     2 : 'uint16',
@@ -131,21 +132,25 @@ DATA_TYPE_GDAL2NUMPY = {
     9 : 'cint32',       # for translation purpose only, as numpy does not support complex int
     10: 'complex64',
     11: 'complex128',
+    12: 'uint64',
+    13: 'int64',
 }
 
 DATA_TYPE_NUMPY2GDAL = {
-    "uint8"     : 1,
-    "int8"      : 1,
-    "uint16"    : 2,
-    "int16"     : 3,
-    "uint32"    : 4,
-    "int32"     : 5,
-    "float32"   : 6,
-    "float64"   : 7,
-    "cint16"    : 8,    # for translation purpose only, as numpy does not support complex int
-    "cint32"    : 9,    # for translation purpose only, as numpy does not support complex int
-    "complex64" : 10,
-    "complex128": 11,
+    "uint8"     : 1,    # GDT_Byte
+    "int8"      : 1,    # GDT_Int8   (GDAL >= 3.7)
+    "uint16"    : 2,    # GDT_UInt16
+    "int16"     : 3,    # GDT_Int16
+    "uint32"    : 4,    # GDT_UInt32
+    "int32"     : 5,    # GDT_Int32
+    "float32"   : 6,    # GDT_Float32
+    "float64"   : 7,    # GDT_Float64
+    "cint16"    : 8,    # GDT_CInt16, for translation purpose only, as numpy does not support complex int
+    "cint32"    : 9,    # GDT_CInt32, for translation purpose only, as numpy does not support complex int
+    "complex64" : 10,   # GDT_CFloat32
+    "complex128": 11,   # GDT_CFloat64
+    "uint64"    : 12,   # GDT_UInt64 (GDAL >= 3.5)
+    "int64"     : 13,   # GDT_Int64  (GDAL >= 3.5)
 }
 
 # 3 - ISCE
@@ -173,7 +178,8 @@ DATA_TYPE_GAMMA2NUMPY = {
 }
 
 # single file (data + attributes) supported by GDAL
-GDAL_FILE_EXTS = ['.tiff', '.tif', '.grd']
+# .cos file - TerraSAR-X complex SAR data (https://gdal.org/drivers/raster/cosar.html)
+GDAL_FILE_EXTS = ['.tiff', '.tif', '.grd', '.cos']
 
 ENVI_BAND_INTERLEAVE = {
     'BAND' : 'BSQ',
@@ -515,7 +521,20 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
 
     # default data to read
     band = 1
-    cpx_band = 'phase'
+    if datasetName:
+        if datasetName.startswith(('mag', 'amp')):
+            cpx_band = 'magnitude'
+        elif datasetName in ['phase', 'angle']:
+            cpx_band = 'phase'
+        elif datasetName.lower() == 'real':
+            cpx_band = 'real'
+        elif datasetName.lower().startswith('imag'):
+            cpx_band = 'imag'
+        else:
+            cpx_band = 'complex'
+    else:
+        # use phase as default value, since it's the most common one.
+        cpx_band = 'phase'
 
     # ISCE
     if processor in ['isce']:
@@ -553,18 +572,6 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                 band = 2
             elif datasetName.lower() == 'band3':
                 band = 3
-
-            elif datasetName.startswith(('mag', 'amp')):
-                cpx_band = 'magnitude'
-            elif datasetName in ['phase', 'angle']:
-                cpx_band = 'phase'
-            elif datasetName.lower() == 'real':
-                cpx_band = 'real'
-            elif datasetName.lower().startswith('imag'):
-                cpx_band = 'imag'
-            elif datasetName.startswith(('cpx', 'complex')):
-                cpx_band = 'complex'
-
             else:
                 # flexible band list
                 ds_list = get_slice_list(fname)
@@ -766,6 +773,8 @@ def get_slice_list(fname, no_complex=False):
     # Binary Files
     else:
         num_band = int(atr.get('BANDS', '1'))
+        dtype = atr.get('DATA_TYPE', 'float32')
+
         if fext in ['.trans', '.utm_to_rdc']:
             # roipac / gamma lookup table
             slice_list = ['rangeCoord', 'azimuthCoord']
@@ -777,7 +786,7 @@ def get_slice_list(fname, no_complex=False):
         elif fext in ['.unw', '.ion']:
             slice_list = ['magnitude', 'phase']
 
-        elif fext in ['.int', '.slc']:
+        elif fext in ['.int', '.slc'] or (dtype.startswith('c') and num_band == 1):
             if no_complex:
                 slice_list = ['magnitude', 'phase']
             else:
@@ -1979,8 +1988,8 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
             data = data.imag
         elif cpx_band.startswith('pha'):
             data = np.angle(data)
-        elif cpx_band.startswith('mag'):
-            data = np.absolute(data)
+        elif cpx_band.startswith(('mag', 'amp')):
+            data = np.abs(data)
         elif cpx_band.startswith(('cpx', 'complex')):
             pass
         else:

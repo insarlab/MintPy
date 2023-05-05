@@ -108,3 +108,7 @@ It takes about 15 mins to finish.
 ## Things you should NOT do ##
 
 (For anyone with push rights to github.com/insarlab/MintPy) Never modify a commit or the history of anything that has been committed to the `main` branch.
+
+## Looking for ideas to contribute? ##
+
+Feel ready and look for something to try? Check our [to-do list](https://github.com/insarlab/MintPy/wiki/To-do-list) and [roadmap](https://github.com/insarlab/MintPy/wiki/version-2-roadmap) for the next major version 2.0!

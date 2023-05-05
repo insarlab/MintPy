@@ -252,6 +252,7 @@ class resample:
         # auto split into list of boxes if max_memory > 0
         if src_file and os.path.isfile(src_file) and max_memory > 0:
             # get max dataset shape
+            atr = readfile.read_attribute(src_file)
             fext = os.path.splitext(src_file)[1]
             if fext in ['.h5', '.he5']:
                 with h5py.File(src_file, 'r') as f:
@@ -259,11 +260,14 @@ class resample:
                                  if isinstance(f[i], h5py.Dataset)]
                     max_ds_size = max(np.prod(i) for i in ds_shapes)
             else:
-                atr = readfile.read_attribute(src_file)
                 max_ds_size = int(atr['LENGTH']) * int(atr['WIDTH'])
 
+            # scale the size for complex arrays
+            if atr.get('DATA_TYPE', 'float32').startswith('complex'):
+                max_ds_size *= 6 if atr['DATA_TYPE'].endswith('128') else 3
+
             # calc num_box
-            num_box = int(np.ceil((max_ds_size * 4 * 4) / (max_memory * 1024**3)))
+            num_box = int(np.ceil((max_ds_size * 4 * 6) / (max_memory * 1024**3)))
 
         return num_box
 
