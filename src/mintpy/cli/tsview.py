@@ -155,11 +155,6 @@ def cmd_line_parse(iargs=None):
             msg += 'Ignore it and continue'
             print(msg)
 
-    # check: --noverbose option
-    # print tsview.py command line if --noverbose
-    if not inps.print_msg:
-        print('tsview.py', ' '.join(inps.argv))
-
     # default: -u / -c / --fig-size options
     inps.disp_unit = inps.disp_unit if inps.disp_unit else 'cm'
     inps.colormap = inps.colormap if inps.colormap else 'jet'

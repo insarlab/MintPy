@@ -20,16 +20,31 @@ from pyproj import Geod
 from mintpy.objects.coord import coordinate
 from mintpy.utils import ptime, readfile, time_func, utils1 as ut
 
-unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
+UNR_SITE_LIST_FILE = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
 
 
-def dload_site_list(out_file=None, print_msg=True):
-    """download DataHoldings.txt"""
-    url = unr_site_list_file
+def dload_site_list(out_file=None, url=UNR_SITE_LIST_FILE, print_msg=True):
+    """download DataHoldings.txt.
+
+    Parameters: out_file - str, path to the local file.
+    Returns:    out_file - str, path to the local file.
+                           default: './GPS/DataHoldings.txt'
+    """
+    # output file path
     if not out_file:
-        out_file = os.path.basename(url)
+        out_dir = os.path.abspath('./GPS')
+        out_file = os.path.join(out_dir, os.path.basename(url))
+    else:
+        out_dir = os.path.abspath(os.path.dirname(out_file))
+
+    # output file directory
+    if not os.path.isdir(out_dir):
+        if print_msg:
+            print('create directory:', out_dir)
+        os.makedirs(out_dir)
+
     if print_msg:
-        print(f'downloading site list from UNR Geod Lab: {url}')
+        print(f'downloading site list from UNR Geod Lab: {url} to {os.path.dirname(out_file)}')
     urlretrieve(url, out_file)
     return out_file
 
@@ -47,7 +62,7 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_nu
     """
     # download site list file if it's not found in current directory
     if site_list_file is None:
-        site_list_file = os.path.basename(unr_site_list_file)
+        site_list_file = os.path.basename(UNR_SITE_LIST_FILE)
 
     if not os.path.isfile(site_list_file):
         dload_site_list(site_list_file, print_msg=print_msg)
@@ -333,12 +348,12 @@ class GPS:
         self.plot_file_url = os.path.join(url_prefix, f'TimeSeries/{site}.png')
 
         # list of stations from Nevada Geodetic Lab
-        self.site_list_file = os.path.join(os.path.dirname(data_dir), 'DataHoldings.txt')
+        self.site_list_file = os.path.join(data_dir, 'DataHoldings.txt')
         if not os.path.isfile(self.site_list_file):
-            dload_site_list()
+            dload_site_list(self.site_list_file)
         site_names = np.loadtxt(self.site_list_file, dtype=bytes, skiprows=1, usecols=(0)).astype(str)
         if site not in site_names:
-            raise ValueError(f'Site {site} NOT found in file: {unr_site_list_file}')
+            raise ValueError(f'Site {site} NOT found in file: {UNR_SITE_LIST_FILE}')
 
         # directories for data files and plot files
         for fdir in [data_dir, os.path.dirname(self.plot_file)]:

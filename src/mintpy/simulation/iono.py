@@ -223,6 +223,9 @@ def lalo_ground2iono(lat, lon, inc_angle, az_angle=None, head_angle=None, iono_h
     if az_angle is None:
         raise ValueError('az_angle can not be None!')
 
+    # In spherical coordinate system, given the starting lat/lon, angular distance and azimuth angle
+    #   calculate the ending lat/lon.
+    #
     # option 1 - spherical_distance
     # link:
     #   https://gis.stackexchange.com/questions/5821 [there is a typo there]

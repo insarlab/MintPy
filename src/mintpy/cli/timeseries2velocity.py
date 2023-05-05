@@ -33,6 +33,7 @@ EXAMPLE = """example:
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --exp 20170910 90
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --log 20170910 60.4
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --log 20170910 60.4 200 --log 20171026 200.7
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --polyline 20190101 20200501
 
   # uncertainty quantification of the estimated time functions
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq residue
@@ -154,6 +155,16 @@ def cmd_line_parse(iargs=None):
             inps.ref_yx = [ref_y, ref_x]
             print(f'input reference point in (lat, lon): ({inps.ref_lalo[0]}, {inps.ref_lalo[1]})')
             print(f'corresponding   point in (y, x): ({inps.ref_yx[0]}, {inps.ref_yx[1]})')
+
+    # check: --poly-order / --polyline option
+    if inps.polynomial < 0:
+        raise ValueError(f'--polynomial ({inps.polynomial}) can NOT be smaller than zero!')
+    if inps.polyline and inps.polynomial == 0:
+        raise ValueError('--polyline is NOT supported when --polynomial is zero!')
+
+    # default: sort --step / --polyline option
+    inps.stepDate = sorted(inps.stepDate)
+    inps.polyline = sorted(inps.polyline)
 
     # default: --output option
     if not inps.outfile:

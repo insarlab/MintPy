@@ -155,8 +155,11 @@ def add_figure_argument(parser):
     # colorbar
     fig.add_argument('--nocbar', '--nocolorbar', dest='disp_cbar',
                      action='store_false', help='do not display colorbar')
-    fig.add_argument('--cbar-nbins', dest='cbar_nbins', metavar='NUM',
-                     type=int, help='number of bins for colorbar.')
+    tik = fig.add_mutually_exclusive_group(required=False)
+    tik.add_argument('--cbar-nbins', dest='cbar_nbins', metavar='NUM', type=int,
+                     help='number of bins for colorbar.')
+    tik.add_argument('--cbar-ticks', dest='cbar_ticks', nargs='+', metavar='NUM', type=float,
+                     help='colorbar ticks.')
     fig.add_argument('--cbar-ext', dest='cbar_ext', default=None,
                      choices={'neither', 'min', 'max', 'both', None},
                      help='Extend setting of colorbar; based on data stat by default.')
@@ -437,6 +440,11 @@ def add_timefunc_argument(parser):
                        help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n'
                             '--step 20061014                        # coseismic step  at 2006-10-14T00:00\n'
                             '--step 20110311 20120928T1733          # coseismic steps at 2011-03-11T00:00 and 2012-09-28T17:33\n')
+
+    model.add_argument('--polyline', dest='polyline', type=str, nargs='+', default=[],
+                       help='polyline segment(s) starting at YYYYMMDD (default: %(default)s). E.g.:\n'
+                            '--polyline 20190101                    # extra velocity   since 2019-01-01T00:00\n'
+                            '--polyline 20190101 20200501T1725      # extra velocities since 2019-01-01T00:00 and 2020-05-01T17:25\n')
 
     model.add_argument('--exp', '--exponential', dest='exp', type=str, nargs='+', action='append', default=[],
                        help='exponential function(s) defined by onset time(s) and characteristic time(s) tau in days (default: %(default)s). E.g.:\n'
