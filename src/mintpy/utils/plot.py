@@ -1,10 +1,11 @@
+"""Utilities for plotting."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
 # Recommend import:
-#     from mintpy.utils import plot as pp
+#   from mintpy.utils import plot as pp
 
 
 import datetime as dt

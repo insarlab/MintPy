@@ -1,9 +1,9 @@
+"""Class / utilities for GPS download / operations."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Jul 2018                           #
 ############################################################
-# Utility scripts for GPS handling
 # Recommend import:
 #     from mintpy.objects.gps import GPS
 

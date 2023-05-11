@@ -1,13 +1,15 @@
+"""Classes for HDF5/MintPy file creation / writing."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Heresh Fattahi, Zhang Yunjun, 2017               #
 ############################################################
-# class used for data loading from InSAR stack to MintPy timeseries
 # Recommend import:
-#     from mintpy.objects.stackDict import (geometryDict,
-#                                           ifgramStackDict,
-#                                           ifgramDict)
+#   from mintpy.objects.stackDict import (
+#       geometryDict,
+#       ifgramStackDict,
+#       ifgramDict,
+#   )
 
 
 import os

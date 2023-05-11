@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
+"""Class wrapped around Dask for parallel computing."""
 #############################################################
 # Program is part of MintPy                                 #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi          #
 # Author: Joshua Zahner, David Grossman, Zhang Yunjun, 2020 #
 #############################################################
 # Recommend import:
-#     from mintpy.objects import cluster
+#   from mintpy.objects import cluster
 
 
 import glob

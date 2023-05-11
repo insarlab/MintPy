@@ -1,10 +1,11 @@
+"""Class wrapped around pyresample/scipy for resampling."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
 # Recommend import:
-#     from mintpy.objects.resample import resample
+#   from mintpy.objects.resample import resample
 
 
 import os

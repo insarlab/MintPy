@@ -1,9 +1,10 @@
+"""Utilities for automatic configuration fo input file pathes"""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Mar 2018                           #
 ############################################################
-# recommended usage:
+# Recommended usage:
 #   from mintpy.defaults import auto_path
 
 

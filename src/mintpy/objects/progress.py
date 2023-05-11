@@ -1,11 +1,12 @@
+"""Classes for progress bar."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Dec 2020                           #
 ############################################################
 # Recommend import:
-#    from mintpy.objects.progress import progressBar
-# OR from mintpy.utils import ptime
+#   from mintpy.objects.progress import progressBar
+#   from mintpy.utils import ptime
 
 
 import io

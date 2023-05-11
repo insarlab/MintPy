@@ -1,11 +1,11 @@
+"""Utilities to grab template content for processing steps."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Mar 2020                           #
 ############################################################
-# recommend usage:
+# Recommend usage:
 #   from mintpy.defaults.template import STEP_LIST, get_template_content
-#
 
 
 import os

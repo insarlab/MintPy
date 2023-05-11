@@ -1,11 +1,12 @@
+"""Utilities wrapped around cartopy/matplotlib for maps."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Joshua Zahner, Jun 2022            #
 ############################################################
 # Recommend import:
-#    from mintpy.utils.map import draw_lalo_label, draw_scalebar
-# OR from mintpy.utils import plot as pp
+#   from mintpy.utils.map import draw_lalo_label, draw_scalebar
+#   from mintpy.utils import plot as pp
 
 
 import numpy as np

@@ -1,9 +1,9 @@
+"""Miscellaneous utilities - dependent on utils0."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
-# High level utilities script (independent within utils folder)
 # Recommend import:
 #   from mintpy.utils import utils as ut
 
