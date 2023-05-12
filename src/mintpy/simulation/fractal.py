@@ -1,15 +1,17 @@
-#!/usr/bin/env python3
+"""Simulate tropospheric turbulence."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2019                               #
 ############################################################
+# Recommend usage:
+#   from mintpy.simulation import fractal
 # This module is based on the matlab scripts written by
-# Ramon Hanssen, May 2000, available in the following website:
-#     http://doris.tudelft.nl/software/insarfractal.tar.gz
+#   Ramon Hanssen, May 2000, available at:
+#   http://doris.tudelft.nl/software/insarfractal.tar.gz
 # Reference:
-#   Hanssen, R. F. (2001), Radar interferometry: data interpretation
-# and error analysis, Kluwer Academic Pub, Dordrecht, Netherlands. Chap. 4.7.
+#   Hanssen, R. F. (2001), Radar interferometry: data interpretation and
+#   error analysis, Kluwer Academic Pub, Dordrecht, Netherlands. Chap. 4.7.
 
 
 import os

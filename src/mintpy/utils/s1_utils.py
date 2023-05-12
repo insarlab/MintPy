@@ -1,3 +1,4 @@
+"""Utilities for Sentinel-1."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #

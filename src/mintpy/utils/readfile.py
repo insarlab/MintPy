@@ -1,3 +1,4 @@
+"""Utilities to read files."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #

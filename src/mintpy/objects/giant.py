@@ -1,11 +1,11 @@
+"""Classes for HDF5/GIAnT file operations"""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
-# class used for file operation within MintPy
 # Recommend import:
-#     from mintpy.objects import giantTimeseries, giantIfgramStack
+#   from mintpy.objects import giantTimeseries, giantIfgramStack
 
 import os
 from datetime import datetime as dt

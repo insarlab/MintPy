@@ -1,11 +1,11 @@
+"""Classes for HDF5/MintPy file operations."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Heresh Fattahi, 2018               #
 ############################################################
-# class used for file operation within MintPy
 # Recommend import:
-#     from mintpy.objects import timeseries, ifgramStack, geometry
+#   from mintpy.objects import timeseries, ifgramStack, geometry
 
 
 import datetime as dt

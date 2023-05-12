@@ -1,14 +1,14 @@
-#!/usr/bin/env python3
+"""Utilities for IONEX products."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Jun 2022                           #
 ############################################################
+# Recommend import:
+#   from mintpy.objects import ionex
 # Links:
 #   IGS (NASA): https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/atmospheric_products.html
 #   IMPC (DLR): https://impc.dlr.de/products/total-electron-content/near-real-time-tec/near-real-time-tec-maps-global
-# Recommend import:
-#   from mintpy.objects import ionex
 
 
 import datetime as dt

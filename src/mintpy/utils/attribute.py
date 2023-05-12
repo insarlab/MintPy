@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
+"""Update attributes for operations."""
 #############################################################
 # Program is part of MintPy                                 #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi          #
 # Author: Zhang Yunjun, Dec 2020                            #
 #############################################################
 # Recommend import:
-#     from mintpy.utils import attribute as attr
+#   from mintpy.utils import attribute as attr
 
 
 import warnings

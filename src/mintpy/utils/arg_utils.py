@@ -1,11 +1,12 @@
+"""Argument parsers."""
 #############################################################
 # Program is part of MintPy                                 #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi          #
 # Author: Zhang Yunjun, Nov 2020                            #
 #############################################################
 # Recommend import:
-#     from mintpy.utils import arg_utils
-#     from mintpy.utils.arg_utils import create_argument_parser
+#   from mintpy.utils import arg_utils
+#   from mintpy.utils.arg_utils import create_argument_parser
 
 
 import argparse

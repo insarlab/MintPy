@@ -1,4 +1,4 @@
-"""Euler Pole class definition and utility functions."""
+"""Class / utilities for Euler Pole / plate motion (models)."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #

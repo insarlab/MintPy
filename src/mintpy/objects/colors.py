@@ -1,3 +1,4 @@
+"""Class wrapped around matplotlib.colors for colormaps."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #

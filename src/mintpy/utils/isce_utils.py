@@ -1,17 +1,18 @@
+"""Utilities wrapped around ISCE."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Heresh Fattahi, Apr 2020           #
 ############################################################
-# 2020-07: Talib Oliver-Cabrera, add UAVSAR support w/in stripmapStack
+# 2020-07: Talib Oliver-Cabrera, add UAVSAR support
 # 2020-10: Cunren Liang, add alosStack support
 # 2022-06: Yujie Zheng, add standard processing from isce2
 # Group contents:
-#     metadata
-#     geometry
-#     baseline
-#     multilook
-#     miscellaneous
+#   metadata
+#   geometry
+#   baseline
+#   multilook
+#   miscellaneous
 # Recommend import:
 #   from mintpy.utils import isce_utils
 
