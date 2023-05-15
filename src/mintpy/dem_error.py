@@ -35,28 +35,28 @@ def run_or_skip(inps):
     flag = 'skip'
 
     # check output file
-    if not os.path.isfile(inps.outfile):
+    if not os.path.isfile(inps.ts_cor_file):
         flag = 'run'
-        print(f'1) output file {inps.outfile} NOT found.')
+        print(f'1) output file {inps.ts_cor_file} NOT found.')
     else:
         # check if time-series file is partly written using file size
         # since time-series file is not compressed
-        with h5py.File(inps.outfile, 'r') as f:
+        with h5py.File(inps.ts_cor_file, 'r') as f:
             fsize_ref = f['timeseries'].size * 4
-        fsize = os.path.getsize(inps.outfile)
+        fsize = os.path.getsize(inps.ts_cor_file)
         if fsize <= fsize_ref:
             flag = 'run'
-            print(f'1) output file {inps.outfile} is NOT fully written.')
+            print(f'1) output file {inps.ts_cor_file} is NOT fully written.')
 
         else:
-            print(f'1) output file {inps.outfile} already exists.')
+            print(f'1) output file {inps.ts_cor_file} already exists.')
 
             # check modification time
-            infiles = [inps.timeseries_file]
+            infiles = [inps.ts_file]
             if inps.geom_file:
                 infiles.append(inps.geom_file)
             ti = max(os.path.getmtime(i) for i in infiles)
-            to = os.path.getmtime(inps.outfile)
+            to = os.path.getmtime(inps.ts_cor_file)
             if ti > to:
                 flag = 'run'
                 print(f'2) output file is NOT newer than input file: {infiles}.')
@@ -65,9 +65,9 @@ def run_or_skip(inps):
 
     # check configuration
     if flag == 'skip':
-        date_list_all = timeseries(inps.timeseries_file).get_date_list()
+        date_list_all = timeseries(inps.ts_file).get_date_list()
         inps.excludeDate = read_exclude_date(inps.excludeDate, date_list_all, print_msg=False)[1]
-        meta = readfile.read_attribute(inps.outfile)
+        meta = readfile.read_attribute(inps.ts_cor_file)
         if any(str(vars(inps)[key]) != meta.get(key_prefix+key, 'None') for key in config_keys):
             flag = 'run'
             print(f'3) NOT all key configuration parameters are the same:{config_keys}')
@@ -161,7 +161,7 @@ def get_design_matrix4defo(inps):
     model['periodic'] = inps.periodic
 
     # prepare SAR info
-    ts_obj = timeseries(inps.timeseries_file)
+    ts_obj = timeseries(inps.ts_file)
     date_list = ts_obj.get_date_list()
     seconds = ts_obj.get_metadata().get('CENTER_LINE_UTC', 0)
 
@@ -439,7 +439,7 @@ def correct_dem_error(inps):
     ## 1. input info
 
     # 1.1 read date info
-    ts_obj = timeseries(inps.timeseries_file)
+    ts_obj = timeseries(inps.ts_file)
     ts_obj.open()
     num_date = ts_obj.numDate
     length, width = ts_obj.length, ts_obj.width
@@ -465,20 +465,18 @@ def correct_dem_error(inps):
         meta[key_prefix+key] = str(vars(inps)[key])
 
     # 2.2 instantiate est. DEM error
-    dem_err_file = 'demErr.h5'
     meta['FILE_TYPE'] = 'dem'
     meta['UNIT'] = 'm'
     ds_name_dict = {'dem' : [np.float32, (length, width), None]}
-    writefile.layout_hdf5(dem_err_file, ds_name_dict, metadata=meta)
+    writefile.layout_hdf5(inps.dem_err_file, ds_name_dict, metadata=meta)
 
     # 2.3 instantiate corrected time-series
-    ts_cor_file = inps.outfile
     meta['FILE_TYPE'] = 'timeseries'
-    writefile.layout_hdf5(ts_cor_file, metadata=meta, ref_file=inps.timeseries_file)
+    writefile.layout_hdf5(inps.ts_cor_file, metadata=meta, ref_file=inps.ts_file)
 
     # 2.4 instantiate residual phase time-series
-    ts_res_file = os.path.join(os.path.dirname(inps.outfile), 'timeseriesResidual.h5')
-    writefile.layout_hdf5(ts_res_file, metadata=meta, ref_file=inps.timeseries_file)
+    ts_res_file = os.path.join(os.path.dirname(inps.ts_cor_file), 'timeseriesResidual.h5')
+    writefile.layout_hdf5(ts_res_file, metadata=meta, ref_file=inps.ts_file)
 
 
     ## 3. run the estimation and write to disk
@@ -503,7 +501,7 @@ def correct_dem_error(inps):
     # 3.2 prepare the input arguments for *_patch()
     data_kwargs = {
         'G_defo'         : G_defo,
-        'ts_file'        : inps.timeseries_file,
+        'ts_file'        : inps.ts_file,
         'geom_file'      : inps.geom_file,
         'date_flag'      : date_flag,
         'phase_velocity' : inps.phaseVelocity,
@@ -558,7 +556,7 @@ def correct_dem_error(inps):
         # DEM error - 2D
         block = [box[1], box[3], box[0], box[2]]
         writefile.write_hdf5_block(
-            dem_err_file,
+            inps.dem_err_file,
             data=delta_z,
             datasetName='dem',
             block=block)
@@ -566,7 +564,7 @@ def correct_dem_error(inps):
         # corrected time-series - 3D
         block = [0, num_date, box[1], box[3], box[0], box[2]]
         writefile.write_hdf5_block(
-            ts_cor_file,
+            inps.ts_cor_file,
             data=ts_cor,
             datasetName='timeseries',
             block=block)
@@ -586,4 +584,4 @@ def correct_dem_error(inps):
     m, s = divmod(time.time()-start_time, 60)
     print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
-    return dem_err_file, ts_cor_file, ts_res_file
+    return inps.dem_err_file, inps.ts_cor_file, ts_res_file
