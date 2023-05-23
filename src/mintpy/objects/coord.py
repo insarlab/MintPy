@@ -28,9 +28,11 @@ class coordinate:
             (bounding) box of points indicate the lat/lon of the pixel UL corner.
 
     Example:
+        from mintpy.utils import readfile, utils as ut
         atr = readfile.read('velocity.h5')
-        coord = ut.coordinate(atr, lookup_file='inputs/geometryRadar.h5')  # for radar coord file
-        coord = ut.coordinate(atr)                                         # for geo   coord file
+        coord = ut.coordinate(atr)                                          # geo coord
+        coord = ut.coordinate(atr, lookup_file='inputs/geometryRadar.h5')   # radar coord
+        coord = ut.coordinate(atr, lookup_file=['lat.rdr', 'lon.rdr'])      # radar coord in isce2 format
         y, x = coord.geo2radar(lat, lon)[0:2]
         lat, lon = coord.radar2geo(y, x)[0:2]
     """
@@ -38,12 +40,10 @@ class coordinate:
     def __init__(self, metadata, lookup_file=None):
         """Define a coordinate object
         Parameters: metadata    - dict, source metadata
-                    lookup_file - list of 2 strings, or string, lookup table file(s)
-        Example:    from mintpy.utils import readfile, utils as ut
-                    atr = readfile.read_attribute('./velocity.h5')
-                    coord = ut.coordinate(atr, './inputs/geometryRadar.h5')
-                    coord.geo2radar(33.450, -90.22)
-                    coord.radar2geo(50, 200)
+                    lookup_file - str / list of 2 str, lookup table file(s)
+                                  'geometryRadar.h5'
+                                  ['lat.rdr', 'lon.rdr']
+        Returns:    mintpy.utils.utils.coordinate object
         """
         self.src_metadata = metadata
         if lookup_file is None:

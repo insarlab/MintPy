@@ -1785,14 +1785,15 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
     if mask is not None:
         mask[np.isnan(mask)] = 0
 
-        # vmin/max
+        # vmin/vmax: create mask based on the input thresholds
         if vmin is not None:
-            mask[mask < vmin] = 0
+            mask = mask >= vmin
             vprint(f'hide pixels with mask value < {vmin}')
         if vmax is not None:
-            mask[mask > vmax] = 0
+            mask = mask <= vmax
             vprint(f'hide pixels with mask value > {vmax}')
 
+        # set to bool type
         mask = mask != 0
 
     return mask, mask_file

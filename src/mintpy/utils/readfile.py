@@ -581,6 +581,12 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
 
         band = min(band, num_band)
 
+        # check file size
+        fsize = os.path.getsize(fname)
+        dsize = np.dtype(data_type).itemsize * length * width * num_band
+        if dsize != fsize:
+            warnings.warn(f'file size ({fsize}) does NOT match with metadata ({dsize})!')
+
     # ROI_PAC
     elif processor in ['roipac']:
         # data structure - auto

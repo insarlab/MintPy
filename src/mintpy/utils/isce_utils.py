@@ -1006,7 +1006,7 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
         cost_mode = 'DEFO'
 
     Parameters: int_file    - str, path to the wrapped interferogram file
-                cor_file    - str, path to the correlation file
+                cor_file    - str, path to the correlation file: phase sigma or complex correlation
                 unw_file    - str, path to the output unwrapped interferogram file
                 defo_max    - float, maximum number of cycles for the deformation phase
                 max_comp    - int, maximum number of connected components
@@ -1046,8 +1046,11 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
     snp.setInput(int_file)
     snp.setOutput(unw_file)
     snp.setCorrfile(cor_file)
-    snp.setCorFileFormat('FLOAT_DATA')
     snp.setWidth(width)
+
+    atr_cor = readfile.read_attribute(cor_file)
+    if int(atr_cor.get('BANDS', 1)) == 1:
+        snp.setCorFileFormat('FLOAT_DATA')
 
     # runtime options
     snp.setCostMode(cost_mode)
