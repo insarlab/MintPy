@@ -127,12 +127,12 @@ def cmd_line_parse(iargs=None):
 
     # check: --lookup (lookup table existence)
     if not inps.lookupFile:
-        # grab default lookup table
-        inps.lookupFile = ut.get_lookup_file(inps.lookupFile)
-
         # use isce-2 lat/lon.rdr file
         if not inps.lookupFile and inps.latFile:
             inps.lookupFile = inps.latFile
+
+        # grab default lookup table
+        inps.lookupFile = ut.get_lookup_file(inps.lookupFile)
 
         # final check
         if not inps.lookupFile:

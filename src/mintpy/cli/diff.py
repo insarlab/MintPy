@@ -18,6 +18,7 @@ EXAMPLE = """example:
   diff.py  timeseries.h5  inputs/ERA5.h5  -o timeseries_ERA5.h5  --force
   diff.py  timeseries_ERA5_ramp_demErr.h5  ../GIANT/Stack/LS-PARAMS.h5 -o mintpy_giant.h5
   diff.py  reconUnwrapIfgram.h5  ./inputs/ifgramStack.h5  -o diffUnwrapIfgram.h5
+  diff.py  filt_20220905_20230220.unw  ./inputs/ERA5.h5 -o filt_20220905_20230220_ERA5.unw
 
   # multiple files
   diff.py  waterMask.h5  maskSantiago.h5  maskFernandina.h5  -o maskIsabela.h5
@@ -51,7 +52,7 @@ def cmd_line_parse(iargs=None):
     # check
     # check: number of files == 2 for time-series and ifgram stack
     ftype = readfile.read_attribute(inps.file1)['FILE_TYPE']
-    if ftype in ['timeseries', 'ifgramStack']:
+    if ftype in ['timeseries', 'ifgramStack', '.unw']:
         if len(inps.file2) > 1:
             raise SystemExit(f'ERROR: ONLY ONE file2 is inputed for {ftype} type!')
 
