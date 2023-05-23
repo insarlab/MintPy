@@ -19,9 +19,9 @@ EXAMPLE = """example:
   view.py velocity.h5 velocity --wrap --wrap-range -2 2 -c cmy --lalo-label
   view.py velocity.h5 --ref-yx  210 566                              #change reference pixel for display
   view.py velocity.h5 --sub-lat 31.05 31.10 --sub-lon 130.05 130.10  #subset in lalo / yx
+  view.py velocity.h5 velocity --mask waterBody.h5 --mask-vmax 1
 
   view.py timeseries.h5
-  view.py timeseries.h5 -m no                   #do not use auto mask
   view.py timeseries.h5 --ref-date 20101120     #change reference date
   view.py timeseries.h5 --ex drop_date.txt      #exclude dates to plot
   view.py timeseries.h5 '*2017*' '*2018*'       #all acquisitions in 2017 and 2018
@@ -32,8 +32,6 @@ EXAMPLE = """example:
   view.py ifgramStack.h5 -n 6                   #the 6th slice
   view.py ifgramStack.h5 20171010_20171115      #all data      related with 20171010_20171115
   view.py ifgramStack.h5 'coherence*20171010*'  #all coherence related with 20171010
-  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap     #wrapped phase
-  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --mask ifgramStack.h5  #mask using connected components
 
   # GPS (for one subplot in geo-coordinates only)
   view.py geo_velocity_msk.h5 velocity --show-gps --gps-label   #show locations of available GPS
