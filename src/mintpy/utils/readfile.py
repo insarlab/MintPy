@@ -1322,7 +1322,7 @@ def auto_no_data_value(meta):
 
         # known file types
         # isce2: dense offsets from topsApp.py
-        if processor == 'isce' and fbase.endswith('dense_offsets') and fext == '.bil' and num_band == 2:
+        if processor == 'isce' and fname.endswith('dense_offsets.bil') and num_band == 2:
             no_data_value = -10000.
 
         else:

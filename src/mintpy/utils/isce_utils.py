@@ -385,10 +385,13 @@ def extract_alosStack_metadata(meta_file, geom_dir):
     meta['LON_REF3'] = str(data[-1-edge,  0+edge])
     meta['LON_REF4'] = str(data[-1-edge, -1-edge])
 
-    los_file = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.los'))[0]
-    data = np.memmap(los_file, dtype='float32', mode='r', shape=(length*2, width))[0:length*2:2, :]
-    inc_angle = data[int(length/2), int(width/2)]
-    meta['CENTER_INCIDENCE_ANGLE'] = str(inc_angle)
+    # CENTER_INCIDENCE_ANGLE is optional
+    los_files = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.los'))
+    if len(los_files) > 0:
+        los_file = los_files[0]
+        data = np.memmap(los_file, dtype='float32', mode='r', shape=(length*2, width))[0:length*2:2, :]
+        inc_angle = data[int(length/2), int(width/2)]
+        meta['CENTER_INCIDENCE_ANGLE'] = str(inc_angle)
 
     pointingDirection = {'right': -1, 'left' :1}
     meta['ANTENNA_SIDE'] = str(pointingDirection[track.pointingDirection])
