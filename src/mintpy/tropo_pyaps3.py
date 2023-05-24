@@ -13,6 +13,7 @@ import h5py
 import numpy as np
 import pyaps3 as pa
 
+import mintpy.cli.diff
 from mintpy.objects import geometry, timeseries
 from mintpy.utils import ptime, readfile, utils as ut, writefile
 
@@ -632,47 +633,6 @@ def calc_delay_timeseries(inps):
     return inps.tropo_file
 
 
-def correct_timeseries(dis_file, tropo_file, cor_dis_file):
-    # diff.py can handle different reference in space and time
-    # between the absolute tropospheric delay and the double referenced time-series
-    print('correcting relative delay for input time-series using diff.py')
-
-    iargs = [dis_file, tropo_file, '-o', cor_dis_file, '--force']
-    print('diff.py', ' '.join(iargs))
-
-    import mintpy.cli.diff
-    mintpy.cli.diff.main(iargs)
-
-    return cor_dis_file
-
-
-def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
-    print('correcting relative delay for input interferogram')
-
-    print(f'read phase from {dis_file}')
-    data, atr = readfile.read(dis_file, datasetName='phase')
-    date1, date2 = ptime.yyyymmdd(atr['DATE12'].split('-'))
-    ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
-
-    print(f'calc tropospheric delay for {date1}-{date2} from {tropo_file}')
-    tropo  = readfile.read(tropo_file, datasetName=date2)[0]
-    tropo -= readfile.read(tropo_file, datasetName=date1)[0]
-    tropo *= -4. * np.pi / float(atr['WAVELENGTH'])
-
-    # apply the correction and re-referencing
-    data -= tropo
-    data -= data[ref_y, ref_x]
-
-    print(f'read magnitude from {dis_file}')
-    mag = readfile.read(dis_file, datasetName='magnitude')[0]
-
-    print(f'write corrected data to {cor_dis_file}')
-    ds_dict = {'magnitude': mag, 'phase': data}
-    writefile.write(ds_dict, cor_dis_file, atr)
-
-    return cor_dis_file
-
-
 ###############################################################
 def run_tropo_pyaps3(inps):
 
@@ -716,25 +676,18 @@ def run_tropo_pyaps3(inps):
     else:
         print(f'Skip re-calculating and use existed troposhperic delay HDF5 file: {inps.tropo_file}.')
 
-    ## 3. correct tropo delay from displacement time-series
+    ## 3. correct tropo delay from displacement time-series (using diff.py)
     if inps.dis_file:
         print('\n'+'-'*80)
         print('Applying tropospheric correction to displacement file...')
         if ut.run_or_skip(inps.cor_dis_file, [inps.dis_file, inps.tropo_file]) == 'run':
-            ftype = inps.atr['FILE_TYPE']
-            if ftype == 'timeseries':
-                correct_timeseries(
-                    dis_file=inps.dis_file,
-                    tropo_file=inps.tropo_file,
-                    cor_dis_file=inps.cor_dis_file)
+            # diff.py can handle different reference in space and time
+            # e.g. the absolute delay and the double referenced time-series
+            print('correcting delay for using diff.py')
+            iargs = [inps.dis_file, inps.tropo_file, '-o', inps.cor_dis_file, '--force']
+            print('diff.py', ' '.join(iargs))
+            mintpy.cli.diff.main(iargs)
 
-            elif ftype == '.unw':
-                correct_single_ifgram(
-                    dis_file=inps.dis_file,
-                    tropo_file=inps.tropo_file,
-                    cor_dis_file=inps.cor_dis_file)
-            else:
-                print(f'input file {ftype} is not timeseries nor .unw, correction is not supported yet.')
         else:
             print(f'Skip re-applying and use existed corrected displacement file: {inps.cor_dis_file}.')
     else:

@@ -951,7 +951,7 @@ def _get_file_base_and_ext(fname):
     fext = fext.lower()
 
     # ignore certain meaningless file extensions
-    while fext in ['.geo', '.rdr', '.full', '.mli', '.wgs84', '.grd']:
+    while fext in ['.geo', '.rdr', '.full', '.mli', '.wgs84', '.grd', '.bil', '.bip']:
         fbase, fext = os.path.splitext(fbase)
     # set fext to fbase if nothing left
     fext = fext if fext else fbase
