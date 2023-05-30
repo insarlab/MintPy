@@ -171,7 +171,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
                 data_list = [data_list[0], data_list[0]]
                 meta['BANDS'] = 2
 
-        elif fext in ['.cor', '.hgt']:
+        elif fext in ['.cor']:
+            # remove .hgt as it can be float64 in isce2.
             meta['DATA_TYPE'] = 'float32'
             meta['INTERLEAVE'] = 'BIL'
             if meta.get('PROCESSOR', 'isce') == 'roipac':
