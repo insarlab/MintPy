@@ -388,8 +388,7 @@ def extract_alosStack_metadata(meta_file, geom_dir):
     # CENTER_INCIDENCE_ANGLE is optional
     los_files = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.los'))
     if len(los_files) > 0:
-        los_file = los_files[0]
-        data = np.memmap(los_file, dtype='float32', mode='r', shape=(length*2, width))[0:length*2:2, :]
+        data = np.memmap(los_files[0], dtype='float32', mode='r', shape=(length*2, width))[0:length*2:2, :]
         inc_angle = data[int(length/2), int(width/2)]
         meta['CENTER_INCIDENCE_ANGLE'] = str(inc_angle)
 
