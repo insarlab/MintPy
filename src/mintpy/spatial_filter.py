@@ -71,15 +71,17 @@ def filter_data(data, filter_type, filter_par=None):
         and regional mean results are separate.
         """
 
-        local_kernel = morphology.disk(filter_par[0], np.float32)
-        local_kernel = np.pad(local_kernel,filter_par[1] - filter_par[0],mode='constant')
+        local_kernel = morphology.disk(filter_par[0], dtype=np.float32)
+        local_kernel = np.pad(local_kernel, pad_width=int(filter_par[1]-filter_par[0]), mode='constant')
 
-        regional_kernel = morphology.disk(filter_par[1], np.float32)
+        regional_kernel = morphology.disk(filter_par[1], dtype=np.float32)
         regional_kernel[local_kernel == 1] = 0
 
+        # normalize
         local_kernel /= local_kernel.sum(axis=(0,1))
         regional_kernel /= regional_kernel.sum(axis=(0,1))
 
+        # double-difference kernel
         combined_kernel = regional_kernel - local_kernel
 
         data_filt = ndimage.convolve(data, combined_kernel)
@@ -107,7 +109,8 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
     # Info
     filter_type = filter_type.lower()
     atr = readfile.read_attribute(fname)
-    msg = 'filtering {} file: {} using {} filter'.format(atr['FILE_TYPE'], fname, filter_type)
+    print(f'input file: {fname}, file type: {atr["FILE_TYPE"]}')
+    print(f'filter type: {filter_type}')
 
     if filter_type.endswith('avg'):
         if not filter_par:
@@ -115,7 +118,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
         elif isinstance(filter_par, list):
             filter_par = filter_par[0]
         filter_par = int(filter_par)
-        msg += f' with kernel size of {filter_par}'
+        print(f'filter parameter: kernel size = {filter_par}')
 
     elif filter_type.endswith('gaussian'):
         if not filter_par:
@@ -123,14 +126,13 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
         elif isinstance(filter_par, list):
             filter_par = filter_par[0]
         filter_par = float(filter_par)
-        msg += f' with sigma of {filter_par:.1f}'
+        print(f'filter parameter: sigma = {filter_par:.1f}')
 
     elif filter_type == 'double_difference':
         if not filter_par:
             filter_par = [1, 10]
         local, regional = int(filter_par[0]), int(filter_par[1])
-        msg += f' with local/regional kernel sizes of {local}/{regional}'
-    print(msg)
+        print(f'filter parameter: local / regional kernel sizes = {local} / {regional}')
 
     # output filename
     if not fname_out:
