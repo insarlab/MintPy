@@ -641,3 +641,34 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
             i += 1
 
     return ds_dict, ds_name_dict, ds_unit_dict
+
+
+def hdf5_dataset2model(ds_dict, ds_name_dict, ds_unit_dict):
+    """ New function, incomplete.
+
+    Prepare the estimated model parameters into a list of dicts for HDF5 dataset writing.
+    Parameters: model        - dict,
+                m            - 2D np.ndarray in (num_param, num_pixel) where num_pixel = 1 or length * width
+                m_std        - 2D np.ndarray in (num_param, num_pixel) where num_pixel = 1 or length * width
+                mask         - 1D np.ndarray in (num_pixel), mask of valid pixels
+                ds_shape     - tuple of 2 int in (length, width)
+    Returns:    ds_dict      - dict, dictionary of dataset values,     input for writefile.write_hdf5_block()
+                ds_name_dict - dict, dictionary of dataset initiation, input for writefile.layout_hdf5()
+                ds_unit_dict - dict, dictionary of dataset unit,       input for writefile.layout_hdf5()
+    Examples:   # read input model parameters into dict
+                model = read_inps2model(inps, date_list=inps.date_list)
+                # for time series cube
+                ds_name_dict, ds_name_dict = model2hdf5_dataset(model, ds_shape=(200,300))[1:]
+                ds_dict = model2hdf5_dataset(model, m, m_std, mask=mask)[0]
+                # for time series point
+                ds_unit_dict = model2hdf5_dataset(model)[2]
+                ds_dict = model2hdf5_dataset(model, m, m_std)[0]
+    """
+    # deformation model info
+    poly_deg   = model['polynomial']
+    num_period = len(model['periodic'])
+    num_step   = len(model['stepDate'])
+    num_exp    = sum(len(val) for key, val in model['exp'].items())
+
+
+    return model, m, m_std
