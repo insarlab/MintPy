@@ -644,7 +644,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
 
 
 def hdf5_dataset2model(ds_dict, ds_name_dict, ds_unit_dict):
-    """ New function, incomplete.
+    """ New function, just a place holder now, incomplete.
 
     Prepare the estimated model parameters into a list of dicts for HDF5 dataset writing.
     Parameters: model        - dict,
@@ -663,12 +663,12 @@ def hdf5_dataset2model(ds_dict, ds_name_dict, ds_unit_dict):
                 # for time series point
                 ds_unit_dict = model2hdf5_dataset(model)[2]
                 ds_dict = model2hdf5_dataset(model, m, m_std)[0]
-    """
+
     # deformation model info
     poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
     num_step   = len(model['stepDate'])
     num_exp    = sum(len(val) for key, val in model['exp'].items())
 
-
-    return model, m, m_std
+    """
+    return

@@ -189,6 +189,8 @@ def diff_timeseries_velocity(file1, file2, out_file, max_num_pixel=2e8):
     if ref_y and ref_x:
         ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
         ref_val = readfile.read(file2, datasetName='velocity', box=ref_box)[0] * unit_fac
+    else:
+        ref_val = 0.
 
     for i, box in enumerate(box_list):
         if num_box > 1:
@@ -197,9 +199,7 @@ def diff_timeseries_velocity(file1, file2, out_file, max_num_pixel=2e8):
 
         # read data2 (consider different reference_date/pixel)
         print(f'read from file: {file2}')
-
-        ### from here
-        velo = readfile.read(file2, datasetName='velocity', box=box)[0] * unit_fac
+        velo = readfile.read(file2, datasetName=k2, box=box)[0] * unit_fac
         print(f'* referencing data from {os.path.basename(file2)} to y/x: {ref_y}/{ref_x}')
         velo -= ref_val   # reference pixel in velocity
         num_pixel = velo.size
