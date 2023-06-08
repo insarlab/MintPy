@@ -1745,6 +1745,9 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
                     print_msg=print_msg,
                 )[0]
                 vprint('read mask from file:', os.path.basename(mask_file))
+                # Kai: handle 0 in when 'numTriNonzeroIntAmbiguity.h5' as mask_file
+                if os.path.basename(mask_file).startswith('numTriNonzeroIntAmbiguity'):
+                    prior_good = np.array(mask == 0)
 
             else:
                 mask_file = None
@@ -1793,8 +1796,12 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
             mask = mask <= vmax
             vprint(f'hide pixels with mask value > {vmax}')
 
-        # set to bool type
-        mask = mask != 0
+        # Kai: handle zero when mask_file='numTriNonzeroIntAmbiguity.h5'
+        if os.path.basename(mask_file).startswith('numTriNonzeroIntAmbiguity'):
+            mask = (mask != 0) + prior_good
+        else:
+            # set to bool type
+            mask = mask != 0
 
     return mask, mask_file
 
