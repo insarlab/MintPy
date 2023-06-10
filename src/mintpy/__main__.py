@@ -41,7 +41,17 @@ from mintpy import __version__
 
 PROG = __package__
 LOGFMT = '%(asctime)s %(levelname)-8s -- %(message)s'
+DEFAULT_LOGLEVEL = "WARNING"
 
+EXAMPLE = """example:
+  mintpy --version
+  mintpy smalbaselineApp FernandinaSenDT128.txt
+  mintpy tsview timeseries_ERA5_ramp_demErr.h5
+  mintpy view velocity.h5
+
+  # debug mode with complete trace back info
+  mintpy --debug view velocity.h5
+"""
 
 
 ################################################################################################
@@ -510,13 +520,55 @@ def get_view_parser(subparsers=None):
 
 
 #######################################  Main Parser  ##########################################
+def _add_logging_control_args(parser, default_loglevel=DEFAULT_LOGLEVEL):
+    """Add command line options for logging control."""
+    loglevels = [logging.getLevelName(level) for level in range(10, 60, 10)]
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--loglevel",
+        default=default_loglevel,
+        choices=loglevels,
+        help="logging level (default: %(default)s)",
+    )
+    group.add_argument(
+        "--quiet",
+        dest="loglevel",
+        action="store_const",
+        const="ERROR",
+        help="suppress standard output messages, "
+        "only errors are printed to screen",
+    )
+    group.add_argument(
+        "--verbose",
+        dest="loglevel",
+        action="store_const",
+        const="INFO",
+        help="print verbose output messages",
+    )
+    group.add_argument(
+        "--debug",
+        dest="loglevel",
+        action="store_const",
+        const="DEBUG",
+        help="print debug messages",
+    )
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
-    parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
+    parser = argparse.ArgumentParser(
+        prog=PROG,
+        description=__doc__,
+        epilog=EXAMPLE,
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.add_argument("-v","--version", action="version", version=f"{__version__}")
 
     # Sub-command management
     sp = parser.add_subparsers(title="sub-commands", dest='func', required=True, metavar='')
+
+    _add_logging_control_args(parser)
 
     # workflow
     get_smallbaselineApp_parser(sp)
@@ -622,13 +674,17 @@ def main(*argv):
     # execute main tasks
     exit_code = EX_OK
     try:
-        return args.func(sys.argv[2:])
+        # NOTE: use the root logger to set the logging level
+        logging.getLogger().setLevel(args.loglevel)
+        log.debug("args: %s", args)
+
+        exit_code = args.func(sys.argv[2:])
     except Exception as exc:
         log.critical(
             "unexpected exception caught: {!r} {}".format(
                 type(exc).__name__, exc)
         )
-        log.debug("stacktrace:", exc_info=True)
+        log.exception("stacktrace:", exc_info=True)
         exit_code = EX_FAILURE
     except KeyboardInterrupt:
         log.warning("Keyboard interrupt received: exit the program")
