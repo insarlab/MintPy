@@ -183,22 +183,23 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     return mat, atr, mat11, mat22, mat_diff
 
 
-def plot_stitch(mat11, mat22, mat, mat_diff, unit=1, vmin=None, vmax=None, cmap=None, out_fig=None):
+def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None, disp_scale=1, disp_vlim=None, disp_cmap=None):
     """plot stitching result"""
 
     # plot settings
     titles = ['file 1', 'file 2', 'stitched', 'difference']
+    if disp_scale != 1:
+        print(f'scale the data by a factor of {disp_scale} for plotting')
     mat_mli = multilook_data(mat, 20, 20, method='mean')
-    if not vmin and not vmax:
-        vmin = np.nanmin(mat_mli)
-        vmax = np.nanmax(mat_mli)
+    vmin = disp_vlim[0] if disp_vlim else np.nanmin(mat_mli) * disp_scale
+    vmax = disp_vlim[1] if disp_vlim else np.nanmax(mat_mli) * disp_scale
 
     fig_size = pp.auto_figure_size(ds_shape=mat.shape, scale=1.4, disp_cbar=True, print_msg=True)
 
     # plot
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=fig_size, sharex=True, sharey=True)
     for ax, data, title in zip(axs.flatten(), [mat11, mat22, mat, mat_diff], titles):
-        im = ax.imshow(data * unit, vmin=vmin, vmax=vmax, cmap=cmap, interpolation='nearest')
+        im = ax.imshow(data * disp_scale, vmin=vmin, vmax=vmax, cmap=disp_cmap, interpolation='nearest')
         ax.set_title(title, fontsize=12)
         ax.tick_params(which='both', direction='in', labelsize=12, left=True, right=True, top=True, bottom=True)
     fig.tight_layout()
@@ -215,7 +216,8 @@ def plot_stitch(mat11, mat22, mat, mat_diff, unit=1, vmin=None, vmax=None, cmap=
     return
 
 
-def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_value=None, unit=1, vmin=None, vmax=None, cmap=None):
+def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_value=None,
+                 disp_scale=1, disp_vlim=None, disp_cmap=None):
     """Stitch all input files into one
     """
     fext = os.path.splitext(fnames[0])[1]
@@ -280,9 +282,15 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
             # plot
             if apply_offset:
                 print('plot stitching & shifting result ...')
-                suffix = f'{i}{i+1}'
-                out_fig = f'{os.path.splitext(out_file)[0]}_{suffix}.png'
-                plot_stitch(mat11, mat22, mat, mat_diff, unit, vmin, vmax, cmap, out_fig=out_fig)
+                out_fig = f'{os.path.splitext(out_file)[0]}_{i}{i+1}.png'
+                plot_stitch(
+                    mat11, mat22,
+                    mat, mat_diff,
+                    out_fig=out_fig,
+                    disp_scale=disp_scale,
+                    disp_vlim=disp_vlim,
+                    disp_cmap=disp_cmap,
+                )
 
         dsDict[ds_name_out] = mat
 

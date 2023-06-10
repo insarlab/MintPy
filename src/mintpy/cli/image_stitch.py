@@ -41,14 +41,12 @@ def create_parser(subparsers=None):
                              '(i.e., for two coherence maps), use this flag')
 
     # plot options
-    parser.add_argument('--unit', dest='disp_unit', type=float, default=1.,
-                        help='convert unit (float) when plotting.')
-    parser.add_argument('--vmin', dest='disp_vmin', type=float, default=None,
-                        help='vmin (float) when plotting.')
-    parser.add_argument('--vmax', dest='disp_vmax', type=float, default=None,
-                        help='vmax (float) when plotting.')
-    parser.add_argument('--cmap', dest='disp_cmap', type=str, default=None,
-                        help='cmap (str) when plotting.')
+    parser.add_argument('--scale', dest='disp_scale', type=float, default=1.,
+                        help='scale the data when plotting.')
+    parser.add_argument('-v','--vlim', dest='disp_vlim', type=float, default=None, nargs=2,
+                        help='vmin and vmax when plotting.')
+    parser.add_argument('-c','--cmap', dest='disp_cmap', type=str, default=None,
+                        help='colormap when plotting.')
     parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',
                         help='do not display the result plotting.')
     return parser
@@ -74,10 +72,9 @@ def main(iargs=None):
         out_file=inps.outfile,
         apply_offset=inps.apply_offset,
         disp_fig=inps.disp_fig,
-        unit=inps.disp_unit,
-        vmin=inps.disp_vmin,
-        vmax=inps.disp_vmax,
-        cmap=inps.disp_cmap
+        disp_scale=inps.disp_scale,
+        disp_vlim=inps.disp_vlim,
+        disp_cmap=inps.disp_cmap,
     )
 
 
