@@ -160,8 +160,6 @@ def diff_timeseries_and_velocity(file1, file2, out_file, max_num_pixel=2e8):
     # basic info
     atr1 = readfile.read_attribute(file1)
     atr2 = readfile.read_attribute(file2)
-    k1 = atr1['FILE_TYPE']
-    k2 = atr2['FILE_TYPE']
     date_list = timeseries(file1).get_date_list()
     num_date = len(date_list)
 
@@ -244,7 +242,7 @@ def diff_timeseries_and_velocity(file1, file2, out_file, max_num_pixel=2e8):
 
         # write the block
         block = [0, num_date, box[1], box[3], box[0], box[2]]
-        writefile.write_hdf5_block(out_file, data=data, datasetName=k1, block=block)
+        writefile.write_hdf5_block(out_file, data=data, datasetName='timeseries', block=block)
 
     return out_file
 
