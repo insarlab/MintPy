@@ -50,7 +50,9 @@ def filter_data(data, filter_type, filter_par=None):
         data_filt = data - lp_data
 
     elif filter_type == "lowpass_gaussian":
-        # Kai: watch out NaN holes (https://stackoverflow.com/questions/18697532/gaussian-filtering-a-image-with-nan-in-python)
+        # ORIGNAL: data_filt = filters.gaussian(data, sigma=filter_par)
+        #   nan pixels can enlarge to big holes depending on the size of your gaussian kernel
+        #   we can do normalized convolution (https://stackoverflow.com/a/36307291/7128154) as below:
         V=np.array(data)
         V[np.isnan(data)]=0
         VV=filters.gaussian(V, sigma=filter_par)
@@ -58,10 +60,10 @@ def filter_data(data, filter_type, filter_par=None):
         W=np.ones_like(data)
         W[np.isnan(data)]=0
         WW=filters.gaussian(W, sigma=filter_par)
+        WW[WW==0]=np.nan
 
         data_filt = VV/WW
         data_filt[np.isnan(data)] = np.nan
-        #data_filt = filters.gaussian(data, sigma=filter_par)
 
     elif filter_type == "highpass_gaussian":
         lp_data = filters.gaussian(data, sigma=filter_par)
