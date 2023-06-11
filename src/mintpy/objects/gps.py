@@ -132,7 +132,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
                                 e.g. enu2los, hz2los, up2los
                 horz_az_angle - float, azimuth angle of the horizontal motion in degree
                                 measured from the north with anti-clockwise as positive
-                model         - time function model, defualt=None.  Ex. model={'polynomial': 1, 'periodic': [1.0, 0.5]}
+                model         - dict, time function model, e.g. {'polynomial': 1, 'periodic': [1.0, 0.5]}
                 print_msg     - bool, print verbose info
                 redo          - bool, ignore existing CSV file and re-calculate
     Returns:    site_obs      - 1D np.ndarray(), GPS LOS velocity or displacement in m or m/yr
