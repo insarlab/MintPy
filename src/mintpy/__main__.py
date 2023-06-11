@@ -684,7 +684,7 @@ def main(*argv):
             "unexpected exception caught: {!r} {}".format(
                 type(exc).__name__, exc)
         )
-        log.exception("stacktrace:", exc_info=True)
+        log.exception("stacktrace:")  #, exc_info=True)
         exit_code = EX_FAILURE
     except KeyboardInterrupt:
         log.warning("Keyboard interrupt received: exit the program")
