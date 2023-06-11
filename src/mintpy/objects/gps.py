@@ -441,7 +441,7 @@ class GPS:
 
         if display:
             import matplotlib.pyplot as plt
-            fig, ax = plt.subplots(nrows=3, ncols=1, sharex=True)
+            _, ax = plt.subplots(nrows=3, ncols=1, sharex=True)
             ax[0].scatter(self.dates, self.dis_e, s=2**2, label='East')
             ax[1].scatter(self.dates, self.dis_n, s=2**2, label='North')
             ax[2].scatter(self.dates, self.dis_u, s=2**2, label='Up')
@@ -546,9 +546,9 @@ class GPS:
             dates = np.array(sorted(list(set(self.dates) & set(ref_obj.dates))))
             dis = np.zeros(dates.shape, np.float32)
             std = np.zeros(dates.shape, np.float32)
-            for i in range(len(dates)):
-                idx1 = np.where(self.dates == dates[i])[0][0]
-                idx2 = np.where(ref_obj.dates == dates[i])[0][0]
+            for i, date_i in enumerate(dates):
+                idx1 = np.where(self.dates == date_i)[0][0]
+                idx2 = np.where(ref_obj.dates == date_i)[0][0]
                 dis[i] = self.dis_los[idx1] - ref_obj.dis_los[idx2]
                 std[i] = (self.std_los[idx1]**2 + ref_obj.std_los[idx2]**2)**0.5
         else:

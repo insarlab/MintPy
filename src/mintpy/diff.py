@@ -98,6 +98,8 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
     if ref_y and ref_x:
         ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
         ref_val = readfile.read(file2, datasetName=date_list_shared, box=ref_box)[0] * unit_fac
+    else:
+        ref_val = None
 
     # instantiate the output file
     writefile.layout_hdf5(out_file, ref_file=file1)
@@ -121,7 +123,7 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
         print(f'read from file: {file2}')
         data2 = readfile.read(file2, datasetName=date_list_shared, box=box)[0] * unit_fac
 
-        if ref_y and ref_x:
+        if ref_val is not None:
             print(f'* referencing data from {os.path.basename(file2)} to y/x: {ref_y}/{ref_x}')
             data2 -= np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2]))
 
@@ -170,7 +172,7 @@ def diff_timeseries_and_velocity(file1, file2, out_file, max_num_pixel=2e8):
         ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
         ref_val = readfile.read(file2, datasetName='velocity', box=ref_box)[0]
     else:
-        ref_val = 0.
+        ref_val = None
 
     # check dataset names in the time-func file
     ds_names = readfile.get_dataset_list(file2)
@@ -210,7 +212,7 @@ def diff_timeseries_and_velocity(file1, file2, out_file, max_num_pixel=2e8):
         print(f'read velocity from file2: {file2}')
         velo = readfile.read(file2, datasetName='velocity', box=box)[0]
 
-        if ref_y and ref_x:
+        if ref_val is not None:
             print(f'* referencing velocity to y/x: {ref_y}/{ref_x} with value of {ref_val*100:.2f} cm/year')
             velo -= ref_val
 

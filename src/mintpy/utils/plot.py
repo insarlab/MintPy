@@ -1798,10 +1798,10 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
         # numTriNonzeroIntAmbiguity: keep pixels in 0, i.e. 0 -> 1, the rest -> 0
         if os.path.basename(mask_file).startswith('numTriNonzeroIntAmbiguity'):
             if vmin is None and vmax is None:
-                vprint(f'keep pixels with numTriNonzeroIntAmbiguity == 0 and mask out the rest')
+                vprint('keep pixels with numTriNonzeroIntAmbiguity == 0 and mask out the rest')
                 mask = mask_data == 0
             else:
-                vprint(f'--mask-vmin/vmax is specified, skip translating numTriNonzeroIntAmbiguity values')
+                vprint('--mask-vmin/vmax is specified, skip translating numTriNonzeroIntAmbiguity values')
 
         # nan: mask out pixels in nan
         mask[np.isnan(mask_data)] = 0
