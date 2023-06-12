@@ -18,7 +18,7 @@ from mintpy.objects import (
     ifgramStack,
     timeseries,
 )
-from mintpy.utils import ptime, readfile, writefile
+from mintpy.utils import ptime, readfile, time_func, writefile
 
 
 #####################################################################################
@@ -95,6 +95,12 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
         else:
             raise Exception('To enforce the differencing anyway, use --force option.')
 
+    if ref_y and ref_x:
+        ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
+        ref_val = readfile.read(file2, datasetName=date_list_shared, box=ref_box)[0] * unit_fac
+    else:
+        ref_val = None
+
     # instantiate the output file
     writefile.layout_hdf5(out_file, ref_file=file1)
 
@@ -108,10 +114,6 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
         print_msg=True,
     )
 
-    if ref_y and ref_x:
-        ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
-        ref_val = readfile.read(file2, datasetName=date_list_shared, box=ref_box)[0] * unit_fac
-
     for i, box in enumerate(box_list):
         if num_box > 1:
             print(f'\n------- processing patch {i+1} out of {num_box} --------------')
@@ -121,7 +123,7 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
         print(f'read from file: {file2}')
         data2 = readfile.read(file2, datasetName=date_list_shared, box=box)[0] * unit_fac
 
-        if ref_y and ref_x:
+        if ref_val is not None:
             print(f'* referencing data from {os.path.basename(file2)} to y/x: {ref_y}/{ref_x}')
             data2 -= np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2]))
 
@@ -143,6 +145,106 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
         # write the block
         block = [0, data.shape[0], box[1], box[3], box[0], box[2]]
         writefile.write_hdf5_block(out_file, data=data, datasetName=k1, block=block)
+
+    return out_file
+
+
+def diff_timeseries_and_velocity(file1, file2, out_file, max_num_pixel=2e8):
+    """Calculate the difference between a time-series file and a velocity file.
+
+    Parameters: file1         - str, path of file1 (time series)
+                file2         - str, path of file2 (velocity)
+                out_file      - str, path of output file
+                max_num_pixel - float, maximum number of pixels for each block
+    Returns:    out_file      - str, path of output file
+    """
+
+    # basic info
+    atr1 = readfile.read_attribute(file1)
+    atr2 = readfile.read_attribute(file2)
+    date_list = timeseries(file1).get_date_list()
+    num_date = len(date_list)
+
+    # check reference point
+    _, ref_y, ref_x = check_reference(atr1, atr2)
+
+    if ref_y and ref_x:
+        ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
+        ref_val = readfile.read(file2, datasetName='velocity', box=ref_box)[0]
+    else:
+        ref_val = None
+
+    # check dataset names in the time-func file
+    ds_names = readfile.get_dataset_list(file2)
+    ds_names = [x for x in ds_names if not x.endswith('Std')]
+    if 'velocity' not in ds_names:
+        raise ValueError(f'No velocity dataset found in file2: {file2}!')
+    if ds_names != ['velocity']:
+        print('WARNING: ONLY velocity is supported, ignore the following datasets and continue:')
+        print([x for x in ds_names if x != 'velocity'])
+
+    # instantiate the output file
+    writefile.layout_hdf5(out_file, ref_file=file1)
+
+    # block-by-block IO
+    length, width = int(atr1['LENGTH']), int(atr1['WIDTH'])
+    num_box = int(np.ceil(len(date_list) * length * width / max_num_pixel))
+    box_list = cluster.split_box2sub_boxes(
+        box=(0, 0, width, length),
+        num_split=num_box,
+        dimension='y',
+        print_msg=True,
+    )
+
+    for i, box in enumerate(box_list):
+        box_wid = box[2] - box[0]
+        box_len = box[3] - box[1]
+        num_pixel = box_len * box_wid
+        if num_box > 1:
+            print(f'\n------- processing patch {i+1} out of {num_box} --------------')
+            print(f'box: {box}')
+
+        ## Re-construct the time series from the time-func file #########
+        #   here is a crude option, m to be only the linear function
+        #   To-do: need a proper new function to get m = timeseries2velocity.hdf5_dataset2model()
+
+        # read file2 (consider different reference pixel)
+        print(f'read velocity from file2: {file2}')
+        velo = readfile.read(file2, datasetName='velocity', box=box)[0]
+
+        if ref_val is not None:
+            print(f'* referencing velocity to y/x: {ref_y}/{ref_x} with value of {ref_val*100:.2f} cm/year')
+            velo -= ref_val
+
+        # calculate design matrix from the time-func file
+        model = {'polynomial' : 1}
+        G_fit = time_func.get_design_matrix4time_func(date_list, model=model)
+
+        print(f'* reconstructing time-series from {os.path.basename(file2)} with model {model}')
+        m = np.vstack([np.zeros(num_pixel), velo.flatten()])
+        ts_fit = np.matmul(G_fit, m)
+        data2 = ts_fit.reshape(-1, box_len, box_wid)
+
+        ###################################################################
+
+        if 'REF_DATE' in atr1.keys():
+            print(f'* referencing time-series from file2: {os.path.basename(file2)} to date: {atr1["REF_DATE"]}')
+            ref_ind = date_list.index(atr1["REF_DATE"])
+            data2 -= np.tile(data2[ref_ind, :, :], (num_date, 1, 1))
+
+        # read data1
+        print(f'read time-series from file1: {file1}')
+        data = readfile.read(file1, box=box)[0]
+
+        # apply differencing
+        mask = data == 0.
+        data -= data2
+        data[mask] = 0.               # Do not change zero phase value
+        del data2
+
+        # write the block
+        block = [0, num_date, box[1], box[3], box[0], box[2]]
+        writefile.write_hdf5_block(out_file, data=data, datasetName='timeseries', block=block)
 
     return out_file
 
@@ -281,9 +383,13 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
     print(f'the 1st input file is: {k1}')
 
     if k1 == 'timeseries':
-        if k2 not in ['timeseries', 'giantTimeseries']:
+        if k2 not in ['timeseries', 'giantTimeseries', 'velocity']:
+            print('If the first file is timeseries, the following file must be either timeseries or velocity.')
             raise Exception('Input multiple dataset files are not the same file type!')
-        diff_timeseries(file1, file2[0], out_file, force_diff, max_num_pixel)
+        if k2 in ['timeseries', 'giantTimeseries']:
+            diff_timeseries(file1, file2[0], out_file, force_diff, max_num_pixel)
+        elif k2 == 'velocity':
+            diff_timeseries_and_velocity(file1, file2[0], out_file, max_num_pixel)
 
     elif all(i == 'ifgramStack' for i in [k1, k2]):
         diff_ifgram_stack(file1, file2[0], out_file)

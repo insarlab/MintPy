@@ -1725,8 +1725,8 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
             else:
                 mask_file = None
 
-    # Read mask file if inputed
-    mask = None
+    # read mask_data from file if inputed
+    mask_data = None
     if os.path.isfile(str(mask_file)):
         try:
             atr_msk = readfile.read_attribute(mask_file)
@@ -1738,7 +1738,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
                     dsName = f'connectComponent-{date12}'
 
                 # read mask data
-                mask = readfile.read(
+                mask_data = readfile.read(
                     mask_file,
                     box=box,
                     datasetName=dsName,
@@ -1761,39 +1761,52 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
     elif k in ['HDFEOS']:
         if datasetName.split('-')[0] in TIMESERIES_DSET_NAMES:
             mask_file = fname
-            mask = readfile.read(fname, datasetName='mask', print_msg=print_msg)[0]
+            mask_data = readfile.read(fname, datasetName='mask', print_msg=print_msg)[0]
             vprint(f'read {k} contained mask dataset.')
 
     elif fname.endswith('PARAMS.h5'):
         mask_file = fname
         with h5py.File(fname, 'r') as f:
-            mask = f['cmask'][:] == 1.
+            mask_data = f['cmask'][:] == 1.
         vprint(f'read {os.path.basename(fname)} contained cmask dataset')
 
     # multilook
-    if mask is not None and xstep * ystep > 1:
+    if mask_data is not None and xstep * ystep > 1:
         # output size if x/ystep > 1
-        xsize = int(mask.shape[1] / xstep)
-        ysize = int(mask.shape[0] / ystep)
+        xsize = int(mask_data.shape[1] / xstep)
+        ysize = int(mask_data.shape[0] / ystep)
 
         # sampling
-        mask = mask[int(ystep/2)::ystep,
-                    int(xstep/2)::xstep]
-        mask = mask[:ysize, :xsize]
+        mask_data = mask_data[int(ystep/2)::ystep,
+                              int(xstep/2)::xstep]
+        mask_data = mask_data[:ysize, :xsize]
 
-    # set to bool type
-    if mask is not None:
-        mask[np.isnan(mask)] = 0
+    # convert mask_data to mask (via thresholding, value translation, etc.)
+    if mask_data is None:
+        mask = None
+    else:
+        mask = np.array(mask_data)
 
         # vmin/vmax: create mask based on the input thresholds
         if vmin is not None:
-            mask = mask >= vmin
+            mask = mask_data >= vmin
             vprint(f'hide pixels with mask value < {vmin}')
         if vmax is not None:
-            mask = mask <= vmax
+            mask = mask_data <= vmax
             vprint(f'hide pixels with mask value > {vmax}')
 
-        # set to bool type
+        # numTriNonzeroIntAmbiguity: keep pixels in 0, i.e. 0 -> 1, the rest -> 0
+        if os.path.basename(mask_file).startswith('numTriNonzeroIntAmbiguity'):
+            if vmin is None and vmax is None:
+                vprint('keep pixels with numTriNonzeroIntAmbiguity == 0 and mask out the rest')
+                mask = mask_data == 0
+            else:
+                vprint('--mask-vmin/vmax is specified, skip translating numTriNonzeroIntAmbiguity values')
+
+        # nan: mask out pixels in nan
+        mask[np.isnan(mask_data)] = 0
+
+        # ensure output in bool type
         mask = mask != 0
 
     return mask, mask_file

@@ -50,11 +50,27 @@ def filter_data(data, filter_type, filter_par=None):
         data_filt = data - lp_data
 
     elif filter_type == "lowpass_gaussian":
-        data_filt = filters.gaussian(data, sigma=filter_par)
+        # ORIGNAL: data_filt = filters.gaussian(data, sigma=filter_par)
+        #   nan pixels can enlarge to big holes depending on the size of your gaussian kernel
+        #   we can do normalized convolution (https://stackoverflow.com/a/36307291/7128154) as below:
+        V=np.array(data)
+        V[np.isnan(data)]=0
+        VV=filters.gaussian(V, sigma=filter_par)
+
+        W=np.ones_like(data)
+        W[np.isnan(data)]=0
+        WW=filters.gaussian(W, sigma=filter_par)
+        WW[WW==0]=np.nan
+
+        data_filt = VV/WW
+        data_filt[np.isnan(data)] = np.nan
 
     elif filter_type == "highpass_gaussian":
         lp_data = filters.gaussian(data, sigma=filter_par)
         data_filt = data - lp_data
+
+    elif filter_type == "median":
+        data_filt = filters.median(data, morphology.disk(filter_par))
 
     elif filter_type == "double_difference":
         """Amplifies the local deformation signal by reducing the influence
@@ -133,6 +149,14 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
             filter_par = [1, 10]
         local, regional = int(filter_par[0]), int(filter_par[1])
         print(f'filter parameter: local / regional kernel sizes = {local} / {regional}')
+
+    elif filter_type == 'median':
+        if not filter_par:
+            filter_par = 5
+        elif isinstance(filter_par, list):
+            filter_par = filter_par[0]
+        print(f'filter parameter:  median radius of {filter_par} pixels')
+
 
     # output filename
     if not fname_out:
