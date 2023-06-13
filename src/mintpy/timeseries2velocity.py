@@ -211,6 +211,7 @@ def run_timeseries2time_func(inps):
                                            num_split=num_box,
                                            dimension='y',
                                            print_msg=True)
+    num_box = len(box_list)
 
     # loop for block-by-block IO
     for i, box in enumerate(box_list):

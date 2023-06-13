@@ -50,8 +50,14 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     else:
         dim_size = width
     step = int(np.ceil(dim_size / num_split))
-    step = max(step, 10)                       # constain the min step size
-    num_split = int(np.ceil(dim_size / step))  # trim the final number of boxes
+    # condition: step >= 10
+    step = max(step, 10)
+    # update num_split based on the final step size
+    num_split = int(np.ceil(dim_size / step))
+    # if the last step is too small, merge it into the 2nd last one
+    last_step = dim_size - step * (num_split - 1)
+    if last_step < step * 0.05 or last_step < 5:
+        num_split -= 1
 
     # get list of boxes
     sub_boxes = []
@@ -59,13 +65,15 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
         if dimension == 'y':
             r0 = y0 + step * i
             r1 = y0 + step * (i + 1)
-            r1 = min(r1, y1)
+            if i == num_split - 1:
+                r1 = y1
             sub_boxes.append([x0, r0, x1, r1])
 
         else:
             c0 = x0 + step * i
             c1 = x0 + step * (i + 1)
-            c1 = min(c1, x1)
+            if i == num_split - 1:
+                c1 = x1
             sub_boxes.append([c0, y0, c1, y1])
 
     if print_msg:

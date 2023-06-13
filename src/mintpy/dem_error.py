@@ -497,6 +497,7 @@ def correct_dem_error(inps):
         num_split=num_box,
         dimension='y',
     )
+    num_box = len(box_list)
 
     # 3.2 prepare the input arguments for *_patch()
     data_kwargs = {

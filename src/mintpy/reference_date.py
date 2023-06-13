@@ -97,6 +97,7 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, 
         dimension='y',
         print_msg=True,
     )
+    num_box = len(box_list)
 
     # updating existing file or write new file
     if outfile == ts_file:
