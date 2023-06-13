@@ -163,13 +163,12 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     # with the default value of NaN for float type and 0 for the other types
     vprint(f'create output metadata and matrix in shape of {(length, width)}')
     fill_value = np.nan if str(mat1.dtype).startswith('float') else 0
-    mat = np.zeros([length, width]) * fill_value
+    mat = np.zeros([length, width], dtype=mat1.dtype) * fill_value
 
     # fill the output matrix
     flag2 = np.isfinite(mat2)
     mat[y1:y1+length1, x1:x1+width1] = mat1
     mat[y2:y2+length2, x2:x2+width2][flag2] = mat2[flag2]
-    mat = np.array(mat, dtype=mat1.dtype)
 
     # output attributes
     atr = dict()
@@ -224,17 +223,15 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
     atr = readfile.read_attribute(fnames[0])
 
     # grab ds_names
-    ds_names = [None]
-    if fext in ['.h5', '.he5']:
-        # get the common dataset list among all input files
-        ds_names = set(readfile.get_dataset_list(fnames[0]))
-        for fname in fnames[1:]:
-            ds_names.intersection_update(readfile.get_dataset_list(fname))
-        ds_names = sorted(list(ds_names))
+    ds_names = set(readfile.get_dataset_list(fnames[0]))
+    # get the common dataset list among all input files
+    for fname in fnames[1:]:
+        ds_names.intersection_update(readfile.get_dataset_list(fname))
+    ds_names = sorted(list(ds_names))
 
-        # special treatment for velocity/time_function files
-        if atr['FILE_TYPE'] == 'velocity' and len(ds_names) > 1:
-            ds_names = ['velocity']
+    # special treatment for velocity/time_function files
+    if atr['FILE_TYPE'] == 'velocity' and len(ds_names) > 1:
+        ds_names = ['velocity']
 
     print(f'files to be stitched: {fnames}')
     print(f'datasets to be stitched: {ds_names}')
@@ -254,7 +251,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
             mat[mat==no_data_value] = np.nan
 
         # skip pixels with zero incidenceAngle for geometry files
-        if atr['FILE_TYPE'] == 'geometry' and 'incidenceAngle' in ds_names:
+        if atr['FILE_TYPE'] in ['geometry', 'los'] and 'incidenceAngle' in ds_names:
             print('ignore pixels with ZERO incidenceAngle')
             inc_angle = readfile.read(fnames[0], datasetName='incidenceAngle')[0]
             mat[inc_angle == 0] = np.nan
@@ -268,7 +265,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
             if no_data_value is not None:
                 mat2[mat2==no_data_value] = np.nan
             # skip pixels with zero incidenceAngle for geometry files
-            if atr['FILE_TYPE'] == 'geometry' and 'incidenceAngle' in ds_names:
+            if atr['FILE_TYPE'] in ['geometry', 'los'] and 'incidenceAngle' in ds_names:
                 print('ignore pixels with ZERO incidenceAngle')
                 inc_angle2 = readfile.read(fname, datasetName='incidenceAngle')[0]
                 mat2[inc_angle2 == 0] = np.nan

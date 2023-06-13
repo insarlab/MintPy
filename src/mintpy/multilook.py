@@ -180,12 +180,14 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', max_memory
         return outfile
 
     # output file name
-    fbase, fext = os.path.splitext(infile)
     if not outfile:
         if os.getcwd() == os.path.dirname(os.path.abspath(infile)):
+            fbase, fext = os.path.splitext(infile)
             outfile = f'{fbase}_{lks_y}alks_{lks_x}rlks{fext}'
         else:
             outfile = os.path.basename(infile)
+    # use outfile for file extension, to support non-hdf5 infile and hdf5 outfile
+    fext = os.path.splitext(outfile)[1]
 
     # update metadata
     atr = attr.update_attribute4multilook(atr, lks_y, lks_x, box=box)
@@ -204,7 +206,8 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', max_memory
         # split in Y/row direction for IO for HDF5 only
         if fext in ['.h5', '.he5']:
             # calc step size with memory usage up to 4 GB
-            with h5py.File(infile, 'r') as f:
+            # use outfile as h5py may be be able to handle infile (non-hdf5)
+            with h5py.File(outfile, 'r') as f:
                 ds_size = np.prod(f[dsName].shape) * 4
             num_step = int(np.ceil(ds_size * 4 / (max_memory * 1024**3)))
             row_step = int(np.rint(length / num_step / 10) * 10)
