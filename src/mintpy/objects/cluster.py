@@ -39,7 +39,7 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
 
     dimension = dimension.lower()
     if num_split <= 1:
-        return [box]
+        return [box], num_split
 
     # basic info
     x0, y0, x1, y1 = box
