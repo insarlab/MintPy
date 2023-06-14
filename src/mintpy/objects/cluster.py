@@ -30,15 +30,16 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     """Divide the input box into `num_split` different sub_boxes.
 
     :param box: [x0, y0, x1, y1]: list[int] of size 4
-    :param num_split: int, the number of sub_boxes to split a box into
+    :param num_split: int, the initial number of sub_boxes to split a box into
     :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
     :return: sub_boxes: list(list(4 int)), the splited sub boxes
+    :return: num_split: int, the final number of splitted sub_boxes
     """
     import numpy as np
 
     dimension = dimension.lower()
     if num_split <= 1:
-        return [box]
+        return [box], num_split
 
     # basic info
     x0, y0, x1, y1 = box
@@ -50,8 +51,14 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     else:
         dim_size = width
     step = int(np.ceil(dim_size / num_split))
-    step = max(step, 10)                       # constain the min step size
-    num_split = int(np.ceil(dim_size / step))  # trim the final number of boxes
+    # condition: step >= 10
+    step = max(step, 10)
+    # update num_split based on the final step size
+    num_split = int(np.ceil(dim_size / step))
+    # if the last step is too small, merge it into the 2nd last one
+    last_step = dim_size - step * (num_split - 1)
+    if last_step < step * 0.05 or last_step < 5:
+        num_split -= 1
 
     # get list of boxes
     sub_boxes = []
@@ -59,20 +66,22 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
         if dimension == 'y':
             r0 = y0 + step * i
             r1 = y0 + step * (i + 1)
-            r1 = min(r1, y1)
+            if i == num_split - 1:
+                r1 = y1
             sub_boxes.append([x0, r0, x1, r1])
 
         else:
             c0 = x0 + step * i
             c1 = x0 + step * (i + 1)
-            c1 = min(c1, x1)
+            if i == num_split - 1:
+                c1 = x1
             sub_boxes.append([c0, y0, c1, y1])
 
     if print_msg:
         print(f'split along {dimension} dimension ({dim_size:d}) into {num_split:d} boxes')
         print(f'    with each box up to {step:d} in {dimension} dimension')
 
-    return sub_boxes
+    return sub_boxes, num_split
 
 
 def set_num_threads(num_threads=None, print_msg=True):
@@ -231,8 +240,12 @@ class DaskCluster:
         # split the primary box into sub boxes for workers AND
         # update the number of workers based on split result
         box = func_data["box"]
-        sub_boxes = split_box2sub_boxes(box, num_split=self.num_worker, dimension='x', print_msg=False)
-        self.num_worker = len(sub_boxes)
+        sub_boxes, self.num_worker = split_box2sub_boxes(
+            box,
+            num_split=self.num_worker,
+            dimension='x',
+            print_msg=False,
+        )
         print(f'split patch into {self.num_worker} sub boxes in x direction for workers to process')
 
         # start a bunch of workers from the cluster
