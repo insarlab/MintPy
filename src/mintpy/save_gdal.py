@@ -8,6 +8,7 @@
 import os
 import warnings
 
+import numpy as np
 from osgeo import gdal, osr
 
 from mintpy.utils import plot as pp, readfile, utils0 as ut
@@ -54,6 +55,11 @@ def write_gdal(data, meta, out_file, out_fmt='GTiff'):
         msg = 'No EPSG or UTM_ZONE metadata found! '
         msg += 'Assume EPSG = 4326 (WGS84) and continue.'
         warnings.warn(msg)
+
+    # convert boolean to uint8, as GDAL does not have a direct analogue to boolean
+    if data.dtype == 'bool':
+        print('convert data from boolean to uint8, as GDAL does not support boolean')
+        data = np.array(data, dtype=np.uint8)
 
     # write file
     driver = gdal.GetDriverByName(out_fmt)
