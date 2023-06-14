@@ -492,12 +492,11 @@ def correct_dem_error(inps):
 
     # split in row/line direction based on the input memory limit
     num_box = int(np.ceil((num_epoch * length * width * 4) * 2.5 / (inps.maxMemory * 1024**3)))
-    box_list = cluster.split_box2sub_boxes(
+    box_list, num_box = cluster.split_box2sub_boxes(
         box=(0, 0, width, length),
         num_split=num_box,
         dimension='y',
     )
-    num_box = len(box_list)
 
     # 3.2 prepare the input arguments for *_patch()
     data_kwargs = {

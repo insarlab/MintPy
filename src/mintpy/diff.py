@@ -107,13 +107,12 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
     # block-by-block IO
     length, width = int(atr1['LENGTH']), int(atr1['WIDTH'])
     num_box = int(np.ceil(len(date_list1) * length * width / max_num_pixel))
-    box_list = cluster.split_box2sub_boxes(
+    box_list, num_box = cluster.split_box2sub_boxes(
         box=(0, 0, width, length),
         num_split=num_box,
         dimension='y',
         print_msg=True,
     )
-    num_box = len(box_list)
 
     for i, box in enumerate(box_list):
         if num_box > 1:
@@ -190,13 +189,12 @@ def diff_timeseries_and_velocity(file1, file2, out_file, max_num_pixel=2e8):
     # block-by-block IO
     length, width = int(atr1['LENGTH']), int(atr1['WIDTH'])
     num_box = int(np.ceil(len(date_list) * length * width / max_num_pixel))
-    box_list = cluster.split_box2sub_boxes(
+    box_list, num_box = cluster.split_box2sub_boxes(
         box=(0, 0, width, length),
         num_split=num_box,
         dimension='y',
         print_msg=True,
     )
-    num_box = len(box_list)
 
     for i, box in enumerate(box_list):
         box_wid = box[2] - box[0]

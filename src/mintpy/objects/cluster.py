@@ -30,9 +30,10 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     """Divide the input box into `num_split` different sub_boxes.
 
     :param box: [x0, y0, x1, y1]: list[int] of size 4
-    :param num_split: int, the number of sub_boxes to split a box into
+    :param num_split: int, the initial number of sub_boxes to split a box into
     :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
     :return: sub_boxes: list(list(4 int)), the splited sub boxes
+    :return: num_split: int, the final number of splitted sub_boxes
     """
     import numpy as np
 
@@ -80,7 +81,7 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
         print(f'split along {dimension} dimension ({dim_size:d}) into {num_split:d} boxes')
         print(f'    with each box up to {step:d} in {dimension} dimension')
 
-    return sub_boxes
+    return sub_boxes, num_split
 
 
 def set_num_threads(num_threads=None, print_msg=True):
@@ -239,8 +240,12 @@ class DaskCluster:
         # split the primary box into sub boxes for workers AND
         # update the number of workers based on split result
         box = func_data["box"]
-        sub_boxes = split_box2sub_boxes(box, num_split=self.num_worker, dimension='x', print_msg=False)
-        self.num_worker = len(sub_boxes)
+        sub_boxes, self.num_worker = split_box2sub_boxes(
+            box,
+            num_split=self.num_worker,
+            dimension='x',
+            print_msg=False,
+        )
         print(f'split patch into {self.num_worker} sub boxes in x direction for workers to process')
 
         # start a bunch of workers from the cluster

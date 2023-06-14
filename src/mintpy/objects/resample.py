@@ -457,13 +457,12 @@ class resample:
 
             # split dest_box (in grid)
             # and update num_box based on the actual dest_box_list
-            self.dest_box_list = split_box2sub_boxes(
+            self.dest_box_list, self.num_box = split_box2sub_boxes(
                 box=(0, 0, self.width, self.length),
                 num_split=self.num_box,
                 dimension='y',
                 print_msg=True,
             )
-            self.num_box = len(self.dest_box_list)
 
             # dest_box --> src_box / src_def / dest_def
             for i, dest_box in enumerate(self.dest_box_list):

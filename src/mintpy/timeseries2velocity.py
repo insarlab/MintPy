@@ -207,11 +207,12 @@ def run_timeseries2time_func(inps):
     if inps.uncertaintyQuantification == 'bootstrap':
         memoryAll += inps.bootstrapCount * num_param * length * width * 4
     num_box = int(np.ceil(memoryAll * 3 / (inps.maxMemory * 1024**3)))
-    box_list = cluster.split_box2sub_boxes(box=(0, 0, width, length),
-                                           num_split=num_box,
-                                           dimension='y',
-                                           print_msg=True)
-    num_box = len(box_list)
+    box_list, num_box = cluster.split_box2sub_boxes(
+        box=(0, 0, width, length),
+        num_split=num_box,
+        dimension='y',
+        print_msg=True,
+    )
 
     # loop for block-by-block IO
     for i, box in enumerate(box_list):
