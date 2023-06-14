@@ -511,7 +511,7 @@ def plot_slice(ax, data, metadata, inps):
             inps.disp_ref_pixel = False
 
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=extent, origin='upper', interpolation='nearest',
+                       extent=extent, origin='upper', interpolation=inps.interpolation,
                        alpha=inps.transparency, animated=inps.animation, zorder=1)
 
         # Draw faultline using GMT lonlat file
@@ -625,7 +625,7 @@ def plot_slice(ax, data, metadata, inps):
         extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
                   inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=extent, interpolation='nearest', alpha=inps.transparency, zorder=1)
+                       extent=extent, interpolation=inps.interpolation, alpha=inps.transparency, zorder=1)
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
@@ -1166,7 +1166,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
               inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
 
     im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
-                   interpolation='nearest', alpha=inps.transparency,
+                   interpolation=inps.interpolation, alpha=inps.transparency,
                    extent=extent, zorder=1)
 
     # Plot Seed Point
