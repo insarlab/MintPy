@@ -70,7 +70,7 @@ def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
 
 def get_lalo_ref(m_par_file, atr_dict={}):
     """Extract LAT/LON_REF1/2/3/4 from corner file, e.g. 130118_4rlks.amp.corner.
-    If it's not existed, call Gamma script - SLC_corners - to generate it from SLC par file
+    If it does not exist, call Gamma script - SLC_corners - to generate it from SLC par file
         e.g. 130118_4rlks.amp.par
 
     Parameters: m_par_file - str, path, reference date parameter file, i.e. 130118_4rlks.amp.par

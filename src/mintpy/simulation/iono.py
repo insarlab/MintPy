@@ -538,7 +538,7 @@ def read_sub_tec(tec_file, version=2.1, print_msg=True):
 
 def check_date_list_against_reference(date_list, dset_list, date_list_ref, fill_value=np.nan):
     """Check input date/dset_list against the reference date list:
-    1. remove dates that are not existed in the reference date list
+    1. remove dates that are not existing in the reference date list
     2. fill data of the missing dates
     """
     # remove dates not in date_list_ref

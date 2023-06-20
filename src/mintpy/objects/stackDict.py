@@ -751,7 +751,7 @@ class geometryDict:
                                           compression=compression)
 
             ###############################
-            # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
+            # Generate Dataset if it doesn't exist as a binary file: incidenceAngle, slantRangeDistance
             for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance'] if i not in self.dsNames]:
                 # Calculate data
                 data = None
