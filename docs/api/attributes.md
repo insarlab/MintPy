@@ -41,6 +41,7 @@ The following attributes vary for each interferogram:
 +  FILE_PATH = absolute file path
 +  PROCESSOR = processing software, i.e. isce, aria, snap, gamma, roipac etc.
 +  DATA_TYPE = data type, i.e. float32, int16, etc., for isce product read using GDAL
++  BYTE_ORDER = order of bytes, or endianness, for binary files, i.e. big-endian or little-endian. Most InSAR processors use little-endian, except for Gamma, which sometimes use big-endian.
 +  BANDS = number of bands, for binary file I/O.
 +  INTERLEAVE = band interleave type, i.e. BSQ, BIL, BIP for binary file I/O.
 +  NO_DATA_VALUE = No data value, value that should be ignored.

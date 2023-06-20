@@ -589,14 +589,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
 
     # ROI_PAC
     elif processor in ['roipac']:
-        # data structure - auto
-        interleave = 'BIL'
-        byte_order = 'little-endian'
-
         # data structure - file specific based on file extension
-        data_type = 'float32'
-        num_band = 1
-
         if fext in ['.unw', '.cor', '.hgt', '.msk']:
             num_band = 2
             band = 2
@@ -622,7 +615,6 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # Gamma
     elif processor == 'gamma':
         # data structure - auto
-        interleave = 'BIL'
         byte_order = atr.get('BYTE_ORDER', 'big-endian')
 
         # convert default short name for data type from GAMMA
@@ -635,7 +627,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         elif fext in ['.int']:
             data_type = data_type if 'DATA_TYPE' in atr.keys() else 'complex64'
 
-        elif fext in ['.utm_to_rdc']:
+        elif fext.endswith(('to_rdc', '2_rdc', '2rdc')):
             data_type = data_type if 'DATA_TYPE' in atr.keys() else 'float32'
             interleave = 'BIP'
             num_band = 2
@@ -782,7 +774,7 @@ def get_slice_list(fname, no_complex=False):
         num_band = int(atr.get('BANDS', '1'))
         dtype = atr.get('DATA_TYPE', 'float32')
 
-        if fext in ['.trans', '.utm_to_rdc']:
+        if fext in ['.trans'] or fext.endswith(('to_rdc', '2_rdc', '2rdc')):
             # roipac / gamma lookup table
             slice_list = ['rangeCoord', 'azimuthCoord']
 
@@ -1913,36 +1905,51 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
     # read data
     interleave = interleave.upper()
     if interleave == 'BIL':
-        data = np.fromfile(fname,
-                           dtype=data_type,
-                           count=box[3]*width*num_band).reshape(-1, width*num_band)
-        data = data[box[1]:box[3],
-                    width*(band-1)+box[0]:width*(band-1)+box[2]]
+        count = box[3] * width * num_band
+        data = np.fromfile(fname, dtype=data_type, count=count).reshape(-1, width*num_band)
+        c0 = width * (band - 1) + box[0]
+        c1 = width * (band - 1) + box[2]
+        data = data[box[1]:box[3], c0:c1]
 
     elif interleave == 'BIP':
-        data = np.fromfile(fname,
-                           dtype=data_type,
-                           count=box[3]*width*num_band).reshape(-1, width*num_band)
-        data = data[box[1]:box[3],
-                    np.arange(box[0], box[2])*num_band+band-1]
+        count = box[3] * width * num_band
+        data = np.fromfile(fname, dtype=data_type, count=count).reshape(-1, width*num_band)
+        inds = np.arange(box[0], box[2]) * num_band + band - 1
+        data = data[box[1]:box[3], inds]
 
     elif interleave == 'BSQ':
-        data = np.fromfile(fname,
-                           dtype=data_type,
-                           count=(box[3]+length*(band-1))*width).reshape(-1, width)
-        data = data[length*(band-1)+box[1]:length*(band-1)+box[3],
-                    box[0]:box[2]]
+        count = (box[3] + length * (band - 1)) * width
+        data = np.fromfile(fname, dtype=data_type, count=count).reshape(-1, width)
+        r0 = length * (band - 1) + box[1]
+        r1 = length * (band - 1) + box[3]
+        data = data[r0:r1, box[0]:box[2]]
+
     else:
         raise ValueError('unrecognized band interleaving:', interleave)
 
     # adjust output band for complex data
     if data_type.replace('>', '').startswith('c'):
-        if   cpx_band.startswith('real'):  data = data.real
-        elif cpx_band.startswith('imag'):  data = data.imag
-        elif cpx_band.startswith('pha'):   data = np.angle(data)
-        elif cpx_band.startswith('mag'):   data = np.absolute(data)
-        elif cpx_band.startswith('c'):     pass
-        else:  raise ValueError('unrecognized complex band:', cpx_band)
+        if cpx_band.startswith('real'):
+            data = data.real
+        elif cpx_band.startswith('imag'):
+            data = data.imag
+
+        elif cpx_band.startswith('pha'):
+            data = np.angle(data)
+
+            # set ~pi value to 0, as sometimes shown in gamma products
+            boundary_values = [-3.1415927, 3.1415927]
+            for boundary_value in boundary_values:
+                if np.sum(data == boundary_value) > 100:
+                    print(f'~pi boundary value ({boundary_value}) detected, convert to zero')
+                    data[data == boundary_value] = 0
+
+        elif cpx_band.startswith(('mag', 'amp')):
+            data = np.absolute(data)
+        elif cpx_band.startswith(('cpx', 'complex')):
+            pass
+        else:
+            raise ValueError('unrecognized complex band:', cpx_band)
 
     # skipping/multilooking
     if xstep * ystep > 1:
