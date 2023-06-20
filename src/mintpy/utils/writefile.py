@@ -186,7 +186,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
             meta['DATA_TYPE'] = 'float32'
             meta['INTERLEAVE'] = 'BIL'
 
-        elif fext in ['.utm_to_rdc']:
+        elif fext.endswith(('to_rdc', '2_rdc', '2rdc')):
             # Gamma lookup table
             meta['BANDS'] = 2
             meta['DATA_TYPE'] = 'float32'
