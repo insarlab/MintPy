@@ -208,8 +208,8 @@ def add_figure_argument(parser):
     fig.add_argument('--no-tight-layout', dest='fig_tight_layout', action='store_false',
                      help='disable automatic tight layout for multiple subplots')
 
-    fig.add_argument('--coord', dest='fig_coord', choices=['radar', 'geo'], default='geo',
-                     help='Display in radar/geo coordination system '
+    fig.add_argument('--coord', dest='fig_coord', choices=['geo','radar','yx'], default='geo',
+                     help='Display axes in geo or yx coordinates '
                           '(for geocoded file only; default: %(default)s).')
     fig.add_argument('--animation', action='store_true',
                      help='enable animation mode')

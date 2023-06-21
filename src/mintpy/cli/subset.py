@@ -95,8 +95,13 @@ def cmd_line_parse(iargs=None):
     # import
     from mintpy.utils import utils1 as ut
 
+    # check: existence of input file
+    flist = ut.get_file_list(inps.file)
+    if len(flist) == 0:
+        raise FileNotFoundError(f'NO file found in: {inps.file}!')
+    inps.file = flist
+
     # default: disable --output option for multiple input files
-    inps.file = ut.get_file_list(inps.file)
     if len(inps.file) > 1 and inps.outfile:
         inps.outfile = None
         print('WARNING: disable --output option for multiple input files.')
