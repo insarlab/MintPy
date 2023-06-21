@@ -619,8 +619,7 @@ class resample:
             print(f'output area extent in (S, N, W, E) in degree: {self.SNWE}')
 
             # parameter 3 - length / width (output grid)
-            self.length = dest_box[3] - dest_box[1]
-            self.width = dest_box[2] - dest_box[0]
+            self.length, self.width = dest_box[3], dest_box[2]
 
             # parameter 4 - list of boxes & geometry definitions
 

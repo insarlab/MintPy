@@ -185,7 +185,7 @@ def check_map_projection(inps, metadata, print_msg=True):
     This function will update the following variables:
         inps.map_proj_obj  # cartopy.crs.* object or None
         inps.coord_unit    # degree or meter
-        inps.fig_coord     # geo or radar
+        inps.fig_coord     # geo or yx
     """
 
     inps.map_proj_obj = None
@@ -215,7 +215,7 @@ def check_map_projection(inps, metadata, print_msg=True):
             else:
                 print(f'WARNING: Un-recognized coordinate unit: {inps.coord_unit}')
                 print('    Switch to the native Y/X and continue to plot')
-                inps.fig_coord = 'radar'
+                inps.fig_coord = 'yx'
 
     return inps
 
@@ -605,7 +605,7 @@ def plot_slice(ax, data, metadata, inps):
 
     #------------------------ Plot in Y/X-coordinate ------------------------------------------------#
     else:
-        inps.fig_coord = 'radar'
+        inps.fig_coord = 'yx'
         vprint('plotting in Y/X coordinate ...')
 
         # Plot DEM
