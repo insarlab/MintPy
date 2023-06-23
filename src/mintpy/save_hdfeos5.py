@@ -87,6 +87,7 @@ def metadata_mintpy2unavco(meta_in, dateList, geom_file):
                 meta[key2] = meta_in[key]
 
     unavco_meta = dict()
+
     #################################
     # Required metadata
     #################################
@@ -103,7 +104,15 @@ def metadata_mintpy2unavco(meta_in, dateList, geom_file):
     unavco_meta['beam_swath'] = int(meta.get('beam_swath', '0'))
 
     # relative_orbit, or track number
-    unavco_meta['relative_orbit'] = int(meta['relative_orbit'])
+    try:
+        unavco_meta['relative_orbit'] = int(meta['relative_orbit'])
+
+    except ValueError:
+        try:
+            geom_meta = readfile.read_attribute(geom_file)         # FA 12/22: for TSX meta does not have relative_orbit attribute
+            unavco_meta['relative_orbit'] = int(geom_meta['unavco.relative_orbit'])
+        except ValueError:
+            print('Missing required attribute: relative_orbit')
 
     # processing info
     unavco_meta['processing_type'] = 'LOS_TIMESERIES'
@@ -206,7 +215,7 @@ def metadata_mintpy2unavco(meta_in, dateList, geom_file):
     return unavco_meta
 
 
-def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=False):
+def get_output_filename(metadata, template, suffix=None, update_mode=False, subset_mode=False):
     """Get output file name of HDF-EOS5 time-series file."""
     SAT = metadata['mission']
     SW = metadata['beam_mode']
@@ -234,10 +243,19 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
 
     if subset_mode:
         print('Subset mode is enabled, put subset range info in output filename.')
-        lat1 = float(metadata['Y_FIRST'])
-        lon0 = float(metadata['X_FIRST'])
-        lat0 = lat1 + float(metadata['Y_STEP']) * int(metadata['LENGTH'])
-        lon1 = lon0 + float(metadata['X_STEP']) * int(metadata['WIDTH'])
+        if 'Y_FIRST' in metadata.keys():
+            lat1 = float(metadata['Y_FIRST'])
+            lon0 = float(metadata['X_FIRST'])
+            lat0 = lat1 + float(metadata['Y_STEP']) * int(metadata['LENGTH'])
+            lon1 = lon0 + float(metadata['X_STEP']) * int(metadata['WIDTH'])
+        elif 'mintpy.subset.lalo' in template.keys():
+            # for MiaplPy it would be preferrd to use miaplpy.subset.lalo but that is not available
+            lat1 = float(template['mintpy.subset.lalo'].split(',')[0].split(':')[1])
+            lon0 = float(template['mintpy.subset.lalo'].split(',')[1].split(':')[0])
+            lat0 = float(template['mintpy.subset.lalo'].split(',')[0].split(':')[0])
+            lon1 = float(template['mintpy.subset.lalo'].split(',')[1].split(':')[1])
+        else:
+            raise SystemExit('ERROR: --subset mode for time-series in radar-coordinates requires mintpy.subset.lalo')
 
         lat0Str = f'N{round(lat0*1e3):05d}'
         lat1Str = f'N{round(lat1*1e3):05d}'
@@ -250,7 +268,11 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
 
         SUB = f'_{lat0Str}_{lat1Str}_{lon0Str}_{lon1Str}'
         fbase, fext = os.path.splitext(outName)
-        outName = f'{fbase}{SUB}{fext}'
+
+        if suffix:
+            outName = fbase.removesuffix('_' + suffix) + SUB + '_' + suffix + fext
+        else:
+            outName = fbase + SUB + fext
 
     return outName
 
@@ -443,6 +465,7 @@ def save_hdfeos5(inps):
     # get output filename
     out_file = get_output_filename(
         metadata=meta,
+        template=template,
         suffix=inps.suffix,
         update_mode=inps.update,
         subset_mode=inps.subset)
