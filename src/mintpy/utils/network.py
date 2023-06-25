@@ -781,7 +781,7 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[], date_format='YYMMDD
     date8_list = sorted(ptime.yyyymmdd(date_list))
     date6_list = ptime.yymmdd(date8_list)
 
-    # Select reference date if not existed
+    # Select reference date if not chosen
     if not m_date:
         m_date = select_reference_date(date8_list, pbase_list)
         print('auto select reference date: '+m_date)
@@ -789,7 +789,7 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[], date_format='YYMMDD
     # Check input reference date
     m_date8 = ptime.yyyymmdd(m_date)
     if m_date8 not in date8_list:
-        print('Input reference date is not existed in date list!')
+        print('Input reference date does not exist in date list!')
         print(f'Input reference date: {m_date8}')
         print(f'Input date list: {date8_list}')
         m_date8 = None

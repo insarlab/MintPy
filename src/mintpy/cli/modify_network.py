@@ -221,7 +221,7 @@ def read_input_index_list(idxList, stackFile=None):
             print('Unrecoganized input: '+idx)
     idxListOut = sorted(set(idxListOut))
 
-    # remove index not existed in the input ifgram stack file
+    # remove index not existing in the input ifgram stack file
     if stackFile:
         obj = ifgramStack(stackFile)
         obj.open(print_msg=False)

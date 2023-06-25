@@ -39,13 +39,13 @@ NOTE = """
   2) secondary .par file, e.g. 130129_4rlks.amp.par
   3) interferogram .off file, e.g. 130118-130129_4rlks.off
 
-  Other metadata files are recommended and can be generated from the above 3 if not existed, more specifically:
+  Other metadata files are recommended and can be generated from the above 3 if not existing, more specifically:
   4) baseline files, e.g. 130118-130129_4rlks.baseline and 130118-130129_4rlks.base_perp,
       which can be generated from file 1-3 with Gamma command base_orbit and base_perp.
   5) corner files, e.g. 130118_4rlks.amp.corner_full and 130118_4rlks.amp.corner,
       which can be generated from file 1 with Gamma command SLC_corners.
 
-  This script will read all these files (generate 4 and 5 if not existed), merge them into one, convert their name from
+  This script will read all these files (generate 4 and 5 if not existing), merge them into one, convert their name from
   Gamma style to ROI_PAC style, and write to an metadata file, same name as input binary data file with suffix .rsc,
   e.g. diff_filt_HDR_130118-130129_4rlks.unw.rsc
 
