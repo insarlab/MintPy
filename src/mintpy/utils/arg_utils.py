@@ -60,7 +60,11 @@ def add_data_disp_argument(parser):
     data.add_argument('--nd','--no-data-val','--no-data-value', dest='no_data_value', type=float,
                       help='Specify the no-data-value to be ignored and masked.')
 
-    data.add_argument('--interpolation', default='nearest', help='Matplotlib interpolation method')
+    data.add_argument('--interp','--interpolation', dest='interpolation', default='nearest',
+                      help='matplotlib interpolation method for imshow, e.g.:\n'
+                           'none, antialiased, nearest, bilinear, bicubic, spline16, sinc, etc. Check more at:\n'
+                           'https://matplotlib.org/stable/gallery/images_contours_and_fields/'
+                           'interpolation_methods.html')
     data.add_argument('--wrap', action='store_true',
                       help='re-wrap data to display data in fringes.')
     data.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2,
