@@ -66,8 +66,8 @@ def filter_data(data, filter_type, filter_par=None):
         data_filt[np.isnan(data)] = np.nan
 
     elif filter_type == "highpass_gaussian":
-        lp_data = filters.gaussian(data, sigma=filter_par)
-        data_filt = data - lp_data
+        # Use the existing logic for lowpass_gaussian, then subtract from original data
+        return data - filter_data(data, "lowpass_gaussian", filter_par=filter_par)
 
     elif filter_type == "median":
         data_filt = filters.median(data, morphology.disk(filter_par))
