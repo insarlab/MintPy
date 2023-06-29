@@ -8,8 +8,6 @@
 import sys
 import argparse
 
-from mintpy.utils import arg_utils
-
 ############################################################
 EXAMPLE = """example:
   python3 ./prep_nisar.py -i 'interferograms/stitched/*.h5' -d 'dem.tiff'  
@@ -55,8 +53,27 @@ def _create_parser():
         action='store_false',
         help='Force to overwrite all .rsc metadata files.'
     )
+    parser.add_argument(
+        '--sub-lat',
+        '--sublat',
+        '--subset-lat',
+        dest='subset_lat',
+        type=float,
+        nargs=2,
+        metavar=('LATMIN', 'LATMAX'),
+        help='subset in latitude'
+    )
 
-    parser = arg_utils.add_subset_argument(parser, geo=True)
+    parser.add_argument(
+        '--sub-lon',
+        '--sublon',
+        '--subset-lon',
+        dest='subset_lon',
+        type=float,
+        nargs=2,
+        metavar=('LONMIN', 'LONMAX'),
+        help='subset in longitude'
+    )
 
     return parser
 

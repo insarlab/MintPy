@@ -636,12 +636,22 @@ def prepare_metadata(iDict):
 
         # run prep_*.py
         iargs = ['-i', gunw_files, '-d', dem_file, '-o', '../mintpy']
+
+        if iDict['mintpy.subset.yx']:
+            warnings.warn('Subset in Y/X is not implemented for NISAR. \n'
+                          'There might be shift in the coordinates of different products. \n'
+                          'Use lat/lon instead.')
+        if iDict['mintpy.subset.lalo']:
+            lalo = iDict['mintpy.subset.lalo'].split(',')
+            lats = lalo[0].split(':')
+            lons = lalo[1].split(':')
+            iargs = iargs + ['--sub-lat', lats[0], lats[1], '--sub-lon', lons[0], lons[1]]
+
         ut.print_command_line(script_name, iargs)
         try:
             prep_module.main(iargs)
         except:
             warnings.warn('prep_nisar.py failed. Assuming its result exists and continue...')
-
 
     elif processor == 'isce':
         from mintpy.utils import isce_utils, s1_utils
