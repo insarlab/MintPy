@@ -14,6 +14,7 @@ from osgeo import gdal
 from scipy.interpolate import RegularGridInterpolator
 from pyproj.transformer import Transformer
 from mintpy.utils import ptime, writefile
+from mintpy.constants import EARTH_RADIUS, SPEED_OF_LIGHT
 
 DATASET_ROOT_UNW = '/science/LSAR/GUNW/grids/frequencyA/interferogram/unwrapped'
 IDENTIFICATION = '/science/LSAR/identification'
