@@ -24,7 +24,7 @@ from mintpy.objects.stackDict import geometryDict, ifgramDict, ifgramStackDict
 from mintpy.utils import ptime, readfile, utils as ut
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr']
+PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr', 'nisar']
 
 # primary observation dataset names
 OBS_DSET_NAMES = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
@@ -601,7 +601,6 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
 
 def prepare_metadata(iDict):
     """Prepare metadata via prep_{processor}.py scripts."""
-
     processor = iDict['processor']
     script_name = f'prep_{processor}.py'
     print('-'*50)
@@ -631,6 +630,18 @@ def prepare_metadata(iDict):
                 ut.print_command_line(script_name, iargs)
                 # run
                 prep_module.main(iargs)
+    elif processor == 'nisar':
+        dem_file = iDict['mintpy.load.demFile']
+        gunw_files = iDict['mintpy.load.unwFile']
+
+        # run prep_*.py
+        iargs = ['-i', gunw_files, '-d', dem_file, '-o', '../mintpy']
+        ut.print_command_line(script_name, iargs)
+        try:
+            prep_module.main(iargs)
+        except:
+            warnings.warn('prep_nisar.py failed. Assuming its result exists and continue...')
+
 
     elif processor == 'isce':
         from mintpy.utils import isce_utils, s1_utils
@@ -785,7 +796,7 @@ def load_data(inps):
     extraDict = get_extra_metadata(iDict)
 
     # skip data writing for aria as it is included in prep_aria
-    if iDict['processor'] == 'aria':
+    if iDict['processor'] in ['aria', 'nisar']:
         return
 
     ## 2. search & write data files
