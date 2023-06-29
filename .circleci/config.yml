@@ -1,87 +1,79 @@
 version: 2.1
 jobs:
-  test:
+  unit-n-workflow-tests:
     docker:
       - image: ubuntu:bionic
         environment:
-          CONDA_PREFIX: /root/tools/miniconda3
+          CONDA_PREFIX: /root/tools/mambaforge
           MINTPY_HOME: /root/tools/MintPy
         user: root
     working_directory: /root/tools/MintPy
     resource_class: large
+
     steps:
       - checkout
       - run:
-          name: Setting Up Environment with Miniconda
+          name: Setting Up Environment with Mambaforge
           command: |
             apt update
             apt-get update --yes && apt-get upgrade --yes
             apt-get install --yes git wget
-            # download and install miniconda3
+            # install mambaforge
             mkdir -p ${HOME}/tools
             cd ${HOME}/tools
-            wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-            bash Miniconda3-latest-Linux-x86_64.sh -b -p ${HOME}/tools/miniconda3
-            ${HOME}/tools/miniconda3/bin/conda init bash
-            # add conda-forge channel and install mamba
-            ${HOME}/tools/miniconda3/bin/conda config --add channels conda-forge
-            ${HOME}/tools/miniconda3/bin/conda config --set channel_priority strict
-            ${HOME}/tools/miniconda3/bin/conda install --yes mamba
-            cat ${HOME}/.condarc
+            wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
+            bash Mambaforge-Linux-x86_64.sh -b -p ${HOME}/tools/mambaforge
+            ${HOME}/tools/mambaforge/bin/mamba init bash
+            # modify/export env var PATH to BASH_ENV to be shared across run steps
+            echo 'export PATH=${CONDA_PREFIX}/bin:${PATH}' >> ${BASH_ENV}
 
       - run:
           name: Installing MintPy
           no_output_timeout: 30m
           command: |
             export PYTHONUNBUFFERED=1
-            # setup environment variable
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             # install dependencies and source code
-            source activate root
             mamba install --verbose --yes gdal">=3" --file ${MINTPY_HOME}/requirements.txt
             python -m pip install ${MINTPY_HOME}
             # test installation
-            smallbaselineApp.py -v
+            smallbaselineApp.py -h
             tropo_pyaps3.py -h
             solid_earth_tides.py -h
 
       - run:
-          name: Testing MintPy Python Modules
+          name: Unit Test
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
-            ${MINTPY_HOME}/tests/asc_desc2horz_vert.py
+            ${MINTPY_HOME}/tests/objects/euler_pole.py
             ${MINTPY_HOME}/tests/objects/ionex.py
+            ${MINTPY_HOME}/tests/asc_desc2horz_vert.py
+            ${MINTPY_HOME}/tests/dem_error.py
 
       - run:
-          name: Testing MintPy on Example Dataset 1/4 - FernandinaSenDT128 (ISCE/topsStack)
+          name: Integration Test 1/4 - FernandinaSenDT128 (ISCE/topsStack)
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
 
       - run:
-          name: Testing MintPy on Example Dataset 2/4 - SanFranSenDT42 (ARIA)
+          name: Integration Test 2/4 - SanFranSenDT42 (ARIA)
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
 
       - run:
-          name: Testing MintPy on Example Dataset 3/4 - WellsEnvD2T399 (Gamma)
+          name: Integration Test 3/4 - WellsEnvD2T399 (Gamma)
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
       - run:
-          name: Testing MintPy on Example Dataset 4/4 - WCapeSenAT29 (SNAP)
+          name: Integration Test 4/4 - WCapeSenAT29 (SNAP)
           command: |
-            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
 
 workflows:
   version: 2
-  test:
+  unit-n-workflow-tests:
     jobs:
-      - test
+      - unit-n-workflow-tests

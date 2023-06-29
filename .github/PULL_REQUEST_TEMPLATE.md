@@ -5,8 +5,8 @@
 **Reminders**
 
 - [ ] Fix #xxxx
-- [ ] Pass Codacy code review (green)
 - [ ] Pass Pre-commit check (green)
+- [ ] Pass Codacy code review (green)
 - [ ] Pass Circle CI test (green)
 - [ ] Make sure that your code follows our style. Use the other functions/files as a basis.
 - [ ] If modifying functionality, describe changes to function behavior and arguments in a comment below the function declaration.

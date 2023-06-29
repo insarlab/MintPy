@@ -35,9 +35,8 @@ is a great starting point if you are new to version control.
    - `upstream`, which refers to the `insarlab` repository
    - `origin`, which refers to your personal fork
 
-+ Setting up `pre-commit` within `MintPy` directory:
-   - Run `pre-commit install` to set up the git hook scripts, so that `pre-commit` will run automatically on `git commit` ([https://pre-commit.com/](https://pre-commit.com/)).
-   - If the error of `No .pre-commit-config.yaml file was found` occurrs while doing `git commit`, update MintPy to the latest upstream to have this config file.
++ Setting up [`pre-commit`](https://pre-commit.com/) within `MintPy` directory:
+   - Run `pre-commit install` to set up the git hook scripts, so that `pre-commit` will run automatically on `git commit`. If the `No .pre-commit-config.yaml file was found` error occurrs, update your local MintPy to the latest upstream version to have this config file.
 
 
 #### 2. Develop your contribution: ####
@@ -109,3 +108,7 @@ It takes about 15 mins to finish.
 ## Things you should NOT do ##
 
 (For anyone with push rights to github.com/insarlab/MintPy) Never modify a commit or the history of anything that has been committed to the `main` branch.
+
+## Looking for ideas to contribute? ##
+
+Feel ready and look for something to try? Check our [to-do list](https://github.com/insarlab/MintPy/wiki/To-do-list) and [roadmap](https://github.com/insarlab/MintPy/wiki/version-2-roadmap) for the next major version 2.0!

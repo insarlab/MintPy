@@ -44,6 +44,14 @@ dst_file=$inputs_dir_dst"/ifgramStack.h5"
 echo "geocode.py $src_file -o $dst_file $geocode_opt"
 geocode.py $src_file -o $dst_file $geocode_opt
 
+echo "geocode & subset - ionStack file"
+src_file=$inputs_dir_src"/ionStack.h5"
+dst_file=$inputs_dir_dst"/ionStack.h5"
+if [ -f $src_file ]; then
+    echo "geocode.py $src_file -o $dst_file $geocode_opt"
+    geocode.py $src_file -o $dst_file $geocode_opt
+fi
+
 # subset - prepare script options
 # split SNWE into four variables to be used by subset.py
 S="$(cut -d' ' -f1 <<<"$SNWE")"
@@ -54,7 +62,7 @@ subset_opt=" --lat $S $N --lon $W $E"
 
 echo "subset - DEM"
 src_file=$inputs_dir_src"/../../../DEM/gsi10m.dem.wgs84"   #adjust filename for specific dataset
-dst_file=$inputs_dir_dst"/gsi10m.dem.wgs84"                #adjust filename for specific dataset
+dst_file=$inputs_dir_dst"/gsi10m.h5"                       #adjust filename for specific dataset
 echo "subset.py $src_file -o $dst_file $subset_opt"
 subset.py $src_file -o $dst_file $subset_opt
 

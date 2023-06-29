@@ -5,7 +5,7 @@ Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-b
 + **local cluster:** on a single machine (laptop or computing node) with multiple CPU cores, suitable for laptops, local cluster/stations and distributed High Performance Cluster (HPC). No job scheduler is required.
 + **non-local cluster:** on a distributed HPC with job scheduler installed, including PBS, LSF and SLURM.
 
-Below is a brief description of the required options and recommended best practices for each cluster/scheduler.
+[Here](https://github.com/2gotgrossman/dask-rsmas-presentation) is an entry-level presentation on parallel computing using Dask by David Grossman. Below we brief describe for each cluster/scheduler the required options and recommended best practices.
 
 ## 1. local cluster ##
 
@@ -72,7 +72,7 @@ The parallel proceesing on multiple machines is supported via [`Dask-jobqueue`](
 We provide an example [YAML configuration file](../mintpy/defaults/mintpy.yaml), besides the `dask.yaml`,  `distributed.yaml` and `jobqueue.yaml` files in `~/.config/dask` installed by dask by default. One can copy it over to the `~/.config/dask` directory as below for dask to identify and use it.
 
 ```bash
-cp $MINTPY_HOME/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
+cp $MINTPY_HOME/src/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
 ```
 
 **Note on `DASK_CONFIG`:** Besides the default `~/.config/dask` directory, one can use the `DASK_CONFIG` environment variable to use a custom directory to store the configuration files. However, it has lower priority than the default directory; and it is **generally NOT recommended**.

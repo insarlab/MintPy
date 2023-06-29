@@ -35,7 +35,7 @@ Besides [the attributes used in MintPy](./api/attributes.md), we add extra metad
 
 #### 2.1 required & manual
 
-The following metadata requires manual specification in the custom template file, e.g. [WellsEnvD2T399.txt](https://github.com/insarlab/MintPy/blob/main/mintpy/data/input_files/WellsEnvD2T399.txt).
+The following metadata requires manual specification in the custom template file, e.g. [WellsEnvD2T399.txt](./templates/WellsEnvD2T399.txt).
 
 +   **mission:** short name of the air-/space-borne SAR (constellation) mission, e.g. ALOS, ALOS2, CSK, ENV, ERS, JERS, NISAR, RS1, RS2, S1, TSX, UAV [auto-grabbed for tops/stripmap/alosStack only]
 +   **beam_mode:** short name of the beam mode as used by the space agency, e.g. IW for Sentinel-1, SM for stripmap, SL for spotlight, etc. [auto-grabbed for tops/stripmapStack only]

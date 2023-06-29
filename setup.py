@@ -13,7 +13,7 @@ from setuptools import find_packages, setup
 
 # Grab version and description from version.py
 # link: https://stackoverflow.com/questions/53648900
-sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 from mintpy.version import description, version
 
 # Grab long_description from README.md
@@ -29,7 +29,7 @@ setup(
     url="https://github.com/insarlab/MintPy",
     download_url=(f"https://github.com/insarlab/MintPy/archive/v{version}.tar.gz"),
     author="Zhang Yunjun, Heresh Fattahi",
-    author_email="yunjunzgeo@gmail.com",
+    author_email="yunjunz@outlook.com",
     license="GPL-3.0-or-later",
     license_files=("LICENSE",),
 
@@ -56,7 +56,6 @@ setup(
         "cvxopt",
         "dask>=1.0",
         "dask-jobqueue>=0.3",
-        "defusedxml",
         "h5py",
         "joblib",
         "lxml",
@@ -67,7 +66,7 @@ setup(
         "pykml>=0.2",
         "pyproj",
         "pyresample",  # pip installed version does not work
-        #"pysolid",    # will be available soon after the pypi project transfer is completed
+        "pysolid",     # pip installed version does not work because Fortran compiler is needed but not available via pip
         "rich",
         "setuptools",
         "scikit-image",
@@ -80,7 +79,6 @@ setup(
         "gbis": ["geoid"],                          # not available on pypi
         "isce": ["isce"],                           # not available on pypi
         "kite": ["kite"],
-        "platemotion": ["platemotion", "astropy"],  # will be removed in the coming new version of plate motion script
         "all": [
             "cli",
             "extra",
@@ -92,11 +90,11 @@ setup(
     },
 
     # package discovery
-    packages=find_packages(),
+    packages=find_packages("src"),  # include all packages under src
+    package_dir={"": "src"},        # tell distutils packages are under src
     entry_points={
         'console_scripts': [
             'mintpy = mintpy.__main__:main',
-            'add_attribute.py = mintpy.add_attribute:main',
             'add.py = mintpy.cli.add:main',
             'asc_desc2horz_vert.py = mintpy.cli.asc_desc2horz_vert:main',
             'closure_phase_bias.py = mintpy.cli.closure_phase_bias:main',
@@ -172,9 +170,6 @@ setup(
             "data/*.js",
             "data/*.png",
             "data/colormaps/*.cpt",
-            "data/input_files/*.txt",
-            "data/input_files/*.template",
-            "data/input_files/*.md",
             "defaults/*.cfg",
             "defaults/*.yaml",
         ],
