@@ -45,7 +45,6 @@ PROCESSINFO = {
             'bperp': f"{RADARGRID_ROOT}/perpendicularBaseline",
             }
 
-LIGHTSPEED = 299792458    # (m/s)
 ####################################################################################
 
 def load_nisar(inps):
