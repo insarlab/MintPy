@@ -111,7 +111,7 @@ def extract_metadata(input_files, bbox=None, polarization='HH'):
         xcoord = ds[DATASETS['xcoord']][()]
         ycoord = ds[DATASETS['ycoord']][()]
         meta["EPSG"] = ds[DATASETS['epsg']][()]
-        meta['WAVELENGTH'] = LIGHTSPEED / ds[PROCESSINFO['centerFrequency']][()]
+        meta['WAVELENGTH'] = SPEED_OF_LIGHT / ds[PROCESSINFO['centerFrequency']][()]
         meta["ORBIT_DIRECTION"] = ds[PROCESSINFO['orbit_direction']][()].decode('utf-8')
         meta['POLARIZATION'] = polarization
         meta["ALOOKS"] = ds[DATASETS['azimuth_look']][()]
