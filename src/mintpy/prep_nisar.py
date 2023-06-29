@@ -131,7 +131,7 @@ def extract_metadata(input_files, bbox=None, polarization='HH'):
     meta["X_STEP"] = pixel_width
     meta["Y_STEP"] = pixel_height
     meta["X_UNIT"] = meta["Y_UNIT"] = "meters"
-    meta["EARTH_RADIUS"] = 6371000.0
+    meta["EARTH_RADIUS"] = EARTH_RADIUS
 
     # NISAR Altitude
     meta['HEIGHT'] = 747000
