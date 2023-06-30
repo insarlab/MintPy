@@ -127,8 +127,9 @@ def extract_metadata(input_files, bbox=None, polarization='HH'):
     meta["CENTER_LINE_UTC"] = (
             t_mid - datetime.datetime(t_mid.year, t_mid.month, t_mid.day)
     ).total_seconds()
-    meta["X_FIRST"] = x_origin
-    meta["Y_FIRST"] = y_origin
+   
+    meta["X_FIRST"] = x_origin - pixel_width//2
+    meta["Y_FIRST"] = y_origin - pixel_height//2
     meta["X_STEP"] = pixel_width
     meta["Y_STEP"] = pixel_height
     meta["X_UNIT"] = meta["Y_UNIT"] = "meters"
