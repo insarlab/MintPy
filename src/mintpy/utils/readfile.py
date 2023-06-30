@@ -1643,8 +1643,8 @@ def read_gdal_vrt(fname):
 
     atr['X_STEP'] = x_step
     atr['Y_STEP'] = y_step
-    atr['X_FIRST'] = x0 - x_step / 2.
-    atr['Y_FIRST'] = y0 - y_step / 2.
+    atr['X_FIRST'] = x0
+    atr['Y_FIRST'] = y0
 
     # projection / coordinate unit
     srs = osr.SpatialReference(wkt=ds.GetProjection())

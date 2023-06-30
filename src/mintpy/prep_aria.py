@@ -180,8 +180,8 @@ def extract_metadata(stack):
     x_step = abs(transform[1])
     y_step = abs(transform[5]) * -1.
 
-    W = transform[0] - x_step / 2.
-    N = transform[3] - y_step / 2.
+    W = transform[0]
+    N = transform[3]
     E = W + x_step * ds.RasterXSize
     S = N + y_step * ds.RasterYSize
 
