@@ -107,7 +107,7 @@ def extract_metadata(input_files, bbox=None, polarization='HH'):
         pixel_height = ds[DATASETS['ySpacing']][()]
         pixel_width = ds[DATASETS['xSpacing']][()]
         x_origin = min(ds[DATASETS['xcoord']][()])
-        y_origin = min(ds[DATASETS['ycoord']][()])
+        y_origin = max(ds[DATASETS['ycoord']][()])
         xcoord = ds[DATASETS['xcoord']][()]
         ycoord = ds[DATASETS['ycoord']][()]
         meta["EPSG"] = ds[DATASETS['epsg']][()]
