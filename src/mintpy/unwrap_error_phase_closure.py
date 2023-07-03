@@ -292,7 +292,7 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
         # plot sample result
         fig_size = pp.auto_figure_size(label_img.shape, disp_cbar=False)
         fig, ax = plt.subplots(figsize=fig_size)
-        ax.imshow(label_img, cmap='jet')
+        ax.imshow(label_img, cmap='cmc.roma')
         for common_reg in common_regions:
             ax.plot(common_reg.sample_coords[:,1],
                     common_reg.sample_coords[:,0], 'k.', ms=2)
