@@ -635,6 +635,7 @@ def get_parser():
     get_prep_gmtsar_parser(sp)
     get_prep_hyp3_parser(sp)
     get_prep_isce_parser(sp)
+    get_prep_nisar_parser(sp)
     get_prep_roipac_parser(sp)
     get_prep_snap_parser(sp)
 
