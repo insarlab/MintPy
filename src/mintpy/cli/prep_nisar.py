@@ -2,23 +2,25 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Sara Mirzaee                                     #
+# Author: Sara Mirzaee, Jul 2023                           #
 ############################################################
 
 import sys
-import argparse
+
+from mintpy.utils.arg_utils import create_argument_parser
 
 ############################################################
 EXAMPLE = """example:
-  python3 ./prep_nisar.py -i 'interferograms/stitched/*.h5' -d 'dem.tiff'  
+  python3 ./prep_nisar.py -i 'interferograms/stitched/*.h5' -d 'dem.tiff'
 """
 
-def _create_parser():
-    parser = argparse.ArgumentParser(
-        description="Prepare NISAR products for MintPy",
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog=EXAMPLE,
-    )
+def create_parser(subparsers=None):
+    """Command line parser."""
+    synopsis = 'Prepare NISAR GUNW products for MintPy.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument(
         "-i",
@@ -80,7 +82,7 @@ def _create_parser():
 
 def cmd_line_parse(iargs=None):
     """Create the command line parser."""
-    parser = _create_parser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     return inps
