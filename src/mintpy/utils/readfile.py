@@ -1587,6 +1587,8 @@ def read_envi_hdr(fname):
     atr['DATA_TYPE'] = DATA_TYPE_ENVI2NUMPY[atr.get('data type', '4')]
     atr['BYTE_ORDER'] = ENVI_BYTE_ORDER[atr.get('byte order', '1')]
 
+    # ENVI seems to use the center of the upper-left pixel as the first coordinates
+    # link: https://www.l3harrisgeospatial.com/docs/OverviewMapInformationInENVI.html
     if 'map info' in atr.keys():
         map_info = [i.replace('{','').replace('}','').strip() for i in atr['map info'].split(',')]
         x_step = abs(float(map_info[5]))
@@ -1634,7 +1636,10 @@ def read_gdal_vrt(fname):
     atr['INTERLEAVE'] = ENVI_BAND_INTERLEAVE[interleave]
 
     # transformation contains gridcorners
-    # (lines/pixels or lonlat and the spacing 1/-1 or deltalon/deltalat)
+    #   lines/pixels with a spacing of 1/-1 OR lonlat with a spacing of deltalon/deltalat
+    # GDAL uses the upper-left corner of the upper-left pixel as the first coordinate,
+    #   which is the same as ROI_PAC and MintPy
+    #   link: https://gdal.org/tutorials/geotransforms_tut.html
     transform = ds.GetGeoTransform()
     x0 = transform[0]
     y0 = transform[3]
@@ -1643,8 +1648,8 @@ def read_gdal_vrt(fname):
 
     atr['X_STEP'] = x_step
     atr['Y_STEP'] = y_step
-    atr['X_FIRST'] = x0 - x_step / 2.
-    atr['Y_FIRST'] = y0 - y_step / 2.
+    atr['X_FIRST'] = x0
+    atr['Y_FIRST'] = y0
 
     # projection / coordinate unit
     srs = osr.SpatialReference(wkt=ds.GetProjection())
