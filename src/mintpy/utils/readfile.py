@@ -1634,7 +1634,10 @@ def read_gdal_vrt(fname):
     atr['INTERLEAVE'] = ENVI_BAND_INTERLEAVE[interleave]
 
     # transformation contains gridcorners
-    # (lines/pixels or lonlat and the spacing 1/-1 or deltalon/deltalat)
+    #   lines/pixels with a spacing of 1/-1 OR lonlat with a spacing of deltalon/deltalat
+    # GDAL uses the upper-left corner of the upper-left pixel as the first coordinate,
+    #   which is the same as ROI_PAC and MintPy
+    #   link: https://gdal.org/tutorials/geotransforms_tut.html
     transform = ds.GetGeoTransform()
     x0 = transform[0]
     y0 = transform[3]
