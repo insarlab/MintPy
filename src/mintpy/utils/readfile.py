@@ -1587,6 +1587,8 @@ def read_envi_hdr(fname):
     atr['DATA_TYPE'] = DATA_TYPE_ENVI2NUMPY[atr.get('data type', '4')]
     atr['BYTE_ORDER'] = ENVI_BYTE_ORDER[atr.get('byte order', '1')]
 
+    # ENVI seems to use the center of the upper-left pixel as the first coordinates
+    # link: https://www.l3harrisgeospatial.com/docs/OverviewMapInformationInENVI.html
     if 'map info' in atr.keys():
         map_info = [i.replace('{','').replace('}','').strip() for i in atr['map info'].split(',')]
         x_step = abs(float(map_info[5]))
