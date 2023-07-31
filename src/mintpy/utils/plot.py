@@ -126,9 +126,10 @@ def auto_figure_size(ds_shape, scale=1.0, disp_cbar=False, disp_slider=False,
                     max_figsize_height / fig_shape[1])
 
     # fig_shape/scale --> fig_size
-    fig_size = [i*fig_scale*scale for i in fig_shape]
+    fig_size = [x*fig_scale*scale for x in fig_shape]
+    fig_size = [float(f'{x:.1f}') for x in fig_size]
     if print_msg:
-        print(f'figure size : [{fig_size[0]:.2f}, {fig_size[1]:.2f}]')
+        print(f'figure size : [{fig_size[0]}, {fig_size[1]}]')
 
     return fig_size
 
