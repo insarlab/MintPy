@@ -1263,6 +1263,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         # ignore Std because it shares the same unit as base parameter
         # e.g. velocityStd and velocity
         datasetName = datasetName.replace('Std','')
+        # use the last segment if / is used, e.g. HDF-EOS5
+        datasetName = datasetName.split('/')[-1]
     ftype = atr['FILE_TYPE'].replace('.', '')
     if ftype == 'ifgramStack':
         if datasetName and datasetName in DSET_UNIT_DICT.keys():

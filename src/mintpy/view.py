@@ -981,11 +981,20 @@ def update_figure_setting(inps):
                 data_shape,
                 fig_size4plot,
                 inps.fig_num)
-        inps.fig_num = np.ceil(float(inps.dsetNum) / float(inps.fig_row_num * inps.fig_col_num)).astype(int)
+        inps.fig_num = float(inps.dsetNum) / float(inps.fig_row_num * inps.fig_col_num)
+        inps.fig_num = np.ceil(inps.fig_num).astype(int)
         vprint('dataset number: '+str(inps.dsetNum))
         vprint('row     number: '+str(inps.fig_row_num))
         vprint('column  number: '+str(inps.fig_col_num))
         vprint('figure  number: '+str(inps.fig_num))
+
+        # adjust figure size for single row plot, to avoid extra whitespace
+        if inps.fig_row_num == 1 and '--figsize' not in inps.argv:
+            inps.fig_size = pp.auto_figure_size(
+                ds_shape=(length, width*inps.fig_col_num),
+                disp_cbar=inps.disp_cbar,
+                print_msg=False)
+            vprint(f'row number is 1, adjust figure size to {inps.fig_size}')
 
         if not inps.font_size:
             inps.font_size = 12
@@ -1199,8 +1208,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
         # get title
         subplot_title = None
         if inps.key in TIMESERIES_KEY_NAMES or inps.dset[0].startswith('bperp'):
-            # support / for py2-mintpy
-            date_str = inps.dset[i].replace('/','-').split('-')[1]
+            # support "/" in the dataset names, e.g. HDF-EOS5 and py2-mintpy formats
+            date_str = inps.dset[i].replace('/','-').split('-')[-1]
             try:
                 subplot_title = dt.datetime.strptime(date_str, '%Y%m%d').isoformat()[0:10]
             except:

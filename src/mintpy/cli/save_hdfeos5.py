@@ -92,6 +92,10 @@ def cmd_line_parse(iargs=None):
     if inps.subset and 'Y_FIRST' not in meta.keys():
         raise SystemExit('ERROR: --subset mode is NOT supported for time-series in radar-coordinates!')
 
+    # check: coordinate
+    if not 'Y_FIRST' in meta.keys():
+        raise ValueError(f'Input file {inps.ts_file} is NOT geocoded!')
+
     return inps
 
 
