@@ -71,6 +71,7 @@ setup(
         "setuptools",
         "scikit-image",
         "scipy",
+        "utm",
     ],
     extras_require={
         "cli": ["argcomplete"],

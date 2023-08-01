@@ -259,21 +259,25 @@ def touch(fname_list, times=None):
 ################################## Coordinate ##########################################
 def utm_zone2epsg_code(utm_zone):
     """Convert UTM Zone string to EPSG code.
-    Parameters: utm_zone - str, atr['UTM_ZONE']
-    Returns:    epsg     - str, EPSG code
-    Examples:   epsg = utm_zone2epsg_code('11N')
+
+    Parameters: utm_zone  - str, atr['UTM_ZONE']
+    Returns:    epsg_code - str, EPSG code
+    Examples:   epsg_code = utm_zone2epsg_code('11N')
     """
     from pyproj import CRS
-    crs = CRS.from_dict({'proj': 'utm',
-                         'zone': int(utm_zone[:-1]),
-                         'south': utm_zone[-1] == 'S',
-                        })
-    epsg = crs.to_authority()[1]
-    return epsg
+
+    # N is the first letter in the northern hemisphere
+    crs = CRS.from_dict({
+        'proj': 'utm',
+        'zone': int(utm_zone[:-1]),
+        'south': utm_zone[-1].upper() < 'N',
+    })
+    epsg_code = crs.to_authority()[1]
+    return epsg_code
 
 
 def to_latlon(infile, x, y):
-    """Convert x, y in the projection coordinates of the file to lon/lat in degree.
+    """Convert x, y in the projection coordinates of the file to lat/lon in degree.
 
     Similar functionality also exists in utm.to_latlon() at:
         https://github.com/Turbo87/utm#utm-to-latitudelongitude
@@ -300,6 +304,37 @@ def to_latlon(infile, x, y):
     transformer = Transformer.from_proj(p_in, p_out)
     y, x = transformer.transform(x, y)
     return y, x
+
+
+def utm2latlon(meta, easting, northing):
+    """Convert UTM easting/northing in meters to lat/lon in degrees.
+
+    Parameters: meta     - dict, mintpy attributes that includes:
+                           UTM_ZONE
+                easting  - scalar or 1/2D np.ndarray, UTM    coordiantes in x direction
+                northing - scalar or 1/2D np.ndarray, UTM    coordiantes in y direction
+    Returns:    lat      - scalar or 1/2D np.ndarray, WGS 84 coordiantes in y direction
+                lon      - scalar or 1/2D np.ndarray, WGS 84 coordiantes in x direction
+    """
+    import utm
+    zone_num = int(meta['UTM_ZONE'][:-1])
+    lat_band = meta['UTM_ZONE'][-1].upper()
+    lat, lon = utm.to_latlon(easting, northing, zone_num, lat_band)
+    return lat, lon
+
+
+def latlon2utm(lat, lon):
+    """Convert latitude/longitude in degrees to UTM easting/northing in meters.
+
+    Parameters: lat      - scalar or 1/2D np.ndarray, WGS 84 coordiantes in y direction
+                lon      - scalar or 1/2D np.ndarray, WGS 84 coordiantes in x direction
+    Returns:    easting  - scalar or 1/2D np.ndarray, UTM    coordiantes in x direction
+                northing - scalar or 1/2D np.ndarray, UTM    coordiantes in y direction
+                zone_num - int, UTM zone number, from 1 to 60
+                lat_band - str, MGRS latitude band, C-X omitting I and O
+    """
+    import utm
+    return utm.from_latlon(lat, lon)
 
 
 def snwe_to_wkt_polygon(snwe):
@@ -368,6 +403,10 @@ def get_lat_lon(meta, geom_file=None, box=None, dimension=2, ystep=1, xstep=1):
 
         else:
             raise ValueError(f'un-supported dimension = {dimension}')
+
+        # UTM to lat/lon
+        if not meta['Y_UNIT'].startswith('deg') and 'UTM_ZONE' in meta.keys():
+            lats, lons = utm2latlon(meta, easting=lons, northing=lats)
 
     else:
         msg = 'Can not get pixel-wise lat/lon!'
