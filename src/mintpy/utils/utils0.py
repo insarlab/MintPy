@@ -260,17 +260,16 @@ def touch(fname_list, times=None):
 def utm_zone2epsg_code(utm_zone):
     """Convert UTM Zone string to EPSG code.
 
-    Parameters: utm_zone  - str, atr['UTM_ZONE']
+    Parameters: utm_zone  - str, atr['UTM_ZONE'], comprises a zone number
+                            and a hemisphere, e.g. 11N, 36S, etc.
     Returns:    epsg_code - str, EPSG code
     Examples:   epsg_code = utm_zone2epsg_code('11N')
     """
     from pyproj import CRS
-
-    # N is the first letter in the northern hemisphere
     crs = CRS.from_dict({
         'proj': 'utm',
         'zone': int(utm_zone[:-1]),
-        'south': utm_zone[-1].upper() < 'N',
+        'south': utm_zone[-1].upper() == 'S',
     })
     epsg_code = crs.to_authority()[1]
     return epsg_code
@@ -318,8 +317,8 @@ def utm2latlon(meta, easting, northing):
     """
     import utm
     zone_num = int(meta['UTM_ZONE'][:-1])
-    lat_band = meta['UTM_ZONE'][-1].upper()
-    lat, lon = utm.to_latlon(easting, northing, zone_num, lat_band)
+    northern = meta['UTM_ZONE'][-1].upper() == 'N'
+    lat, lon = utm.to_latlon(easting, northing, zone_num, northern=northern)
     return lat, lon
 
 
@@ -330,11 +329,9 @@ def latlon2utm(lat, lon):
                 lon      - scalar or 1/2D np.ndarray, WGS 84 coordiantes in x direction
     Returns:    easting  - scalar or 1/2D np.ndarray, UTM    coordiantes in x direction
                 northing - scalar or 1/2D np.ndarray, UTM    coordiantes in y direction
-                zone_num - int, UTM zone number, from 1 to 60
-                lat_band - str, MGRS latitude band, C-X omitting I and O
     """
     import utm
-    return utm.from_latlon(lat, lon)
+    return utm.from_latlon(lat, lon)[:2]
 
 
 def snwe_to_wkt_polygon(snwe):
