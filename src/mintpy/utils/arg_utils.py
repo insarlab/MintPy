@@ -130,7 +130,7 @@ def add_dem_argument(parser):
     return parser
 
 
-def add_figure_argument(parser):
+def add_figure_argument(parser, figsize_img=False):
     """Argument group parser for figure options"""
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
     fig.add_argument('--fontsize', dest='font_size',
@@ -186,6 +186,9 @@ def add_figure_argument(parser):
                      help='display Sentinel-1 A/B and IPF info in title.')
 
     # size, subplots number and space
+    if figsize_img:
+        fig.add_argument('--figsize-img', dest='fig_size_img', metavar=('WID', 'LEN'), type=float, nargs=2,
+                         help='figure size in inches for the image/map (for tsview.py) figure')
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                      help='figure size in inches - width and length')
     fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=300,
