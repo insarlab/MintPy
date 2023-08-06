@@ -4,14 +4,14 @@ MintPy uses [HDF5](https://www.hdfgroup.org) file internally. It loads files gen
 
 ### File name convention
 
-Using the underscore "_" as the delimiter in the file name, the first part describes the file type, while the rest parts describe the additional operations. For example:
-+ `timeseries.h5` is the raw time series
-+ `timeseries_ERA5.h5` is the time series after the ERA5 correction;
-+ `velocity.h5` is the velocity from the final displacement time series
-+ `velocityERA5.h5` is the velocity from ERA5 tropospheric delay (from `inputs/ERA5.h5` file), not the displacement velocity after ERA5 correction.
-+ `timeseriesResidual.h5` is the residual phase time series
-+ `timeseriesResidual_ramp.h5` is the residual phase time series after deramping
-+ and so on.
+Using the underscore `_` as the delimiter in the file name, the first part describes the file type, while the rest parts describe the additional operations. For example:
+
++  `timeseries.h5` is the raw time series
++  `timeseries_ERA5.h5` is the time series after the ERA5 correction;
++  `velocity.h5` is the velocity from the final displacement time series
++  `velocityERA5.h5` is the velocity from ERA5 tropospheric delay (from `inputs/ERA5.h5` file), not the displacement velocity after ERA5 correction.
++  `timeseriesResidual.h5` is the residual phase time series
++  `timeseriesResidual_ramp.h5` is the residual phase time series after deramping
 
 ### HDF5 data structure
 

@@ -938,6 +938,51 @@ def convolve(data, kernel):
     return real + 1J * imag
 
 
+def filter_goldstein(int_file, filt_file, filt_strength=0.2):
+    """Filter wrapped interferogram with the power-spectral filter via isce2.
+
+    Modified from ISCE-2/topsStack/FilterAndCoherence.py
+    Reference: Goldstein, R. M., & Werner, C. L. (1998). Radar interferogram
+        filtering for geophysical applications. Geophysical Research Letters,
+        25(21), 4035-4038. doi:10.1029/1998GL900033
+
+    Parameters: int_file      - str, path of wrapped interferogram
+                filt_file     - str, path of filtered wrapped interferogram
+                filt_strength - float, filtering strength between 0 and 1
+    Returns:    filt_file     - str, path of filtered wrapped interferogram
+    """
+
+    import isce
+    import isceobj
+    from mroipac.filter.Filter import Filter
+    print(f"Applying power-spectral filter (strength={filt_strength})...")
+
+    # initialize the flattened interferogram
+    int_img = isceobj.createIntImage()
+    int_img.load(int_file + '.xml')
+    int_img.setAccessMode('read')
+    int_img.createImage()
+
+    # create the filtered interferogram
+    filt_img = isceobj.createIntImage()
+    filt_img.setFilename(filt_file)
+    filt_img.setWidth(int_img.getWidth())
+    filt_img.setAccessMode('write')
+    filt_img.createImage()
+
+    # filter
+    filt_obj = Filter()
+    filt_obj.wireInputPort(name='interferogram', object=int_img)
+    filt_obj.wireOutputPort(name='filtered interferogram', object=filt_img)
+    filt_obj.goldsteinWerner(alpha=filt_strength)
+
+    # close
+    int_img.finalizeImage()
+    filt_img.finalizeImage()
+
+    return filt_file
+
+
 def estimate_coherence(intfile, corfile):
     '''Estimate the spatial coherence (phase sigma) of the wrapped interferogram.
 
@@ -981,7 +1026,7 @@ def estimate_coherence(intfile, corfile):
     return
 
 
-def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
+def unwrap_snaphu(int_file, cor_file, unw_file, max_defo=2.0, max_comp=32,
                   init_only=True, init_method='MCF', cost_mode='SMOOTH'):
     '''Unwrap interferograms using SNAPHU via isce2.
 
@@ -1010,7 +1055,7 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
     Parameters: int_file    - str, path to the wrapped interferogram file
                 cor_file    - str, path to the correlation file: phase sigma or complex correlation
                 unw_file    - str, path to the output unwrapped interferogram file
-                defo_max    - float, maximum number of cycles for the deformation phase
+                max_defo    - float, maximum number of cycles for the deformation phase
                 max_comp    - int, maximum number of connected components
                 init_only   - bool, initlize-only mode
                 init_method - str, algo used for initialization: MCF, MST
@@ -1069,7 +1114,7 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
     snp.setCorrLooks(corr_looks)
 
     # deformation mode parameters
-    snp.setDefoMaxCycles(defo_max)
+    snp.setDefoMaxCycles(max_defo)
 
     # connected component control
     # grow connectedc components if init_only is True

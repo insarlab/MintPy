@@ -144,7 +144,7 @@ def cmd_line_parse(iargs=None):
         inps.auto_flip = False
 
     # check: conflicted options (geo-only options if inpput file is in radar-coordinates)
-    geo_opt_names = ['--coord', '--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar']
+    geo_opt_names = ['--coord', '--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar', '--faultline']
     geo_opt_names = list(set(geo_opt_names) & set(inps.argv))
     if geo_opt_names and 'Y_FIRST' not in readfile.read_attribute(inps.file).keys():
         for opt_name in geo_opt_names:
