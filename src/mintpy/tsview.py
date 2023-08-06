@@ -680,7 +680,8 @@ class timeseriesViewer():
 
         self, self.atr = read_init_info(self)
 
-        # input figsize for the point time-series plot
+        # input figsize for the image/point time-series plot
+        self.figsize_img = self.fig_size_img
         self.figsize_pts = self.fig_size
         self.pts_marker = 'r^'
         self.pts_marker_size = 6.
@@ -836,7 +837,7 @@ class timeseriesViewer():
         # call view.py to plot
         self.img, self.cbar_img = view.plot_slice(self.ax_img, img_data, self.atr, self)[2:4]
         self.fig_img.canvas.manager.set_window_title(self.figname_img)
-        self.fig_img.tight_layout(rect=(0,0,1,0.97))
+        self.fig_img.tight_layout(rect=(0, 0.16, 1, 0.97))
 
         return self.img, self.cbar_img
 
@@ -844,7 +845,7 @@ class timeseriesViewer():
     def plot_init_time_slider(self, init_idx=-1, ref_idx=None):
         """Plot the initial slider."""
         # initiate axes
-        self.fig_img.subplots_adjust(bottom=0.16)
+        #self.fig_img.subplots_adjust(bottom=0.16)
         self.ax_tslider = self.fig_img.add_axes([0.125, 0.05, 0.75, 0.03])
 
         # plot slider

@@ -35,10 +35,9 @@ def create_parser(subparsers=None):
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+',
-                        help='time-series file to display\n'
-                             'i.e.: timeseries_ERA5_ramp_demErr.h5 (MintPy)\n'
-                             '      LS-PARAMS.h5 (GIAnT)\n'
-                             '      S1_IW12_128_0593_0597_20141213_20180619.he5 (HDF-EOS5)')
+                        help='time-series file to display, e.g.:\n'
+                             'timeseries_ERA5_ramp_demErr.h5 (MintPy)\n'
+                             'S1_IW12_128_0593_0597_20141213_20180619.he5 (HDF-EOS5)')
     parser.add_argument('--label', dest='file_label', nargs='*',
                         help='labels to display for multiple input files')
     parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
@@ -103,7 +102,7 @@ def create_parser(subparsers=None):
     # other groups
     parser = arg_utils.add_data_disp_argument(parser)
     parser = arg_utils.add_dem_argument(parser)
-    parser = arg_utils.add_figure_argument(parser)
+    parser = arg_utils.add_figure_argument(parser, figsize_img=True)
     parser = arg_utils.add_gps_argument(parser)
     parser = arg_utils.add_mask_argument(parser)
     parser = arg_utils.add_map_argument(parser)

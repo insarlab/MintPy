@@ -63,25 +63,37 @@ def read_subset_template2box(template_file):
     Parameters: template_file - str, path to the template file
     Returns     pix/geo_box   - tuple of 4 int or None
     """
+    # initiate output
+    pix_box, geo_box = None, None
+
+    # read template file into dict
     tmpl = readfile.read_template(template_file)
 
-    # subset.lalo -> geo_box
-    try:
-        opts = [i.strip().replace('[','').replace(']','') for i in tmpl['mintpy.subset.lalo'].split(',')]
-        lat0, lat1 = sorted(float(i.strip()) for i in opts[0].split(':'))
-        lon0, lon1 = sorted(float(i.strip()) for i in opts[1].split(':'))
-        geo_box = (lon0, lat1, lon1, lat0)
-    except:
-        geo_box = None
+    # dict: yx -> pix_box
+    key = 'mintpy.subset.yx'
+    if key in tmpl.keys():
+        # ignore common typo: [ ]
+        opt_str = tmpl[key].replace('[','').replace(']','')
+        # convert : to ,
+        opt_str = opt_str.replace(':',',')
 
-    # subset.yx -> pix_box
-    try:
-        opts = [i.strip().replace('[','').replace(']','') for i in tmpl['mintpy.subset.yx'].split(',')]
-        y0, y1 = sorted(int(i.strip()) for i in opts[0].split(':'))
-        x0, x1 = sorted(int(i.strip()) for i in opts[1].split(':'))
-        pix_box = (x0, y0, x1, y1)
-    except:
-        pix_box = None
+        opt_str_list = [i.strip() for i in opt_str.split(',')]
+        if len(opt_str_list) == 4:
+            y0, y1, x0, x1 = (int(i) for i in opt_str_list)
+            pix_box = (x0, y0, x1, y1)
+
+    # dict: lalo -> geo_box
+    key = 'mintpy.subset.lalo'
+    if key in tmpl.keys():
+        # ignore common typo: [ ]
+        opt_str = tmpl[key].replace('[','').replace(']','')
+        # convert : to ,
+        opt_str = opt_str.replace(':',',')
+
+        opt_str_list = [i.strip() for i in opt_str.split(',')]
+        if len(opt_str_list) == 4:
+            lat0, lat1, lon0, lon1 = (float(i) for i in opt_str_list)
+            geo_box = (lon0, lat1, lon1, lat0)
 
     return pix_box, geo_box
 
