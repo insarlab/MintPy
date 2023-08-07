@@ -521,6 +521,7 @@ def plot_slice(ax, data, metadata, inps):
                 faultline_file=inps.faultline_file,
                 SNWE=SNWE,
                 linewidth=inps.faultline_linewidth,
+                min_dist=inps.faultline_min_dist,
                 print_msg=inps.print_msg,
             )
 
@@ -731,6 +732,10 @@ def plot_slice(ax, data, metadata, inps):
 
     # 3.5 Tick labels
     if inps.disp_tick:
+        # move x-axis tick label to the top if colorbar is at the bottom
+        if inps.cbar_loc == 'bottom':
+            ax.tick_params(labelbottom=False, labeltop=True)
+
         # manually turn ON to enable tick labels for UTM with cartopy
         # link: https://github.com/SciTools/cartopy/issues/491
         ax.xaxis.set_visible(True)
