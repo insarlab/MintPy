@@ -458,7 +458,11 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_
 
     # auto param
     if not every_year:
-        every_year = max(1, np.rint((xmax - xmin).days / 365.25 / 5).astype(int))
+        # take axes width into account
+        fig = ax.get_figure()
+        bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        scale = 6.2 / bbox.width
+        every_year = max(1, np.rint(scale * (xmax - xmin).days / 365.25 / 5).astype(int))
 
     if not every_month:
         if   every_year <= 3 :  every_month = 1
@@ -1125,7 +1129,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
     if site_names.size == 0:
         warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
-        print('Continue without GNSS plots.')
+        print('  continue without GNSS plots.')
         return ax
 
     # mask out stations not coincident with InSAR data
@@ -1424,7 +1428,7 @@ def plot_colorbar(inps, im, cax):
     return inps, cbar
 
 
-def plot_faultline(ax, faultline_file, SNWE, linewidth=0.5, print_msg=True):
+def plot_faultline(ax, faultline_file, SNWE, linewidth=0.5, min_dist=0.1, print_msg=True):
     """Plot fault lines.
 
     Parameters: ax             - matplotlib.axes object
@@ -1442,9 +1446,14 @@ def plot_faultline(ax, faultline_file, SNWE, linewidth=0.5, print_msg=True):
     faults = readfile.read_gmt_lonlat_file(
         faultline_file,
         SNWE=SNWE,
-        min_dist=0.1,
+        min_dist=min_dist,
         print_msg=print_msg,
     )
+
+    if len(faults) == 0:
+        warnings.warn(f'No fault lines found within {SNWE} with length >= {min_dist} km!')
+        print('  continue without fault lines.')
+        return ax, faults
 
     # plot
     print_msg = False if len(faults) < 1000 else print_msg

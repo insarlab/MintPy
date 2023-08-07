@@ -289,6 +289,9 @@ def add_map_argument(parser):
     mapg.add_argument('--faultline-lw', '--faultline-linewidth', dest='faultline_linewidth',
                       metavar='NUM', type=float, default=0.5,
                       help='Faultline linewidth (default: %(default)s).')
+    mapg.add_argument('--faultline-min-dist','--faultline-min-len', dest='faultline_min_dist',
+                      metavar='NUM', type=float, default=0.1,
+                      help='Show fault segments with length >= X km (default: %(default)s).')
 
     # lalo label
     mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',
