@@ -403,6 +403,7 @@ def get_lat_lon(meta, geom_file=None, box=None, dimension=2, ystep=1, xstep=1):
 
         # UTM to lat/lon
         if not meta['Y_UNIT'].startswith('deg') and 'UTM_ZONE' in meta.keys():
+            print('UTM coordinates detected, convert UTM into lat/lon')
             lats, lons = utm2latlon(meta, easting=lons, northing=lats)
 
     else:

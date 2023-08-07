@@ -465,8 +465,8 @@ def prepare_geo_los_geometry(geom_file, unit='rad'):
         E = W + x_step * width
 
         # SNWE in meter --> degree
-        lat0, lon0 = to_latlon(atr['OG_FILE_PATH'], W, N)
-        lat1, lon1 = to_latlon(atr['OG_FILE_PATH'], E, S)
+        lat0, lon0 = utm2latlon(atr, W, N)
+        lat1, lon1 = utm2latlon(atr, E, S)
         lat_step = (lat1 - lat0) / length
         lon_step = (lon1 - lon0) / width
 
