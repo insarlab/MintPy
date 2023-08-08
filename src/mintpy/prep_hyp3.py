@@ -14,7 +14,7 @@ from mintpy.utils import readfile, utils1 as ut, writefile
 
 
 #########################################################################
-def add_hyp3_metadata(fname,meta,is_ifg=True):
+def add_hyp3_metadata(fname, meta, is_ifg=True):
     '''Read/extract attribute data from HyP3 metadata file and add to metadata dictionary
     Inputs:
         *unw_phase.tif, *corr.tif file name, *dem.tif, *inc_map.tif, e.g.
@@ -56,6 +56,10 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     W = float(meta['X_FIRST'])
     S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])
     E = W + float(meta['X_STEP']) * int(meta['WIDTH'])
+
+    # convert UTM to lat/lon
+    N, W = ut.utm2latlon(meta, W, N)
+    S, E = ut.utm2latlon(meta, E, S)
 
     if meta['ORBIT_DIRECTION'] == 'ASCENDING':
         meta['LAT_REF1'] = str(S)

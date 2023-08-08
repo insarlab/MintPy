@@ -279,8 +279,8 @@ def get_bounding_box(meta, geom_file=None):
         # e.g. meters for UTM projection from ASF HyP3
         y_unit = meta.get('Y_UNIT', 'degrees').lower()
         if not y_unit.startswith('deg'):
-            lat0, lon0 = ut.to_latlon(meta['OG_FILE_PATH'], lon0, lat0)
-            lat1, lon1 = ut.to_latlon(meta['OG_FILE_PATH'], lon1, lat1)
+            lat0, lon0 = ut.utm2latlon(meta, easting=lon0, northing=lat0)
+            lat1, lon1 = ut.utm2latlon(meta, easting=lon1, northing=lat1)
 
     else:
         # radar coordinates
@@ -560,10 +560,6 @@ def calc_delay_timeseries(inps):
     elif 'Y_FIRST' in geom_obj.metadata:
         # for lookup table in geo-coded (gamma, roipac) and obs. in geo-coord
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
-
-        # convert coordinates to lat/lon, e.g. from UTM for ASF HyPP3
-        if not geom_obj.metadata.get('Y_UNIT', 'degrees').startswith('deg'):
-            inps.lat, inps.lon = ut.to_latlon(inps.atr['OG_FILE_PATH'], inps.lon, inps.lat)
 
     else:
         # for lookup table in geo-coded (gamma, roipac) and obs. in radar-coord
