@@ -230,7 +230,7 @@ export HDF5_USE_FILE_LOCKING=FALSE     # request that HDF5 file locks should NOT
 
 #### d. Tab complete sub-commands ####
 
-If you run mintpy in sub-commands style, e.g. <code>mintpy view</code> instead of <code>view.py</code>, we recommend activating the tab completion: 
+If you run mintpy in sub-commands style, e.g. <code>mintpy view</code> instead of <code>view.py</code>, we recommend activating the tab completion:
 
 ```bash
 activate-global-python-argcomplete --user
