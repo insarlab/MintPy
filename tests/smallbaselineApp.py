@@ -45,10 +45,18 @@ DSET_INFO = """
 """
 
 EXAMPLE = """example:
+  # regular tests
   $MINTPY_HOME/tests/smallbaselineApp.py
-  $MINTPY_HOME/tests/smallbaselineApp.py  --dir ~/test
-  $MINTPY_HOME/tests/smallbaselineApp.py  --dset KujuAlosAT422F650
-  $MINTPY_HOME/tests/smallbaselineApp.py  --nofresh
+
+  # fast tests
+  $MINTPY_HOME/tests/smallbaselineApp.py --nofresh
+  $MINTPY_HOME/tests/smallbaselineApp.py --dset KujuAlosAT422F650
+
+  # change the local test directory
+  $MINTPY_HOME/tests/smallbaselineApp.py --dir ~/test
+
+  # the most complete tests
+  $MINTPY_HOME/tests/smallbaselineApp.py --test-pyaps --test-isce
 """
 
 def create_parser():
