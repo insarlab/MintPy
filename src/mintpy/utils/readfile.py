@@ -1247,12 +1247,15 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             atr.update(read_gdal_vrt(metafile))
             atr['FILE_TYPE'] = fext
 
-        # DATA_TYPE for ISCE products
+        # DATA_TYPE for ISCE/ROI_PAC products
         data_type_dict = {
-            'byte': 'int8',
-            'float': 'float32',
+            # isce2
+            'byte'  : 'int8',
+            'float' : 'float32',
             'double': 'float64',
             'cfloat': 'complex64',
+            # roipac
+            'ci2'   : 'float32',
         }
         data_type = atr.get('DATA_TYPE', 'none').lower()
         if data_type != 'none' and data_type in data_type_dict.keys():
