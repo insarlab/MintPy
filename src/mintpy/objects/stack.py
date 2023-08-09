@@ -1191,7 +1191,10 @@ class ifgramStack:
         print(f'reading {ds_name} to compute closure phases')
         phase = self.read(datasetName=ds_name, box=box, print_msg=False)
 
-        # apply spatial referencing to ARIA products
+        # apply spatial referencing (for ARIA only)
+        # to avoid the abnormal result as shown in https://github.com/insarlab/MintPy/pull/1063
+        # This may be caused by the phase stitching during product preparation via ARIA-tools,
+        # which could have broken the temporal consistency of the native unwrapped phase.
         processor = self.metadata.get('mintpy.load.processor', 'isce')
         if ds_name == 'unwrapPhase' and processor in ['aria']:
             print(f'apply spatial referencing to {processor} products')
