@@ -122,7 +122,8 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     # calculate number of nonzero closure phase
     ds_size = (C.shape[0] * 2 + C.shape[1]) * length * width * 4
     num_loop = int(np.ceil(ds_size * 2 / (max_memory * 1024**3)))
-    step = int(np.rint(length / num_loop / 10) * 10)
+    # ensure a min step size of 10
+    step = int(np.ceil(length / num_loop / 10)) * 10
     num_loop = int(np.ceil(length / step))
     num_nonzero_closure = np.zeros((length, width), dtype=np.float32)
     msg = 'calculating the number of triplets with non-zero integer ambiguity of closure phase ...'
