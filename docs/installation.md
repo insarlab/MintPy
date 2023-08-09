@@ -105,7 +105,7 @@ conda activate mintpy
 <details open>
 <p><summary>via pip [recommended]</summary></p>
 
-We recommend installing mintpy in the "editable" mode. This mode installs the package without copying files to your interpreter directory (e.g. the <code>site-packages</code> directory), thus, one could "edit" the source code and have changes take effect immediately without having to rebuild and reinstall.
+We recommend installing MintPy in the "editable" mode. This mode installs the package without copying files to your interpreter directory (e.g. the <code>site-packages</code> directory), thus, one could "edit" the source code and have changes take effect immediately without having to rebuild and reinstall.
 
 ```bash
 python -m pip install -e ~/tools/MintPy
@@ -230,13 +230,16 @@ export HDF5_USE_FILE_LOCKING=FALSE     # request that HDF5 file locks should NOT
 
 #### d. Tab complete sub-commands ####
 
-If you run mintpy in sub-commands style, e.g. <code>mintpy view</code> instead of <code>view.py</code>, we recommend activating the tab completion:
+We recommend activating the <a href="https://kislyuk.github.io/argcomplete/">tab completion</a> as below if you:
+1. Use bash or zsh shells
+2. On Linux or macOS
+3. Run MintPy in sub-commands style, e.g. <code>mintpy view</code> instead of <code>view.py</code>
 
 ```bash
 activate-global-python-argcomplete --user
 ```
 
-For macOS bash users, there is a <a href="https://kislyuk.github.io/argcomplete/#global-completion">version compatibility issue</a>, which can be fixed as below.
+On macOS, there is a <a href="https://kislyuk.github.io/argcomplete/#global-completion">bash version compatibility</a> issue, which can be fixed as below. If you use the default zsh shell, no fix is needed.
 
 <p>
 <details>
