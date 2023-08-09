@@ -72,6 +72,7 @@ setup(
         "setuptools",
         "scikit-image",
         "scipy",
+        "shapely",
         "utm",
     ],
     extras_require={

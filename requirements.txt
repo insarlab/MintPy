@@ -24,4 +24,5 @@ pysolid
 rich
 scikit-image
 scipy
+shapely
 utm
