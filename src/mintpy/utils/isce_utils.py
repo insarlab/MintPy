@@ -455,21 +455,30 @@ def load_track(trackDir, dateStr):
 
 #####################################  geometry  #######################################
 def extract_multilook_number(geom_dir, meta=dict(), fext_list=['.rdr','.geo','.rdr.full','.geo.full']):
-    for fbase in ['hgt','lat','lon','los']:
+    for fbase in ['hgt','lat','lon','los','shadowMask']:
         fbase = os.path.join(geom_dir, fbase)
+
+        # get the file name of the geometry file of interest
         for fext in fext_list:
             fnames = glob.glob(fbase+fext)
             if len(fnames) > 0:
-                break
+                fname = fnames[0]
 
-        if len(fnames) > 0:
-            fullXmlFile = f'{fnames[0]}.full.xml'
-            if os.path.isfile(fullXmlFile):
-                fullXmlDict = readfile.read_isce_xml(fullXmlFile)
-                xmlDict = readfile.read_attribute(fnames[0])
-                meta['ALOOKS'] = int(int(fullXmlDict['LENGTH']) / int(xmlDict['LENGTH']))
-                meta['RLOOKS'] = int(int(fullXmlDict['WIDTH']) / int(xmlDict['WIDTH']))
-                break
+                # get the file name of the full resolution metadata file
+                full_meta_files = [f'{fname}.full.xml', f'{fname}.full.vrt']
+                full_meta_files = [x for x in full_meta_files if os.path.isfile(x)]
+                if len(full_meta_files) > 0:
+                    full_meta_file = full_meta_files[0]
+
+                    # calc A/RLOOKS
+                    if full_meta_file.endswith('.xml'):
+                        full_dict = readfile.read_isce_xml(full_meta_file)
+                    else:
+                        full_dict = readfile.read_gdal_vrt(full_meta_file)
+                    mli_dict = readfile.read_attribute(fname)
+                    meta['ALOOKS'] = int(int(full_dict['LENGTH']) / int(mli_dict['LENGTH']))
+                    meta['RLOOKS'] = int(int(full_dict['WIDTH']) / int(mli_dict['WIDTH']))
+                    break
 
     # default value
     for key in ['ALOOKS', 'RLOOKS']:
