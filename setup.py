@@ -52,6 +52,7 @@ setup(
     # dependencies
     python_requires=">=3.6",
     install_requires=[
+        "argcomplete",
         "cartopy",
         "cvxopt",
         "dask>=1.0",
@@ -74,14 +75,12 @@ setup(
         "utm",
     ],
     extras_require={
-        "cli": ["argcomplete"],
         "extra": ["gdal"],
         "fractal": ["pyfftw"],
         "gbis": ["geoid"],                          # not available on pypi
         "isce": ["isce"],                           # not available on pypi
         "kite": ["kite"],
         "all": [
-            "cli",
             "extra",
             "fractal",
             "gbis",

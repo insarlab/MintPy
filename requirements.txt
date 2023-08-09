@@ -4,6 +4,7 @@
 # docs/requirements4rtd.txt for readthedocs, which uses pip with limited memory usage
 python>=3.6
 pip
+argcomplete
 cartopy
 cvxopt
 dask>=1.0
