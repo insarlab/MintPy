@@ -231,6 +231,7 @@ export HDF5_USE_FILE_LOCKING=FALSE     # request that HDF5 file locks should NOT
 #### d. Tab complete sub-commands ####
 
 We recommend activating the <a href="https://kislyuk.github.io/argcomplete/">tab completion</a> as below if you:
+
 1. Use bash or zsh shells
 2. On Linux or macOS
 3. Run MintPy in sub-commands style, e.g. <code>mintpy view</code> instead of <code>view.py</code>
@@ -245,23 +246,17 @@ On macOS, there is a <a href="https://kislyuk.github.io/argcomplete/#global-comp
 <details>
 <p><summary>Click to expand for more details</summary></p>
 
-macOS ships with an older version of the bash shell, but <code>argcomplete</code> requires the newer version, which can be installed as below.
+macOS ships with an older version of the bash shell (run <code>echo $BASH_VERSION</code> to check the version number), but <code>argcomplete</code> requires the newer version (>=4.2), which can be installed using <a href="https://brew.sh/">Homebrew</a> as:
 
 ```bash
-# check the current bash version: argcomplete requires bash>=4.2
-echo $BASH_VERSION
+brew install bash
+```
 
-# install via mamba
-mamba install bash
+You will also need to add the bash to <code>/etc/shells</code> and change your shell via <code>chsh</code> as:
 
-# add the path to /etc/shells file
-echo "${CONDA_PREFIX}/bin/bash" | sudo tee -a /etc/shells
-
-# change your shell via chsh
-chsh -s "${CONDA_PREFIX}/bin/bash"
-
-# check the current bash version
-echo $BASH_VERSION
+```bash
+echo "/usr/local/bin/bash" | sudo tee -a /etc/shells
+chsh -s "/usr/local/bin/bash"
 ```
 
 Then run <code>activate-global-python-argcomplete --user</code> again. You may need to add the following to your <code>~/.bash_profile</code> file.
