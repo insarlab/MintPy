@@ -35,6 +35,7 @@ degrees     --> meters on equator
 0.000833334 --> 90
 0.000555556 --> 60
 0.000462963 --> 50
+0.000370370 --> 40
 0.000277778 --> 30
 0.000185185 --> 20
 0.000092593 --> 10
@@ -206,6 +207,16 @@ def read_template2inps(template_file, inps):
                     iDict[key] = math.nan
                 else:
                     iDict[key] = float(value)
+
+    # ensure laloStep is a list of two items
+    key = 'laloStep'
+    if key in iDict.keys() and iDict[key]:
+        if len(iDict[key]) == 1:
+            lalo_step = iDict[key]
+            iDict[key] = [-1 * abs(lalo_step[0]), abs(lalo_step[0])]
+            print(f'single laloStep input {lalo_step} detected, convert into two as {iDict[key]}')
+        elif len(iDict[key]) > 2:
+            raise ValueError(f'laloStep input {iDict[key]} could NOT have >2 items!')
 
     # computing configurations
     key = 'mintpy.compute.maxMemory'

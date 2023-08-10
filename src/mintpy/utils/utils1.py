@@ -168,7 +168,7 @@ def nonzero_mask(File, out_file='maskConnComp.h5', datasetName=None):
     return out_file
 
 
-def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
+def spatial_average(fname, datasetName='coherence', maskFile=None, box=None,
                     saveList=False, checkAoi=True, reverseMask=False, threshold=None):
     """Read/Calculate Spatial Average of input file.
 
@@ -178,14 +178,14 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         Otherwise, calculate it from data file.
 
         Only non-nan pixel is considered.
-    Parameters: File        - string, path of input file
+    Parameters: fname       - string, path of input file
                 maskFile    - string, path of mask file, e.g. maskTempCoh.h5
                 box         - 4-tuple defining the left, upper, right, and lower pixel coordinate
                 saveList    - bool, save (list of) mean value into text file
                 reverseMask - bool, perform analysis within masked regions instead of outside of them
                 threshold   - float, calculate area ratio above threshold instead of spatial average
-    Returns:    meanList    - list for float, average value in space for each epoch of input file
-                dateList    - list of string for date info
+    Returns:    meanList    - list(float) or float, average value in space for each epoch of input file
+                dateList    - list(str) or str, for date info
                               date12_list, e.g. 101120-110220, for interferograms/coherence
                               date8_list, e.g. 20101120, for timeseries
                               file name, e.g. velocity.h5, for all the other file types
@@ -200,26 +200,26 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         dateList = [i for i in txtContent[:, 0]]
         return meanList, dateList
 
-    # Basic File Info
-    atr = readfile.read_attribute(File)
+    # Baic File Info
+    atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     if not box:
         box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
 
     # default output filename
-    prefix = datasetName if k == 'ifgramStack' else os.path.splitext(os.path.basename(File))[0]
+    prefix = datasetName if k == 'ifgramStack' else os.path.splitext(os.path.basename(fname))[0]
     suffix = 'SpatialAvg' if threshold is None else 'AreaRatio'
     suffix += 'RevMsk' if reverseMask else ''
     txtFile = prefix + suffix + '.txt'
 
     # If input is text file
-    if File.endswith(suffix):
+    if fname.endswith(suffix):
         print('Input file is spatial average txt already, read it directly')
-        meanList, dateList = read_text_file(File)
+        meanList, dateList = read_text_file(fname)
         return meanList, dateList
 
     # Read existing txt file only if 1) data file is older AND 2) same AOI
-    file_line  = f'# Data file: {os.path.basename(File)}\n'
+    file_line  = f'# Data file: {os.path.basename(fname)}\n'
     mask_line  = f'# Mask file: {maskFile}\n'
     aoi_line   = f'# AOI box: {box}\n'
     thres_line = f'# Threshold: {threshold}\n'
@@ -229,6 +229,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         fl = open(txtFile)
         lines = fl.readlines()
         fl.close()
+        # 1. aoi
         if checkAoi:
             try:
                 aoi_line_orig = [i for i in lines if '# AOI box:' in i][0]
@@ -236,15 +237,25 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
                 aoi_line_orig = ''
         else:
             aoi_line_orig = aoi_line
+        # 2. mask file
         try:
             mask_line_orig = [i for i in lines if '# Mask file:' in i][0]
         except:
             mask_line_orig = ''
+        # 3. mask file - modification time
+        update_mask_file = run_or_skip(out_file=txtFile, in_file=[maskFile], readable=False)
+        # 4. data file - modification time
+        if k == 'ifgramStack':
+            with h5py.File(fname, 'r') as f:
+                ti = float(f[datasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(fname)))
+        else:
+            ti = os.path.getmtime(fname)
+        to = os.path.getmtime(txtFile)
+
         if (aoi_line_orig == aoi_line
                 and mask_line_orig == mask_line
-                and run_or_skip(out_file=txtFile,
-                                in_file=[File, maskFile],
-                                readable=False) == 'skip'):
+                and update_mask_file == 'skip'
+                and ti <= to):
             print(txtFile+' already exists, read it directly')
             meanList, dateList = read_text_file(txtFile)
             return meanList, dateList
@@ -259,7 +270,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
 
     # Calculate mean coherence or area ratio list
     if k == 'ifgramStack':
-        obj = ifgramStack(File)
+        obj = ifgramStack(fname)
         obj.open(print_msg=False)
         meanList, dateList = obj.spatial_average(
             datasetName=datasetName,
@@ -274,7 +285,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         obj.close()
 
     elif k == 'timeseries':
-        meanList, dateList = timeseries(File).spatial_average(
+        meanList, dateList = timeseries(fname).spatial_average(
             maskFile=maskFile,
             box=box,
             reverseMask=reverseMask,
@@ -282,7 +293,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         )
 
     else:
-        data = readfile.read(File, box=box)[0]
+        data = readfile.read(fname, box=box)[0]
         if maskFile and os.path.isfile(maskFile):
             print('mask from file: '+maskFile)
             mask = readfile.read(maskFile, datasetName='mask', box=box)[0]
@@ -295,7 +306,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
             data[data <= threshold] = 0
 
         meanList = np.nanmean(data)
-        dateList = [os.path.basename(File)]
+        dateList = [os.path.basename(fname)]
 
     # Write mean coherence list into text file
     if saveList:
@@ -316,40 +327,45 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
                 fl.write(f'{dateList[i]}\t{meanList[i]:.4f}\n')
         fl.close()
 
+    # read from text file (in 1e-4 precision)
+    # to ensure output value consistency
+    meanList, dateList = read_text_file(txtFile)
+
     if len(meanList) == 1:
         meanList = meanList[0]
         dateList = dateList[0]
+
     return meanList, dateList
 
 
-def temporal_average(File, datasetName='coherence', updateMode=False, outFile=None):
+def temporal_average(fname, datasetName='coherence', updateMode=False, outFile=None):
     """Calculate temporal average of multi-temporal dataset, equivalent to stacking
     For ifgramStack/unwrapPhase, return average phase velocity
 
-    Parameters: File : string, file to be averaged in time
-                datasetName : string, dataset to be read from input file, for multiple
-                    datasets file - ifgramStack - only
-                    e.g.: coherence, unwrapPhase
-                updateMode : bool
-                outFile : string, output filename
-                    None for auto output filename
-                    False for do not save as output file
-    Returns:    dataMean : 2D array
-                outFile : string, output file name
+    Parameters: fname       - str, file to be averaged in time
+                datasetName - str, dataset to be read from input file, for multiple
+                              datasets file - ifgramStack - only
+                              e.g.: coherence, unwrapPhase
+                updateMode  - bool
+                outFile     - str, output filename
+                              None for auto output filename
+                              False for do not save as output file
+    Returns:    dataMean    - 2D np.ndarray
+                outFile     - str, output file name
     Examples:   avgPhaseVel = ut.temporal_average('ifgramStack.h5', datasetName='unwrapPhase')[0]
                 ut.temporal_average('ifgramStack.h5', datasetName='coherence',
                                     outFile='avgSpatialCoh.h5', updateMode=True)
     """
-    atr = readfile.read_attribute(File, datasetName=datasetName)
+    atr = readfile.read_attribute(fname, datasetName=datasetName)
     k = atr['FILE_TYPE']
     if k not in ['ifgramStack', 'timeseries']:
-        print(f'WARNING: input file is not multi-temporal file: {File}, return itself.')
-        data = readfile.read(File)[0]
-        return data, File
+        print(f'WARNING: input file is not multi-temporal file: {fname}, return itself.')
+        data = readfile.read(fname)[0]
+        return data, fname
 
     # Default output filename
     if outFile is None:
-        ext = os.path.splitext(File)[1]
+        ext = os.path.splitext(fname)[1]
         if not outFile:
             if k == 'ifgramStack':
                 if datasetName == 'coherence':
@@ -359,11 +375,11 @@ def temporal_average(File, datasetName='coherence', updateMode=False, outFile=No
                 else:
                     outFile = f'avg{datasetName}.h5'
             elif k == 'timeseries':
-                if k in File:
-                    processMark = os.path.basename(File).split('timeseries')[1].split(ext)[0]
+                if k in fname:
+                    processMark = os.path.basename(fname).split('timeseries')[1].split(ext)[0]
                     outFile = f'avgDisplacement{processMark}.h5'
             else:
-                outFile = f'avg{File}.h5'
+                outFile = f'avg{fname}.h5'
 
     if updateMode and os.path.isfile(outFile):
         dataMean = readfile.read(outFile)[0]
@@ -371,14 +387,14 @@ def temporal_average(File, datasetName='coherence', updateMode=False, outFile=No
 
     # Calculate temporal average
     if k == 'ifgramStack':
-        dataMean = ifgramStack(File).temporal_average(datasetName=datasetName)
+        dataMean = ifgramStack(fname).temporal_average(datasetName=datasetName)
         if 'unwrapPhase' in datasetName:
             atr['FILE_TYPE'] = 'velocity'
             atr['UNIT'] = 'm/year'
         else:
             atr['FILE_TYPE'] = datasetName
     elif k == 'timeseries':
-        dataMean = timeseries(File).temporal_average()
+        dataMean = timeseries(fname).temporal_average()
         atr['FILE_TYPE'] = 'displacement'
 
     if outFile:

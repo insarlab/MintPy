@@ -186,7 +186,7 @@ class TimeSeriesAnalysis:
             # use ut.add_attribute() instead of add_attribute.py because of
             # better control of special metadata, such as SUBSET_X/YMIN
             msg = f'updating metadata based on custom template file {os.path.basename(self.customTemplateFile)}'
-            for fname in [stack_file, ion_file, geom_file]:
+            for fname in [stack_file, ion_file]:  #, geom_file]:
                 if fname:
                     print(f'{msg} for file: {os.path.basename(fname)}')
                     ut.add_attribute(fname, self.customTemplate)
@@ -217,8 +217,8 @@ class TimeSeriesAnalysis:
         # 1) output waterMask.h5 to simplify the detection/use of waterMask
         water_mask_file = os.path.join(self.workDir, 'waterMask.h5')
         if 'waterMask' in readfile.get_dataset_list(geom_file):
-            print(f'generate {water_mask_file} from {geom_file} for conveniency')
             if ut.run_or_skip(out_file=water_mask_file, in_file=geom_file) == 'run':
+                print(f'generate {water_mask_file} from {geom_file} for conveniency')
                 water_mask, atr = readfile.read(geom_file, datasetName='waterMask')
 
                 # ignore no-data pixels in geometry files
