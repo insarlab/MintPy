@@ -164,6 +164,8 @@ def update_inps_with_file_metadata(inps, metadata):
     if not inps.outfile:
         # ignore whitespaces in the filename
         fbase = inps.fig_title.replace(' ', '')
+        if not inps.disp_whitespace:
+            fbase += '_nws'
         inps.outfile = [f'{fbase}{inps.fig_ext}']
 
     inps = update_figure_setting(inps)

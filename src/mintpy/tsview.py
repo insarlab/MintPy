@@ -486,7 +486,7 @@ def get_model_param_str(model, ds_dict, disp_unit='cm'):
             ds_unit_dict[ds_name] = '/'.join(units)
 
     # list of dataset names
-    ds_names = [x for x in ds_dict.keys() if not x.endswith('Std')]
+    ds_names = [x for x in ds_dict.keys() if not x.endswith('Std') and x not in ['intercept']]
     w_key = max(len(x) for x in ds_names)
     w_val = max(len(f'{x[0]:.2f}') for x in ds_dict.values())
 
@@ -692,8 +692,13 @@ class timeseriesViewer():
 
         # Figure 1 - Cumulative Displacement Map
         if not self.figsize_img:
+            if self.geo_box and self.fig_coord == 'geo':
+                w, n, e, s = self.geo_box
+                ds_shape = (e - w, n - s)
+            else:
+                ds_shape = self.ts_data[0].shape[-2:]
             self.figsize_img = pp.auto_figure_size(
-                ds_shape=self.ts_data[0].shape[-2:],
+                ds_shape=ds_shape,
                 disp_cbar=True,
                 disp_slider=True,
                 print_msg=False)
