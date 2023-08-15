@@ -1996,12 +1996,10 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
         box = (0, 0, ds.RasterXSize, ds.RasterYSize)
 
     # read
-    # Note: do not use gdal python kwargs because of error: 'BandRasterIONumPy', argument 3 of type 'double'
-    # Recommendation: use rasterio instead of gdal pytho
-    # Link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
-    #kwargs = dict(xoff=box[0], win_xsize=box[2]-box[0],
-    #              yoff=box[1], win_ysize=box[3]-box[1])
-    data = bnd.ReadAsArray()[box[1]:box[3], box[0]:box[2]]
+    # Link: https://gdal.org/api/python/osgeo.gdal.html#osgeo.gdal.Band.ReadAsArray
+    kwargs = dict(xoff=int(box[0]), win_xsize=int(box[2]-box[0]),
+                  yoff=int(box[1]), win_ysize=int(box[3]-box[1]))
+    data = bnd.ReadAsArray(**kwargs)
 
     # adjust output band for complex data
     data_type = DATA_TYPE_GDAL2NUMPY[bnd.DataType]
