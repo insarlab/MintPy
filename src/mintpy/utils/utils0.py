@@ -990,15 +990,12 @@ def yes_or_no(question):
 
 def update_attribute_or_not(atr_new, atr_orig):
     """Compare new attributes with existing ones"""
-    update = False
     for key in atr_new.keys():
         value = str(atr_new[key])
-        if ((key in atr_orig.keys() and value == str(atr_orig[key]) and value != 'None')
+        if not ((key in atr_orig.keys() and value == str(atr_orig[key]) and value != 'None')
                 or (key not in atr_orig.keys() and value == 'None')):
-            next
-        else:
-            update = True
-    return update
+            return True
+    return False
 
 
 def which(program):
