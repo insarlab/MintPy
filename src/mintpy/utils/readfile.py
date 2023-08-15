@@ -983,7 +983,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
 
         # FILE_TYPE
-        # pre-defined/known dataset/group names > existing FILE_TYPE > exsiting dataset/group names
+        # pre-defined/known dataset/group names > existing FILE_TYPE > existing dataset/group names
         py2_mintpy_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete mintpy format
         if any(i in d1_list for i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']):
             ftype = 'ifgramStack'
