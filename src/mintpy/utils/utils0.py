@@ -346,16 +346,6 @@ def snwe_to_wkt_polygon(snwe):
     polygon = "POLYGON((" + ",".join([f"{lon} {lat}" for lon, lat in zip(lons, lats)])  + "))"
     return polygon
 
-def snwe_to_wkt_polygon2(snwe):
-    """Convert the input bounding box in SNWE into WKT format POLYGON.
-
-    Parameters: snwe    - list of 4 float, south, north, west and east in degrees/meters
-    Returns:    polygon - str, WKT format POLYGON
-    """
-    from shapely import box
-    S, N, W, E = snwe
-    return box(W, S, E, N).wkt
-
 
 def get_lat_lon(meta, geom_file=None, box=None, dimension=2, ystep=1, xstep=1):
     """Extract precise pixel-wise lat/lon.
