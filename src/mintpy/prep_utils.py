@@ -11,6 +11,8 @@ from mintpy.utils import readfile
 
 __all__ = ["write_coordinate_system"]
 
+TIME_DSET_NAME = "time"
+
 
 def write_coordinate_system(
     filename: str,
@@ -199,11 +201,11 @@ def _setup_time_dimension(hf: h5py.File, dset: h5py.Dataset):
         datetime.datetime.strptime(ds, "%Y%m%d") for ds in hf["date"][()].astype(str)
     ]
     days_since = [(d - date_arr[0]).days for d in date_arr]
-    dt_dim = hf.create_dataset("time", data=days_since)
+    dt_dim = hf.create_dataset(TIME_DSET_NAME, data=days_since)
     dt_dim.make_scale()
     cf_attrs = dict(
         units=f"days since {str(date_arr[0])}", calendar="proleptic_gregorian"
     )
     dt_dim.attrs.update(cf_attrs)
     dset.dims[0].attach_scale(dt_dim)
-    dset.dims[0].label = "time"
+    dset.dims[0].label = TIME_DSET_NAME
