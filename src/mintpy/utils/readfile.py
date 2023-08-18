@@ -281,6 +281,7 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
         data, atr = readfile.read('geometryRadar.h5', datasetName='bperp')
         data, atr = readfile.read('100120-110214.unw', box=(100,1100, 500, 2500))
     """
+    fname = os.fspath(fname)  # Convert from possible pathlib.Path
     # metadata
     dsname4atr = None   #used to determine UNIT
     if isinstance(datasetName, list):
@@ -963,13 +964,14 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
                          ...
     Returns:    atr : dict, attributes dictionary
     """
+    fname = os.fspath(fname)  # Convert from possible pathlib.Path
     fdir = os.path.dirname(fname)
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
     if not os.path.isfile(fname):
-        msg = f'input file not existed: {fname}\n'
+        msg = f'input file does not exist: {fname}\n'
         msg += 'current directory: '+os.getcwd()
-        raise Exception(msg)
+        raise FileNotFoundError(msg)
 
     # HDF5 files
     if fext in ['.h5', '.he5']:
