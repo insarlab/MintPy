@@ -231,8 +231,10 @@ def _setup_time_dimension(hf: h5py.File, dset: h5py.Dataset):
     date_arr = [
         datetime.datetime.strptime(ds, "%Y%m%d") for ds in hf["date"][()].astype(str)
     ]
-    days_since = [(d - date_arr[0]).days for d in date_arr]
-    dt_dim = hf.require_dataset(TIME_DSET_NAME, data=days_since)
+    days_since = np.array([(d - date_arr[0]).days for d in date_arr])
+    dt_dim = hf.require_dataset(
+        TIME_DSET_NAME, data=days_since, shape=days_since.shape, dtype=days_since.dtype
+    )
     dt_dim.make_scale()
     cf_attrs = dict(
         units=f"days since {str(date_arr[0])}", calendar="proleptic_gregorian"
