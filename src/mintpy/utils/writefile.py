@@ -309,9 +309,9 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                     ds = fr[key]
                     if isinstance(ds, h5py.Dataset):
 
-                        # auxliary dataset
+                        # auxiliary dataset
                         if ds.shape[-2:] != shape2d_orig:
-                            ds_name_dict[key] = [ds.dtype, ds.shape, ds[:]]
+                            ds_name_dict[key] = [ds.dtype, ds.shape, ds[()]]
 
                         # dataset
                         else:
@@ -360,16 +360,19 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                                                 t=str(data_type),
                                                 s=str(data_shape),
                                                 c=ds_comp))
-            ds = f.create_dataset(key,
-                                  shape=data_shape,
-                                  maxshape=max_shape,
-                                  dtype=data_type,
-                                  chunks=True,
-                                  compression=ds_comp)
+            if len(data_shape) > 0:
+                kwargs = dict(
+                    maxshape=max_shape,
+                    chunks=True,
+                    compression=ds_comp
+                )
+            else:
+                kwargs = {}
+            ds = f.create_dataset(key, shape=data_shape, dtype=data_type, **kwargs)
 
-            # write auxliary data
+            # write auxiliary data
             if len(ds_name_dict[key]) > 2 and ds_name_dict[key][2] is not None:
-                ds[:] = np.array(ds_name_dict[key][2])
+                ds[()] = np.array(ds_name_dict[key][2])
 
         # write attributes in root level
         for key, value in meta.items():
