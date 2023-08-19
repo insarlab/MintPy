@@ -51,6 +51,9 @@ def write_coordinate_system(
 
         for dset_name in dset_names:
             dset = hf[dset_name]
+            if dset.ndim < 2:
+                print(f"Skipping {dset.ndim}-dimensional dset {dset_name}")
+                continue
             # Setup the dataset holding the SRS information
             dset.attrs["grid_mapping"] = grid_mapping_dset
             _attach_xy_dimensions(hf, dset, xy_dim_names)
