@@ -79,7 +79,7 @@ def create_parser():
                         help='test directory (default: %(default)s).')
 
     parser.add_argument('--nofresh', dest='fresh_start', action='store_false',
-                        help='Use exsiting files WITHOUT starting from the scratch (default: %(default)s).')
+                        help='Use existing files WITHOUT starting from the scratch (default: %(default)s).')
     return parser
 
 

@@ -18,7 +18,7 @@ from scipy.interpolate import griddata
 from mintpy.defaults.plot import *
 from mintpy.objects import giantTimeseries, timeseries
 from mintpy.objects.gps import GPS
-from mintpy.utils import plot as pp, readfile, utils as ut
+from mintpy.utils import readfile, utils as ut
 
 
 ############################## beginning of insar_vs_gps class ##############################

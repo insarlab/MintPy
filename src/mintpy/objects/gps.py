@@ -44,7 +44,7 @@ def dload_site_list(out_file=None, url=UNR_SITE_LIST_FILE, print_msg=True):
         os.makedirs(out_dir)
 
     if print_msg:
-        print(f'downloading site list from UNR Geod Lab: {url} to {os.path.dirname(out_file)}')
+        print(f'downloading site list from UNR Geod Lab: {url} to {out_file}')
     urlretrieve(url, out_file)
     return out_file
 
