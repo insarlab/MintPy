@@ -18,7 +18,13 @@ import numpy as np
 from pyproj import Geod
 
 from mintpy.objects.coord import coordinate
-from mintpy.utils import ptime, readfile, time_func, utils1 as ut
+from mintpy.utils import (
+    ptime,
+    readfile,
+    time_func,
+    utils0 as ut0,
+    utils1 as ut,
+)
 
 UNR_SITE_LIST_FILE = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
 
@@ -493,12 +499,19 @@ class GPS:
         if isinstance(geom_obj, str):
             # geometry file
             atr = readfile.read_attribute(geom_obj)
+            file_epsg = int(atr["EPSG"])
+            if file_epsg != 4326:
+                # Convert the GPS position to the same projection as `geom_obj`
+                x, y = ut0.reproject(lon, lat, from_epsg=4326, to_epsg=file_epsg)
+            else:
+                x, y = lon, lat
+
             coord = coordinate(atr, lookup_file=geom_obj)
-            y, x = coord.geo2radar(lat, lon, print_msg=print_msg)[0:2]
+            row, col = coord.geo2radar(y, x, print_msg=print_msg)[0:2]
             # check against image boundary
-            y = max(0, y);  y = min(int(atr['LENGTH'])-1, y)
-            x = max(0, x);  x = min(int(atr['WIDTH'])-1, x)
-            box = (x, y, x+1, y+1)
+            row = max(0, row);  row = min(int(atr['LENGTH'])-1, row)
+            col = max(0, col);  col = min(int(atr['WIDTH'])-1, col)
+            box = (col, row, col+1, row+1)
             inc_angle = readfile.read(geom_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
             az_angle  = readfile.read(geom_obj, datasetName='azimuthAngle',   box=box, print_msg=print_msg)[0][0,0]
 
