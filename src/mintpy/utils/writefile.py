@@ -382,8 +382,9 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                     f[key].attrs['UNIT'] = value
                     vprint(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
 
-    vprint(f'Adding coordinate metadata to all datasets in {fname}')
-    prep_utils.write_coordinate_system(fname, list(ds_unit_dict.keys()))
+    if ds_name_dict:
+        vprint(f'Adding coordinate metadata to all datasets in {fname}')
+        prep_utils.write_coordinate_system(fname, list(ds_name_dict.keys()))
 
     vprint(f'close  HDF5 file: {fname}')
 
