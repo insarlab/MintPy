@@ -731,8 +731,8 @@ def prepare_metadata(iDict):
         ut.print_command_line(script_name, iargs)
         try:
             prep_module.main(iargs)
-        except:
-            warnings.warn('prep_aria.py failed. Assuming its result exists and continue...')
+        except Exception as e:
+            warnings.warn(f'prep_aria.py failed: {e}\n Assuming its result exists and continuing...')
 
     elif processor == 'gmtsar':
         # use the custom template file if exists & input
