@@ -234,7 +234,7 @@ def _setup_time_dimension(hf: h5py.File, dset: h5py.Dataset):
     dset : h5py.Dataset
         Dataset within the HDF5 file.
     """
-    if "date" not in hf:
+    if "date" not in hf or hf["dset"].ndim == 2:
         print(f"'date' dataset not in {hf}, skipping 'time' dimension")
         # If we want to do something other than time as a 3rd dimension
         # (e.g. for ifg date pairs) we'll need to figure out what other valid
