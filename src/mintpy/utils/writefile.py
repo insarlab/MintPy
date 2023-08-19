@@ -388,8 +388,6 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
             prep_utils.write_coordinate_system(fname, list(ds_name_dict.keys()))
         except prep_utils.CoordinateError:
             vprint('Skipping, not geocoded.')
-            # Not a geocoded file
-            pass
 
     vprint(f'close  HDF5 file: {fname}')
 
