@@ -360,14 +360,11 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                                                 t=str(data_type),
                                                 s=str(data_shape),
                                                 c=ds_comp))
-            if len(data_shape) > 0:
-                kwargs = dict(
-                    maxshape=max_shape,
-                    chunks=True,
-                    compression=ds_comp
-                )
-            else:
+            if len(data_shape) < 1:
+                # scalar datasets can't be chunked
                 kwargs = {}
+            else:
+                kwargs = dict(maxshape=max_shape, chunks=True, compression=ds_comp)
             ds = f.create_dataset(key, shape=data_shape, dtype=data_type, **kwargs)
 
             # write auxiliary data
