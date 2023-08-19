@@ -14,7 +14,7 @@ import shutil
 import h5py
 import numpy as np
 
-from mintpy.utils import readfile
+from mintpy.utils import prep_utils, readfile
 
 
 def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None, ds_unit_dict=None, print_msg=True):
@@ -381,6 +381,9 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                 if key in f.keys() and value is not None:
                     f[key].attrs['UNIT'] = value
                     vprint(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
+
+    vprint(f'Adding coordinate metadata to all datasets in {fname}')
+    prep_utils.write_coordinate_system(fname, list(ds_unit_dict.keys()))
 
     vprint(f'close  HDF5 file: {fname}')
 

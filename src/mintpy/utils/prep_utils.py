@@ -16,19 +16,18 @@ TIME_DSET_NAME = "time"
 
 def write_coordinate_system(
     filename: str,
-    dset_name: str,
+    dset_names: list[str],
     xy_dim_names: tuple[str, str] = ("x", "y"),
     grid_mapping_dset: str = "spatial_ref",
 ) -> None:
-    """
-    Write the coordinate system CF metadata to an existing HDF5 file.
+    """Write the coordinate system metadata to datasets within `filename`.
 
     Parameters
     ----------
     filename : str
         File path.
-    dset_name : str
-        Dataset name within the HDF5 file.
+    dset_names : list[str]
+        list of dataset names within the HDF5 file.
     xy_dim_names : tuple[str, str], optional
         x and y dimension names, by default ("x", "y").
     grid_mapping_dset : str, optional
@@ -37,18 +36,20 @@ def write_coordinate_system(
     """
     atr = readfile.read_attribute(filename)
     epsg = int(atr.get("EPSG", 4326))
+    crs = pyproj.CRS.from_epsg(epsg)
 
     with h5py.File(filename, "a") as hf:
-        crs = pyproj.CRS.from_epsg(epsg)
-        dset = hf[dset_name]
-
-        # Setup the dataset holding the SRS information
+        _setup_xy_dimensions(hf, atr, crs, xy_dim_names)
         srs_dset = hf.require_dataset(grid_mapping_dset, shape=(), dtype=int)
         srs_dset.attrs.update(crs.to_cf())
-        dset.attrs["grid_mapping"] = grid_mapping_dset
 
-        _setup_time_dimension(hf, dset)
-        _setup_xy_dimensions(hf, dset, atr, crs, xy_dim_names)
+        for dset_name in dset_names:
+            dset = hf[dset_name]
+            # Setup the dataset holding the SRS information
+            dset.attrs["grid_mapping"] = grid_mapping_dset
+            _attach_xy_dimensions(hf, dset, xy_dim_names)
+            if dset.ndim == 3:
+                _setup_time_dimension(hf, dset)
 
 
 def _get_xy_arrays(atr: dict) -> tuple[np.ndarray, np.ndarray]:
@@ -137,13 +138,13 @@ def _get_coordinate_metadata(crs: pyproj.CRS) -> tuple[dict, dict]:
 
 def _setup_xy_dimensions(
     hf: h5py.File,
-    dset: h5py.Dataset,
-    atr,
+    atr: dict,
     crs: pyproj.CRS,
     xy_dim_names: tuple[str, str] = ("x", "y"),
 ):
-    """
-    Setup time dimension in the HDF5 file.
+    """Create X/Y spatial dimension in the HDF5 file.
+
+    Sets the datasets as HDF5 dimension scales.
 
     Parameters
     ----------
@@ -153,6 +154,8 @@ def _setup_xy_dimensions(
         Dataset within the HDF5 file.
     atr : dict
         MintPy attribute dictionary containing ROIPAC raster attributes.
+    crs : pyproj.CRS
+        Coordinate Reference System.
     xy_dim_names : tuple[str, str], optional
         x and y dimension names, by default ("x", "y").
 
@@ -164,9 +167,13 @@ def _setup_xy_dimensions(
     x_dim_name, y_dim_name = xy_dim_names
     # add metadata to x, y coordinates
     x_arr, y_arr = _get_xy_arrays(atr)
-    x_dim_dset = hf.create_dataset(x_dim_name, data=x_arr)
+    x_dim_dset = hf.require_dataset(
+        x_dim_name, shape=x_arr.shape, dtype=x_arr.dtype, data=x_arr
+    )
     x_dim_dset.make_scale(x_dim_name)
-    y_dim_dset = hf.create_dataset(y_dim_name, data=y_arr)
+    y_dim_dset = hf.require_dataset(
+        y_dim_name, shape=y_arr.shape, dtype=y_arr.dtype, data=y_arr
+    )
     y_dim_dset.make_scale(y_dim_name)
 
     x_coord_attrs, y_coord_attrs = _get_coordinate_metadata(crs)
@@ -174,9 +181,33 @@ def _setup_xy_dimensions(
     y_dim_dset.attrs.update(y_coord_attrs)
     x_dim_dset.attrs.update(x_coord_attrs)
 
+
+def _attach_xy_dimensions(
+    hf: h5py.File,
+    dset: h5py.Dataset,
+    xy_dim_names: tuple[str, str] = ("x", "y"),
+):
+    """
+    Setup time dimension in the HDF5 file.
+
+    Parameters
+    ----------
+    hf : h5py.File
+        HDF5 file object.
+    dset : h5py.Dataset
+        Dataset within the HDF5 file.
+    xy_dim_names : tuple[str, str], optional
+        x and y dimension names, by default ("x", "y").
+
+    Returns
+    -------
+    Optional[list[datetime.datetime]]
+        list of dates if they exist, otherwise None.
+    """
+    x_dim_name, y_dim_name = xy_dim_names
     ndim = dset.ndim
-    dset.dims[ndim - 1].attach_scale(x_dim_dset)
-    dset.dims[ndim - 2].attach_scale(y_dim_dset)
+    dset.dims[ndim - 1].attach_scale(hf[x_dim_name])
+    dset.dims[ndim - 2].attach_scale(hf[y_dim_name])
     dset.dims[ndim - 1].label = x_dim_name
     dset.dims[ndim - 2].label = y_dim_name
 
@@ -201,7 +232,7 @@ def _setup_time_dimension(hf: h5py.File, dset: h5py.Dataset):
         datetime.datetime.strptime(ds, "%Y%m%d") for ds in hf["date"][()].astype(str)
     ]
     days_since = [(d - date_arr[0]).days for d in date_arr]
-    dt_dim = hf.create_dataset(TIME_DSET_NAME, data=days_since)
+    dt_dim = hf.require_dataset(TIME_DSET_NAME, data=days_since)
     dt_dim.make_scale()
     cf_attrs = dict(
         units=f"days since {str(date_arr[0])}", calendar="proleptic_gregorian"
