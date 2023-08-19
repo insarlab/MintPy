@@ -35,6 +35,12 @@ def write_coordinate_system(
         By default "spatial_ref" (matching `rioxarray`).
     """
     atr = readfile.read_attribute(filename)
+    if "X_FIRST" not in atr:
+        raise ValueError(f"{filename} is not geocoded.")
+        # TODO: It should be possible to write in the 2D lat/lon arrays
+        # for radar coordinates.
+        # But unclear what quick benefit we get from that like with geocoded files.
+
     epsg = int(atr.get("EPSG", 4326))
     crs = pyproj.CRS.from_epsg(epsg)
 
