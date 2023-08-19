@@ -14,6 +14,9 @@ __all__ = ["write_coordinate_system"]
 TIME_DSET_NAME = "time"
 
 
+class CoordinateError(ValueError):
+    pass
+
 def write_coordinate_system(
     filename: str,
     dset_names: list[str],
@@ -36,7 +39,7 @@ def write_coordinate_system(
     """
     atr = readfile.read_attribute(filename)
     if "X_FIRST" not in atr:
-        raise ValueError(f"{filename} is not geocoded.")
+        raise CoordinateError(f"{filename} is not geocoded.")
         # TODO: It should be possible to write in the 2D lat/lon arrays
         # for radar coordinates.
         # But unclear what quick benefit we get from that like with geocoded files.
@@ -232,6 +235,7 @@ def _setup_time_dimension(hf: h5py.File, dset: h5py.Dataset):
         Dataset within the HDF5 file.
     """
     if "date" not in hf:
+        print(f"'date' dataset not in {hf}, skipping 'time' dimension")
         # If we want to do something other than time as a 3rd dimension
         # (e.g. for ifg date pairs) we'll need to figure out what other valid
         # dims there are. otherwise, you can just do `phony_dims="sort"` in xarray

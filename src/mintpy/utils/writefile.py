@@ -386,7 +386,8 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
         vprint(f'Adding coordinate metadata to all datasets in {fname}')
         try:
             prep_utils.write_coordinate_system(fname, list(ds_name_dict.keys()))
-        except ValueError:
+        except prep_utils.CoordinateError:
+            vprint('Skipping, not geocoded.')
             # Not a geocoded file
             pass
 
