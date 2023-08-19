@@ -275,6 +275,24 @@ def utm_zone2epsg_code(utm_zone):
     return epsg_code
 
 
+def reproject(x, y, *, from_epsg: int, to_epsg: int):
+    """Convert x, y in the projection EPSG:`from_epsg` to EPSG:`to_epsg`.
+
+    For lon/lat, use 4326.
+
+    Parameters: x/y       - scalar or 1/2D np.ndarray, coordinates in x and y direction
+                from_epsg - int, EPSG code of `x/y`
+    Returns:    x/y    - scalar or 1/2D np.ndarray, coordinates in new projection
+    """
+    from pyproj import CRS, Transformer
+
+    transformer = Transformer.from_crs(
+        CRS.from_epsg(from_epsg), CRS.from_epsg(to_epsg), always_xy=True
+    )
+    new_x, new_y = transformer.transform(x, y)
+    return new_x, new_y
+
+
 def to_latlon(infile, x, y):
     """Convert x, y in the projection coordinates of the file to lat/lon in degree.
 
@@ -282,27 +300,20 @@ def to_latlon(infile, x, y):
         https://github.com/Turbo87/utm#utm-to-latitudelongitude
 
     Parameters: infile - str, GDAL supported file path
-                x/y    - scalar or 1/2D np.ndarray, coordiantes in x and y direction
-    Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
+                x/y    - scalar or 1/2D np.ndarray, coordinates in x and y direction
+    Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitude and longitude
     """
     from osgeo import gdal
-    from pyproj import Proj, Transformer
 
     # read projection info using gdal
     ds = gdal.Open(infile)
-    srs = ds.GetSpatialRef()
-
+    epsg = ds.GetSpatialRef().GetAuthorityCode(None)
     # if input file is already in lat/lon, do nothing and return
-    if (not srs.IsProjected()) and (srs.GetAttrValue('unit') == 'degree'):
+    if int(epsg) == 4326:
         return y, x
 
-    # convert coordiantes using pyproj
-    # note that Transform.from_proj(x, y, always_xy=True) convert the x, y to lon, lat
-    p_in = Proj(ds.GetProjection())
-    p_out = Proj('epsg:4326')
-    transformer = Transformer.from_proj(p_in, p_out)
-    y, x = transformer.transform(x, y)
-    return y, x
+    lon, lat = reproject(x, y, epsg, 4326)
+    return lat, lon
 
 
 def utm2latlon(meta, easting, northing):
