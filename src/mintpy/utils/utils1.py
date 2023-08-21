@@ -200,7 +200,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         dateList = [i for i in txtContent[:, 0]]
         return meanList, dateList
 
-    # Baic File Info
+    # Basic File Info
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     if not box:
@@ -324,7 +324,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
 
 def temporal_average(File, datasetName='coherence', updateMode=False, outFile=None):
     """Calculate temporal average of multi-temporal dataset, equivalent to stacking
-    For ifgramStakc/unwrapPhase, return average phase velocity
+    For ifgramStack/unwrapPhase, return average phase velocity
 
     Parameters: File : string, file to be averaged in time
                 datasetName : string, dataset to be read from input file, for multiple
@@ -502,7 +502,7 @@ def get_geometry_file(dset_list, work_dir=None, coord='geo', abspath=True, print
         return None
 
     # check dset in the existing h5 files
-    for fname in list(fname_list):   #use list() as temp copy to handle varing list during the loop
+    for fname in list(fname_list):   #use list() as temp copy to handle modifying list during the loop
         if any(dset not in readfile.get_dataset_list(fname) for dset in dset_list):
             fname_list.remove(fname)
     if len(fname_list) == 0:
@@ -557,7 +557,7 @@ def update_template_file(template_file, extra_dict, delimiter='='):
         f_tmp.write(line)
     f_tmp.close()
 
-    # Overwrite exsting original template file
+    # Overwrite existing original template file
     shutil.move(tmp_file, template_file)
     return template_file
 
@@ -576,14 +576,14 @@ def add_attribute(fname, atr_new=dict(), print_msg=False):
     atr = readfile.read_attribute(fname)
     key_list = list(atr.keys())
 
-    # compare new attributes with exsiting ones
+    # compare new attributes with existing ones
     update = update_attribute_or_not(atr_new, atr)
     if not update:
         vprint('All updated (removed) attributes already exists (do not exists)'
                ' and have the same value, skip update.')
         return fname
 
-    # update attributes in the inpupt data file
+    # update attributes in the input data file
     fext = os.path.splitext(fname)[1]
     if fext in ['.h5', '.he5']:
         with h5py.File(fname, 'r+') as f:
@@ -767,7 +767,7 @@ def check_template_auto_value(templateDict, auto_file='defaults/smallbaselineApp
 def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None,
                save_ramp_coeff=False, extra_meta=None):
     """ Remove ramp from each 2D matrix of input file
-    Parameters: fname           - str, data file to be derampped
+    Parameters: fname           - str, data file to be deramped
                 ramp_type       - str, name of ramp to be estimated.
                 mask_file       - str, file of mask of pixels used for ramp estimation
                 out_file        - str, output file name

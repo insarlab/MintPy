@@ -231,7 +231,7 @@ def azimuth_ground_resolution(atr):
 
 #################################### File Operation ##########################################
 def touch(fname_list, times=None):
-    """python equivalent function to Unix utily - touch
+    """python equivalent function to Unix utility - touch
     It sets the modification and access times of files to the current time of day.
     If the file doesn't exist, it is created with default permissions.
     Inputs/Output:
@@ -282,7 +282,7 @@ def to_latlon(infile, x, y):
         https://github.com/Turbo87/utm#utm-to-latitudelongitude
 
     Parameters: infile - str, GDAL supported file path
-                x/y    - scalar or 1/2D np.ndarray, coordiantes in x and y direction
+                x/y    - scalar or 1/2D np.ndarray, coordinates in x and y direction
     Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
     """
     from osgeo import gdal
@@ -296,7 +296,7 @@ def to_latlon(infile, x, y):
     if (not srs.IsProjected()) and (srs.GetAttrValue('unit') == 'degree'):
         return y, x
 
-    # convert coordiantes using pyproj
+    # convert coordinates using pyproj
     # note that Transform.from_proj(x, y, always_xy=True) convert the x, y to lon, lat
     p_in = Proj(ds.GetProjection())
     p_out = Proj('epsg:4326')
@@ -310,10 +310,10 @@ def utm2latlon(meta, easting, northing):
 
     Parameters: meta     - dict, mintpy attributes that includes:
                            UTM_ZONE
-                easting  - scalar or 1/2D np.ndarray, UTM    coordiantes in x direction
-                northing - scalar or 1/2D np.ndarray, UTM    coordiantes in y direction
-    Returns:    lat      - scalar or 1/2D np.ndarray, WGS 84 coordiantes in y direction
-                lon      - scalar or 1/2D np.ndarray, WGS 84 coordiantes in x direction
+                easting  - scalar or 1/2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar or 1/2D np.ndarray, UTM    coordinates in y direction
+    Returns:    lat      - scalar or 1/2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar or 1/2D np.ndarray, WGS 84 coordinates in x direction
     """
     import utm
     zone_num = int(meta['UTM_ZONE'][:-1])
@@ -325,10 +325,10 @@ def utm2latlon(meta, easting, northing):
 def latlon2utm(lat, lon):
     """Convert latitude/longitude in degrees to UTM easting/northing in meters.
 
-    Parameters: lat      - scalar or 1/2D np.ndarray, WGS 84 coordiantes in y direction
-                lon      - scalar or 1/2D np.ndarray, WGS 84 coordiantes in x direction
-    Returns:    easting  - scalar or 1/2D np.ndarray, UTM    coordiantes in x direction
-                northing - scalar or 1/2D np.ndarray, UTM    coordiantes in y direction
+    Parameters: lat      - scalar or 1/2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar or 1/2D np.ndarray, WGS 84 coordinates in x direction
+    Returns:    easting  - scalar or 1/2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar or 1/2D np.ndarray, UTM    coordinates in y direction
     """
     import utm
     return utm.from_latlon(lat, lon)[:2]
@@ -514,7 +514,7 @@ def get_lalo_digit4display(meta, coord_unit='degree'):
 
 ###################################### Orbit ###########################################
 def xyz_to_local_radius(xyz):
-    """Calculate satellite height and ellpsoid local radius from orbital state vector.
+    """Calculate satellite height and ellipsoid local radius from orbital state vector.
 
     This is a simplified version of the following functions from ISCE-2:
     + isce.isceobj.Planet.xyz_to_llh()
@@ -525,7 +525,7 @@ def xyz_to_local_radius(xyz):
                 radius - float, Earth radius in m
     """
 
-    # paramters from isce.isceobj.Planet.AstronomicalHandbook
+    # parameters from isce.isceobj.Planet.AstronomicalHandbook
     a = 6378137.000       # WGS84 semimajor
     e2 = 0.0066943799901  # WGS84 eccentricity squared
 
@@ -914,7 +914,7 @@ def get_circular_mask(x, y, radius, shape):
 def circle_index(atr, circle_par):
     """Return Index of Elements within a Circle centered at input pixel
     Parameters: atr : dictionary
-                    containging the following attributes:
+                    containing the following attributes:
                     WIDT
                     LENGTH
                 circle_par : string in the format of 'y,x,radius'
@@ -979,16 +979,13 @@ def yes_or_no(question):
 
 
 def update_attribute_or_not(atr_new, atr_orig):
-    """Compare new attributes with exsiting ones"""
-    update = False
+    """Compare new attributes with existing ones"""
     for key in atr_new.keys():
         value = str(atr_new[key])
-        if ((key in atr_orig.keys() and value == str(atr_orig[key]) and value != 'None')
+        if not ((key in atr_orig.keys() and value == str(atr_orig[key]) and value != 'None')
                 or (key not in atr_orig.keys() and value == 'None')):
-            next
-        else:
-            update = True
-    return update
+            return True
+    return False
 
 
 def which(program):
@@ -1114,7 +1111,7 @@ def median_abs_deviation(data, center=None, scale=0.67449):
 
 
 def median_abs_deviation_threshold(data, center=None, cutoff=3.):
-    """calculate rms_threshold based on the standardised residual
+    """calculate rms_threshold based on the standardized residual
 
     Outlier detection with median absolute deviation.
     """
