@@ -676,8 +676,8 @@ def prepare_metadata(iDict):
         ut.print_command_line(script_name, iargs)
         try:
             prep_module.main(iargs)
-        except:
-            warnings.warn('prep_isce.py failed. Assuming its result exists and continue...')
+        except Exception as e:
+            warnings.warn(f'prep_isce.py failed: {e}.\nAssuming its result exists and continue...')
 
         # [optional] for topsStack: SAFE_files.txt --> S1A/B_date.txt
         if os.path.isfile(meta_file) and isce_utils.get_processor(meta_file) == 'topsStack':
@@ -732,7 +732,7 @@ def prepare_metadata(iDict):
         try:
             prep_module.main(iargs)
         except Exception as e:
-            warnings.warn(f'prep_aria.py failed: {e}\n Assuming its result exists and continuing...')
+            warnings.warn(f'prep_aria.py failed: {e}.\n Assuming its result exists and continuing...')
 
     elif processor == 'gmtsar':
         # use the custom template file if exists & input
@@ -746,8 +746,8 @@ def prepare_metadata(iDict):
         ut.print_command_line(script_name, iargs)
         try:
             prep_module.main(iargs)
-        except:
-            warnings.warn('prep_gmtsar.py failed. Assuming its result exists and continue...')
+        except Exception as e:
+            warnings.warn(f'prep_gmtsar.py failed: {e}.\nAssuming its result exists and continue...')
 
     return
 
