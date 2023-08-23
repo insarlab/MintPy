@@ -341,7 +341,7 @@ def prep_slice(cmd, auto_fig=False):
 
         cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 --dem srtm1.dem --dem-nocontour '
         cmd += f'--sub-lon {W} {E} --sub-lat {S} {N} -c jet -v -3 10 '
-        cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
+        cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-label "LOS velocity [cm/year]" '
         cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle'
 
         data, atr, inps = prep_slice(cmd)
@@ -350,7 +350,37 @@ def prep_slice(cmd, auto_fig=False):
     """
     # parse
     from mintpy.cli.view import cmd_line_parse
-    inps = cmd_line_parse(cmd.split()[1:])
+    iargs = cmd.split()[1:]
+
+    # support option inputs of a list of characters (separated by whitespaces but quoted)
+    # e.g.: --cbar-label "LOS velocity [cm/yar]" --title "S1 asc. velocity"
+    # to be consistent with the behavior in command line parsing
+    if any(x.startswith(('"', '\'')) for x in iargs):
+        # backup and reset
+        temp_iargs = list(iargs)
+        iargs = []
+
+        # get index of quoted list of characters
+        ind0s = np.where([x.startswith(('"', '\'')) for x in temp_iargs])[0]
+        ind1s = np.where([x.endswith(('"', '\'')) for x in temp_iargs])[0]
+        for i, temp_iarg in enumerate(temp_iargs):
+            if any(ind0 <= i <= ind1 for ind0, ind1 in zip(ind0s, ind1s)):
+                # quoted list of characters
+                for ind0, ind1 in zip(ind0s, ind1s):
+                    if i == ind0:
+                        temp = temp_iarg[1:]
+                    elif ind0 < i < ind1:
+                        temp += ' ' + temp_iarg
+                    elif i == ind1:
+                        temp += ' ' + temp_iarg[:-1]
+                        iargs.append(temp)
+                        break
+            else:
+                # regular unquoted list of characters
+                iargs.append(temp_iarg)
+
+    # run parse
+    inps = cmd_line_parse(iargs)
 
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
