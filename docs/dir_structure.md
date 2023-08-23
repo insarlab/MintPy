@@ -388,6 +388,10 @@ mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
 
 Here is an example workflow: [smallbaselineApp_hyp3](https://nbviewer.jupyter.org/github/insarlab/MintPy-tutorial/blob/main/smallbaselineApp_hyp3.ipynb).
 
+Currently, HyP3 produces two INSAR products. One is INSAR by HyP3_GAMMA, the other is burst_based INSAR by HyP3_ISCE2_burst.
+
+HyP3_GAMMA INSAR product
+
 ```
 $DATA_DIR/RidgecrestSenDT71
 ├── hyp3
@@ -409,7 +413,6 @@ $DATA_DIR/RidgecrestSenDT71
 └── mintpy
     └── RidgecrestSenDT71.txt
 ```
-
 The corresponding template options for `load_data`:
 
 ```cfg
@@ -422,6 +425,43 @@ mintpy.load.demFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*dem_clip.tif
 mintpy.load.incAngleFile     = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*lv_theta_clip.tif
 mintpy.load.azAngleFile      = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*lv_phi_clip.tif
 mintpy.load.waterMaskFile    = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*water_mask_clip.tif
+```
+
+HyP3_ISCE2 Burst INSAR product 
+```
+$DATA_DIR/2014_mount_edgecumbe
+├── data
+│   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_dem_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_corr_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_lv_theta_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_lv_phi_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_unw_phase_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_water_mask_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044.txt
+│   │   └── ...
+│   ├── S1_372326_IW3_20141110_20141204_VV_INT80_1894
+│   │   ├── S1_372326_IW3_20141110_20141204_VV_INT80_1894_corr_clipped.tif
+│   │   ├── S1_372326_IW3_20141110_20141204_VV_INT80_1894_unw_phase_clipped.tif
+│   │   ├── S1_372326_IW3_20141110_20141204_VV_INT80_1894.txt
+│   │   └── ...
+│   └── ...
+└── 2014_mount_edgecumbe.txt
+```
+
+The corresponding template options for `load_data`:
+
+```cfg
+mintpy.load.processor        = hyp3
+##---------interferogram datasets:
+mintpy.load.unwFile          = $DATA_DIR/2014_mount_edgecumbe/data/*/*_unw_phase_clipped.tif
+mintpy.load.corFile          = $DATA_DIR/2014_mount_edgecumbe/data/*/*_corr_clipped.tif
+##---------geometry datasets:
+mintpy.load.demFile          = $DATA_DIR/2014_mount_edgecumbe/data/*/*_dem_clipped.tif
+mintpy.load.incAngleFile     = $DATA_DIR/2014_mount_edgecumbe/data/*/*_lv_theta_clipped.tif
+mintpy.load.azAngleFile      = $DATA_DIR/2014_mount_edgecumbe/data/*/*_lv_phi_clipped.tif
+mintpy.load.waterMaskFile    = $DATA_DIR/2014_mount_edgecumbe/data/*/*_water_mask_clipped.tif
+mintpy.troposphericDelay.method = no
 ```
 
 ### [GMTSAR](https://github.com/gmtsar/gmtsar) ###
