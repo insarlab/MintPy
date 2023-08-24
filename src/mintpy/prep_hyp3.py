@@ -26,28 +26,28 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         Metadata dictionary (meta)
     '''
 
-    # determine interferogram pair info and hyp3 metadata file name
-    if len(os.path.basename(fname).split("_")[0]) != 2:
-        sat, date1_str, date2_str, pol, res, soft, proc, ids, *_ = os.path.basename(fname).split('_')
-        job_id = '_'.join([sat, date1_str, date2_str, pol, res, soft, proc, ids])
-        date1 = dt.datetime.strptime(date1_str,'%Y%m%dT%H%M%S')
-        date2 = dt.datetime.strptime(date2_str,'%Y%m%dT%H%M%S')
-        # directory = os.path.dirname(fname)
-        # meta_file = f'{os.path.join(directory,job_id)}.txt'
-    else:
-        sat, frame, beammode, date1_str, date2_str, pol, res, ids, *_ = os.path.basename(fname).split('_')
-        job_id = '_'.join([sat, frame, beammode, date1_str, date2_str, pol, res, ids])
-        date1 = dt.datetime.strptime(f'{date1_str}T000000','%Y%m%dT%H%M%S')
-        date2 = dt.datetime.strptime(f'{date2_str}T000000','%Y%m%dT%H%M%S')
-
-    directory = os.path.dirname(fname)
-    meta_file = f'{os.path.join(directory,job_id)}.txt'
-    # open and read hyp3 metadata
+    # read hyp3 metadata file
+    # e.g.: burst-wide product using ISCE2: {SAT}_{FRAME}_{SUBSWATH}_{DATE1}_{DATE2}_{POL}_{RES}_{IDS}.txt
+    #       scene-wide product using Gamma: {SAT}_{DATE1}_{DATE2}_{POL}_{RES}_{SOFT}_{PROC}_{IDS}.txt
+    job_id = '_'.join(os.path.basename(fname).split('_')[:8])
+    meta_file = os.path.join(os.path.dirname(fname), f'{job_id}.txt')
     hyp3_meta = {}
     with open(meta_file) as f:
         for line in f:
             key, value = line.strip().replace(' ','').split(':')[:2]
             hyp3_meta[key] = value
+
+    # get date1/2 objects
+    if job_id.split('_')[2].startswith('IW'):
+        # burst-wide product using ISCE2
+        date1_str, date2_str = job_id.split('_')[3:5]
+        date1 = dt.datetime.strptime(f'{date1_str}','%Y%m%d')
+        date2 = dt.datetime.strptime(f'{date2_str}','%Y%m%d')
+    else:
+        # scene-wide product using Gamma
+        date1_str, date2_str = job_id.split('_')[1:3]
+        date1 = dt.datetime.strptime(date1_str,'%Y%m%dT%H%M%S')
+        date2 = dt.datetime.strptime(date2_str,'%Y%m%dT%H%M%S')
 
     # add universal hyp3 metadata
     meta['PROCESSOR'] = 'hyp3'
@@ -106,12 +106,10 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
 
     # add metadata that is only relevant to interferogram files
     if is_ifg:
-        #date_avg = date1 + (date2 - date1) / 2
-        #date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-        #meta['CENTER_LINE_UTC'] = date_avg_seconds
         meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
         meta['P_BASELINE_TOP_HDR'] = hyp3_meta['Baseline']
         meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
+
     return(meta)
 
 

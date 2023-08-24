@@ -388,9 +388,9 @@ mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
 
 Here is an example workflow: [smallbaselineApp_hyp3](https://nbviewer.jupyter.org/github/insarlab/MintPy-tutorial/blob/main/smallbaselineApp_hyp3.ipynb).
 
-Currently, HyP3 produces two INSAR products. One is INSAR by HyP3_GAMMA, the other is burst_based INSAR by HyP3_ISCE2_burst.
+HyP3 produces two types of InSAR products: 1) scene-wide products using Gamma and 2) burst-wide products using ISCE2.
 
-HyP3_GAMMA INSAR product
++ INSAR_GAMMA directory structure:
 
 ```
 $DATA_DIR/RidgecrestSenDT71
@@ -413,24 +413,12 @@ $DATA_DIR/RidgecrestSenDT71
 └── mintpy
     └── RidgecrestSenDT71.txt
 ```
-The corresponding template options for `load_data`:
 
-```cfg
-mintpy.load.processor        = hyp3
-##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*unw_phase_clip.tif
-mintpy.load.corFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*corr_clip.tif
-##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*dem_clip.tif
-mintpy.load.incAngleFile     = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*lv_theta_clip.tif
-mintpy.load.azAngleFile      = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*lv_phi_clip.tif
-mintpy.load.waterMaskFile    = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*water_mask_clip.tif
-```
++ INSAR_ISCE2_BURST directory structure:
 
-HyP3_ISCE2 Burst INSAR product 
 ```
-$DATA_DIR/2014_mount_edgecumbe
-├── data
+$DATA_DIR/MtEdgecumbeSenAT174
+├── hyp3
 │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044
 │   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_dem_clipped.tif
 │   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_corr_clipped.tif
@@ -446,7 +434,8 @@ $DATA_DIR/2014_mount_edgecumbe
 │   │   ├── S1_372326_IW3_20141110_20141204_VV_INT80_1894.txt
 │   │   └── ...
 │   └── ...
-└── 2014_mount_edgecumbe.txt
+└── mintpy
+    └── MtEdgecumbeSenAT174.txt
 ```
 
 The corresponding template options for `load_data`:
@@ -454,14 +443,13 @@ The corresponding template options for `load_data`:
 ```cfg
 mintpy.load.processor        = hyp3
 ##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/2014_mount_edgecumbe/data/*/*_unw_phase_clipped.tif
-mintpy.load.corFile          = $DATA_DIR/2014_mount_edgecumbe/data/*/*_corr_clipped.tif
+mintpy.load.unwFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*unw_phase_clip.tif
+mintpy.load.corFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*corr_clip.tif
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/2014_mount_edgecumbe/data/*/*_dem_clipped.tif
-mintpy.load.incAngleFile     = $DATA_DIR/2014_mount_edgecumbe/data/*/*_lv_theta_clipped.tif
-mintpy.load.azAngleFile      = $DATA_DIR/2014_mount_edgecumbe/data/*/*_lv_phi_clipped.tif
-mintpy.load.waterMaskFile    = $DATA_DIR/2014_mount_edgecumbe/data/*/*_water_mask_clipped.tif
-mintpy.troposphericDelay.method = no
+mintpy.load.demFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*dem_clip.tif
+mintpy.load.incAngleFile     = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*lv_theta_clip.tif
+mintpy.load.azAngleFile      = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*lv_phi_clip.tif
+mintpy.load.waterMaskFile    = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*water_mask_clip.tif
 ```
 
 ### [GMTSAR](https://github.com/gmtsar/gmtsar) ###
