@@ -312,7 +312,7 @@ def to_latlon(infile, x, y):
     if int(epsg) == 4326:
         return y, x
 
-    lon, lat = reproject(x, y, epsg, 4326)
+    lon, lat = reproject(x, y, from_epsg=epsg, to_epsg=4326)
     return lat, lon
 
 
