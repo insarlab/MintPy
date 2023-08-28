@@ -11,7 +11,7 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ############################################################
 EXAMPLE = """example:
-  python3 ./prep_nisar.py -i 'interferograms/stitched/*.h5' -d 'dem.tiff'
+  prep_nisar.py -i 'interferograms/stitched/*.h5' -d dem.tiff
 """
 
 def create_parser(subparsers=None):
