@@ -499,18 +499,7 @@ class GPS:
         if isinstance(geom_obj, str):
             # geometry file
             atr = readfile.read_attribute(geom_obj)
-            file_epsg = int(atr["EPSG"])
-            if file_epsg != 4326:
-                # Convert the GPS position to the same projection as `geom_obj`
-                x, y = ut0.reproject(lon, lat, from_epsg=4326, to_epsg=file_epsg)
-            else:
-                x, y = lon, lat
-
-            coord = coordinate(atr, lookup_file=geom_obj)
-            row, col = coord.geo2radar(y, x, print_msg=print_msg)[0:2]
-            # check against image boundary
-            row = max(0, row);  row = min(int(atr['LENGTH'])-1, row)
-            col = max(0, col);  col = min(int(atr['WIDTH'])-1, col)
+            row, col = ut0.get_image_rowcol(atr, lat=lat, lon=lon)
             box = (col, row, col+1, row+1)
             inc_angle = readfile.read(geom_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
             az_angle  = readfile.read(geom_obj, datasetName='azimuthAngle',   box=box, print_msg=print_msg)[0][0,0]
@@ -523,8 +512,28 @@ class GPS:
         else:
             raise ValueError(f'input geom_obj is neight str nor dict: {geom_obj}')
 
-        return inc_angle, az_angle
+        return inc_angle or np.nan, az_angle or np.nan
 
+    def get_image_values(self, filename, datasetName=None, pad: int = 0, print_msg=False):
+        """Read the value from `filename` at the pixel nearest to the GPS station.
+
+        Parameters: atr         - dict, mintpy attributes that includes "EPSG"
+                    datasetName - str, If `filename` is an HDF5 file, dataset to read from
+                    pad         - int, default = 0. Number of pixels of padding to read around
+                                  the nearest pixel.
+                                  `pad=0` only reads the closes pixel.
+                                  `pad=1` will return a 3x3 ndarray of image values.
+        Returns:    scalar, (or ndarray if `pad > 1`)
+                                  The values closes to the GPS station in `filename`.
+        """
+        lat, lon = self.get_stat_lat_lon(print_msg=print_msg)
+
+        atr = readfile.read_attribute(filename)
+        row, col = ut0.get_image_rowcol(atr, lat=lat, lon=lon)
+
+        box = (col - pad, row - pad, col + pad + 1, row + pad + 1)
+        values = readfile.read(filename, datasetName=datasetName, box=box, print_msg=print_msg)[0]
+        return np.squeeze(values)
 
     def read_gps_los_displacement(self, geom_obj, start_date=None, end_date=None, ref_site=None,
                                   gps_comp='enu2los', horz_az_angle=-90., print_msg=False):

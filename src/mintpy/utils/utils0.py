@@ -15,7 +15,7 @@
 #   Math / Statistics
 # Recommend import:
 #   from mintpy.utils import utils as ut
-
+from __future__ import annotations
 
 import math
 import os
@@ -291,6 +291,33 @@ def reproject(x, y, *, from_epsg: int, to_epsg: int):
     )
     new_x, new_y = transformer.transform(x, y)
     return new_x, new_y
+
+
+def get_image_rowcol(atr: dict, lat: float, lon: float, print_msg: bool = False):
+    """Get the (row, column) of `lat`,`lon` for an image with attributes `atr`.
+
+    For images not using EPSG:4326, will reproject the latitude/longitude
+    to the same projection as `atr`.
+
+    Parameters: atr       - dict, mintpy attributes that includes "EPSG"
+                lat/lon   - float, latitude/longitude of point of interest
+                print_msg - bool, enable verbose printing
+    Returns:    row, col  - integers for the closest row/column in `atr`.
+    """
+    from mintpy.objects.coord import coordinate
+    file_epsg = int(atr["EPSG"])
+    if file_epsg != 4326:
+        # Convert the GPS position to the same projection as `geom_obj`
+        x, y = reproject(lon, lat, from_epsg=4326, to_epsg=file_epsg)
+    else:
+        x, y = lon, lat
+
+    coord = coordinate(atr)
+    row, col = coord.geo2radar(y, x, print_msg=print_msg)[0:2]
+
+    if row < 0 or col < 0 or row > int(atr['LENGTH'])-1 or col > int(atr['WIDTH'])-1:
+        raise ValueError(f"{lat = }, {lon = } is outside the image bounds")
+    return row, col
 
 
 def to_latlon(infile, x, y):
