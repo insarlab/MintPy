@@ -17,7 +17,6 @@ from urllib.request import urlretrieve
 import numpy as np
 from pyproj import Geod
 
-from mintpy.objects.coord import coordinate
 from mintpy.utils import (
     ptime,
     readfile,
@@ -463,7 +462,7 @@ class GPS:
         """Convert displacement in ENU to LOS direction.
 
         Parameters: inc_angle     - float, LOS incidence angle in degree
-                    az_angle      - float, LOS aziuth angle in degree
+                    az_angle      - float, LOS azimuth angle in degree
                                     from the north, defined as positive in clock-wise direction
                     gps_comp      - str, GPS components used to convert to LOS direction
                     horz_az_angle - float, fault azimuth angle used to convert horizontal to fault-parallel
