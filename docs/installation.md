@@ -224,7 +224,7 @@ We recommend setting the following environment variables, e.g. in your <code>~/.
 
 ```bash
 export VRT_SHARED_SOURCE=0             # do not share dataset while using GDAL VRT in a multi-threading environment
-export HDF5_DISABLE_VERSION_CHECK=2    # supress the HDF5 version warning message (0 for abort; 1/2 for printout/suppress warning message)
+export HDF5_DISABLE_VERSION_CHECK=2    # suppress the HDF5 version warning message (0 for abort; 1/2 for printout/suppress warning message)
 export HDF5_USE_FILE_LOCKING=FALSE     # request that HDF5 file locks should NOT be used
 ```
 

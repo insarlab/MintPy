@@ -1260,7 +1260,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             # ignore dataset family info if there is only one type
             if len(inps.dsetFamilyList) == 1 and '-' in title_str:
                 title_str = title_str.split('-')[1]
-                # for ifgramStack, show index in the date12 list to facilitate the network modfication
+                # for ifgramStack, show index in the date12 list to facilitate the network modification
                 if inps.atr['FILE_TYPE'] == 'ifgramStack':
                     title_ind = inps.date12List.index(title_str)
 

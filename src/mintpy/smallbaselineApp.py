@@ -57,7 +57,7 @@ class TimeSeriesAnalysis:
         self.cwd = os.path.abspath(os.getcwd())
 
     def open(self):
-        """The starting point of the workflow. It runs everytime.
+        """The starting point of the workflow. It runs every time.
         It 1) grab project name if given
            2) go to work directory
            3) get and read template(s) options
@@ -117,7 +117,7 @@ class TimeSeriesAnalysis:
             print('update default template based on input custom template')
             self.templateFile = ut.update_template_file(self.templateFile, self.customTemplate)
 
-        # 2) backup custome/default template file in inputs/pic folder
+        # 2) backup custom/default template file in inputs/pic folder
         flen = len(os.path.basename(self.templateFile))
         if self.customTemplateFile:
             flen = max(flen, len(os.path.basename(self.customTemplateFile)))

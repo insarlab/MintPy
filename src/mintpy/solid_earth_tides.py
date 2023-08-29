@@ -3,7 +3,7 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Sep 2020                           #
 ############################################################
-# Recomend import:
+# Recommend import:
 #   from mintpy import solid_earth_tides as SET
 
 

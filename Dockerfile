@@ -10,7 +10,7 @@ LABEL org.opencontainers.image.source="https://github.com/insarlab/MintPy"
 LABEL org.opencontainers.image.documentation="https://mintpy.readthedocs.io/en/latest/"
 LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
 
-# Dynamic lables to define at build time via `docker build --label`
+# Dynamic labels to define at build time via `docker build --label`
 # LABEL org.opencontainers.image.created=""
 # LABEL org.opencontainers.image.version=""
 # LABEL org.opencontainers.image.revision=""

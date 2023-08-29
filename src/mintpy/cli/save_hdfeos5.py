@@ -13,7 +13,7 @@ from mintpy.defaults.template import get_template_content
 from mintpy.utils.arg_utils import create_argument_parser
 
 ################################################################
-TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
+TEMPLATE = TEMPLATE = get_template_content('hdfeos5')
 
 EXAMPLE = """example:
   save_hdfeos5.py geo/geo_timeseries_ERA5_ramp_demErr.h5
@@ -29,7 +29,7 @@ NOTE = """
 
 def create_parser(subparsers=None):
     synopsis = 'Convert MintPy timeseries product into HDF-EOS5 format'
-    epilog = TEMPALTE + '\n' + EXAMPLE
+    epilog = TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
         name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)

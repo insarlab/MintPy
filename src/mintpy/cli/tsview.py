@@ -78,7 +78,7 @@ def create_parser(subparsers=None):
                         dest='plot_model_conf_int', action='store_true',
                         help='Plot the time function prediction confidence intervals.\n'
                              '[!-- Preliminary feature alert! --!]\n'
-                             '[!-- This feature is NOT throughly checked. '
+                             '[!-- This feature is NOT thoroughly checked. '
                              'Read the code before use. Interpret at your own risk! --!]')
 
     parser = arg_utils.add_timefunc_argument(parser)

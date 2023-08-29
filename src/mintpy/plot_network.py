@@ -68,7 +68,7 @@ def read_network_info(inps):
         # cohList
         inps.cohList = np.loadtxt(inps.file, dtype=bytes).astype(float)[:,1]
     else:
-        raise ValueError('un-recognized input file extention:', ext)
+        raise ValueError('un-recognized input file extension:', ext)
     print(f'number of acquisitions: {len(inps.dateList)}')
     print(f'number of interferograms: {len(inps.date12List)}')
 

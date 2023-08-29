@@ -577,7 +577,7 @@ def correct_dem_error(inps):
             datasetName='timeseries',
             block=block)
 
-    # roll back to the origial number of threads
+    # roll back to the original number of threads
     cluster.roll_back_num_threads(num_threads_dict)
 
     # time info

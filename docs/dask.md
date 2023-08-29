@@ -106,7 +106,7 @@ smallbaselineApp.py smallbaselineApp.cfg
 
 #### 2.3 Configuration parameters in `~/.config/dask/mintpy.yaml` ####
 
-We provide a brief description below for the most commonly used configurations of dask-jobqueue for MintPy. Users are recommended to check [Dask-Jobqueue](https://jobqueue.dask.org/en/latest/configuration-setup.html) for more detailed and comprehensive documentaion.
+We provide a brief description below for the most commonly used configurations of dask-jobqueue for MintPy. Users are recommended to check [Dask-Jobqueue](https://jobqueue.dask.org/en/latest/configuration-setup.html) for more detailed and comprehensive documentation.
 
 + **name:** Name of the worker job as it will appear to the job scheduler. Any values are perfectly fine.
 

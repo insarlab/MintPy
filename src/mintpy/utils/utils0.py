@@ -567,7 +567,7 @@ def xyz_to_local_radius(xyz):
 # Definition of angles:
 # (los_)inc_angle - the incidence angle of the LOS vector (from the ground to the SAR platform)
 #                   measured from vertical. Used in isce2.
-# (los_)az_angle  - the azimuth   angle of the LOS vecotr (from the ground to the SAR platform)
+# (los_)az_angle  - the azimuth   angle of the LOS vector (from the ground to the SAR platform)
 #                   measured from the north, with anti-clockwise as positive. Used in isce2.
 # orb_az_angle    - the azimuth   angle of the SAR platform's orbit (along-track direction)
 #                   measured from the north, with anti-clockwise as positive
@@ -696,7 +696,7 @@ def get_unit_vector4component_of_interest(los_inc_angle, los_az_angle, comp='enu
     comps = [
         'enu2los', 'en2los', 'hz2los', 'horz2los', 'u2los', 'vert2los',   # radar LOS / cross-track
         'en2az', 'hz2az', 'orb_az', 'orbit_az',                           # radar azimuth / along-track
-        'vert', 'vertical', 'horz', 'horizontal',                         # vertical / arbitraty horizontal
+        'vert', 'vertical', 'horz', 'horizontal',                         # vertical / arbitrary horizontal
     ]
 
     if comp not in comps:

@@ -997,7 +997,7 @@ def main(argv=None):
         ax.set_xlabel('Distance along profile [km]', fontsize=26)
 
         ###################################################################
-        # lower and higher bounds for diplaying the profile
+        # lower and higher bounds for displaying the profile
 
         try:
             lbound

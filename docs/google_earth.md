@@ -26,7 +26,7 @@ save_kmz_timeseries.py embeds a [dygraphs](http://dygraphs.com) javascript for i
 
 The script also use the [regions KML feature](https://developers.google.com/kml/documentation/regions) to support very large datasets without sacrificing resolution. It divides the data matrix into regionalized boxes, nests them using network links so that Google Earth could load them in a "smart" way.
 
-**Alert: for very large datasets, the default settings are not generic due to the various computer memories, data sizes and different prefered details. The user is highly recommended to read the following to understand how the regions feature works and adjust parameters accordingly.**
+**Alert: for very large datasets, the default settings are not generic due to the various computer memories, data sizes and different preferred details. The user is highly recommended to read the following to understand how the regions feature works and adjust parameters accordingly.**
 
 1. Level of Detail (LOD)
 

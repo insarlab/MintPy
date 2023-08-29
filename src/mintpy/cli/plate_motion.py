@@ -37,7 +37,7 @@ REFERENCE = """reference:
 """
 
 EXAMPLE = """example:
-  # Use build-in plate motion model of Table 1 from Altamimi et al. (2017)
+  # Use built-in plate motion model of Table 1 from Altamimi et al. (2017)
   plate_motion.py -g inputs/geometryGeo.h5   --plate Arabia
   plate_motion.py -g inputs/geometryRadar.h5 --plate Eurasia
 

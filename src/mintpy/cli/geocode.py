@@ -70,7 +70,7 @@ def create_parser(subparsers=None):
     out = parser.add_argument_group('grid in geo-coordinates')
     out.add_argument('-b', '--bbox', dest='SNWE', type=float, nargs=4, metavar=('S', 'N', 'W', 'E'),
                      help='Bounding box for the area of interest.\n'
-                          'using coordinates of the uppler left corner of the first pixel\n'
+                          'using coordinates of the upper left corner of the first pixel\n'
                           '                 and the lower right corner of the last pixel\n'
                           "for radar2geo, it's the output spatial extent\n"
                           "for geo2radar, it's the input  spatial extent")

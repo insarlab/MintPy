@@ -1,4 +1,4 @@
-"""Miscellaneous utlities for simulation."""
+"""Miscellaneous utilities for simulation."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #

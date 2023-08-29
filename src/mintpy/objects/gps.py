@@ -508,7 +508,7 @@ class GPS:
             az_angle  = ut.heading2azimuth_angle(float(geom_obj['HEADING']))
 
         else:
-            raise ValueError(f'input geom_obj is neight str nor dict: {geom_obj}')
+            raise ValueError(f'input geom_obj is neither str nor dict: {geom_obj}')
 
         return inc_angle, az_angle
 

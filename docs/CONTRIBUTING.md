@@ -36,7 +36,7 @@ is a great starting point if you are new to version control.
    - `origin`, which refers to your personal fork
 
 + Setting up [`pre-commit`](https://pre-commit.com/) within `MintPy` directory:
-   - Run `pre-commit install` to set up the git hook scripts, so that `pre-commit` will run automatically on `git commit`. If the `No .pre-commit-config.yaml file was found` error occurrs, update your local MintPy to the latest upstream version to have this config file.
+   - Run `pre-commit install` to set up the git hook scripts, so that `pre-commit` will run automatically on `git commit`. If the `No .pre-commit-config.yaml file was found` error occurs, update your local MintPy to the latest upstream version to have this config file.
 
 
 #### 2. Develop your contribution: ####
@@ -56,7 +56,7 @@ is a great starting point if you are new to version control.
    git checkout -b seasonal_fitting
    ```
 
-+ Work on your idea, run tests and commit locally (`git add` and `git commit`) and/or to your fork on GitHub as you progress (`git push` in command line or [GitHub Desktop](https://desktop.github.com/) with graphical user interface). Use a clear commit message describing the motivation of a change, the nature of a bug for bug fixes or some details on what an enchancement does.
++ Work on your idea, run tests and commit locally (`git add` and `git commit`) and/or to your fork on GitHub as you progress (`git push` in command line or [GitHub Desktop](https://desktop.github.com/) with graphical user interface). Use a clear commit message describing the motivation of a change, the nature of a bug for bug fixes or some details on what an enhancement does.
 
 + Run the [overall test](./CONTRIBUTING.md#testing) locally.
 
