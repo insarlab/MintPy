@@ -329,7 +329,7 @@ def get_date12_to_drop(inps):
     date12ListKept = obj.get_date12_list(dropIfgram=True)
     date12ListDropped = sorted(list(set(date12ListAll) - set(date12ListKept)))
     if date12_to_drop == date12ListDropped:
-        print('Calculated date12 to drop is the same as exsiting marked input file, skip updating file.')
+        print('Calculated date12 to drop is the same as existing marked input file, skip updating file.')
         date12_to_drop = None
     elif date12_to_drop == date12ListAll:
         raise Exception('Zero interferogram left! Please adjust your setting and try again.')

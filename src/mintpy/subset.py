@@ -310,10 +310,15 @@ def subset_file(fname, subset_dict_input, out_file=None):
     # subset datasets one by one
     dsNames = readfile.get_dataset_list(fname)
 
-    ext = os.path.splitext(out_file)[1]
-    if ext in ['.h5', '.he5']:
+    in_ext = os.path.splitext(fname)[1]
+    out_ext = os.path.splitext(out_file)[1]
+    if in_ext in ['.h5', '.he5']:
+
         # initiate the output file
-        writefile.layout_hdf5(out_file, metadata=atr, ref_file=fname)
+        if out_ext in ['.h5', '.he5']:
+            writefile.layout_hdf5(out_file, metadata=atr, ref_file=fname)
+        else:
+            dsDict = dict()
 
         # subset dataset one-by-one
         for dsName in dsNames:
@@ -339,16 +344,24 @@ def subset_file(fname, subset_dict_input, out_file=None):
                              pix_box4subset[0]:pix_box4subset[2]] = data
                     data_out = np.array(data_out, dtype=data.dtype)
 
-                    # write
-                    block = [0, int(atr['LENGTH']), 0, int(atr['WIDTH'])]
-                    writefile.write_hdf5_block(
-                        out_file,
-                        data=data_out,
-                        datasetName=dsName,
-                        block=block,
-                        print_msg=True)
+                    # write each dataset to HDF5 file
+                    # OR save each dataset for binary file
+                    if out_ext in ['.h5', '.he5']:
+                        block = [0, int(atr['LENGTH']), 0, int(atr['WIDTH'])]
+                        writefile.write_hdf5_block(
+                            out_file,
+                            data=data_out,
+                            datasetName=dsName,
+                            block=block,
+                            print_msg=True)
+                    else:
+                        dsDict[dsName] = data_out
 
-                if ds_ndim == 3:
+                elif ds_ndim == 3:
+                    # 3D dataset is not supported in binary
+                    if out_ext not in ['.h5', '.he5']:
+                        raise ValueError(f'Writing 3D dataset {dsName} into binary file is NOT supported!')
+
                     prog_bar = ptime.progressBar(maxValue=ds_shape[0])
                     for i in range(ds_shape[0]):
                         # read
@@ -378,8 +391,12 @@ def subset_file(fname, subset_dict_input, out_file=None):
                     prog_bar.close()
                     print(f'finished writing to file: {out_file}')
 
+        # write to binary file
+        if out_ext not in ['.h5', '.he5']:
+            writefile.write(dsDict, out_file=out_file, metadata=atr)
+
     else:
-        # IO for binary files
+        # binary --> binary / hdf5 file
         dsDict = dict()
         for dsName in dsNames:
             dsDict[dsName] = subset_dataset(
@@ -394,8 +411,8 @@ def subset_file(fname, subset_dict_input, out_file=None):
         atr['BANDS'] = len(dsDict.keys())
         writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fname)
 
-        # write extra metadata files for ISCE data files
-        if os.path.isfile(fname+'.xml') or os.path.isfile(fname+'.aux.xml'):
+        # write extra metadata files for ISCE2 binary data files
+        if out_ext not in ['.h5', '.he5'] and (os.path.isfile(fname+'.xml') or os.path.isfile(fname+'.aux.xml')):
             writefile.write_isce_xml(atr, out_file)
 
     return out_file

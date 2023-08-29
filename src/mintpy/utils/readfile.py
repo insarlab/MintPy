@@ -281,6 +281,7 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
         data, atr = readfile.read('geometryRadar.h5', datasetName='bperp')
         data, atr = readfile.read('100120-110214.unw', box=(100,1100, 500, 2500))
     """
+    fname = os.fspath(fname)  # Convert from possible pathlib.Path
     # metadata
     dsname4atr = None   #used to determine UNIT
     if isinstance(datasetName, list):
@@ -963,14 +964,14 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
                          ...
     Returns:    atr : dict, attributes dictionary
     """
-    fname = str(fname)  # convert from possible Path
+    fname = os.fspath(fname)  # Convert from possible pathlib.Path
     fdir = os.path.dirname(fname)
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
     if not os.path.isfile(fname):
-        msg = f'input file not existed: {fname}\n'
+        msg = f'input file does not exist: {fname}\n'
         msg += 'current directory: '+os.getcwd()
-        raise Exception(msg)
+        raise FileNotFoundError(msg)
 
     # HDF5 files
     if fext in ['.h5', '.he5']:
@@ -984,7 +985,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
 
         # FILE_TYPE
-        # pre-defined/known dataset/group names > existing FILE_TYPE > exsiting dataset/group names
+        # pre-defined/known dataset/group names > existing FILE_TYPE > existing dataset/group names
         py2_mintpy_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete mintpy format
         if any(i in d1_list for i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']):
             ftype = 'ifgramStack'
@@ -1997,12 +1998,10 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
         box = (0, 0, ds.RasterXSize, ds.RasterYSize)
 
     # read
-    # Note: do not use gdal python kwargs because of error: 'BandRasterIONumPy', argument 3 of type 'double'
-    # Recommendation: use rasterio instead of gdal pytho
-    # Link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
-    #kwargs = dict(xoff=box[0], win_xsize=box[2]-box[0],
-    #              yoff=box[1], win_ysize=box[3]-box[1])
-    data = bnd.ReadAsArray()[box[1]:box[3], box[0]:box[2]]
+    # Link: https://gdal.org/api/python/osgeo.gdal.html#osgeo.gdal.Band.ReadAsArray
+    kwargs = dict(xoff=int(box[0]), win_xsize=int(box[2]-box[0]),
+                  yoff=int(box[1]), win_ysize=int(box[3]-box[1]))
+    data = bnd.ReadAsArray(**kwargs)
 
     # adjust output band for complex data
     data_type = DATA_TYPE_GDAL2NUMPY[bnd.DataType]
