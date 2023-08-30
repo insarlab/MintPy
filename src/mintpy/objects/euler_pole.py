@@ -546,9 +546,9 @@ def read_plate_outline(pmm_name='GSRM', plate_name=None):
     """Read the plate boundaries for the given plate motion model.
 
     Parameters: pmm_name   - str, plate motion (model) name
-               plate_name - str, plate name of interest, return all plates if None
-    Returns:   outline    - dict, a dictionary that contains lists of vertices in lat/lon for all plates
-                            OR shapely.geometry.polygon.Polygon object, boundary of the given "plate".
+                plate_name - str, plate name of interest, return all plates if None
+    Returns:    outline    - dict, a dictionary that contains lists of vertices in lat/lon for all plates
+                             OR shapely.geometry.polygon.Polygon object, boundary of the given "plate".
     """
 
     # check input
