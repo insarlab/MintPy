@@ -279,11 +279,12 @@ def utm_zone2epsg_code(utm_zone):
 def reproject(x, y, *, from_epsg: int, to_epsg: int):
     """Convert x, y in the projection EPSG:`from_epsg` to EPSG:`to_epsg`.
 
-    For lon/lat, use 4326.
+    For lon/lat, the EPSG code is 4326.
 
     Parameters: x/y       - scalar or 1/2D np.ndarray, coordinates in x and y direction
                 from_epsg - int, EPSG code of `x/y`
-    Returns:    x/y    - scalar or 1/2D np.ndarray, coordinates in new projection
+                to_epsg   - int, EPSG code of `new_x/y`
+    Returns:    new_x/y   - scalar or 1/2D np.ndarray, coordinates in new projection
     """
     from pyproj import CRS, Transformer
 
@@ -297,8 +298,8 @@ def reproject(x, y, *, from_epsg: int, to_epsg: int):
 def get_image_rowcol(atr: dict, lat: float, lon: float, print_msg: bool = False):
     """Get the (row, column) of `lat`,`lon` for an image with attributes `atr`.
 
-    For images not using EPSG:4326, will reproject the latitude/longitude
-    to the same projection as `atr`.
+    For images not using EPSG:4326 (as in lat/lon), will reproject the latitude/longitude
+    to the same projection as `atr['EPSG']`.
 
     Parameters: atr       - dict, mintpy attributes that includes "EPSG"
                 lat/lon   - float, latitude/longitude of point of interest
