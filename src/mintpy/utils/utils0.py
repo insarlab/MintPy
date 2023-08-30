@@ -15,6 +15,7 @@
 #   Math / Statistics
 # Recommend import:
 #   from mintpy.utils import utils as ut
+
 from __future__ import annotations
 
 import math
@@ -326,15 +327,16 @@ def to_latlon(infile, x, y):
     Similar functionality also exists in utm.to_latlon() at:
         https://github.com/Turbo87/utm#utm-to-latitudelongitude
 
-    Parameters: infile - str, GDAL supported file path
-                x/y    - scalar or 1/2D np.ndarray, coordinates in x and y direction
-    Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
+    Parameters: infile  - str, GDAL supported file path
+                x/y     - scalar or 1/2D np.ndarray, coordinates in x and y direction
+    Returns:    lat/lon - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
     """
     from osgeo import gdal
 
     # read projection info using gdal
     ds = gdal.Open(infile)
     epsg = ds.GetSpatialRef().GetAuthorityCode(None)
+
     # if input file is already in lat/lon, do nothing and return
     if int(epsg) == 4326:
         return y, x
