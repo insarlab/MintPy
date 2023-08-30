@@ -13,7 +13,7 @@ from mintpy.defaults.template import get_template_content
 from mintpy.utils.arg_utils import create_argument_parser
 
 ################################################################
-TEMPLATE = TEMPLATE = get_template_content('hdfeos5')
+TEMPLATE = get_template_content('hdfeos5')
 
 EXAMPLE = """example:
   save_hdfeos5.py geo/geo_timeseries_ERA5_ramp_demErr.h5
