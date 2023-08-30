@@ -75,5 +75,5 @@ AUTHORIZED_LIST="$AUTHORIZED_LIST,smallbaselineApp"
 AUTHORIZED_LIST="$AUTHORIZED_LIST,Nealy" # Author in reference
 
 python fix_typos/codespell/codespell.py -w -i 3 -q 2 -S "$EXCLUDED_FILES,./autotest/*,./build*/*" \
-    --words-white-list=$AUTHORIZED_LIST \
+    --words-white-list="$AUTHORIZED_LIST" \
     -D ./fix_typos/gdal_dict.txt .
