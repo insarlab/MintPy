@@ -6,7 +6,7 @@ For line-of-sight (LOS) phase in the unit of radians, i.e. 'unwrapPhase' dataset
 
 For LOS displacement (velocity) in the unit of meters (m/yr), i.e. 'timeseries' dataset in `timeseries.h5` file, positive value represents motion toward the satellite (uplift for pure vertical motion).
 
-### 2. How to prepare the input for MintPy if I am using currently un-supported InSAR softwares?
+### 2. How to prepare the input for MintPy if I am using currently un-supported InSAR software?
 
 The input of MintPy routine workflow (`smallbaselineApp.py`) is a stack of unwrapped interferograms. For "stack", we mean all the interferograms (unwrapped phase and spatial coherence) and geometries (DEM, incidence angle, etc.) have the same spatial extent and same spatial resolution, either in geo-coordinates or radar (range-doppler) coordinates. The input has 2 components: data and attributes.
 
@@ -39,7 +39,7 @@ For dataset in geo-coordinates [recommended]:
 
 For dataset in radar-coordinates, the extra lookup table file(s) is required (_e.g._ lat/lon.rdr for `ISCE-2`, sim_\*.UTM_TO_RDC for `Gamma`, geo_\*.trans for `ROI_PAC`).
 
-All the files above should be in the same spatial extent and same spatial resolution (except for the lookup table in geo-coordinates from Gamma/ROI_PAC). If they are not (e.g. different row/column number, different spatial extent in terms of SNWE, different spatial resolution, etc.), the easiest way is to geocode them with the same ouput spatial extent and same output spatial resolution.
+All the files above should be in the same spatial extent and same spatial resolution (except for the lookup table in geo-coordinates from Gamma/ROI_PAC). If they are not (e.g. different row/column number, different spatial extent in terms of SNWE, different spatial resolution, etc.), the easiest way is to geocode them with the same output spatial extent and same output spatial resolution.
 
 MintPy read data files via `mintpy.utils.readfile.read()`. It supports the following two types of file formats:
 

@@ -48,7 +48,7 @@ def read_data(inps):
         # read/prepare data
         if not inps.dset:
             inps.dset = 'velocity'
-            print('No selected datset, assuming "velocity" and continue.')
+            print('No selected dataset, assuming "velocity" and continue.')
         data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
         # convert velocity to cumulative displacement

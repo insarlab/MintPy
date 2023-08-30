@@ -33,7 +33,7 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     :param num_split: int, the initial number of sub_boxes to split a box into
     :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
     :return: sub_boxes: list(list(4 int)), the splited sub boxes
-    :return: num_split: int, the final number of splitted sub_boxes
+    :return: num_split: int, the final number of split sub_boxes
     """
     import numpy as np
 
@@ -143,7 +143,7 @@ class DaskCluster:
         3. all matrices will be in 2D in size of (len, wid) or 3D in size of (n, len, wid),
            thus, the last two dimension (in space) will be the same.
     This charateristics allows the automatic result collection without prior knowledge
-        of the computing funciton, thus being a generic wrapper.
+        of the computing function, thus being a generic wrapper.
 
     Check ifgram_inversion.py as an example.
 
@@ -176,7 +176,7 @@ class DaskCluster:
         if self.config_name is not None:
             print(f"input Dask config name: {self.config_name}")
 
-        ## intitial value
+        ## initial value
         self.cluster = None
         self.client = None
 
@@ -317,7 +317,7 @@ class DaskCluster:
             print(f"\nFUTURE #{num_future} complete. Time used: {sub_t:.0f} seconds")
 
             # catch result - sub_box
-            # and convert the abosulte sub_box into local col/row start/end relative to the primary box
+            # and convert the absolute sub_box into local col/row start/end relative to the primary box
             # to assemble the result from each worker
             sub_box = sub_results[-1]
             x0, y0, x1, y1 = sub_box

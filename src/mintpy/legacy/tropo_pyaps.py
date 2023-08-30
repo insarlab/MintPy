@@ -381,7 +381,7 @@ def dload_grib_pyaps(grib_file_list):
 def get_delay(grib_file, inps):
     """Get delay matrix using PyAPS for one acquisition
     Inputs:
-        grib_file - strng, grib file path
+        grib_file - string, grib file path
         atr       - dict, including the following attributes:
                     dem_file    - string, DEM file path
                     trop_model - string, Weather re-analysis data source

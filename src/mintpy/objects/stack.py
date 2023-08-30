@@ -1144,7 +1144,7 @@ class ifgramStack:
 
 
     def get_sequential_closure_phase(self, box, conn, post_proc=None):
-        """Computes wrapped sequential closure phases for a given conneciton level.
+        """Computes wrapped sequential closure phases for a given connection level.
 
         Reference: Equation (21) in Zheng et al. (2022, TGRS)
         For conn = 5, seq_closure_phase = p12 + p23 + p34 + p45 + p56 - p16.

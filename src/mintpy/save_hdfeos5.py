@@ -214,7 +214,7 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
         SW += str(metadata['beam_swath'])
     RELORB = "{:03d}".format(int(metadata['relative_orbit']))
 
-    # Frist and/or Last Frame
+    # First and/or Last Frame
     frame1 = metadata['first_frame']
     frame2 = metadata['last_frame']
     FRAME = f"{int(frame1):04d}"

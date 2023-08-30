@@ -347,7 +347,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
             if key in ['connectComponent']:
                 ds_comp = 'lzf'
 
-            # changable dataset shape
+            # changeable dataset shape
             if len(data_shape) == 3:
                 max_shape = (None, data_shape[1], data_shape[2])
             else:
@@ -508,7 +508,7 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
     """Write attribute dict into ROI_PAC .rsc file
     Inputs:
         metadata : dict, attributes dictionary
-        out_file : rsc file name, to which attribute is writen
+        out_file : rsc file name, to which attribute is written
         update_mode : bool, skip writing if
                       1) output file existed AND
                       2) no new metadata key/value
@@ -758,7 +758,7 @@ def write_float32(*args):
     Format of the binary file is same as roi_pac unw, cor, or hgt data.
           should rename to write_rmg_float32()
 
-    Exmaple:
+    Example:
             write_float32(phase, out_file)
             write_float32(amp, phase, out_file)
     """

@@ -1019,7 +1019,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             atr = giantIfgramStack(fname).get_metadata()
 
         elif len(atr) > 0 and 'WIDTH' in atr.keys():
-            # use the attribute at root level, which is already read from the begining
+            # use the attribute at root level, which is already read from the beginning
 
             # grab attribute of dataset if specified, e.g. UNIT, no-data value, etc.
             if datasetName and datasetName in d1_list:
@@ -1155,7 +1155,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             raise FileNotFoundError('No UAVSAR *.ann file found!')
 
     else:
-        # grab all existed potential metadata file given the data file in prefered order/priority
+        # grab all existed potential metadata file given the data file in preferred order/priority
         # .aux.xml file does not have geo-coordinates info
         # .vrt file (e.g. incLocal.rdr.vrt from isce) does not have band interleavee info
         metafiles = [
@@ -1359,7 +1359,7 @@ def read_template(fname, delimiter='=', skip_chars=None):
 
     Parameters: fname      - str, full path to the template file
                 delimiter  - str, string to separate the key and value
-                skip_chars - list of str, skip certain charaters in values
+                skip_chars - list of str, skip certain characters in values
     Returns:    template   - dict, file content
     Examples:   template = read_template('KyushuAlosAT424.txt')
                 template = read_template('smallbaselineApp.cfg')
@@ -2192,7 +2192,7 @@ def read_complex_float32(fname, box=None, byte_order='l', band='phase'):
 
     ROI_PAC file: .slc, .int, .amp
 
-    Data is sotred as:
+    Data is stored as:
     real, imaginary, real, imaginary, ...
     real, imaginary, real, imaginary, ...
     ...

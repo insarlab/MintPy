@@ -213,7 +213,7 @@ def manual_select_reference_yx(data, inps, mask=None):
                 # plt.close(fig)
             else:
                 print('\nWARNING:')
-                print('The selectd pixel has NaN value in data.')
+                print('The selected pixel has NaN value in data.')
                 print('Try a difference location please.')
 
     fig.canvas.mpl_connect('button_press_event', onclick)

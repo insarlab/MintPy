@@ -724,7 +724,7 @@ def multilook_number2resolution(meta_file, az_looks, rg_looks):
 
 def resolution2multilook_number(meta_file, resolution):
     """
-    Calculate multilook number for InSAR processing given a disired output resolution on the ground
+    Calculate multilook number for InSAR processing given a desired output resolution on the ground
 
     Parameters: meta_file   : str, path of ISCE metadata file, i.e. IW1.xml, data.dat
                 resolution  : float, target output resolution on the ground in meters
@@ -817,7 +817,7 @@ def get_IPF(proj_dir, ts_file):
     # reference date
     m_date = [i for i in date_list if not os.path.isdir(os.path.join(s_dir, i))][0]
 
-    # grab IPF numver
+    # grab IPF number
     IPF_IW1, IPF_IW2, IPF_IW3 = [], [], []
     prog_bar = ptime.progressBar(maxValue=num_date)
     for i in range(num_date):
@@ -911,10 +911,10 @@ def get_sensing_datetime_list(proj_dir, date_list=None):
 ############################## Standard Processing ###########################################
 
 def gaussian_kernel(sx, sy, sig_x, sig_y):
-    '''Generate a guassian kernal (with all elements sum to 1).
+    '''Generate a Gaussian kernel (with all elements sum to 1).
 
-    Parameters: sx/y    - int, dimensions of kernal
-                sig_x/y - float, standard deviation of the guassian distribution
+    Parameters: sx/y    - int, dimensions of kernel
+                sig_x/y - float, standard deviation of the Gaussian distribution
     '''
     # ensure sx/y are odd number
     sx += 1 if np.mod(sx, 2) == 0 else 0
@@ -1203,7 +1203,7 @@ def unwrap_icu(int_file, unw_file):
     # run ICU
     icu_obj = Icu()
     icu_obj.filteringFlag = False
-    icu_obj.useAmplitudeFalg = False
+    icu_obj.useAmplitudeFlag = False
     icu_obj.singlePatch = True
     icu_obj.initCorrThresdhold = 0.1
     icu_obj.icu(intImage=int_img, unwImage=unw_img)

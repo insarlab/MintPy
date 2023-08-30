@@ -116,7 +116,7 @@ def cmd_line_parse(iargs=None):
 
 def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
-    print('read options from tempalte file: '+os.path.basename(inps.template_file))
+    print('read options from template file: '+os.path.basename(inps.template_file))
 
     from mintpy.unwrap_error_phase_closure import key_prefix
     from mintpy.utils import readfile, utils1 as ut

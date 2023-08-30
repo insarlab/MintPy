@@ -42,7 +42,7 @@ def read_data(inps):
         if k == 'velocity':
             if not inps.dset:
                 inps.dset = 'velocity'
-                print('No selected datset, assuming "velocity" and continue.')
+                print('No selected dataset, assuming "velocity" and continue.')
             inps.phase, atr = readfile.read(inps.file, datasetName=inps.dset)
 
             # velocity to displacement

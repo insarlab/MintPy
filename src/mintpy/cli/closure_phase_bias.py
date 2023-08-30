@@ -23,7 +23,7 @@ EXAMPLE = """example:
   # Notebook tutorial:
   #   https://nbviewer.org/github/insarlab/MintPy-tutorial/blob/main/applications/closure_phase_bias.ipynb
 
-  # create mask for areas suseptible to biases
+  # create mask for areas susceptible to biases
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 5  -a mask
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 -a mask --num-sigma 2.5
 

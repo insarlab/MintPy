@@ -99,7 +99,7 @@ def read_init_info(inps):
         error_fc = np.loadtxt(inps.error_file, dtype=bytes).astype(str)
         inps.error_ts = error_fc[:, 1].astype(np.float32)*inps.unit_fac
 
-        # update error file with exlcude date
+        # update error file with exclude date
         if inps.ex_date_list:
             e_ts = inps.error_ts[:]
             inps.ex_error_ts = e_ts[inps.ex_flag == 0]
@@ -243,7 +243,7 @@ def subset_and_multilook_yx(yx, pix_box=None, multilook_num=1):
 
 
 def read_exclude_date(input_ex_date, dateListAll):
-    """Read exlcude list of dates
+    """Read exclude list of dates
     Parameters: input_ex_date : list of string in YYYYMMDD or filenames for excluded dates
                 dateListAll   : list of string in YYYYMMDD for all dates
     Returns:    ex_date_list  : list of string in YYYYMMDD for excluded dates
@@ -507,7 +507,7 @@ def get_model_param_str(model, ds_dict, disp_unit='cm'):
 
 
 def fit_time_func(model, date_list, ts_dis, disp_unit='cm', G_fit=None, conf_level=0.95, seconds=0):
-    """Fit a suite of fime functions to the time series.
+    """Fit a suite of time functions to the time series.
     Equations:  Gm = d
     Parameters: model      - dict of time functions, check utils.time_func.estimate_time_func() for details.
                 date_list  - list of dates in YYYYMMDD format

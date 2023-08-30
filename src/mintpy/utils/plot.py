@@ -111,7 +111,7 @@ def auto_figure_size(ds_shape, scale=1.0, disp_cbar=False, disp_slider=False,
                 scale             - floag, scale the final figure size
                 disp_cbar/slider  - bool, plot colorbar on the right / slider on the bottom
                 cbar/slider_ratio - float, size ratio of the additional colobar / slider
-    Returns:    figsize           - list of 2 float for the figure size in [width, lenght] in inches
+    Returns:    figsize           - list of 2 float for the figure size in [width, length] in inches
     """
     # figure shape
     fig_shape = list(ds_shape)[::-1]
@@ -262,7 +262,7 @@ def auto_flip_direction(metadata, ax=None, print_msg=True):
 
 
 def auto_multilook_num(box, num_time, max_memory=4.0, print_msg=True):
-    """Calcualte the default/auto multilook number based on the input 3D shape.
+    """Calculate the default/auto multilook number based on the input 3D shape.
     Parameters: box           - tuple of 4 int in (x0, y0, x1, y1) for the spatial bounding box
                 num_time      - int, the 3rd / time dimension size
                 max_memory    - float, max memory in GB
@@ -483,7 +483,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_
 
     # Label font size
     ax.tick_params(labelsize=fontsize)
-    # fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
+    # fig2.autofmt_xdate()     #adjust x overlap by rorating, may enable again
     return ax, xmin, xmax
 
 
@@ -856,7 +856,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
                 date12List : list of date12 in YYYYMMDD_YYYYMMDD format
                 cohList    : list of float, coherence value
                 date12List_drop : list of date12 for date12 marked as dropped
-                p_dict  : dict of plot settting
+                p_dict  : dict of plot setting
     Returns:    ax : matplotlib.pyplot.Axes
                 coh_mat : 2D np.array in size of [num_date, num_date]
                 im : mappable
@@ -1744,7 +1744,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
             else:
                 mask_file = None
 
-    # read mask_data from file if inputed
+    # read mask_data from file if inputted
     mask_data = None
     if os.path.isfile(str(mask_file)):
         try:

@@ -149,7 +149,7 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
         print('remove existing metadata file:', meta_file)
         os.remove(meta_file)
 
-    # runing smallbaselineApp
+    # running smallbaselineApp
     # Note: execute script in command line instead of call main() for a clean run
     # to avoid strange error from prep_aria: not recognized as a supported file format.
     # which only occurs if all datasets are tested in one run
@@ -189,14 +189,14 @@ def main(iargs=None):
     for i in range(num_dset):
         dset_name = inps.dset_name[i]
         print('#'*100)
-        print(f'Start testing smallbaselineApp workflow on exmaple dataset {i+1}/{num_dset}: {dset_name}')
+        print(f'Start testing smallbaselineApp workflow on example dataset {i+1}/{num_dset}: {dset_name}')
         test_smallbaselineApp(dset_name,
                               test_dir=inps.test_dir,
                               fresh_start=inps.fresh_start,
                               test_pyaps=inps.test_pyaps,
                               test_isce=inps.test_isce)
         print('#'*100)
-        print(f'   PASS testing of smallbaselineApp workflow on exmaple dataset {i+1}/{num_dset}: {dset_name}')
+        print(f'   PASS testing of smallbaselineApp workflow on example dataset {i+1}/{num_dset}: {dset_name}')
         print('#'*100+'\n'*3)
 
     # print message

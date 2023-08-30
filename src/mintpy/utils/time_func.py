@@ -179,7 +179,7 @@ def inps2model(inps, date_list=None, print_msg=True):
 
 
 def get_num_param(model):
-    """Get the number of unknown paramters from the given time function configuration.
+    """Get the number of unknown parameters from the given time function configuration.
 
     Parameters: model     - dict, time functions config, e.g. {cfg}
     Returns:    num_param - int, number of unknown parameters

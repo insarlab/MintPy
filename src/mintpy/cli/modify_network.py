@@ -115,7 +115,7 @@ def cmd_line_parse(iargs=None):
     if not os.path.isfile(inps.maskFile):
         inps.maskFile = None
 
-    # check: --exclude-ifg-index option (convert input index to continous index list)
+    # check: --exclude-ifg-index option (convert input index to continuous index list)
     inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
 
     # check: -t / --template option

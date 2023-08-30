@@ -45,7 +45,7 @@ docker run -it -v </path/to/data/dir>:/home/mambauser/data ghcr.io/insarlab/mint
 docker run -it -v </path/to/data/dir>:/home/mambauser/data ghcr.io/insarlab/mintpy:latest smallbaselineApp.py /home/mambauser/data/FernandinaSenDT128/mintpy/FernandinaSenDT128.txt
 ```
 
-Or run the following to launch the Jupyter Lab server, then copy and paste the printed `http://localhost:8888/lab?token=` url in a brower.
+Or run the following to launch the Jupyter Lab server, then copy and paste the printed `http://localhost:8888/lab?token=` url in a browser.
 
 ```shell
 # to launch a Jupyter Notebook frontend, replace "lab" with "notebook" in the command below
