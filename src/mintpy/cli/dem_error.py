@@ -41,7 +41,7 @@ def create_parser(subparsers=None):
     parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
-    parser.add_argument('ts_file', help='Time-series HDF5 file to be corrrected.')
+    parser.add_argument('ts_file', help='Time-series HDF5 file to be corrected.')
     parser.add_argument('-g', '--geometry', dest='geom_file',
                         help='geometry file including datasets:\n'+
                              'incidence angle\n'+

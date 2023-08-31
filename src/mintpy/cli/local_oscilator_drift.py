@@ -26,7 +26,7 @@ EXAMPLE = """example:
 """
 
 def create_parser(subparsers=None):
-    synopsis = 'Local Oscilator Drift (LOD) correction of Envisat'
+    synopsis = 'Local Oscillator Drift (LOD) correction of Envisat'
     epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(

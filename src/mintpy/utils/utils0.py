@@ -231,7 +231,7 @@ def azimuth_ground_resolution(atr):
 
 #################################### File Operation ##########################################
 def touch(fname_list, times=None):
-    """python equivalent function to Unix utily - touch
+    """python equivalent function to Unix utility - touch
     It sets the modification and access times of files to the current time of day.
     If the file doesn't exist, it is created with default permissions.
     Inputs/Output:
@@ -259,27 +259,30 @@ def touch(fname_list, times=None):
 ################################## Coordinate ##########################################
 def utm_zone2epsg_code(utm_zone):
     """Convert UTM Zone string to EPSG code.
-    Parameters: utm_zone - str, atr['UTM_ZONE']
-    Returns:    epsg     - str, EPSG code
-    Examples:   epsg = utm_zone2epsg_code('11N')
+
+    Parameters: utm_zone  - str, atr['UTM_ZONE'], comprises a zone number
+                            and a hemisphere, e.g. 11N, 36S, etc.
+    Returns:    epsg_code - str, EPSG code
+    Examples:   epsg_code = utm_zone2epsg_code('11N')
     """
     from pyproj import CRS
-    crs = CRS.from_dict({'proj': 'utm',
-                         'zone': int(utm_zone[:-1]),
-                         'south': utm_zone[-1] == 'S',
-                        })
-    epsg = crs.to_authority()[1]
-    return epsg
+    crs = CRS.from_dict({
+        'proj': 'utm',
+        'zone': int(utm_zone[:-1]),
+        'south': utm_zone[-1].upper() == 'S',
+    })
+    epsg_code = crs.to_authority()[1]
+    return epsg_code
 
 
 def to_latlon(infile, x, y):
-    """Convert x, y in the projection coordinates of the file to lon/lat in degree.
+    """Convert x, y in the projection coordinates of the file to lat/lon in degree.
 
     Similar functionality also exists in utm.to_latlon() at:
         https://github.com/Turbo87/utm#utm-to-latitudelongitude
 
     Parameters: infile - str, GDAL supported file path
-                x/y    - scalar or 1/2D np.ndarray, coordiantes in x and y direction
+                x/y    - scalar or 1/2D np.ndarray, coordinates in x and y direction
     Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
     """
     from osgeo import gdal
@@ -293,13 +296,42 @@ def to_latlon(infile, x, y):
     if (not srs.IsProjected()) and (srs.GetAttrValue('unit') == 'degree'):
         return y, x
 
-    # convert coordiantes using pyproj
+    # convert coordinates using pyproj
     # note that Transform.from_proj(x, y, always_xy=True) convert the x, y to lon, lat
     p_in = Proj(ds.GetProjection())
     p_out = Proj('epsg:4326')
     transformer = Transformer.from_proj(p_in, p_out)
     y, x = transformer.transform(x, y)
     return y, x
+
+
+def utm2latlon(meta, easting, northing):
+    """Convert UTM easting/northing in meters to lat/lon in degrees.
+
+    Parameters: meta     - dict, mintpy attributes that includes:
+                           UTM_ZONE
+                easting  - scalar or 1/2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar or 1/2D np.ndarray, UTM    coordinates in y direction
+    Returns:    lat      - scalar or 1/2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar or 1/2D np.ndarray, WGS 84 coordinates in x direction
+    """
+    import utm
+    zone_num = int(meta['UTM_ZONE'][:-1])
+    northern = meta['UTM_ZONE'][-1].upper() == 'N'
+    lat, lon = utm.to_latlon(easting, northing, zone_num, northern=northern)
+    return lat, lon
+
+
+def latlon2utm(lat, lon):
+    """Convert latitude/longitude in degrees to UTM easting/northing in meters.
+
+    Parameters: lat      - scalar or 1/2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar or 1/2D np.ndarray, WGS 84 coordinates in x direction
+    Returns:    easting  - scalar or 1/2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar or 1/2D np.ndarray, UTM    coordinates in y direction
+    """
+    import utm
+    return utm.from_latlon(lat, lon)[:2]
 
 
 def snwe_to_wkt_polygon(snwe):
@@ -368,6 +400,11 @@ def get_lat_lon(meta, geom_file=None, box=None, dimension=2, ystep=1, xstep=1):
 
         else:
             raise ValueError(f'un-supported dimension = {dimension}')
+
+        # UTM to lat/lon
+        if not meta['Y_UNIT'].startswith('deg') and 'UTM_ZONE' in meta.keys():
+            print('UTM coordinates detected, convert UTM into lat/lon')
+            lats, lons = utm2latlon(meta, easting=lons, northing=lats)
 
     else:
         msg = 'Can not get pixel-wise lat/lon!'
@@ -477,7 +514,7 @@ def get_lalo_digit4display(meta, coord_unit='degree'):
 
 ###################################### Orbit ###########################################
 def xyz_to_local_radius(xyz):
-    """Calculate satellite height and ellpsoid local radius from orbital state vector.
+    """Calculate satellite height and ellipsoid local radius from orbital state vector.
 
     This is a simplified version of the following functions from ISCE-2:
     + isce.isceobj.Planet.xyz_to_llh()
@@ -488,7 +525,7 @@ def xyz_to_local_radius(xyz):
                 radius - float, Earth radius in m
     """
 
-    # paramters from isce.isceobj.Planet.AstronomicalHandbook
+    # parameters from isce.isceobj.Planet.AstronomicalHandbook
     a = 6378137.000       # WGS84 semimajor
     e2 = 0.0066943799901  # WGS84 eccentricity squared
 
@@ -530,7 +567,7 @@ def xyz_to_local_radius(xyz):
 # Definition of angles:
 # (los_)inc_angle - the incidence angle of the LOS vector (from the ground to the SAR platform)
 #                   measured from vertical. Used in isce2.
-# (los_)az_angle  - the azimuth   angle of the LOS vecotr (from the ground to the SAR platform)
+# (los_)az_angle  - the azimuth   angle of the LOS vector (from the ground to the SAR platform)
 #                   measured from the north, with anti-clockwise as positive. Used in isce2.
 # orb_az_angle    - the azimuth   angle of the SAR platform's orbit (along-track direction)
 #                   measured from the north, with anti-clockwise as positive
@@ -659,7 +696,7 @@ def get_unit_vector4component_of_interest(los_inc_angle, los_az_angle, comp='enu
     comps = [
         'enu2los', 'en2los', 'hz2los', 'horz2los', 'u2los', 'vert2los',   # radar LOS / cross-track
         'en2az', 'hz2az', 'orb_az', 'orbit_az',                           # radar azimuth / along-track
-        'vert', 'vertical', 'horz', 'horizontal',                         # vertical / arbitraty horizontal
+        'vert', 'vertical', 'horz', 'horizontal',                         # vertical / arbitrary horizontal
     ]
 
     if comp not in comps:
@@ -877,7 +914,7 @@ def get_circular_mask(x, y, radius, shape):
 def circle_index(atr, circle_par):
     """Return Index of Elements within a Circle centered at input pixel
     Parameters: atr : dictionary
-                    containging the following attributes:
+                    containing the following attributes:
                     WIDT
                     LENGTH
                 circle_par : string in the format of 'y,x,radius'
@@ -942,16 +979,13 @@ def yes_or_no(question):
 
 
 def update_attribute_or_not(atr_new, atr_orig):
-    """Compare new attributes with exsiting ones"""
-    update = False
+    """Compare new attributes with existing ones"""
     for key in atr_new.keys():
         value = str(atr_new[key])
-        if ((key in atr_orig.keys() and value == str(atr_orig[key]) and value != 'None')
+        if not ((key in atr_orig.keys() and value == str(atr_orig[key]) and value != 'None')
                 or (key not in atr_orig.keys() and value == 'None')):
-            next
-        else:
-            update = True
-    return update
+            return True
+    return False
 
 
 def which(program):
@@ -1077,7 +1111,7 @@ def median_abs_deviation(data, center=None, scale=0.67449):
 
 
 def median_abs_deviation_threshold(data, center=None, cutoff=3.):
-    """calculate rms_threshold based on the standardised residual
+    """calculate rms_threshold based on the standardized residual
 
     Outlier detection with median absolute deviation.
     """

@@ -4,7 +4,7 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Aug 2021                           #
 ############################################################
-# Recommand import:
+# Recommend import:
 #   from mintpy.utils import s1_utils
 
 

@@ -2,7 +2,7 @@
 # Author: Zhang Yunjun, 10 Jan 2019
 #
 # The least-norm problem is interesting only when m < n, i.e. when the equation Ax = b is underdetermined.
-# It uses prior information and guess that x is more likly to be small (as measured by ||*||) than large.
+# It uses prior information and guess that x is more likely to be small (as measured by ||*||) than large.
 # Tge least-norm problem chooses the estimate of x the one that is the smallest among all solutions that
 # are consistent with measurements Ax = b.
 #

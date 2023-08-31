@@ -41,6 +41,7 @@ The following attributes vary for each interferogram:
 +  FILE_PATH = absolute file path
 +  PROCESSOR = processing software, i.e. isce, aria, snap, gamma, roipac etc.
 +  DATA_TYPE = data type, i.e. float32, int16, etc., for isce product read using GDAL
++  BYTE_ORDER = order of bytes, or endianness, for binary files, i.e. big-endian or little-endian. Most InSAR processors use little-endian, except for Gamma, which sometimes use big-endian.
 +  BANDS = number of bands, for binary file I/O.
 +  INTERLEAVE = band interleave type, i.e. BSQ, BIL, BIP for binary file I/O.
 +  NO_DATA_VALUE = No data value, value that should be ignored.
@@ -50,7 +51,7 @@ The following attributes vary for each interferogram:
 +  SUBSET_XMIN/XMAX/YMIN/YMAX = start/end column/row number of subset in the original coverage
 +  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for "--update" option of unwrap error corrections.
 +  NCORRLOOKS = number of independent looks, as explained in [SNAPHU](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full)
-+  UTM_ZONE = UTM zone, e.g. 60S, for geocoded file with UTM projection only.
++  UTM_ZONE = UTM zone, comprises a zone number and a hemisphere, e.g. 11N, 60S, for geocoded file with UTM projection only.
 +  EPSG = EPSG code for coordinate systems, for geocoded files only.
 
 ### Reference ###

@@ -40,7 +40,7 @@ EXAMPLE = """example:
   # common mask file of pixels in all connected components / with non-zero unwrapped phase
   generate_mask.py  ifgramStack.h5  --nonzero  -o maskConnComp.h5  --update
 
-  # interative polygon selection of region of interest
+  # interactive polygon selection of region of interest
   # useful for custom mask generation in unwrap error correction with bridging
   generate_mask.py  waterMask.h5 -m 0.5 --roipoly
   generate_mask.py  azOff.h5 --roipoly --view-cmd "-v -0.1 0.1"

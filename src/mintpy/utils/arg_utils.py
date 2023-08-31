@@ -130,7 +130,7 @@ def add_dem_argument(parser):
     return parser
 
 
-def add_figure_argument(parser):
+def add_figure_argument(parser, figsize_img=False):
     """Argument group parser for figure options"""
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
     fig.add_argument('--fontsize', dest='font_size',
@@ -186,6 +186,9 @@ def add_figure_argument(parser):
                      help='display Sentinel-1 A/B and IPF info in title.')
 
     # size, subplots number and space
+    if figsize_img:
+        fig.add_argument('--figsize-img', dest='fig_size_img', metavar=('WID', 'LEN'), type=float, nargs=2,
+                         help='figure size in inches for the image/map (for tsview.py) figure')
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                      help='figure size in inches - width and length')
     fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=300,
@@ -208,8 +211,8 @@ def add_figure_argument(parser):
     fig.add_argument('--no-tight-layout', dest='fig_tight_layout', action='store_false',
                      help='disable automatic tight layout for multiple subplots')
 
-    fig.add_argument('--coord', dest='fig_coord', choices=['radar', 'geo'], default='geo',
-                     help='Display in radar/geo coordination system '
+    fig.add_argument('--coord', dest='fig_coord', choices=['geo','radar','yx'], default='geo',
+                     help='Display axes in geo or yx coordinates '
                           '(for geocoded file only; default: %(default)s).')
     fig.add_argument('--animation', action='store_true',
                      help='enable animation mode')
@@ -286,6 +289,9 @@ def add_map_argument(parser):
     mapg.add_argument('--faultline-lw', '--faultline-linewidth', dest='faultline_linewidth',
                       metavar='NUM', type=float, default=0.5,
                       help='Faultline linewidth (default: %(default)s).')
+    mapg.add_argument('--faultline-min-dist','--faultline-min-len', dest='faultline_min_dist',
+                      metavar='NUM', type=float, default=0.1,
+                      help='Show fault segments with length >= X km (default: %(default)s).')
 
     # lalo label
     mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',

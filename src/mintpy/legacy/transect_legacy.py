@@ -307,7 +307,7 @@ USAGE = """
        transect.py -f velocity.h5 -s 'y1,x1' -e 'y2,x2  -n number_of_transects  -d distace_between_profiles(pixel)
                    -g gps velocity file -r reference station -L List of stations
 
-       -s : strat point of the profile
+       -s : start point of the profile
        -e : end   point of the profile
        -F : Fault coordinates (lat_first, lon_first, lat_end, lon_end)
        -n : number of transections                [default: 1]
@@ -638,7 +638,7 @@ def main(argv):
                 print("""
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-      WARNING: nan value for InSAR data at the refernce pixel!
+      WARNING: nan value for InSAR data at the reference pixel!
                reference station should be a pixel with valid value in InSAR data.
 
                please select another GPS station as the reference station.
@@ -940,7 +940,7 @@ def main(argv):
     # print df0_km/1000.0
 
     ###################################################################
-    # lower and higher bounds for diplaying the profile
+    # lower and higher bounds for displaying the profile
 
     try:
         lbound

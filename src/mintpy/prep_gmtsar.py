@@ -59,8 +59,8 @@ def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwra
     if not (1e-7 < x_step < 1.):
         raise ValueError('File {} is NOT geocoded!')
 
-    W = transform[0] - x_step / 2.
-    N = transform[3] - y_step / 2.
+    W = transform[0]
+    N = transform[3]
     E = W + x_step * ds.RasterXSize
     S = N + y_step * ds.RasterYSize
 

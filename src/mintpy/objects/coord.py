@@ -185,7 +185,7 @@ class coordinate:
 
         row, col = np.nanmean(np.where(mask_yx), axis=1)
         if any(np.isnan(i) for i in [row, col]):
-            raise RuntimeError(f'No coresponding coordinate found for y/x: {y}/{x}')
+            raise RuntimeError(f'No corresponding coordinate found for y/x: {y}/{x}')
 
         return row, col
 

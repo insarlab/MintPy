@@ -80,7 +80,7 @@ def create_parser(subparsers=None):
                         help=('Enable inversion with minimum-norm deformation phase,'
                               ' instead of the default minimum-norm deformation velocity.'))
     #solver.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
-    #                    help='Optimization mehtod, L1 or L2 norm. (default: %(default)s).')
+    #                    help='Optimization method, L1 or L2 norm. (default: %(default)s).')
 
     # uncertainty propagation
     parser.add_argument('--calc-cov', dest='calcCov', action='store_true',
@@ -97,9 +97,9 @@ def create_parser(subparsers=None):
                       help='minimum redundancy of interferograms for every SAR acquisition. (default: %(default)s).')
     # for offset ONLY
     #mask.add_argument('--mask-min-snr', dest='maskMinSNR', type=float, default=10.0,
-    #                  help='minimum SNR to diable/ignore the threshold-based masking [for offset only].')
+    #                  help='minimum SNR to disable/ignore the threshold-based masking [for offset only].')
     #mask.add_argument('--mask-min-area-size', dest='maskMinAreaSize', type=float, default=16.0,
-    #                  help='minimum area size to diable/ignore the threshold-based masking [for offset only]')
+    #                  help='minimum area size to disable/ignore the threshold-based masking [for offset only]')
 
     # computing
     parser = arg_utils.add_memory_argument(parser)

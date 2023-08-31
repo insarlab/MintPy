@@ -111,24 +111,25 @@ def auto_figure_size(ds_shape, scale=1.0, disp_cbar=False, disp_slider=False,
                 scale             - floag, scale the final figure size
                 disp_cbar/slider  - bool, plot colorbar on the right / slider on the bottom
                 cbar/slider_ratio - float, size ratio of the additional colobar / slider
-    Returns:    figsize           - list of 2 float for the figure size in [width, lenght] in inches
+    Returns:    figsize           - list of 2 float for the figure size in [width, length] in inches
     """
     # figure shape
     fig_shape = list(ds_shape)[::-1]
-    if disp_cbar:
-        fig_shape[0] *= (1 + cbar_ratio)
-    if disp_slider:
-        fig_shape[1] *= (1 + slider_ratio)
+    fig_shape[0] *= 1 if not disp_cbar else 1 + cbar_ratio
+    fig_shape[1] *= 1 if not disp_slider else 1 + slider_ratio
 
     # get scale to meet the min/max figure size constrain
-    fig_scale = min(min_figsize_single / min(fig_shape),
-                    max_figsize_single / max(fig_shape),
-                    max_figsize_height / fig_shape[1])
+    fig_scale = min(
+        min_figsize_single / min(fig_shape),
+        max_figsize_single / max(fig_shape),
+        max_figsize_height / fig_shape[1],
+    )
 
     # fig_shape/scale --> fig_size
-    fig_size = [i*fig_scale*scale for i in fig_shape]
+    fig_size = [x * fig_scale * scale for x in fig_shape]
+    fig_size = [float(f'{x:.1f}') for x in fig_size]
     if print_msg:
-        print(f'figure size : [{fig_size[0]:.2f}, {fig_size[1]:.2f}]')
+        print(f'figure size : [{fig_size[0]}, {fig_size[1]}]')
 
     return fig_size
 
@@ -261,7 +262,7 @@ def auto_flip_direction(metadata, ax=None, print_msg=True):
 
 
 def auto_multilook_num(box, num_time, max_memory=4.0, print_msg=True):
-    """Calcualte the default/auto multilook number based on the input 3D shape.
+    """Calculate the default/auto multilook number based on the input 3D shape.
     Parameters: box           - tuple of 4 int in (x0, y0, x1, y1) for the spatial bounding box
                 num_time      - int, the 3rd / time dimension size
                 max_memory    - float, max memory in GB
@@ -419,6 +420,10 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
             vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
             unique_values = None
 
+            # convert near-pi value to pi
+            vlim[0] = vlim[0] if abs(vlim[0] + np.pi) / np.pi >= 0.001 else np.pi * -1
+            vlim[1] = vlim[1] if abs(vlim[1] - np.pi) / np.pi >= 0.001 else np.pi
+
     return cmap_lut, vlim, unique_values
 
 
@@ -457,7 +462,11 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_
 
     # auto param
     if not every_year:
-        every_year = max(1, np.rint((xmax - xmin).days / 365.25 / 5).astype(int))
+        # take axes width into account
+        fig = ax.get_figure()
+        bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        scale = 6.2 / bbox.width
+        every_year = max(1, np.rint(scale * (xmax - xmin).days / 365.25 / 5).astype(int))
 
     if not every_month:
         if   every_year <= 3 :  every_month = 1
@@ -474,7 +483,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_
 
     # Label font size
     ax.tick_params(labelsize=fontsize)
-    # fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
+    # fig2.autofmt_xdate()     #adjust x overlap by rorating, may enable again
     return ax, xmin, xmax
 
 
@@ -847,7 +856,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
                 date12List : list of date12 in YYYYMMDD_YYYYMMDD format
                 cohList    : list of float, coherence value
                 date12List_drop : list of date12 for date12 marked as dropped
-                p_dict  : dict of plot settting
+                p_dict  : dict of plot setting
     Returns:    ax : matplotlib.pyplot.Axes
                 coh_mat : 2D np.array in size of [num_date, num_date]
                 im : mappable
@@ -1124,7 +1133,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
     if site_names.size == 0:
         warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
-        print('Continue without GNSS plots.')
+        print('  continue without GNSS plots.')
         return ax
 
     # mask out stations not coincident with InSAR data
@@ -1370,13 +1379,15 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
 
 
 def plot_colorbar(inps, im, cax):
+
+    # expand vlim by 0.01% to account for potential numerical precision leak
+    # e.g. wrapped phase
+    epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.0001
+    vmin = inps.vlim[0] - epsilon
+    vmax = inps.vlim[1] + epsilon
+
     # extend
     if not inps.cbar_ext:
-        # expand vlim by 0.1% to account for potential numerical precision leak
-        # e.g. wrapped phase
-        epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.001
-        vmin = inps.vlim[0] - epsilon
-        vmax = inps.vlim[1] + epsilon
         if   vmin <= inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='neither'
         elif vmin >  inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='min'
         elif vmin <= inps.dlim[0] and vmax <  inps.dlim[1]: inps.cbar_ext='max'
@@ -1390,9 +1401,12 @@ def plot_colorbar(inps, im, cax):
 
     # plot colorbar
     unique_values = getattr(inps, 'unique_values', None)
-    if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
+    if abs(vmin + np.pi) / np.pi < 0.001 and abs(vmax - np.pi) / np.pi < 0.001:
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=[-np.pi, 0, np.pi])
-        cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+        if orientation == 'vertical':
+            cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+        else:
+            cbar.ax.set_xticklabels([r'-$\pi$', '0', r'$\pi$'])
 
     elif unique_values is not None and len(inps.unique_values) <= 5:
         # show the exact tick values
@@ -1423,7 +1437,7 @@ def plot_colorbar(inps, im, cax):
     return inps, cbar
 
 
-def plot_faultline(ax, faultline_file, SNWE, linewidth=0.5, print_msg=True):
+def plot_faultline(ax, faultline_file, SNWE, linewidth=0.5, min_dist=0.1, print_msg=True):
     """Plot fault lines.
 
     Parameters: ax             - matplotlib.axes object
@@ -1441,9 +1455,14 @@ def plot_faultline(ax, faultline_file, SNWE, linewidth=0.5, print_msg=True):
     faults = readfile.read_gmt_lonlat_file(
         faultline_file,
         SNWE=SNWE,
-        min_dist=0.1,
+        min_dist=min_dist,
         print_msg=print_msg,
     )
+
+    if len(faults) == 0:
+        warnings.warn(f'No fault lines found within {SNWE} with length >= {min_dist} km!')
+        print('  continue without fault lines.')
+        return ax, faults
 
     # plot
     print_msg = False if len(faults) < 1000 else print_msg
@@ -1725,7 +1744,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
             else:
                 mask_file = None
 
-    # read mask_data from file if inputed
+    # read mask_data from file if inputted
     mask_data = None
     if os.path.isfile(str(mask_file)):
         try:

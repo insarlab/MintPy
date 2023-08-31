@@ -133,13 +133,13 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     length = int(np.ceil((S - N) / lat_step))
 
     # index of input matrices in output matrix
-    vprint('estimate difference in the overlaping area')
+    vprint('estimate difference in the overlapping area')
     lon_seq = np.arange(W, W + width  * lon_step, lon_step)
     lat_seq = np.arange(N, N + length * lat_step, lat_step)
     x1, y1 = np.argmin(np.square(lon_seq - W1)), np.argmin(np.square(lat_seq - N1))
     x2, y2 = np.argmin(np.square(lon_seq - W2)), np.argmin(np.square(lat_seq - N2))
 
-    # estimate offset of the overlaping area
+    # estimate offset of the overlapping area
     mat11 = np.zeros([length, width]) * np.nan;
     mat22 = np.zeros([length, width]) * np.nan;
     mat11[y1:y1+length1, x1:x1+width1] = mat1

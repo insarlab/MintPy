@@ -28,7 +28,7 @@ def get_relative_range_distance(meta):
 
 def correct_local_oscilator_drift(fname, rg_dist_file=None, out_file=None):
     print('-'*50)
-    print('correct Local Oscilator Drift for Envisat using an empirical model (Marinkovic and Larsen, 2013)')
+    print('correct Local Oscillator Drift for Envisat using an empirical model (Marinkovic and Larsen, 2013)')
     print('-'*50)
     atr = readfile.read_attribute(fname)
 

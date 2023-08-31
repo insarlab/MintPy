@@ -164,6 +164,8 @@ def update_inps_with_file_metadata(inps, metadata):
     if not inps.outfile:
         # ignore whitespaces in the filename
         fbase = inps.fig_title.replace(' ', '')
+        if not inps.disp_whitespace:
+            fbase += '_nws'
         inps.outfile = [f'{fbase}{inps.fig_ext}']
 
     inps = update_figure_setting(inps)
@@ -185,7 +187,7 @@ def check_map_projection(inps, metadata, print_msg=True):
     This function will update the following variables:
         inps.map_proj_obj  # cartopy.crs.* object or None
         inps.coord_unit    # degree or meter
-        inps.fig_coord     # geo or radar
+        inps.fig_coord     # geo or yx
     """
 
     inps.map_proj_obj = None
@@ -215,7 +217,7 @@ def check_map_projection(inps, metadata, print_msg=True):
             else:
                 print(f'WARNING: Un-recognized coordinate unit: {inps.coord_unit}')
                 print('    Switch to the native Y/X and continue to plot')
-                inps.fig_coord = 'radar'
+                inps.fig_coord = 'yx'
 
     return inps
 
@@ -339,7 +341,7 @@ def prep_slice(cmd, auto_fig=False):
 
         cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 --dem srtm1.dem --dem-nocontour '
         cmd += f'--sub-lon {W} {E} --sub-lat {S} {N} -c jet -v -3 10 '
-        cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
+        cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-label "LOS velocity [cm/year]" '
         cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle'
 
         data, atr, inps = prep_slice(cmd)
@@ -348,7 +350,37 @@ def prep_slice(cmd, auto_fig=False):
     """
     # parse
     from mintpy.cli.view import cmd_line_parse
-    inps = cmd_line_parse(cmd.split()[1:])
+    iargs = cmd.split()[1:]
+
+    # support option inputs of a list of characters (separated by whitespaces but quoted)
+    # e.g.: --cbar-label "LOS velocity [cm/yar]" --title "S1 asc. velocity"
+    # to be consistent with the behavior in command line parsing
+    if any(x.startswith(('"', '\'')) for x in iargs):
+        # backup and reset
+        temp_iargs = list(iargs)
+        iargs = []
+
+        # get index of quoted list of characters
+        ind0s = np.where([x.startswith(('"', '\'')) for x in temp_iargs])[0]
+        ind1s = np.where([x.endswith(('"', '\'')) for x in temp_iargs])[0]
+        for i, temp_iarg in enumerate(temp_iargs):
+            if any(ind0 <= i <= ind1 for ind0, ind1 in zip(ind0s, ind1s)):
+                # quoted list of characters
+                for ind0, ind1 in zip(ind0s, ind1s):
+                    if i == ind0:
+                        temp = temp_iarg[1:]
+                    elif ind0 < i < ind1:
+                        temp += ' ' + temp_iarg
+                    elif i == ind1:
+                        temp += ' ' + temp_iarg[:-1]
+                        iargs.append(temp)
+                        break
+            else:
+                # regular unquoted list of characters
+                iargs.append(temp_iarg)
+
+    # run parse
+    inps = cmd_line_parse(iargs)
 
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
@@ -521,6 +553,7 @@ def plot_slice(ax, data, metadata, inps):
                 faultline_file=inps.faultline_file,
                 SNWE=SNWE,
                 linewidth=inps.faultline_linewidth,
+                min_dist=inps.faultline_min_dist,
                 print_msg=inps.print_msg,
             )
 
@@ -605,7 +638,7 @@ def plot_slice(ax, data, metadata, inps):
 
     #------------------------ Plot in Y/X-coordinate ------------------------------------------------#
     else:
-        inps.fig_coord = 'radar'
+        inps.fig_coord = 'yx'
         vprint('plotting in Y/X coordinate ...')
 
         # Plot DEM
@@ -731,6 +764,10 @@ def plot_slice(ax, data, metadata, inps):
 
     # 3.5 Tick labels
     if inps.disp_tick:
+        # move x-axis tick label to the top if colorbar is at the bottom
+        if inps.cbar_loc == 'bottom':
+            ax.tick_params(labelbottom=False, labeltop=True)
+
         # manually turn ON to enable tick labels for UTM with cartopy
         # link: https://github.com/SciTools/cartopy/issues/491
         ax.xaxis.set_visible(True)
@@ -981,11 +1018,20 @@ def update_figure_setting(inps):
                 data_shape,
                 fig_size4plot,
                 inps.fig_num)
-        inps.fig_num = np.ceil(float(inps.dsetNum) / float(inps.fig_row_num * inps.fig_col_num)).astype(int)
+        inps.fig_num = float(inps.dsetNum) / float(inps.fig_row_num * inps.fig_col_num)
+        inps.fig_num = np.ceil(inps.fig_num).astype(int)
         vprint('dataset number: '+str(inps.dsetNum))
         vprint('row     number: '+str(inps.fig_row_num))
         vprint('column  number: '+str(inps.fig_col_num))
         vprint('figure  number: '+str(inps.fig_num))
+
+        # adjust figure size for single row plot, to avoid extra whitespace
+        if inps.fig_row_num == 1 and '--figsize' not in inps.argv:
+            inps.fig_size = pp.auto_figure_size(
+                ds_shape=(length, width*inps.fig_col_num),
+                disp_cbar=inps.disp_cbar,
+                print_msg=False)
+            vprint(f'row number is 1, adjust figure size to {inps.fig_size}')
 
         if not inps.font_size:
             inps.font_size = 12
@@ -1199,8 +1245,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
         # get title
         subplot_title = None
         if inps.key in TIMESERIES_KEY_NAMES or inps.dset[0].startswith('bperp'):
-            # support / for py2-mintpy
-            date_str = inps.dset[i].replace('/','-').split('-')[1]
+            # support "/" in the dataset names, e.g. HDF-EOS5 and py2-mintpy formats
+            date_str = inps.dset[i].replace('/','-').split('-')[-1]
             try:
                 subplot_title = dt.datetime.strptime(date_str, '%Y%m%d').isoformat()[0:10]
             except:
@@ -1214,7 +1260,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             # ignore dataset family info if there is only one type
             if len(inps.dsetFamilyList) == 1 and '-' in title_str:
                 title_str = title_str.split('-')[1]
-                # for ifgramStack, show index in the date12 list to facilitate the network modfication
+                # for ifgramStack, show index in the date12 list to facilitate the network modification
                 if inps.atr['FILE_TYPE'] == 'ifgramStack':
                     title_ind = inps.date12List.index(title_str)
 

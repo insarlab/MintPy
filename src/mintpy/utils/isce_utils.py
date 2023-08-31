@@ -455,21 +455,30 @@ def load_track(trackDir, dateStr):
 
 #####################################  geometry  #######################################
 def extract_multilook_number(geom_dir, meta=dict(), fext_list=['.rdr','.geo','.rdr.full','.geo.full']):
-    for fbase in ['hgt','lat','lon','los']:
+    for fbase in ['hgt','lat','lon','los','shadowMask']:
         fbase = os.path.join(geom_dir, fbase)
+
+        # get the file name of the geometry file of interest
         for fext in fext_list:
             fnames = glob.glob(fbase+fext)
             if len(fnames) > 0:
-                break
+                fname = fnames[0]
 
-        if len(fnames) > 0:
-            fullXmlFile = f'{fnames[0]}.full.xml'
-            if os.path.isfile(fullXmlFile):
-                fullXmlDict = readfile.read_isce_xml(fullXmlFile)
-                xmlDict = readfile.read_attribute(fnames[0])
-                meta['ALOOKS'] = int(int(fullXmlDict['LENGTH']) / int(xmlDict['LENGTH']))
-                meta['RLOOKS'] = int(int(fullXmlDict['WIDTH']) / int(xmlDict['WIDTH']))
-                break
+                # get the file name of the full resolution metadata file
+                full_meta_files = [f'{fname}.full.xml', f'{fname}.full.vrt']
+                full_meta_files = [x for x in full_meta_files if os.path.isfile(x)]
+                if len(full_meta_files) > 0:
+                    full_meta_file = full_meta_files[0]
+
+                    # calc A/RLOOKS
+                    if full_meta_file.endswith('.xml'):
+                        full_dict = readfile.read_isce_xml(full_meta_file)
+                    else:
+                        full_dict = readfile.read_gdal_vrt(full_meta_file)
+                    mli_dict = readfile.read_attribute(fname)
+                    meta['ALOOKS'] = int(int(full_dict['LENGTH']) / int(mli_dict['LENGTH']))
+                    meta['RLOOKS'] = int(int(full_dict['WIDTH']) / int(mli_dict['WIDTH']))
+                    break
 
     # default value
     for key in ['ALOOKS', 'RLOOKS']:
@@ -715,7 +724,7 @@ def multilook_number2resolution(meta_file, az_looks, rg_looks):
 
 def resolution2multilook_number(meta_file, resolution):
     """
-    Calculate multilook number for InSAR processing given a disired output resolution on the ground
+    Calculate multilook number for InSAR processing given a desired output resolution on the ground
 
     Parameters: meta_file   : str, path of ISCE metadata file, i.e. IW1.xml, data.dat
                 resolution  : float, target output resolution on the ground in meters
@@ -808,7 +817,7 @@ def get_IPF(proj_dir, ts_file):
     # reference date
     m_date = [i for i in date_list if not os.path.isdir(os.path.join(s_dir, i))][0]
 
-    # grab IPF numver
+    # grab IPF number
     IPF_IW1, IPF_IW2, IPF_IW3 = [], [], []
     prog_bar = ptime.progressBar(maxValue=num_date)
     for i in range(num_date):
@@ -902,10 +911,10 @@ def get_sensing_datetime_list(proj_dir, date_list=None):
 ############################## Standard Processing ###########################################
 
 def gaussian_kernel(sx, sy, sig_x, sig_y):
-    '''Generate a guassian kernal (with all elements sum to 1).
+    '''Generate a Gaussian kernel (with all elements sum to 1).
 
-    Parameters: sx/y    - int, dimensions of kernal
-                sig_x/y - float, standard deviation of the guassian distribution
+    Parameters: sx/y    - int, dimensions of kernel
+                sig_x/y - float, standard deviation of the Gaussian distribution
     '''
     # ensure sx/y are odd number
     sx += 1 if np.mod(sx, 2) == 0 else 0
@@ -936,6 +945,51 @@ def convolve(data, kernel):
     real = ndimage.convolve(data.real, kernel, mode='constant', cval=0.0)
     imag = ndimage.convolve(data.imag, kernel, mode='constant', cval=0.0)
     return real + 1J * imag
+
+
+def filter_goldstein(int_file, filt_file, filt_strength=0.2):
+    """Filter wrapped interferogram with the power-spectral filter via isce2.
+
+    Modified from ISCE-2/topsStack/FilterAndCoherence.py
+    Reference: Goldstein, R. M., & Werner, C. L. (1998). Radar interferogram
+        filtering for geophysical applications. Geophysical Research Letters,
+        25(21), 4035-4038. doi:10.1029/1998GL900033
+
+    Parameters: int_file      - str, path of wrapped interferogram
+                filt_file     - str, path of filtered wrapped interferogram
+                filt_strength - float, filtering strength between 0 and 1
+    Returns:    filt_file     - str, path of filtered wrapped interferogram
+    """
+
+    import isce
+    import isceobj
+    from mroipac.filter.Filter import Filter
+    print(f"Applying power-spectral filter (strength={filt_strength})...")
+
+    # initialize the flattened interferogram
+    int_img = isceobj.createIntImage()
+    int_img.load(int_file + '.xml')
+    int_img.setAccessMode('read')
+    int_img.createImage()
+
+    # create the filtered interferogram
+    filt_img = isceobj.createIntImage()
+    filt_img.setFilename(filt_file)
+    filt_img.setWidth(int_img.getWidth())
+    filt_img.setAccessMode('write')
+    filt_img.createImage()
+
+    # filter
+    filt_obj = Filter()
+    filt_obj.wireInputPort(name='interferogram', object=int_img)
+    filt_obj.wireOutputPort(name='filtered interferogram', object=filt_img)
+    filt_obj.goldsteinWerner(alpha=filt_strength)
+
+    # close
+    int_img.finalizeImage()
+    filt_img.finalizeImage()
+
+    return filt_file
 
 
 def estimate_coherence(intfile, corfile):
@@ -981,7 +1035,7 @@ def estimate_coherence(intfile, corfile):
     return
 
 
-def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
+def unwrap_snaphu(int_file, cor_file, unw_file, max_defo=2.0, max_comp=32,
                   init_only=True, init_method='MCF', cost_mode='SMOOTH'):
     '''Unwrap interferograms using SNAPHU via isce2.
 
@@ -1010,7 +1064,7 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
     Parameters: int_file    - str, path to the wrapped interferogram file
                 cor_file    - str, path to the correlation file: phase sigma or complex correlation
                 unw_file    - str, path to the output unwrapped interferogram file
-                defo_max    - float, maximum number of cycles for the deformation phase
+                max_defo    - float, maximum number of cycles for the deformation phase
                 max_comp    - int, maximum number of connected components
                 init_only   - bool, initlize-only mode
                 init_method - str, algo used for initialization: MCF, MST
@@ -1069,7 +1123,7 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
     snp.setCorrLooks(corr_looks)
 
     # deformation mode parameters
-    snp.setDefoMaxCycles(defo_max)
+    snp.setDefoMaxCycles(max_defo)
 
     # connected component control
     # grow connectedc components if init_only is True
@@ -1149,7 +1203,7 @@ def unwrap_icu(int_file, unw_file):
     # run ICU
     icu_obj = Icu()
     icu_obj.filteringFlag = False
-    icu_obj.useAmplitudeFalg = False
+    icu_obj.useAmplitudeFlag = False
     icu_obj.singlePatch = True
     icu_obj.initCorrThresdhold = 0.1
     icu_obj.icu(intImage=int_img, unwImage=unw_img)

@@ -1144,7 +1144,7 @@ class ifgramStack:
 
 
     def get_sequential_closure_phase(self, box, conn, post_proc=None):
-        """Computes wrapped sequential closure phases for a given conneciton level.
+        """Computes wrapped sequential closure phases for a given connection level.
 
         Reference: Equation (21) in Zheng et al. (2022, TGRS)
         For conn = 5, seq_closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
@@ -1190,6 +1190,18 @@ class ifgramStack:
         ds_name = 'wrapPhase' if 'wrapPhase' in self.datasetNames else 'unwrapPhase'
         print(f'reading {ds_name} to compute closure phases')
         phase = self.read(datasetName=ds_name, box=box, print_msg=False)
+
+        # apply spatial referencing (for ARIA only)
+        # to avoid the abnormal result as shown in https://github.com/insarlab/MintPy/pull/1063
+        # This may be caused by the phase stitching during product preparation via ARIA-tools,
+        # which could have broken the temporal consistency of the native unwrapped phase.
+        processor = self.metadata.get('mintpy.load.processor', 'isce')
+        if ds_name == 'unwrapPhase' and processor in ['aria']:
+            print(f'apply spatial referencing to {processor} products')
+            ref_phase = self.get_reference_phase(dropIfgram=False)
+            for i in range(phase.shape[0]):
+                mask = phase[i] != 0.
+                phase[i][mask] -= ref_phase[i]
 
         ## calculate the 3D complex seq closure phase
         cp_w = np.zeros((num_cp, box_len, box_wid), dtype=np.complex64)

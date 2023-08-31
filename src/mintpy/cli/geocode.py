@@ -35,6 +35,7 @@ degrees     --> meters on equator
 0.000833334 --> 90
 0.000555556 --> 60
 0.000462963 --> 50
+0.000370370 --> 40
 0.000277778 --> 30
 0.000185185 --> 20
 0.000092593 --> 10
@@ -69,7 +70,7 @@ def create_parser(subparsers=None):
     out = parser.add_argument_group('grid in geo-coordinates')
     out.add_argument('-b', '--bbox', dest='SNWE', type=float, nargs=4, metavar=('S', 'N', 'W', 'E'),
                      help='Bounding box for the area of interest.\n'
-                          'using coordinates of the uppler left corner of the first pixel\n'
+                          'using coordinates of the upper left corner of the first pixel\n'
                           '                 and the lower right corner of the last pixel\n'
                           "for radar2geo, it's the output spatial extent\n"
                           "for geo2radar, it's the input  spatial extent")
@@ -206,6 +207,16 @@ def read_template2inps(template_file, inps):
                     iDict[key] = math.nan
                 else:
                     iDict[key] = float(value)
+
+    # ensure laloStep is a list of two items
+    key = 'laloStep'
+    if key in iDict.keys() and iDict[key]:
+        if len(iDict[key]) == 1:
+            lalo_step = iDict[key]
+            iDict[key] = [-1 * abs(lalo_step[0]), abs(lalo_step[0])]
+            print(f'single laloStep input {lalo_step} detected, convert into two as {iDict[key]}')
+        elif len(iDict[key]) > 2:
+            raise ValueError(f'laloStep input {iDict[key]} could NOT have >2 items!')
 
     # computing configurations
     key = 'mintpy.compute.maxMemory'

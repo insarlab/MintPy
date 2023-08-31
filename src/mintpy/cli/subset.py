@@ -21,6 +21,7 @@ EXAMPLE = """example:
   subset.py inputs/ifgramStack.h5 -y 400  1500 -x 200   600
   subset.py geo_velocity.h5       -l 30.5 30.8 -L 130.3 130.9
   subset.py 030405_090801.unw     -t SinabungT495F50AlosA.template
+  subset.py demLat*.dem.wgs84 --lat 32.5 33.0 --lon 130.2 130.6 -o srtm1.h5
 
   # subset to the same coverage as the reference file
   subset.py geo_incidence.h5 -r subset_geo_velocity.h5
@@ -95,8 +96,13 @@ def cmd_line_parse(iargs=None):
     # import
     from mintpy.utils import utils1 as ut
 
+    # check: existence of input file
+    flist = ut.get_file_list(inps.file)
+    if len(flist) == 0:
+        raise FileNotFoundError(f'NO file found in: {inps.file}!')
+    inps.file = flist
+
     # default: disable --output option for multiple input files
-    inps.file = ut.get_file_list(inps.file)
     if len(inps.file) > 1 and inps.outfile:
         inps.outfile = None
         print('WARNING: disable --output option for multiple input files.')

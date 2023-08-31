@@ -130,7 +130,7 @@ def create_parser():
                            help='max temporal baseline in days')
     threshold.add_argument('--keep-seasonal', dest='keepSeasonal', action='store_true',
                            help='keep seasonal pairs, even they are out of temporal baseline limit\n' +
-                                'i.e. pairs in same/adjcent month within 3 years.')
+                                'i.e. pairs in same/adjacent month within 3 years.')
 
     parser.add_argument('--inc-angle', dest='inc_angle',
                         type=float, help='Center incidence angle in degrees.')
@@ -154,7 +154,7 @@ def cmd_line_parse(iargs=None):
 
 #########################################################################
 def log(msg):
-    """Log function writen by Falk"""
+    """Log function written by Falk"""
     f = open('log', 'a')
     callingFunction = os.path.basename(inspect.stack()[1][1])
     dateStr = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H:%M:%S')
@@ -186,7 +186,7 @@ def read_template2inps(templateFile, inps=None):
             msg += f'Use {prefix} instead'
             raise Exception(msg)
     if all(prefix not in key for key in template.keys()):
-        msg = 'no valid input option deteced in template file!\n'
+        msg = 'no valid input option detected in template file!\n'
         msg += 'Check the template below for supported options:\n'
         msg += TEMPLATE
         raise Exception(msg)

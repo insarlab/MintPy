@@ -99,7 +99,7 @@ def read_init_info(inps):
         error_fc = np.loadtxt(inps.error_file, dtype=bytes).astype(str)
         inps.error_ts = error_fc[:, 1].astype(np.float32)*inps.unit_fac
 
-        # update error file with exlcude date
+        # update error file with exclude date
         if inps.ex_date_list:
             e_ts = inps.error_ts[:]
             inps.ex_error_ts = e_ts[inps.ex_flag == 0]
@@ -243,7 +243,7 @@ def subset_and_multilook_yx(yx, pix_box=None, multilook_num=1):
 
 
 def read_exclude_date(input_ex_date, dateListAll):
-    """Read exlcude list of dates
+    """Read exclude list of dates
     Parameters: input_ex_date : list of string in YYYYMMDD or filenames for excluded dates
                 dateListAll   : list of string in YYYYMMDD for all dates
     Returns:    ex_date_list  : list of string in YYYYMMDD for excluded dates
@@ -486,7 +486,7 @@ def get_model_param_str(model, ds_dict, disp_unit='cm'):
             ds_unit_dict[ds_name] = '/'.join(units)
 
     # list of dataset names
-    ds_names = [x for x in ds_dict.keys() if not x.endswith('Std')]
+    ds_names = [x for x in ds_dict.keys() if not x.endswith('Std') and x not in ['intercept']]
     w_key = max(len(x) for x in ds_names)
     w_val = max(len(f'{x[0]:.2f}') for x in ds_dict.values())
 
@@ -507,7 +507,7 @@ def get_model_param_str(model, ds_dict, disp_unit='cm'):
 
 
 def fit_time_func(model, date_list, ts_dis, disp_unit='cm', G_fit=None, conf_level=0.95, seconds=0):
-    """Fit a suite of fime functions to the time series.
+    """Fit a suite of time functions to the time series.
     Equations:  Gm = d
     Parameters: model      - dict of time functions, check utils.time_func.estimate_time_func() for details.
                 date_list  - list of dates in YYYYMMDD format
@@ -680,7 +680,8 @@ class timeseriesViewer():
 
         self, self.atr = read_init_info(self)
 
-        # input figsize for the point time-series plot
+        # input figsize for the image/point time-series plot
+        self.figsize_img = self.fig_size_img
         self.figsize_pts = self.fig_size
         self.pts_marker = 'r^'
         self.pts_marker_size = 6.
@@ -691,8 +692,13 @@ class timeseriesViewer():
 
         # Figure 1 - Cumulative Displacement Map
         if not self.figsize_img:
+            if self.geo_box and self.fig_coord == 'geo':
+                w, n, e, s = self.geo_box
+                ds_shape = (e - w, n - s)
+            else:
+                ds_shape = self.ts_data[0].shape[-2:]
             self.figsize_img = pp.auto_figure_size(
-                ds_shape=self.ts_data[0].shape[-2:],
+                ds_shape=ds_shape,
                 disp_cbar=True,
                 disp_slider=True,
                 print_msg=False)
@@ -836,7 +842,7 @@ class timeseriesViewer():
         # call view.py to plot
         self.img, self.cbar_img = view.plot_slice(self.ax_img, img_data, self.atr, self)[2:4]
         self.fig_img.canvas.manager.set_window_title(self.figname_img)
-        self.fig_img.tight_layout(rect=(0,0,1,0.97))
+        self.fig_img.tight_layout(rect=(0, 0.16, 1, 0.97))
 
         return self.img, self.cbar_img
 
@@ -844,7 +850,7 @@ class timeseriesViewer():
     def plot_init_time_slider(self, init_idx=-1, ref_idx=None):
         """Plot the initial slider."""
         # initiate axes
-        self.fig_img.subplots_adjust(bottom=0.16)
+        #self.fig_img.subplots_adjust(bottom=0.16)
         self.ax_tslider = self.fig_img.add_axes([0.125, 0.05, 0.75, 0.03])
 
         # plot slider

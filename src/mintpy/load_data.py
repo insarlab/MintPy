@@ -180,7 +180,7 @@ def read_subset_box(iDict):
         geo_box = None
         print('WARNING: mintpy.subset.lalo is not supported'
               ' if 1) no lookup file AND'
-              '    2) radar/unkonwn coded dataset')
+              '    2) radar/unknown coded dataset')
         print('\tignore it and continue.')
 
     if not geo_box and not pix_box:
@@ -537,7 +537,7 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
 
     Do not write HDF5 file if ALL the following meet:
         1. HDF5 file exists and is readable,
-        2. HDF5 file constains all the datasets and in the same size
+        2. HDF5 file contains all the datasets and in the same size
         3. For ifgramStackDict, HDF5 file contains all date12.
 
     Parameters: outFile    - str, path to the output HDF5 file

@@ -57,7 +57,7 @@ class TimeSeriesAnalysis:
         self.cwd = os.path.abspath(os.getcwd())
 
     def open(self):
-        """The starting point of the workflow. It runs everytime.
+        """The starting point of the workflow. It runs every time.
         It 1) grab project name if given
            2) go to work directory
            3) get and read template(s) options
@@ -117,7 +117,7 @@ class TimeSeriesAnalysis:
             print('update default template based on input custom template')
             self.templateFile = ut.update_template_file(self.templateFile, self.customTemplate)
 
-        # 2) backup custome/default template file in inputs/pic folder
+        # 2) backup custom/default template file in inputs/pic folder
         flen = len(os.path.basename(self.templateFile))
         if self.customTemplateFile:
             flen = max(flen, len(os.path.basename(self.customTemplateFile)))
@@ -186,7 +186,7 @@ class TimeSeriesAnalysis:
             # use ut.add_attribute() instead of add_attribute.py because of
             # better control of special metadata, such as SUBSET_X/YMIN
             msg = f'updating metadata based on custom template file {os.path.basename(self.customTemplateFile)}'
-            for fname in [stack_file, ion_file, geom_file]:
+            for fname in [stack_file, ion_file]:  #, geom_file]:
                 if fname:
                     print(f'{msg} for file: {os.path.basename(fname)}')
                     ut.add_attribute(fname, self.customTemplate)
@@ -217,8 +217,8 @@ class TimeSeriesAnalysis:
         # 1) output waterMask.h5 to simplify the detection/use of waterMask
         water_mask_file = os.path.join(self.workDir, 'waterMask.h5')
         if 'waterMask' in readfile.get_dataset_list(geom_file):
-            print(f'generate {water_mask_file} from {geom_file} for conveniency')
             if ut.run_or_skip(out_file=water_mask_file, in_file=geom_file) == 'run':
+                print(f'generate {water_mask_file} from {geom_file} for conveniency')
                 water_mask, atr = readfile.read(geom_file, datasetName='waterMask')
 
                 # ignore no-data pixels in geometry files

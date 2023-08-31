@@ -206,7 +206,7 @@ class resample:
 
         if self.software == 'pyresample':
             # move 1st/time dimension to the last
-            # so that rows/cols axis are the frist, as required by pyresample
+            # so that rows/cols axis are the first, as required by pyresample
             if len(src_data.shape) == 3:
                 src_data = np.moveaxis(src_data, 0, -1)
 
@@ -246,7 +246,7 @@ class resample:
                     max_memory - float, memory size in GB
                     scale_fac  - float, scale factor from data size to memory used
                                  empirically estimated.
-        Returns:    num_box    - int, number of boxes to be splitted
+        Returns:    num_box    - int, number of boxes to be split
         """
         num_box = 1
 
@@ -393,7 +393,7 @@ class resample:
                 bin_value, bin_edge = np.histogram(data[mask], bins=10)
                 # if there is anomaly, histogram won't be evenly distributed
                 while np.max(bin_value) > np.sum(zero_mask) * 0.3:
-                    # find the continous bins where the largest bin is --> normal data range
+                    # find the continuous bins where the largest bin is --> normal data range
                     bin_value_thres = ut.median_abs_deviation_threshold(bin_value, cutoff=3)
                     bin_label = ndimage.label(bin_value > bin_value_thres)[0]
                     idx = np.where(bin_label == bin_label[np.argmax(bin_value)])[0]
@@ -619,8 +619,7 @@ class resample:
             print(f'output area extent in (S, N, W, E) in degree: {self.SNWE}')
 
             # parameter 3 - length / width (output grid)
-            self.length = dest_box[3] - dest_box[1]
-            self.width = dest_box[2] - dest_box[0]
+            self.length, self.width = dest_box[3], dest_box[2]
 
             # parameter 4 - list of boxes & geometry definitions
 

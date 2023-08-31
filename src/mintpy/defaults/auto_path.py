@@ -1,4 +1,4 @@
-"""Utilities for automatic configuration fo input file pathes"""
+"""Utilities for automatic configuration for input file paths"""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -119,7 +119,7 @@ AUTO_PATH_DICT = {
 prefix = 'mintpy.load.'
 
 
-##----------------- Functions from mintpy.utils.readfile to be independnt module ---------##
+##----------------- Functions from mintpy.utils.readfile to be independent module ---------##
 def read_str2dict(inString, delimiter='=', print_msg=False):
     '''Read multiple lines of string into dict
     Based on mintpy.utils.readfile.read_template()

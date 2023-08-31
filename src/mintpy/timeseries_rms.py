@@ -89,6 +89,10 @@ def run_timeseries_rms(inps):
     analyze_rms(inps.date_list, inps.rms_list, inps)
 
     # plot RMS
+    if '--figsize' not in inps.argv and len(inps.date_list) > 120:
+        fig_wid = min(15, inps.fig_size[0] * len(inps.date_list) / 120)
+        inps.fig_size[0] = float(f'{fig_wid:.1f}')
+
     pp.plot_timeseries_rms(
         rms_file=inps.rms_file,
         cutoff=inps.cutoff,

@@ -78,7 +78,7 @@ def get_design_matrix4horz_vert(los_inc_angle, los_az_angle, horz_az_angle=-90):
                + dV * cos(inc_angle)
         with dH_perp = 0.0
     This could be easily modified to support multiple view geometry
-        (e.g. two adjcent tracks from asc & desc) to resolve 3D
+        (e.g. two adjacent tracks from asc & desc) to resolve 3D
 
     Parameters: los_inc_angle - 1D np.ndarray in size of (num_file), LOS incidence angle in degree.
                 los_az_angle  - 1D np.ndarray in size of (num_file), LOS azimuth   angle in degree.
@@ -155,7 +155,7 @@ def run_asc_desc2horz_vert(inps):
     Returns:    inps.outfile - str(s) output file(s)
     """
 
-    ## 1. calculate the overlaping area in lat/lon
+    ## 1. calculate the overlapping area in lat/lon
     atr_list = [readfile.read_attribute(fname, datasetName=inps.ds_name) for fname in inps.file]
     S, N, W, E = get_overlap_lalo(atr_list)
     lat_step = float(atr_list[0]['Y_STEP'])

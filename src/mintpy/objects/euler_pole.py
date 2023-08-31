@@ -398,7 +398,7 @@ class EulerPole:
         ve, vn, vu = transform_xyz_enu(lat, lon, x=vx, y=vy, z=vz)
 
         # enforce zero vertical velocitpy when ellps=False
-        # to avoid artefacts due to numerical precision
+        # to avoid artifacts due to numerical precision
         if not ellps:
             if isinstance(lat, np.ndarray):
                 vu[:] = 0
@@ -545,10 +545,10 @@ def transform_xyz_enu(lat, lon, x=None, y=None, z=None, e=None, n=None, u=None):
 def read_plate_outline(pmm_name='GSRM', plate_name=None):
     """Read the plate boundaries for the given plate motion model.
 
-    Paramters: pmm_name   - str, plate motion (model) name
-               plate_name - str, plate name of interest, return all plates if None
-    Returns:   outline    - dict, a dictionary that contains lists of vertices in lat/lon for all plates
-                            OR shapely.geometry.polygon.Polygon object, boundary of the given "plate".
+    Parameters: pmm_name   - str, plate motion (model) name
+                plate_name - str, plate name of interest, return all plates if None
+    Returns:    outline    - dict, a dictionary that contains lists of vertices in lat/lon for all plates
+                             OR shapely.geometry.polygon.Polygon object, boundary of the given "plate".
     """
 
     # check input
@@ -631,7 +631,7 @@ def plot_plate_motion(plate_boundary, epole_obj, center_lalo=None, qscale=200, q
 
     Parameters: plate_boundary   - shapely.geometry.Polygon object
                 epole_obj        - mintpy.objects.euler_pole.EulerPole object
-                center_lalo      - list of 2 float, center the map at this latitute, longitude
+                center_lalo      - list of 2 float, center the map at this latitude, longitude
                 qscale           - float, scaling factor of the quiver
                 qunit            - float, length of the quiver legend in mm/yr
                 satellite_height - height of the perspective view looking in meters
@@ -658,8 +658,8 @@ def plot_plate_motion(plate_boundary, epole_obj, center_lalo=None, qscale=200, q
         """Make a set of points inside the defined sphericalpolygon object.
 
         Parameters: polygon_obj - shapely.geometry.Polygon, a polygon object in lat/lon.
-                    ny          - int, number of intial sample points in the y (lat) direction.
-                    nx          - int, number of intial sample points in the x (lon) direction.
+                    ny          - int, number of initial sample points in the y (lat) direction.
+                    nx          - int, number of initial sample points in the x (lon) direction.
         Returns:    sample_lats - 1D np.ndarray, sample coordinates   in the y (lat) direction.
                     sample_lons - 1D np.ndarray, sample coordinates   in the x (lon) direction.
         """

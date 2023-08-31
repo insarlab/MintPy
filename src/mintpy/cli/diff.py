@@ -58,7 +58,7 @@ def cmd_line_parse(iargs=None):
     ftype = readfile.read_attribute(inps.file1)['FILE_TYPE']
     if ftype in ['timeseries', 'ifgramStack', '.unw']:
         if len(inps.file2) > 1:
-            raise SystemExit(f'ERROR: ONLY ONE file2 is inputed for {ftype} type!')
+            raise SystemExit(f'ERROR: ONLY ONE file2 is inputted for {ftype} type!')
 
     # check: --output (output file is required for number of files >=2)
     if not inps.out_file:

@@ -47,6 +47,8 @@ def create_parser():
     # output
     parser.add_argument('--dname','--dset-name', dest='dset_name', help='output dataset name(s)')
     parser.add_argument('--meta', dest='metadata', nargs='*', help='add custom metadata')
+    parser.add_argument('--comp','--compression', dest='compression', choices={None, 'lzf', 'gzip'},
+                        default=None, help='compression while writing to HDF5 file (default: %(default)s).')
 
     parser.add_argument('-o', '--output', dest='outfile', required=True, help='output HDF5 file name')
     parser.add_argument('--force', dest='force', action='store_true', help='enforce output data overwrite.')
@@ -132,7 +134,7 @@ def main(iargs=None):
     # write
     atr['LENGTH'] = box[3] - box[1]
     atr['WIDTH'] = box[2] - box[0]
-    writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
+    writefile.write(dsDict, out_file=inps.outfile, metadata=atr, compression=inps.compression)
 
     return inps.outfile
 

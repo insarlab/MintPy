@@ -221,7 +221,7 @@ class transectionViewer():
                 dist_unit = 'km'
 
             # plot
-            # update distance values by excluding the commonly masked out pixels in the begining
+            # update distance values by excluding the commonly masked out pixels in the beginning
             self.ax_txn.scatter(
                 x=(txn['distance'] - min_dist) * dist_scale,
                 y=txn['value'] - self.offset[i],

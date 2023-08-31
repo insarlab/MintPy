@@ -214,7 +214,7 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
         SW += str(metadata['beam_swath'])
     RELORB = "{:03d}".format(int(metadata['relative_orbit']))
 
-    # Frist and/or Last Frame
+    # First and/or Last Frame
     frame1 = metadata['first_frame']
     frame2 = metadata['last_frame']
     FRAME = f"{int(frame1):04d}"
@@ -390,9 +390,22 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
 
         geom_obj = geometry(geom_file)
         geom_obj.open(print_msg=False)
-        for dsName in geom_obj.datasetNames:
+
+        # add latitude/longitude if missing, e.g. ARIA/HyP3
+        dsNames = geom_obj.datasetNames + ['latitude', 'longitude']
+        dsNames = list(set(dsNames))
+
+        for dsName in dsNames:
             # read
-            data = geom_obj.read(datasetName=dsName, print_msg=False)
+            if dsName in geom_obj.datasetNames:
+                data = geom_obj.read(datasetName=dsName, print_msg=False)
+            elif dsName == 'latitude':
+                data = ut.get_lat_lon(metadata, dimension=2)[0]
+            elif dsName == 'longitude':
+                data = ut.get_lat_lon(metadata, dimension=2)[1]
+            else:
+                raise ValueError(f'Un-recognized dataset name: {dsName}!')
+
             # write
             dset = create_hdf5_dataset(group, dsName, data)
 

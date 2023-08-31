@@ -290,7 +290,7 @@ def extract_metadata4geometry_geo(fname):
     """
     # Get/read GAMMA par file
     ext = os.path.splitext(fname)[1]
-    if ext in ['.UTM_TO_RDC']:
+    if ext.lower().endswith(('to_rdc', '2_rdc', '2rdc')):
         par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
     elif fname[0].endswith('.utm.dem'):
         par_file = fname+'.par'
@@ -344,7 +344,7 @@ def prep_gamma(inps):
             extract_metadata4interferogram(fname, sensor_name=inps.sensor.lower())
 
         # geometry - geo
-        elif inps.file_ext in ['.UTM_TO_RDC'] or fname.endswith('.utm.dem'):
+        elif inps.file_ext.endswith(('to_rdc', '2_rdc', '2rdc')) or fname.endswith('.utm.dem'):
             extract_metadata4geometry_geo(fname)
 
         # geometry - radar

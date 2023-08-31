@@ -44,7 +44,7 @@ def dload_site_list(out_file=None, url=UNR_SITE_LIST_FILE, print_msg=True):
         os.makedirs(out_dir)
 
     if print_msg:
-        print(f'downloading site list from UNR Geod Lab: {url} to {os.path.dirname(out_file)}')
+        print(f'downloading site list from UNR Geod Lab: {url} to {out_file}')
     urlretrieve(url, out_file)
     return out_file
 
@@ -508,7 +508,7 @@ class GPS:
             az_angle  = ut.heading2azimuth_angle(float(geom_obj['HEADING']))
 
         else:
-            raise ValueError(f'input geom_obj is neight str nor dict: {geom_obj}')
+            raise ValueError(f'input geom_obj is neither str nor dict: {geom_obj}')
 
         return inc_angle, az_angle
 
