@@ -1,8 +1,9 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Sara Mirzaee                                     #
+# Author: Sara Mirzaee, Jul 2023                           #
 ############################################################
+
 import datetime
 import glob
 import os
@@ -11,40 +12,43 @@ from pathlib import Path
 import h5py
 import numpy as np
 from osgeo import gdal
-from scipy.interpolate import RegularGridInterpolator
 from pyproj.transformer import Transformer
-from mintpy.utils import ptime, writefile
+from scipy.interpolate import RegularGridInterpolator
+
 from mintpy.constants import EARTH_RADIUS, SPEED_OF_LIGHT
+from mintpy.utils import ptime, writefile
 
 DATASET_ROOT_UNW = '/science/LSAR/GUNW/grids/frequencyA/interferogram/unwrapped'
 IDENTIFICATION = '/science/LSAR/identification'
 RADARGRID_ROOT = 'science/LSAR/GUNW/metadata/radarGrid'
-DATASETS = {'xcoord': f"{DATASET_ROOT_UNW}/xCoordinates",
-            'ycoord': f"{DATASET_ROOT_UNW}/yCoordinates",
-            'unw': f"{DATASET_ROOT_UNW}/POL/unwrappedPhase",
-            'cor': f"{DATASET_ROOT_UNW}/POL/coherenceMagnitude",
-            'connComp': f"{DATASET_ROOT_UNW}/POL/connectedComponents",
-            'layoverShadowMask': f"{DATASET_ROOT_UNW}/layoverShadowMask",
-            'waterMask': f"{DATASET_ROOT_UNW}/waterMask",
-            'epsg': f"{DATASET_ROOT_UNW}/projection",
-            'xSpacing': f"{DATASET_ROOT_UNW}/xCoordinateSpacing",
-            'ySpacing': f"{DATASET_ROOT_UNW}/yCoordinateSpacing",
-            'polarization': f"{DATASET_ROOT_UNW}/listOfPolarizations",
-            'range_look': f"{DATASET_ROOT_UNW}/numberOfRangeLooks",
-            'azimuth_look': f"{DATASET_ROOT_UNW}/numberOfAzimuthLooks",}
+DATASETS = {
+    'xcoord'           : f"{DATASET_ROOT_UNW}/xCoordinates",
+    'ycoord'           : f"{DATASET_ROOT_UNW}/yCoordinates",
+    'unw'              : f"{DATASET_ROOT_UNW}/POL/unwrappedPhase",
+    'cor'              : f"{DATASET_ROOT_UNW}/POL/coherenceMagnitude",
+    'connComp'         : f"{DATASET_ROOT_UNW}/POL/connectedComponents",
+    'layoverShadowMask': f"{DATASET_ROOT_UNW}/layoverShadowMask",
+    'waterMask'        : f"{DATASET_ROOT_UNW}/waterMask",
+    'epsg'             : f"{DATASET_ROOT_UNW}/projection",
+    'xSpacing'         : f"{DATASET_ROOT_UNW}/xCoordinateSpacing",
+    'ySpacing'         : f"{DATASET_ROOT_UNW}/yCoordinateSpacing",
+    'polarization'     : f"{DATASET_ROOT_UNW}/listOfPolarizations",
+    'range_look'       : f"{DATASET_ROOT_UNW}/numberOfRangeLooks",
+    'azimuth_look'     : f"{DATASET_ROOT_UNW}/numberOfAzimuthLooks",
+}
 PROCESSINFO = {
-            'centerFrequency': "/science/LSAR/GUNW/grids/frequencyA/centerFrequency",
-            'orbit_direction': f"{IDENTIFICATION}/orbitPassDirection",
-            'platform': f"{IDENTIFICATION}/missionId",
-            'start_time': f"{IDENTIFICATION}/referenceZeroDopplerStartTime",
-            'end_time': f"{IDENTIFICATION}/referenceZeroDopplerEndTime",
-            'rdr_xcoord': f"{RADARGRID_ROOT}/xCoordinates",
-            'rdr_ycoord': f"{RADARGRID_ROOT}/yCoordinates",
-            'rdr_slant_range': f"{RADARGRID_ROOT}/slantRange",
-            'rdr_height': f"{RADARGRID_ROOT}/heightAboveEllipsoid",
-            'rdr_incidence': f"{RADARGRID_ROOT}/incidenceAngle",
-            'bperp': f"{RADARGRID_ROOT}/perpendicularBaseline",
-            }
+    'centerFrequency': "/science/LSAR/GUNW/grids/frequencyA/centerFrequency",
+    'orbit_direction': f"{IDENTIFICATION}/orbitPassDirection",
+    'platform'       : f"{IDENTIFICATION}/missionId",
+    'start_time'     : f"{IDENTIFICATION}/referenceZeroDopplerStartTime",
+    'end_time'       : f"{IDENTIFICATION}/referenceZeroDopplerEndTime",
+    'rdr_xcoord'     : f"{RADARGRID_ROOT}/xCoordinates",
+    'rdr_ycoord'     : f"{RADARGRID_ROOT}/yCoordinates",
+    'rdr_slant_range': f"{RADARGRID_ROOT}/slantRange",
+    'rdr_height'     : f"{RADARGRID_ROOT}/heightAboveEllipsoid",
+    'rdr_incidence'  : f"{RADARGRID_ROOT}/incidenceAngle",
+    'bperp'          : f"{RADARGRID_ROOT}/perpendicularBaseline",
+}
 
 ####################################################################################
 
@@ -127,7 +131,7 @@ def extract_metadata(input_files, bbox=None, polarization='HH'):
     meta["CENTER_LINE_UTC"] = (
             t_mid - datetime.datetime(t_mid.year, t_mid.month, t_mid.day)
     ).total_seconds()
-   
+
     meta["X_FIRST"] = x_origin - pixel_width//2
     meta["Y_FIRST"] = y_origin - pixel_height//2
     meta["X_STEP"] = pixel_width
@@ -175,8 +179,8 @@ def get_raster_corners(input_file):
     with h5py.File(input_file, 'r') as ds:
         xcoord = ds[DATASETS['xcoord']][:]
         ycoord = ds[DATASETS['ycoord']][:]
-        west = max(min(ds[PROCESSINFO['rdr_xcoord']][:]), min(xcoord))
-        east = min(max(ds[PROCESSINFO['rdr_xcoord']][:]), max(xcoord))
+        west  = max(min(ds[PROCESSINFO['rdr_xcoord']][:]), min(xcoord))
+        east  = min(max(ds[PROCESSINFO['rdr_xcoord']][:]), max(xcoord))
         north = min(max(ds[PROCESSINFO['rdr_ycoord']][:]), max(ycoord))
         south = max(min(ds[PROCESSINFO['rdr_ycoord']][:]), min(ycoord))
     return west, south, east, north
@@ -351,7 +355,7 @@ def prepare_stack(
 ):
     """Prepare the input unw stack."""
     print("-" * 50)
-    print("preparing ifgramStack file: {}".format(outfile))
+    print(f"preparing ifgramStack file: {outfile}")
     # copy metadata to meta
     meta = {key: value for key, value in metadata.items()}
 
@@ -383,7 +387,7 @@ def prepare_stack(
     writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta)
 
     # writing data to HDF5 file
-    print("writing data to HDF5 file {} with a mode ...".format(outfile))
+    print(f"writing data to HDF5 file {outfile} with a mode ...")
 
     with h5py.File(outfile, "a") as f:
         prog_bar = ptime.progressBar(maxValue=num_pair)
@@ -405,8 +409,5 @@ def prepare_stack(
             prog_bar.update(i + 1, suffix=date12_list[i])
         prog_bar.close()
 
-    print("finished writing to HDF5 file: {}".format(outfile))
+    print(f"finished writing to HDF5 file: {outfile}")
     return outfile
-
-
-

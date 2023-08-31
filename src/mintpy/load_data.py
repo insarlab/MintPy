@@ -630,6 +630,7 @@ def prepare_metadata(iDict):
                 ut.print_command_line(script_name, iargs)
                 # run
                 prep_module.main(iargs)
+
     elif processor == 'nisar':
         dem_file = iDict['mintpy.load.demFile']
         gunw_files = iDict['mintpy.load.unwFile']
@@ -805,7 +806,7 @@ def load_data(inps):
     prepare_metadata(iDict)
     extraDict = get_extra_metadata(iDict)
 
-    # skip data writing for aria as it is included in prep_aria
+    # skip data writing as it is included in prep_aria/nisar
     if iDict['processor'] in ['aria', 'nisar']:
         return
 
