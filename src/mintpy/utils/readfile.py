@@ -211,8 +211,8 @@ SPECIAL_STR2NUM = {
 def numpy_to_gdal_dtype(np_dtype: DTypeLike) -> int:
     """Convert NumPy dtype to GDAL dtype.
 
-    Parameters: np_dtype  : DTypeLike, NumPy dtype to convert.
-    Returns:    gdal_code : int, GDAL type code corresponding to `np_dtype`.
+    Parameters: np_dtype  - DTypeLike, NumPy dtype to convert.
+    Returns:    gdal_code - int, GDAL type code corresponding to `np_dtype`.
     """
     from osgeo import gdal_array, gdalconst
     np_dtype = np.dtype(np_dtype)
@@ -233,8 +233,8 @@ def numpy_to_gdal_dtype(np_dtype: DTypeLike) -> int:
 def gdal_to_numpy_dtype(gdal_dtype: Union[str, int]) -> np.dtype:
     """Convert GDAL dtype to NumPy dtype.
 
-    Parameters: gdal_dtype : str/int, GDAL dtype to convert.
-    Returns:    np_dtype   : DTypeLike, NumPy dtype
+    Parameters: gdal_dtype - str/int, GDAL dtype to convert.
+    Returns:    np_dtype   - np.dtype, NumPy dtype
     """
     from osgeo import gdal, gdal_array
     if isinstance(gdal_dtype, str):
