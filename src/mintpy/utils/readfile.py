@@ -15,6 +15,7 @@ import re
 import sys
 import warnings
 import xml.etree.ElementTree as ET
+from typing import Union
 
 import h5py
 import numpy as np
