@@ -18,6 +18,7 @@ import xml.etree.ElementTree as ET
 
 import h5py
 import numpy as np
+from numpy.typing import DTypeLike
 
 from mintpy.objects import (
     DSET_UNIT_DICT,
@@ -135,11 +136,11 @@ DATA_TYPE_GDAL2NUMPY = {
     11: 'complex128',
     12: 'uint64',
     13: 'int64',
+    14: 'int8',         # GDAL >= 3.7
 }
 
 DATA_TYPE_NUMPY2GDAL = {
     "uint8"     : 1,    # GDT_Byte
-    "int8"      : 1,    # GDT_Int8   (GDAL >= 3.7)
     "uint16"    : 2,    # GDT_UInt16
     "int16"     : 3,    # GDT_Int16
     "uint32"    : 4,    # GDT_UInt32
@@ -152,6 +153,7 @@ DATA_TYPE_NUMPY2GDAL = {
     "complex128": 11,   # GDT_CFloat64
     "uint64"    : 12,   # GDT_UInt64 (GDAL >= 3.5)
     "int64"     : 13,   # GDT_Int64  (GDAL >= 3.5)
+    "int8"      : 14,   # GDT_Int8   (GDAL >= 3.7)
 }
 
 # 3 - ISCE
@@ -204,7 +206,43 @@ SPECIAL_STR2NUM = {
 }
 
 
-###########################################################################
+#########################################################################
+def numpy_to_gdal_dtype(np_dtype: DTypeLike) -> int:
+    """Convert NumPy dtype to GDAL dtype.
+
+    Parameters: np_dtype  : DTypeLike, NumPy dtype to convert.
+    Returns:    gdal_code : int, GDAL type code corresponding to `np_dtype`.
+    """
+    from osgeo import gdal_array, gdalconst
+    np_dtype = np.dtype(np_dtype)
+
+    # convert dtype using the GDAL function/attribute
+    if np.issubdtype(bool, np_dtype):
+        gdal_code = gdalconst.GDT_Byte
+    else:
+        gdal_code = gdal_array.NumericTypeCodeToGDALTypeCode(np_dtype)
+
+    # if provided dtype is not support GDAL, e.g. np.dtype('>i4')
+    if gdal_code is None:
+        raise TypeError(f"dtype {np_dtype} not supported by GDAL.")
+
+    return gdal_code
+
+
+def gdal_to_numpy_dtype(gdal_dtype: Union[str, int]) -> np.dtype:
+    """Convert GDAL dtype to NumPy dtype.
+
+    Parameters: gdal_dtype : str/int, GDAL dtype to convert.
+    Returns:    np_dtype   : DTypeLike, NumPy dtype
+    """
+    from osgeo import gdal, gdal_array
+    if isinstance(gdal_dtype, str):
+        gdal_dtype = gdal.GetDataTypeByName(gdal_dtype)
+    np_dtype = np.dtype(gdal_array.GDALTypeCodeToNumericTypeCode(gdal_dtype))
+    return np_dtype
+
+
+#########################################################################
 ## Slice-based data identification for data reading:
 ##
 ## slice   : np.ndarray in 2D,  with/without '-' in their names
@@ -252,7 +290,7 @@ SPECIAL_STR2NUM = {
 ##     recons-20150115
 ##     cmask
 ##
-###########################################################################
+#########################################################################
 
 
 
