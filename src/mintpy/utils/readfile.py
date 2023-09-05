@@ -211,6 +211,8 @@ SPECIAL_STR2NUM = {
 def numpy_to_gdal_dtype(np_dtype: DTypeLike) -> int:
     """Convert NumPy dtype to GDAL dtype.
 
+    Modified from dolphin.utils.numpy_to_gdal_type().
+
     Parameters: np_dtype  - DTypeLike, NumPy dtype to convert.
     Returns:    gdal_code - int, GDAL type code corresponding to `np_dtype`.
     """
@@ -232,6 +234,8 @@ def numpy_to_gdal_dtype(np_dtype: DTypeLike) -> int:
 
 def gdal_to_numpy_dtype(gdal_dtype: Union[str, int]) -> np.dtype:
     """Convert GDAL dtype to NumPy dtype.
+
+    Modified from dolphin.utils.gdal_to_numpy_type().
 
     Parameters: gdal_dtype - str/int, GDAL dtype to convert.
     Returns:    np_dtype   - np.dtype, NumPy dtype
