@@ -1149,7 +1149,9 @@ def read_data4figure(i_start, i_end, inps, metadata):
             or inps.key in ['timeseries', 'inversion']
             or all(d in inps.dsetFamilyList for d in ['horizontal', 'vertical'])
             or inps.dsetFamilyList == ['data','model','residual']
-            or inps.dsetFamilyList == [f'band{i+1}' for i in range(len(inps.dsetFamilyList))]):
+            or inps.dsetFamilyList == [f'band{i+1}' for i in range(len(inps.dsetFamilyList))]
+            or all(d in inps.dsetFamilyList for d in ['annualAmplitude', 'semiAnnualAmplitude'])
+            or all(d in inps.dsetFamilyList for d in ['annualPhase', 'semiAnnualPhase'])):
         same_unit4all_subplots = True
     else:
         same_unit4all_subplots = False
