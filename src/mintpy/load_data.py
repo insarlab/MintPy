@@ -24,7 +24,7 @@ from mintpy.objects.stackDict import geometryDict, ifgramDict, ifgramStackDict
 from mintpy.utils import ptime, readfile, utils as ut
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr']
+PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr', 'nisar']
 
 # primary observation dataset names
 OBS_DSET_NAMES = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
@@ -601,7 +601,6 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
 
 def prepare_metadata(iDict):
     """Prepare metadata via prep_{processor}.py scripts."""
-
     processor = iDict['processor']
     script_name = f'prep_{processor}.py'
     print('-'*50)
@@ -631,6 +630,29 @@ def prepare_metadata(iDict):
                 ut.print_command_line(script_name, iargs)
                 # run
                 prep_module.main(iargs)
+
+    elif processor == 'nisar':
+        dem_file = iDict['mintpy.load.demFile']
+        gunw_files = iDict['mintpy.load.unwFile']
+
+        # run prep_*.py
+        iargs = ['-i', gunw_files, '-d', dem_file, '-o', '../mintpy']
+
+        if iDict['mintpy.subset.yx']:
+            warnings.warn('Subset in Y/X is not implemented for NISAR. \n'
+                          'There might be shift in the coordinates of different products. \n'
+                          'Use lat/lon instead.')
+        if iDict['mintpy.subset.lalo']:
+            lalo = iDict['mintpy.subset.lalo'].split(',')
+            lats = lalo[0].split(':')
+            lons = lalo[1].split(':')
+            iargs = iargs + ['--sub-lat', lats[0], lats[1], '--sub-lon', lons[0], lons[1]]
+
+        ut.print_command_line(script_name, iargs)
+        try:
+            prep_module.main(iargs)
+        except:
+            warnings.warn('prep_nisar.py failed. Assuming its result exists and continue...')
 
     elif processor == 'isce':
         from mintpy.utils import isce_utils, s1_utils
@@ -784,8 +806,8 @@ def load_data(inps):
     prepare_metadata(iDict)
     extraDict = get_extra_metadata(iDict)
 
-    # skip data writing for aria as it is included in prep_aria
-    if iDict['processor'] == 'aria':
+    # skip data writing as it is included in prep_aria/nisar
+    if iDict['processor'] in ['aria', 'nisar']:
         return
 
     ## 2. search & write data files

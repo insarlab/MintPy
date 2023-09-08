@@ -102,6 +102,10 @@ mintpy.load.shadowMaskFile  = None
 mintpy.load.waterMaskFile   = ../mask/watermask.msk
 '''
 
+AUTO_PATH_NISAR = '''##----------Default file path of NISAR products
+mintpy.load.unwFile         = ../interferograms/*.h5
+mintpy.load.demFile         = ../dem.tiff
+'''
 
 AUTO_PATH_DICT = {
     'isce_tops'     : AUTO_PATH_ISCE_TOPS,
@@ -109,6 +113,7 @@ AUTO_PATH_DICT = {
     'roipac'        : AUTO_PATH_ROIPAC,
     'gamma'         : AUTO_PATH_GAMMA,
     'aria'          : AUTO_PATH_ARIA,
+    'nisar'         : AUTO_PATH_NISAR,
 }
 
 prefix = 'mintpy.load.'

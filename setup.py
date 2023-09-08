@@ -128,6 +128,7 @@ setup(
             'prep_gmtsar.py = mintpy.cli.prep_gmtsar:main',
             'prep_hyp3.py = mintpy.cli.prep_hyp3:main',
             'prep_isce.py = mintpy.cli.prep_isce:main',
+            'prep_nisar.py = mintpy.cli.prep_nisar:main',
             'prep_roipac.py = mintpy.cli.prep_roipac:main',
             'prep_snap.py = mintpy.cli.prep_snap:main',
             'reference_date.py = mintpy.cli.reference_date:main',

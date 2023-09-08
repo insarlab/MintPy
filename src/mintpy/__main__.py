@@ -286,6 +286,13 @@ def get_prep_isce_parser(subparsers=None):
     return parser
 
 
+def get_prep_nisar_parser(subparsers=None):
+    from mintpy.cli import prep_nisar
+    parser = prep_nisar.create_parser(subparsers)
+    parser.set_defaults(func=prep_nisar.main)
+    return parser
+
+
 def get_prep_roipac_parser(subparsers=None):
     from mintpy.cli import prep_roipac
     parser = prep_roipac.create_parser(subparsers)
@@ -628,6 +635,7 @@ def get_parser():
     get_prep_gmtsar_parser(sp)
     get_prep_hyp3_parser(sp)
     get_prep_isce_parser(sp)
+    get_prep_nisar_parser(sp)
     get_prep_roipac_parser(sp)
     get_prep_snap_parser(sp)
 
