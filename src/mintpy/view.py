@@ -1150,8 +1150,8 @@ def read_data4figure(i_start, i_end, inps, metadata):
             or all(d in inps.dsetFamilyList for d in ['horizontal', 'vertical'])
             or inps.dsetFamilyList == ['data','model','residual']
             or inps.dsetFamilyList == [f'band{i+1}' for i in range(len(inps.dsetFamilyList))]
-            or all(d in inps.dsetFamilyList for d in ['annualAmplitude', 'semiAnnualAmplitude'])
-            or all(d in inps.dsetFamilyList for d in ['annualPhase', 'semiAnnualPhase'])):
+            or all(d.endswith('Amplitude') for d in inps.dsetFamilyList)
+            or all(d.endswith('Phase') for d in inps.dsetFamilyList)):
         same_unit4all_subplots = True
     else:
         same_unit4all_subplots = False
