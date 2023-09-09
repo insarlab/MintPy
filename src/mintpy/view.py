@@ -333,17 +333,20 @@ def prep_slice(cmd, auto_fig=False):
                 atr  - dict, metadata
                 inps - namespace, input argument for plot setup
     Example:
+        from cartopy import crs as ccrs
         from mintpy.view import prep_slice, plot_slice
 
+        # initiate matplotlib figure/axes
         subplot_kw = dict(projection=ccrs.PlateCarree())
         fig, ax = plt.subplots(figsize=[4, 3], subplot_kw=subplot_kw)
-        W, N, E, S = (-91.670, -0.255, -91.370, -0.515)    # geo_box
 
+        # compose view.py command
         cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 --dem srtm1.dem --dem-nocontour '
-        cmd += f'--sub-lon {W} {E} --sub-lat {S} {N} -c jet -v -3 10 '
+        cmd += f'--sub-lon -91.7 -91.4 --sub-lat -0.5 -0.3 -c jet -v -3 10 '
         cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-label "LOS velocity [cm/year]" '
         cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle'
 
+        # call prep/plot_slice()
         data, atr, inps = prep_slice(cmd)
         ax, inps, im, cbar = plot_slice(ax, data, atr, inps)
         plt.show()
@@ -468,15 +471,7 @@ def plot_slice(ax, data, metadata, inps):
                 inps     : Namespace for input options
                 im       : matplotlib.image.AxesImage object
                 cbar     : matplotlib.colorbar.Colorbar object
-    Example:
-        from matplotlib import pyplot as plt
-        from mintpy.utils import readfile
-        from mintpy.view import plot_slice
-
-        data, atr = readfile.read('velocity.h5')
-        fig, ax = plt.subplots()
-        ax = plot_slice(ax, data, atr)[0]
-        plt.show()
+    Example: See prep_slice() above for example usage.
     """
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
