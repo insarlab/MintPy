@@ -102,6 +102,8 @@ def add_dem_argument(parser):
                      help='Mask out DEM pixels not coincident with valid data pixels')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',
                      help='do not show DEM shaded relief')
+    dem.add_argument('--dem-blend', dest='disp_dem_blend', action='store_true',
+                     help='blend the DEM shade with input image to have a GMT-like impression.')
     dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
                      help='do not show DEM contour lines')
 
@@ -127,6 +129,10 @@ def add_dem_argument(parser):
                      help='The max height of colormap of shaded relief topography (default: max(DEM)+2000).')
     dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,
                      help='Vertical exaggeration ratio (default: %(default)s).')
+    dem.add_argument('--shade-frac', dest='shade_frac', type=float, default=0.5,
+                     help='Only for --dem-blend. Increases/decreases the contrast of the hillshade (default: %(default)s).')
+    dem.add_argument('--base-color', dest='base_color', type=float, default=0.9,
+                     help='Only for --dem-blend. DEM basemap greyish color ranges in [0,1] (default: %(default)s).')
     return parser
 
 

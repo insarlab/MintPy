@@ -485,6 +485,7 @@ def plot_slice(ax, data, metadata, inps):
         ).colormap
 
     # read DEM
+    dem = None  # initialize for pp.plot_image4view()
     if inps.dem_file:
         dem, dem_metadata, dem_pix_box = pp.read_dem(
             inps.dem_file,
@@ -512,20 +513,8 @@ def plot_slice(ax, data, metadata, inps):
             vprint(f'draw coast line with resolution: {inps.coastline}')
             ax.coastlines(resolution=inps.coastline, linewidth=inps.coastline_linewidth)
 
-        # Plot DEM
-        if inps.dem_file:
-            vprint('plotting DEM background ...')
-            pp.plot_dem_background(
-                ax=ax,
-                geo_box=inps.geo_box,
-                dem=dem,
-                inps=inps,
-                print_msg=inps.print_msg,
-            )
-
-        # Plot Data
+        # Whether reference to a gps site
         coord = ut.coordinate(metadata)
-        vprint('plotting image ...')
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
             ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
@@ -537,9 +526,8 @@ def plot_slice(ax, data, metadata, inps):
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False
 
-        im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=extent, origin='upper', interpolation=inps.interpolation,
-                       alpha=inps.transparency, animated=inps.animation, zorder=1)
+        ## Plot the image
+        ax, im = pp.plot_image4view(ax, data, dem, extent=extent, geo_box=inps.geo_box, inps=inps)
 
         # Draw faultline using GMT lonlat file
         if inps.faultline_file:
@@ -636,24 +624,12 @@ def plot_slice(ax, data, metadata, inps):
         inps.fig_coord = 'yx'
         vprint('plotting in Y/X coordinate ...')
 
-        # Plot DEM
-        if inps.dem_file:
-            vprint('plotting DEM background ...')
-            pp.plot_dem_background(
-                ax=ax,
-                geo_box=None,
-                dem=dem,
-                inps=inps,
-                print_msg=inps.print_msg,
-            )
-
-        # Plot Data
-        vprint('plotting Data ...')
         # extent = (left, right, bottom, top) in data coordinates
         extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
                   inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
-        im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=extent, interpolation=inps.interpolation, alpha=inps.transparency, zorder=1)
+
+        ## Plot the image
+        ax, im = pp.plot_image4view(ax, data, dem, extent=extent, inps=inps)
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
@@ -737,7 +713,11 @@ def plot_slice(ax, data, metadata, inps):
     if inps.disp_cbar:
         divider = make_axes_locatable(ax)
         cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size, axes_class=plt.Axes)
-        inps, cbar = pp.plot_colorbar(inps, im, cax)
+
+        if not inps.disp_dem_blend:
+            inps, cbar = pp.plot_colorbar(inps, im, cax)
+        else:
+            cax = pp.shaded_colorbar(inps, cax)
 
     # 3.2 Title
     if inps.disp_title:
@@ -1191,26 +1171,29 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     1) Plot DEM, data and reference pixel
     2) axes setting: tick, ticklabel, title, axis etc.
     """
+    imshow_data = ~inps.disp_dem_blend # if disp_dem_blend, no need to imshow the data as a layer again
+
     # Plot DEM
     if inps.dem_file:
-        pp.plot_dem_background(
-            ax=ax,
-            geo_box=None,
-            dem_shade=inps.dem_shade,
-            dem_contour=inps.dem_contour,
-            dem_contour_seq=inps.dem_contour_seq,
-            inps=inps,
-            print_msg=inps.print_msg)
+        ax, im = pp.plot_dem_background(ax,
+                                        dem_shade=inps.dem_shade,
+                                        dem_contour=inps.dem_contour,
+                                        dem_contour_seq=inps.dem_contour_seq,
+                                        dem=inps.dem,
+                                        data=data,
+                                        blend_img=inps.blend_img,
+                                        inps=inps,
+                                        print_msg=False)
 
-    # Plot Data
-    vlim = inps.vlim
-    vlim = vlim if vlim is not None else [np.nanmin(data), np.nanmax(data)]
-    extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-              inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
-
-    im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
-                   interpolation=inps.interpolation, alpha=inps.transparency,
-                   extent=extent, zorder=1)
+    if imshow_data:
+        vlim = inps.vlim
+        vlim = vlim if vlim is not None else [np.nanmin(data), np.nanmax(data)]
+        extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+                inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
+        # Plot Data
+        im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
+                        extent=extent, origin='upper', interpolation=inps.interpolation,
+                        alpha=inps.transparency, zorder=1)
 
     # Plot Seed Point
     if inps.disp_ref_pixel:
@@ -1406,7 +1389,11 @@ def plot_figure(j, inps, metadata):
             vprint('show colorbar')
             fig.subplots_adjust(right=0.93)
             cax = fig.add_axes([0.94, (1.0-cbar_length)/2, 0.005, cbar_length])
-            inps, cbar = pp.plot_colorbar(inps, im, cax)
+
+            if not inps.disp_dem_blend:
+                inps, cbar = pp.plot_colorbar(inps, im, cax)
+            else:
+                cax = pp.shaded_colorbar(inps, cax)
 
     else:
         adjust_subplots_layout(fig, inps)
@@ -1494,7 +1481,7 @@ def prepare4multi_subplots(inps, metadata):
                 print_msg=False,
             )[0]
 
-            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prepare_dem_background(
+            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq, inps.blend_img = pp.prepare_dem_background(
                 dem=dem,
                 inps=inps,
                 print_msg=inps.print_msg,
@@ -1507,6 +1494,7 @@ def prepare4multi_subplots(inps, metadata):
             msg += 'This feature is only supported for single subplot, and not for multi-subplots.'
             msg += '\n    --> Ignore it and continue.'
             print(msg)
+        inps.dem = dem   # store it for later call pp.plot_dem_background()
     return inps
 
 
