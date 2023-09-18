@@ -14,10 +14,8 @@ import warnings
 
 import h5py
 import matplotlib as mpl
-import matplotlib.colors as colors
 import numpy as np
 from matplotlib import dates as mdates, pyplot as plt, ticker
-from matplotlib.colors import LightSource
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import stats
 
@@ -1915,6 +1913,7 @@ def prepare_dem_background(dem, inps, data=None, print_msg=True):
 
     # prepare shade relief
     if inps.disp_dem_shade:
+        from matplotlib.colors import LightSource
         ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -2053,7 +2052,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
             # radar coordinates
             elif isinstance(ax, plt.Axes):
                 ax.imshow(blend_img, extent=rdr_extent, **kwargs)
-            im = plt.cm.ScalarMappable(norm=colors.Normalize(vlim[0], vlim[1]), cmap=inps.colormap)
+            im = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(vlim[0], vlim[1]), cmap=inps.colormap)
 
     # plot topo contour
     if dem_contour is not None and dem_contour_seq is not None:
@@ -2097,6 +2096,8 @@ def shaded_colorbar(inps, cax, fraction=0.75, blend_mode='soft', vert_exag=6000)
 
     Examples :      cax = pp.shaded_colorbar(inps, cax)
     """
+    from matplotlib.colors import LightSource
+
     # expand vlim by 0.01% to account for potential numerical precision leak
     # e.g. wrapped phase
     epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.0001
@@ -2115,7 +2116,7 @@ def shaded_colorbar(inps, cax, fraction=0.75, blend_mode='soft', vert_exag=6000)
     ele = np.ones_like(arr) * np.cos(0.6*x)    # altitude as a cosine along teh illum. profile
 
     dnorm = (arr - vmin) / (vmax - vmin)
-    cMap = plt.cm.ScalarMappable(norm=colors.Normalize(0,1), cmap=inps.colormap)
+    cMap = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(0,1), cmap=inps.colormap)
     image = cMap.to_rgba(dnorm)[:, :, :3]
     rgb = ls.shade_rgb(image, ele, fraction=fraction, blend_mode=blend_mode, vert_exag=vert_exag)
 
@@ -2171,7 +2172,7 @@ def shaded_image(data, dem, ls, vmin=None, vmax=None, cmap='viridis',
     data_norm = (data-vmin) / (vmax-vmin)
 
     # cmap norm and ScalarMappable
-    mappable = plt.cm.ScalarMappable(norm=colors.Normalize(0,1), cmap=cmap)
+    mappable = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(0,1), cmap=cmap)
 
     # convert data norm to image and remove alpha channel (the fourth dimension)
     img_rgb = mappable.to_rgba(data_norm)[:, :, :3]
