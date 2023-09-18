@@ -1,7 +1,6 @@
 # requirements.txt          for dependency installation via conda
 # docs/ports.txt            for dependency installation via mac-ports
 # setup.py                  for mintpy     installation via pip after the dependency installation above
-# docs/requirements4rtd.txt for readthedocs, which uses pip with limited memory usage
 python>=3.6
 pip
 argcomplete

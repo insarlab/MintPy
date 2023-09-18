@@ -1,7 +1,0 @@
-# requirements file to build Read the Docs ONLY
-h5py
-lxml
-matplotlib
-numpy
-pyproj
-scipy
