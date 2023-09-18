@@ -25,6 +25,5 @@ formats: all
 # Optionally set the version of Python and requirements required to build your docs
 # conda method does not work because of the "command killed due to excessive memory consumption" error
 #python:
-#  version: 3.10
 #  install:
 #    - requirements: docs/requirements4rtd.txt
