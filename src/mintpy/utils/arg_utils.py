@@ -98,15 +98,16 @@ def add_dem_argument(parser):
     dem = parser.add_argument_group('DEM', 'display topography in the background')
     dem.add_argument('-d', '--dem', dest='dem_file', metavar='DEM_FILE',
                      help='DEM file to show topography as background')
+    dem.add_argument('--dem-blend', dest='disp_dem_blend', action='store_true',
+                     help='blend the DEM shade with input image to have a GMT-like impression.')
     dem.add_argument('--mask-dem', dest='mask_dem', action='store_true',
                      help='Mask out DEM pixels not coincident with valid data pixels')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',
                      help='do not show DEM shaded relief')
-    dem.add_argument('--dem-blend', dest='disp_dem_blend', action='store_true',
-                     help='blend the DEM shade with input image to have a GMT-like impression.')
     dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
                      help='do not show DEM contour lines')
 
+    # DEM contours
     dem.add_argument('--contour-smooth', dest='dem_contour_smooth', type=float, default=3.0,
                      help='Background topography contour smooth factor - sigma of Gaussian filter. \n'
                           'Set to 0.0 for no smoothing; (default: %(default)s).')
@@ -116,19 +117,21 @@ def add_dem_argument(parser):
                      metavar='NUM', type=float, default=0.5,
                      help='Background topography contour linewidth (default: %(default)s).')
 
+    # DEM shade
     dem.add_argument('--shade-az', dest='shade_azdeg', type=float, default=315., metavar='DEG',
                      help='The azimuth (0-360, degrees clockwise from North) of the light source '
                           '(default: %(default)s).')
     dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45., metavar='DEG',
                      help='The altitude (0-90, degrees up from horizontal) of the light source '
                           '(default: %(default)s).')
-
     dem.add_argument('--shade-min', dest='shade_min', type=float, default=-4000., metavar='MIN',
                      help='The min height in m of colormap of shaded relief topography (default: %(default)s).')
     dem.add_argument('--shade-max', dest='shade_max', type=float, default=999., metavar='MAX',
                      help='The max height of colormap of shaded relief topography (default: max(DEM)+2000).')
     dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,
                      help='Vertical exaggeration ratio (default: %(default)s).')
+
+    # DEM-blended image
     dem.add_argument('--shade-frac', dest='shade_frac', type=float, default=0.5,
                      help='Only for --dem-blend. Increases/decreases the contrast of the hillshade (default: %(default)s).')
     dem.add_argument('--base-color', dest='base_color', type=float, default=0.9,

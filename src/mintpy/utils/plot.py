@@ -2225,9 +2225,6 @@ def plot_image4view(ax, data, dem=None, extent=None, geo_box=None, inps=None):
     Examples :      ax, im = pp.plot_image4view(ax, data, dem, inps=inps)
     """
     imshow_data = True
-
-    # print messages
-    global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
     # get plotting extent from geo_box if not given
