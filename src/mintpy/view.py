@@ -587,8 +587,6 @@ def plot_slice(ax, data, metadata, inps):
 
         # Show UNR GPS stations
         if inps.disp_gps:
-            SNWE = (inps.geo_box[3], inps.geo_box[1],
-                    inps.geo_box[0], inps.geo_box[2])
             ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
 
         # Status bar
