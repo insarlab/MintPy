@@ -1934,8 +1934,11 @@ def prepare_dem_background(dem, inps, data=None, print_msg=True):
             blend_img = shaded_image(
                 data, dem, ls,
                 vmin=vlim[0], vmax=vlim[1],
-                cmap=inps.colormap, base_color=inps.base_color,
-                shade_frac=inps.shade_frac, vert_exag=inps.shade_exag,
+                cmap=inps.colormap,
+                base_color=inps.base_color,
+                shade_frac=inps.shade_frac,
+                blend_mode=inps.blend_mode,
+                vert_exag=inps.shade_exag,
                 mask_dem_dataNan=inps.mask_dem)
 
         if print_msg:
@@ -2139,7 +2142,7 @@ def shaded_colorbar(inps, cax, fraction=0.75, blend_mode='soft', vert_exag=6000)
 
 
 def shaded_image(data, dem, ls, vmin=None, vmax=None, cmap='viridis',
-                 base_color=0.9, shade_frac=0.5, blend_mode='hsv', vert_exag=0.5,
+                 base_color=0.9, shade_frac=0.5, blend_mode='overlay', vert_exag=0.5,
                  mask_dem_demNan=True, mask_dem_dataNan=False, mask_value=0):
     """Add illumination to the rgb data array based on a DEM file.
        Use shaded relief from a light source to adjust the colors of the data rgb array to have a cool impression.

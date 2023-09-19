@@ -98,44 +98,49 @@ def add_dem_argument(parser):
     dem = parser.add_argument_group('DEM', 'display topography in the background')
     dem.add_argument('-d', '--dem', dest='dem_file', metavar='DEM_FILE',
                      help='DEM file to show topography as background')
-    dem.add_argument('--dem-blend', dest='disp_dem_blend', action='store_true',
-                     help='blend the DEM shade with input image to have a GMT-like impression.')
     dem.add_argument('--mask-dem', dest='mask_dem', action='store_true',
                      help='Mask out DEM pixels not coincident with valid data pixels')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',
                      help='do not show DEM shaded relief')
     dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
                      help='do not show DEM contour lines')
+    dem.add_argument('--dem-blend', dest='disp_dem_blend', action='store_true',
+                     help='blend the DEM shade with input image to have a GMT-like impression.')
 
     # DEM contours
-    dem.add_argument('--contour-smooth', dest='dem_contour_smooth', type=float, default=3.0,
-                     help='Background topography contour smooth factor - sigma of Gaussian filter. \n'
+    dem.add_argument('--contour-smooth', dest='dem_contour_smooth', type=float, default=3.0, metavar='NUM',
+                     help='[Contour] Topography contour smooth factor - sigma of Gaussian filter. \n'
                           'Set to 0.0 for no smoothing; (default: %(default)s).')
     dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,
-                     help='Background topography contour step in meters (default: %(default)s).')
+                     help='[Contour] Topography contour step in meters (default: %(default)s).')
     dem.add_argument('--contour-lw','--contour-linewidth', dest='dem_contour_linewidth',
                      metavar='NUM', type=float, default=0.5,
-                     help='Background topography contour linewidth (default: %(default)s).')
+                     help='[Contour] Topography contour linewidth (default: %(default)s).')
 
     # DEM shade
     dem.add_argument('--shade-az', dest='shade_azdeg', type=float, default=315., metavar='DEG',
-                     help='The azimuth (0-360, degrees clockwise from North) of the light source '
+                     help='[Shade] Azimuth angle (0-360, degrees clockwise from North) of the light source '
                           '(default: %(default)s).')
     dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45., metavar='DEG',
-                     help='The altitude (0-90, degrees up from horizontal) of the light source '
+                     help='[Shade] Altitude (0-90, degrees up from horizontal) of the light source '
                           '(default: %(default)s).')
     dem.add_argument('--shade-min', dest='shade_min', type=float, default=-4000., metavar='MIN',
-                     help='The min height in m of colormap of shaded relief topography (default: %(default)s).')
+                     help='[Shade] Minimum height of shaded relief topography (default: %(default)s m).')
     dem.add_argument('--shade-max', dest='shade_max', type=float, default=999., metavar='MAX',
-                     help='The max height of colormap of shaded relief topography (default: max(DEM)+2000).')
-    dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,
-                     help='Vertical exaggeration ratio (default: %(default)s).')
+                     help='[Shade] Maximum height of shaded relief topography (default: max(DEM)+2000 m).')
+    dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,  metavar='NUM',
+                     help='[Shade] Vertical exaggeration ratio (default: %(default)s).')
 
     # DEM-blended image
-    dem.add_argument('--shade-frac', dest='shade_frac', type=float, default=0.5,
-                     help='Only for --dem-blend. Increases/decreases the contrast of the hillshade (default: %(default)s).')
-    dem.add_argument('--base-color', dest='base_color', type=float, default=0.9,
-                     help='Only for --dem-blend. DEM basemap greyish color ranges in [0,1] (default: %(default)s).')
+    dem.add_argument('--shade-frac', dest='shade_frac', type=float, default=0.5, metavar='NUM',
+                     help='[Blend] Increases/decreases the contrast of the hillshade (default: %(default)s).')
+    dem.add_argument('--base-color', dest='base_color', type=float, default=0.9, metavar='NUM',
+                     help='[Blend] Topograhpy basemap greyish color ranges in [0,1] (default: %(default)s).')
+    dem.add_argument('--blend-mode', dest='blend_mode', type=str, default='overlay',
+                     choices={'hsv','overlay','soft'}, metavar='STR',
+                     help='[Blend] Type of blending used to combine the colormapped data with illumated '
+                          'topography.\n(choices: %(choices)s; default: %(default)s).\n'
+                          'https://matplotlib.org/stable/gallery/specialty_plots/topographic_hillshading.html')
     return parser
 
 
@@ -286,8 +291,8 @@ def add_map_argument(parser):
     mapg.add_argument('--coastline', dest='coastline', type=str, choices={'10m', '50m', '110m'},
                       help="Draw coastline with specified resolution (default: %(default)s).\n"
                            "This will enable --lalo-label option.\n"
-                           "Link: https://scitools.org.uk/cartopy/docs/latest/matplotlib/geoaxes.html"
-                           "#cartopy.mpl.geoaxes.GeoAxes.coastlines")
+                           "https://scitools.org.uk/cartopy/docs/latest/reference/generated/"
+                           "cartopy.mpl.geoaxes.GeoAxes.html")
     mapg.add_argument('--coastline-lw', '--coastline-linewidth', dest='coastline_linewidth',
                       metavar='NUM', type=float, default=1,
                       help='Coastline linewidth (default: %(default)s).')
