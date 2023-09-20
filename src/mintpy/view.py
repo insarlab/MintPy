@@ -715,7 +715,7 @@ def plot_slice(ax, data, metadata, inps):
         if not inps.disp_dem_blend:
             inps, cbar = pp.plot_colorbar(inps, im, cax)
         else:
-            cax = pp.shaded_colorbar(inps, cax)
+            cax = pp.plot_blend_colorbar(inps, cax)
 
     # 3.2 Title
     if inps.disp_title:
@@ -1169,29 +1169,16 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     1) Plot DEM, data and reference pixel
     2) axes setting: tick, ticklabel, title, axis etc.
     """
-    imshow_data = ~inps.disp_dem_blend # if disp_dem_blend, no need to imshow the data as a layer again
+    # prepare inps.vlim for each data in subplot
+    inps.vlim = [np.nanmin(data), np.nanmax(data)]
 
-    # Plot DEM
-    if inps.dem_file:
-        ax, im = pp.plot_dem_background(ax,
-                                        dem_shade=inps.dem_shade,
-                                        dem_contour=inps.dem_contour,
-                                        dem_contour_seq=inps.dem_contour_seq,
-                                        dem=inps.dem,
-                                        data=data,
-                                        blend_img=inps.blend_img,
-                                        inps=inps,
-                                        print_msg=False)
+    # set plot extent
+    extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+              inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
 
-    if imshow_data:
-        vlim = inps.vlim
-        vlim = vlim if vlim is not None else [np.nanmin(data), np.nanmax(data)]
-        extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-                inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
-        # Plot Data
-        im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
-                        extent=extent, origin='upper', interpolation=inps.interpolation,
-                        alpha=inps.transparency, zorder=1)
+    # plot image
+    inps.print_msg = False
+    ax, im = pp.plot_image4view(ax, data, dem=inps.dem, extent=extent, inps=inps)
 
     # Plot Seed Point
     if inps.disp_ref_pixel:
@@ -1391,7 +1378,7 @@ def plot_figure(j, inps, metadata):
             if not inps.disp_dem_blend:
                 inps, cbar = pp.plot_colorbar(inps, im, cax)
             else:
-                cax = pp.shaded_colorbar(inps, cax)
+                cax = pp.plot_blend_colorbar(inps, cax)
 
     else:
         adjust_subplots_layout(fig, inps)
@@ -1479,7 +1466,7 @@ def prepare4multi_subplots(inps, metadata):
                 print_msg=False,
             )[0]
 
-            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq, inps.blend_img = pp.prepare_dem_background(
+            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prepare_dem_background(
                 dem=dem,
                 inps=inps,
                 print_msg=inps.print_msg,
@@ -1492,7 +1479,7 @@ def prepare4multi_subplots(inps, metadata):
             msg += 'This feature is only supported for single subplot, and not for multi-subplots.'
             msg += '\n    --> Ignore it and continue.'
             print(msg)
-        inps.dem = dem   # store it for later call pp.plot_dem_background()
+        inps.dem = dem   # store it for later calling pp.plot_image4view()
     return inps
 
 
