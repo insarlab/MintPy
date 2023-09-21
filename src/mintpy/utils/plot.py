@@ -1877,7 +1877,7 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     return dem, dem_meta, dem_pix_box
 
 
-def prepare_dem_background(dem, inps, print_msg=True):
+def prep_dem_background(dem, inps, print_msg=True):
     """Prepare to plot DEM on background
     Parameters: dem : 2D np.int16 matrix, dem data
                 inps : Namespace with the following 4 items:
@@ -1894,7 +1894,7 @@ def prepare_dem_background(dem, inps, print_msg=True):
 
         inps = view.cmd_line_parse()
         dem = readfile.read('inputs/geometryRadar.h5')[0]
-        dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(
+        dem_shade, dem_contour, dem_contour_seq = pp.prep_dem_background(
             dem=dem,
             inps=inps,
         )
@@ -1984,8 +1984,8 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
     """
 
     # prepare DEM shade/contour datasets
-    if any(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:
-        dem_shade, dem_contour, dem_contour_seq = prepare_dem_background(
+    if all(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:
+        dem_shade, dem_contour, dem_contour_seq = prep_dem_background(
             dem,
             inps=inps,
             print_msg=print_msg,
@@ -2006,14 +2006,12 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
     # plot shaded relief
     if dem_shade is not None:
-        # config
         kwargs = dict(interpolation='spline16', zorder=0, origin='upper')
-
-        # geo coordinates
         if geo_box is not None:
+            # geo coordinates
             ax.imshow(dem_shade, extent=geo_extent, **kwargs)
-        # radar coordinates
         elif isinstance(ax, plt.Axes):
+            # radar coordinates
             ax.imshow(dem_shade, extent=rdr_extent, **kwargs)
 
     # plot topo contour
@@ -2166,8 +2164,7 @@ def prep_blend_image(data, dem, ls, vmin=None, vmax=None, cmap='viridis',
     return illum_rgb
 
 
-def plot_blend_image(ax, blend_img=None, dem_contour=None, dem_contour_seq=None,
-                        dem=None, data=None, geo_box=None, inps=None, print_msg=True):
+def plot_blend_image(ax, data, dem, geo_box=None, inps=None, print_msg=True):
     """Plot image with DEM if provided
     Parameters :    ax      matplotlib.pyplot.Axes or BasemapExt object
                     data    2D np.array
@@ -2306,7 +2303,7 @@ def plot_blend_image(ax, blend_img=None, dem_contour=None, dem_contour_seq=None,
     return ax, im
 
 
-def plot_image4view(ax, data, dem=None, extent=None, geo_box=None, inps=None):
+def plot_image4view(ax, data, extent, dem=None, inps=None):
     """Plot image with DEM if provided
     Parameters :    ax      matplotlib.pyplot.Axes or BasemapExt object
                     data    2D np.array
@@ -2327,15 +2324,9 @@ def plot_image4view(ax, data, dem=None, extent=None, geo_box=None, inps=None):
 
     Examples :      ax, im = pp.plot_image4view(ax, data, dem, inps=inps)
     """
+    im = None
     imshow_data = True
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
-
-    # get plotting extent from geo_box if not given
-    if extent is None:
-        if geo_box:
-            extent = (geo_box[0], geo_box[2], geo_box[3], geo_box[1])  # (W, E, S, N)
-        else:
-            print('WARNING: No extent and geo_box are given, expect to have issues in plot.')
 
     # shown dem style
     if inps.dem_file:
@@ -2348,33 +2339,19 @@ def plot_image4view(ax, data, dem=None, extent=None, geo_box=None, inps=None):
     # Plot DEM
     if inps.dem_file:
         vprint(f'plotting {dem_style} ...')
-
-        # GMT style
+        kwargs = dict(dem=dem, geo_box=inps.geo_box, inps=inps, print_msg=inps.print_msg)
         if inps.disp_dem_blend:
-            ax, im = plot_blend_image(
-                        ax=ax,
-                        dem=dem,
-                        data=data,
-                        geo_box=geo_box,
-                        inps=inps,
-                        print_msg=inps.print_msg
-                        )
-
-        # default style
+            # hillshade + DEM-blended data: like `gmt grdimage -I` feature
+            ax, im = plot_blend_image(ax, data, **kwargs)
         elif inps.disp_dem_shade:
-            ax, im = plot_dem_background(
-                        ax=ax,
-                        geo_box=geo_box,
-                        dem=dem,
-                        inps=inps,
-                        print_msg=inps.print_msg,
-                        ), None
+            # hillshade
+            ax = plot_dem_background(ax, **kwargs)
 
     # Plot Data
     if imshow_data:
         vprint('plotting data array ...')
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                        extent=extent, origin='upper', interpolation=inps.interpolation,
-                        alpha=inps.transparency, animated=inps.animation, zorder=1)
+                       extent=extent, origin='upper', interpolation=inps.interpolation,
+                       alpha=inps.transparency, animated=inps.animation, zorder=1)
 
     return ax, im

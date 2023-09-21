@@ -527,7 +527,7 @@ def plot_slice(ax, data, metadata, inps):
             inps.disp_ref_pixel = False
 
         ## Plot the image
-        ax, im = pp.plot_image4view(ax, data, dem, extent=extent, geo_box=inps.geo_box, inps=inps)
+        ax, im = pp.plot_image4view(ax, data, dem=dem, extent=extent, geo_box=inps.geo_box, inps=inps)
 
         # Draw faultline using GMT lonlat file
         if inps.faultline_file:
@@ -627,7 +627,7 @@ def plot_slice(ax, data, metadata, inps):
                   inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
 
         ## Plot the image
-        ax, im = pp.plot_image4view(ax, data, dem, extent=extent, inps=inps)
+        ax, im = pp.plot_image4view(ax, data, dem=dem, extent=extent, inps=inps)
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
@@ -1169,16 +1169,24 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     1) Plot DEM, data and reference pixel
     2) axes setting: tick, ticklabel, title, axis etc.
     """
-    # prepare inps.vlim for each data in subplot
-    inps.vlim = [np.nanmin(data), np.nanmax(data)]
+    # Plot DEM
+    if inps.dem_file:
+        pp.plot_dem_background(
+            ax=ax,
+            geo_box=None,
+            dem_shade=inps.dem_shade,
+            dem_contour=inps.dem_contour,
+            dem_contour_seq=inps.dem_contour_seq,
+            inps=inps,
+            print_msg=inps.print_msg)
 
-    # set plot extent
+    # Plot Data
+    vlim = inps.vlim if inps.vlim is not None else [np.nanmin(data), np.nanmax(data)]
     extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
               inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
-
-    # plot image
-    inps.print_msg = False
-    ax, im = pp.plot_image4view(ax, data, dem=inps.dem, extent=extent, inps=inps)
+    im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
+                   interpolation=inps.interpolation, alpha=inps.transparency,
+                   extent=extent, zorder=1)
 
     # Plot Seed Point
     if inps.disp_ref_pixel:
@@ -1194,8 +1202,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     ax.set_xlim(extent[0:2])
     ax.set_ylim(extent[2:4])
 
-    # Subplot Setting
-    ## Tick and Label
+    ## Subplot Setting
+    # Tick and Label
     if not inps.disp_tick or inps.fig_row_num * inps.fig_col_num > 10:
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
@@ -1363,22 +1371,18 @@ def plot_figure(j, inps, metadata):
             vprint('Note: different color scale for EACH subplot!')
             vprint('Adjust figsize for the colorbar of each subplot.')
             fig.set_size_inches(inps.fig_size[0] * 1.1, inps.fig_size[1])
-
             adjust_subplots_layout(fig, inps)
+
         else:
             adjust_subplots_layout(fig, inps)
-
+            # plot common colorbar
             cbar_length = 0.4
             if inps.fig_size[1] > 8.0:
                 cbar_length /= 2
             vprint('show colorbar')
             fig.subplots_adjust(right=0.93)
             cax = fig.add_axes([0.94, (1.0-cbar_length)/2, 0.005, cbar_length])
-
-            if not inps.disp_dem_blend:
-                inps, cbar = pp.plot_colorbar(inps, im, cax)
-            else:
-                cax = pp.plot_blend_colorbar(inps, cax)
+            inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     else:
         adjust_subplots_layout(fig, inps)
@@ -1466,7 +1470,7 @@ def prepare4multi_subplots(inps, metadata):
                 print_msg=False,
             )[0]
 
-            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prepare_dem_background(
+            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prep_dem_background(
                 dem=dem,
                 inps=inps,
                 print_msg=inps.print_msg,
@@ -1479,7 +1483,6 @@ def prepare4multi_subplots(inps, metadata):
             msg += 'This feature is only supported for single subplot, and not for multi-subplots.'
             msg += '\n    --> Ignore it and continue.'
             print(msg)
-        inps.dem = dem   # store it for later calling pp.plot_image4view()
     return inps
 
 
