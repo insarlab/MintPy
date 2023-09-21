@@ -2164,7 +2164,8 @@ def prep_blend_image(data, dem, ls, vmin=None, vmax=None, cmap='viridis',
     return illum_rgb
 
 
-def plot_blend_image(ax, data, dem, geo_box=None, inps=None, print_msg=True):
+def plot_blend_image(ax, data, dem, geo_box=None, inps=None, print_msg=True,
+                     blend_img=None, dem_contour=None, dem_contour_seq=None):
     """Plot image with DEM if provided
     Parameters :    ax      matplotlib.pyplot.Axes or BasemapExt object
                     data    2D np.array

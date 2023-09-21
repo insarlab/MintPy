@@ -527,7 +527,7 @@ def plot_slice(ax, data, metadata, inps):
             inps.disp_ref_pixel = False
 
         ## Plot the image
-        ax, im = pp.plot_image4view(ax, data, dem=dem, extent=extent, geo_box=inps.geo_box, inps=inps)
+        ax, im = pp.plot_image4view(ax, data, dem=dem, extent=extent, inps=inps)
 
         # Draw faultline using GMT lonlat file
         if inps.faultline_file:
