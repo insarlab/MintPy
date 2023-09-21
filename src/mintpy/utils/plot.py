@@ -2041,20 +2041,18 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 ########################################## Plot slice with DEM ###########################################
 def plot_blend_colorbar(inps, cax, fraction=0.75, blend_mode='soft', vert_exag=6000):
     """Create a shaded illuminated colorbar
-    Parameters :    inps        inps : Namespace with the following 5 items:
-                                'vlim'        : list [float, float] display data limit
-                                'shade_azdeg' : float,  True/False
-                                'shade_alt'   : float, 200.0
-                                'colormap'    : string or matplotlib.colors.colormap class
-                                'cbar_label'  : string
-                    cax         colorbar axis
-                    fraction    float; Increases or decreases the contrast of the hillshade
-                    blend_mode  {'hsv', 'overlay', 'soft'} or callable
-                    vert_exag   float; The amount to exaggerate the elevation values by when calculating illumination
-
-    Returns :       cax         updated colorbar axis
-
-    Examples :      cax = pp.shaded_colorbar(inps, cax)
+    Parameters: inps       - inps : Namespace with the following 5 items:
+                             'vlim'        : list [float, float] display data limit
+                             'shade_azdeg' : float,  True/False
+                             'shade_alt'   : float, 200.0
+                             'colormap'    : string or matplotlib.colors.colormap class
+                             'cbar_label'  : string
+                cax        - colorbar axis
+                fraction   - float; Increases or decreases the contrast of the hillshade
+                blend_mode - {'hsv', 'overlay', 'soft'} or callable
+                vert_exag  - float; The amount to exaggerate the elevation values by when calculating illumination
+    Returns:    cax        - updated colorbar axis
+    Examples:   cax = pp.shaded_colorbar(inps, cax)
     """
     from matplotlib.colors import LightSource
 
@@ -2098,30 +2096,31 @@ def plot_blend_colorbar(inps, cax, fraction=0.75, blend_mode='soft', vert_exag=6
     return cax
 
 
-def prep_blend_image(data, dem, ls, vmin=None, vmax=None, cmap='viridis',
-                 base_color=0.9, shade_frac=0.5, blend_mode='overlay', vert_exag=0.5,
-                 mask_dem_demNan=True, mask_dem_dataNan=False, mask_value=0):
+def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
+                     base_color=0.9, shade_frac=0.5, blend_mode='overlay',
+                     azdeg=315, altdeg=45, vert_exag=0.5,
+                     mask_dem_demNan=True, mask_dem_dataNan=False, mask_value=0):
     """Add illumination to the rgb data array based on a DEM file.
        Use shaded relief from a light source to adjust the colors of the data rgb array to have a cool impression.
-    Parameters :    data        2D (m, n) np.array
-                    dem         2D (m, n) np.int16 matrix, dem data
-                    ls          matplotlib.colors.LightSource class
-                    vmin        float; lower display limit of the data
-                    vmax        float; upper display limit of the data
-                    cmap        string or matplotlib.colors.colormap class
-                    base_color  float or color hex codes
-                    shade_frac  float; Increases or decreases the contrast of the hillshade
-                    blend_mode  {'hsv', 'overlay', 'soft'} or callable
-                    vert_exag   float; The amount to exaggerate the elevation values by when calculating illumination
-                    mask_dem_demNan     bool, True/False; whether to mask dem on nan dem pixels
-                    mask_dem_dataNan    bool, True/False; whether to mask dem on nan data pixels
-                    mask_value  float; set the masked pixels as alpha=mask_value (transparent)
-
-    Returns :       illum_rgb   A 3D (m, n, 4) array of floats ranging between 0-1.
-                                1st to 3rd layers are the rgb values; 4th layer is the transparency
-
-    Examples :      illum_rgb = pp.prep_blend_image(data, dem, ls, vmin, vmax)
+    Parameters: data        2D (m, n) np.array
+                dem         2D (m, n) np.int16 matrix, dem data
+                ls          matplotlib.colors.LightSource class
+                vmin        float; lower display limit of the data
+                vmax        float; upper display limit of the data
+                cmap        string or matplotlib.colors.colormap class
+                base_color  float or color hex codes
+                shade_frac  float; Increases or decreases the contrast of the hillshade
+                blend_mode  {'hsv', 'overlay', 'soft'} or callable
+                vert_exag   float; The amount to exaggerate the elevation values by when calculating illumination
+                mask_dem_demNan     bool, True/False; whether to mask dem on nan dem pixels
+                mask_dem_dataNan    bool, True/False; whether to mask dem on nan data pixels
+                mask_value  float; set the masked pixels as alpha=mask_value (transparent)
+    Returns:    llum_rgb   A 3D (m, n, 4) array of floats ranging between 0-1.
+                            1st to 3rd layers are the rgb values; 4th layer is the transparency
+    Examples:   llum_rgb = pp.prep_blend_image(data, dem, ls, vmin, vmax)
     """
+    from matplotlib.colors import LightSource
+
     # use numpy.ma to mask missing or invalid entries
     data = np.ma.masked_invalid(data)
     dem  = np.ma.masked_invalid(dem)
@@ -2146,6 +2145,7 @@ def prep_blend_image(data, dem, ls, vmin=None, vmax=None, cmap='viridis',
         print(f'DEM shape {dem.shape};  Data shape {data.shape}')
 
     # add shaded relief to illuminate rgb image
+    ls = LightSource(azdeg=azdeg, altdeg=altdeg)
     illum_rgb = ls.shade_rgb(img_rgb, dem, fraction=shade_frac, blend_mode=blend_mode, vert_exag=vert_exag)
 
     # add tranparency layer to the array (defualt: all ones = opaque)
@@ -2164,8 +2164,49 @@ def prep_blend_image(data, dem, ls, vmin=None, vmax=None, cmap='viridis',
     return illum_rgb
 
 
-def plot_blend_image(ax, data, dem, geo_box=None, inps=None, print_msg=True,
-                     blend_img=None, dem_contour=None, dem_contour_seq=None):
+def plot_blend_image(ax, data, dem, inps):
+    """Plot DEM-blended image.
+
+    Parameters: ax - matplotlib.pyplot.Axes or BasemapExt object
+                data - 2D np.ndarray, image to be blended
+                dem  - 2D np.ndarray, topography used for blending
+                inps - Namespace object with the following 7 items:
+                       'base_color'   : float
+                       'blend_mode'   : str
+                       'colormap'     : str or matplotlib.colors.colormap class
+                       'extent'       : tuple of 4 float
+                       'shade_altdeg' : float
+                       'shade_azdeg'  : float
+                       'shade_exag'   : float
+                       'shade_frac'   : float
+                       'mask_dem'     : bool
+                       'vlim'         : list of 2 float
+    Returns:    im   - matplotlob.pyplot.AxesImage
+    """
+    # prepare
+    blend_img = prep_blend_image(
+        data, dem,
+        vmin=inps.vlim[0],
+        vmax=inps.vlim[1],
+        cmap=inps.colormap,
+        base_color=inps.base_color,
+        shade_frac=inps.shade_frac,
+        blend_mode=inps.blend_mode,
+        azdeg=inps.shade_azdeg,
+        altdeg=inps.shade_altdeg,
+        vert_exag=inps.shade_exag,
+        mask_dem_dataNan=inps.mask_dem,
+    )
+
+    # plot
+    ax.imshow(blend_img, extent=inps.extent, interpolation='spline16', zorder=1, origin='upper')
+    im = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(inps.vlim[0], inps.vlim[1]), cmap=inps.colormap)
+
+    return im
+
+
+def plot_blend_image2(ax, data, dem, geo_box=None, inps=None, print_msg=True,
+                      blend_img=None, dem_contour=None, dem_contour_seq=None):
     """Plot image with DEM if provided
     Parameters :    ax      matplotlib.pyplot.Axes or BasemapExt object
                     data    2D np.array
@@ -2193,15 +2234,12 @@ def plot_blend_image(ax, data, dem, geo_box=None, inps=None, print_msg=True,
         blend_img = None
         # prepare shade relief
         if inps.disp_dem_blend:
-            from matplotlib.colors import LightSource
-            ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
-
             # blended image requires an input data array
             if not isinstance(data, type(None)):
                 vlim = inps.vlim
                 vlim = vlim if vlim is not None else [np.nanmin(data), np.nanmax(data)]
                 blend_img = prep_blend_image(
-                    data, dem, ls,
+                    data, dem,
                     vmin=vlim[0], vmax=vlim[1],
                     cmap=inps.colormap,
                     base_color=inps.base_color,

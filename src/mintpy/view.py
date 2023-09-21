@@ -485,7 +485,6 @@ def plot_slice(ax, data, metadata, inps):
         ).colormap
 
     # read DEM
-    dem = None  # initialize for pp.plot_image4view()
     if inps.dem_file:
         dem, dem_metadata, dem_pix_box = pp.read_dem(
             inps.dem_file,
@@ -505,7 +504,7 @@ def plot_slice(ax, data, metadata, inps):
         vprint('plot in geo-coordinate')
 
         # extent info for matplotlib.imshow and other functions
-        extent = (inps.geo_box[0], inps.geo_box[2], inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
+        inps.extent = (inps.geo_box[0], inps.geo_box[2], inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
         SNWE = (inps.geo_box[3], inps.geo_box[1], inps.geo_box[0], inps.geo_box[2])
 
         # Draw coastline using cartopy resolution parameters
@@ -513,7 +512,18 @@ def plot_slice(ax, data, metadata, inps):
             vprint(f'draw coast line with resolution: {inps.coastline}')
             ax.coastlines(resolution=inps.coastline, linewidth=inps.coastline_linewidth)
 
-        # Whether reference to a gps site
+        # Plot DEM
+        if inps.dem_file:
+            vprint('plotting DEM background ...')
+            pp.plot_dem_background(
+                ax=ax,
+                geo_box=inps.geo_box,
+                dem=dem,
+                inps=inps,
+                print_msg=inps.print_msg,
+            )
+
+        # Reference (InSAR) data to a GNSS site
         coord = ut.coordinate(metadata)
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
             ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
@@ -526,8 +536,13 @@ def plot_slice(ax, data, metadata, inps):
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False
 
-        ## Plot the image
-        ax, im = pp.plot_image4view(ax, data, dem=dem, extent=extent, inps=inps)
+        # Plot data
+        if inps.disp_dem_blend:
+            im = pp.plot_blend_image(ax, data, dem, inps)
+        else:
+            im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+                           extent=inps.extent, origin='upper', interpolation=inps.interpolation,
+                           alpha=inps.transparency, animated=inps.animation, zorder=1)
 
         # Draw faultline using GMT lonlat file
         if inps.faultline_file:
@@ -622,12 +637,35 @@ def plot_slice(ax, data, metadata, inps):
         inps.fig_coord = 'yx'
         vprint('plotting in Y/X coordinate ...')
 
-        # extent = (left, right, bottom, top) in data coordinates
-        extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-                  inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
+        # Plot DEM
+        if inps.dem_file:
+            vprint('plotting DEM background ...')
+            pp.plot_dem_background(
+                ax=ax,
+                geo_box=None,
+                dem=dem,
+                inps=inps,
+                print_msg=inps.print_msg,
+            )
 
-        ## Plot the image
-        ax, im = pp.plot_image4view(ax, data, dem=dem, extent=extent, inps=inps)
+        # Plot Data
+        msg = 'plotting data '
+        if inps.disp_dem_blend:
+            msg += f'blended by DEM shaded relief (contrast={inps.shade_frac:.1f}, '
+            msg += f'base_color={inps.base_color:.1f}, exag={inps.shade_exag}, '
+            msg += f'az/alt={inps.shade_azdeg}/{inps.shade_altdeg} deg)'
+        vprint(msg+' ...')
+
+        # (left, right, bottom, top) in data coordinates
+        inps.extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+                       inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
+
+        if inps.disp_dem_blend:
+            im = pp.plot_blend_image(ax, data, dem, inps)
+        else:
+            im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+                           extent=inps.extent, interpolation=inps.interpolation,
+                           alpha=inps.transparency, zorder=1)
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
@@ -662,8 +700,8 @@ def plot_slice(ax, data, metadata, inps):
             ])
             ax.plot(pts_yx[:, 1], pts_yx[:, 0], '-', ms=inps.ref_marker_size, mec='black', mew=1.)
 
-        ax.set_xlim(extent[0:2])
-        ax.set_ylim(extent[2:4])
+        ax.set_xlim(inps.extent[0:2])
+        ax.set_ylim(inps.extent[2:4])
 
         # Status bar
 
@@ -1182,11 +1220,11 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
     # Plot Data
     vlim = inps.vlim if inps.vlim is not None else [np.nanmin(data), np.nanmax(data)]
-    extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-              inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
+    inps.extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+                   inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
     im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
                    interpolation=inps.interpolation, alpha=inps.transparency,
-                   extent=extent, zorder=1)
+                   extent=inps.extent, zorder=1)
 
     # Plot Seed Point
     if inps.disp_ref_pixel:
@@ -1199,8 +1237,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
         if ref_y and ref_x:
             ax.plot(ref_x, ref_y, inps.ref_marker, ms=inps.ref_marker_size)
 
-    ax.set_xlim(extent[0:2])
-    ax.set_ylim(extent[2:4])
+    ax.set_xlim(inps.extent[0:2])
+    ax.set_ylim(inps.extent[2:4])
 
     ## Subplot Setting
     # Tick and Label
