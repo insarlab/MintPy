@@ -1887,7 +1887,7 @@ def prep_dem_background(dem, inps, print_msg=True):
                     'dem_contour_smooth': float, 3.0
     Returns:    dem_shade : 3D np.array in size of (length, width, 4)
                 dem_contour : 2D np.array in size of (length, width)
-                dem_contour_sequence : 1D np.array
+                dem_contour_seq : 1D np.array
     Examples:
         from mintpy.cli import view
         from mintpy.utils import plot as pp
@@ -1902,7 +1902,7 @@ def prep_dem_background(dem, inps, print_msg=True):
     # default returns
     dem_shade = None
     dem_contour = None
-    dem_contour_sequence = None
+    dem_contour_seq = None
 
     # default inputs
     if inps.shade_max == 999.:
@@ -1938,7 +1938,7 @@ def prep_dem_background(dem, inps, print_msg=True):
         else:
             from scipy import ndimage
             dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
-            dem_contour_sequence = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
+            dem_contour_seq = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
             if print_msg:
                 msg = f'show contour in step of {inps.dem_contour_step} m '
                 msg += f'with a smoothing factor of {inps.dem_contour_smooth}'
@@ -1957,7 +1957,7 @@ def prep_dem_background(dem, inps, print_msg=True):
         else:
             print('WARNING: DEM has different size than mask, ignore --mask-dem and continue.')
 
-    return dem_shade, dem_contour, dem_contour_sequence
+    return dem_shade, dem_contour, dem_contour_seq
 
 
 def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_contour_seq=None,
@@ -1967,7 +1967,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
                 geo_box : tuple of 4 float in order of (E, N, W, S), geo bounding box
                 dem_shade : 3D np.array in size of (length, width, 4)
                 dem_contour : 2D np.array in size of (length, width)
-                dem_contour_sequence : 1D np.array
+                dem_contour_seq : 1D np.array
                 dem : 2D np.array of DEM data
                 inps : Namespace with the following 4 items:
                     'disp_dem_shade'    : bool,  True/False
@@ -2064,60 +2064,56 @@ def plot_blend_colorbar(inps, cax, fraction=0.75, blend_mode='soft', vert_exag=6
 
     ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
 
-    num_x = 1000  # array size along the illumination profile
-    num_y = 255   # array size along the cmap
+    nx = 1000  # array size along the illumination profile
+    ny = 255   # array size along the cmap
+    arr = np.linspace(vmax, vmin, ny)  # data value array
+    arr = np.tile(arr, (nx,1)).T
 
-    arr = np.linspace(vmax, vmin, num_y)  # data value array
-    arr = np.tile(arr, (num_x,1)).T
-
-    x = np.linspace(-np.pi/4, np.pi/4, num_x)  # x position along the illum. profile
-    ele = np.ones_like(arr) * np.cos(0.6*x)    # altitude as a cosine along teh illum. profile
+    x = np.linspace(-np.pi/4, np.pi/4, nx)     # x position along the illum. profile
+    elev = np.ones_like(arr) * np.cos(0.6*x)   # altitude as a cosine along teh illum. profile
 
     dnorm = (arr - vmin) / (vmax - vmin)
     cMap = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(0,1), cmap=inps.colormap)
     image = cMap.to_rgba(dnorm)[:, :, :3]
-    rgb = ls.shade_rgb(image, ele, fraction=fraction, blend_mode=blend_mode, vert_exag=vert_exag)
-
+    rgb = ls.shade_rgb(image, elev, fraction=fraction, blend_mode=blend_mode, vert_exag=vert_exag)
 
     # show custom colorbar
-    cax.tick_params(axis='x',
-                    which='both',      # both major and minor ticks are affected
-                    bottom=False,      # ticks along the bottom edge are off
-                    top=False,         # ticks along the top edge are off
-                    labelbottom=True)
+    cax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=True)
     cax.set_xticklabels([])
-    cax.imshow(rgb, extent=[0, num_x, vmin, vmax], aspect='auto')
+    cax.imshow(rgb, extent=[0, nx, vmin, vmax], aspect='auto')
     cax.set_ylim((vmin, vmax))
-    cax.set_xlim((0, num_x))
+    cax.set_xlim((0, nx))
+
     # can modify below outside this function for better visual
     cax.set_ylabel(inps.cbar_label, rotation=-90, labelpad=15)
     cax.yaxis.set_label_position("right")
     cax.yaxis.tick_right()
+
     return cax
 
 
 def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
                      base_color=0.9, shade_frac=0.5, blend_mode='overlay',
-                     azdeg=315, altdeg=45, vert_exag=0.5,
-                     mask_dem_demNan=True, mask_dem_dataNan=False, mask_value=0):
-    """Add illumination to the rgb data array based on a DEM file.
-       Use shaded relief from a light source to adjust the colors of the data rgb array to have a cool impression.
-    Parameters: data        2D (m, n) np.array
-                dem         2D (m, n) np.int16 matrix, dem data
-                ls          matplotlib.colors.LightSource class
-                vmin        float; lower display limit of the data
-                vmax        float; upper display limit of the data
-                cmap        string or matplotlib.colors.colormap class
-                base_color  float or color hex codes
-                shade_frac  float; Increases or decreases the contrast of the hillshade
-                blend_mode  {'hsv', 'overlay', 'soft'} or callable
-                vert_exag   float; The amount to exaggerate the elevation values by when calculating illumination
-                mask_dem_demNan     bool, True/False; whether to mask dem on nan dem pixels
-                mask_dem_dataNan    bool, True/False; whether to mask dem on nan data pixels
-                mask_value  float; set the masked pixels as alpha=mask_value (transparent)
-    Returns:    llum_rgb   A 3D (m, n, 4) array of floats ranging between 0-1.
-                            1st to 3rd layers are the rgb values; 4th layer is the transparency
-    Examples:   llum_rgb = pp.prep_blend_image(data, dem, ls, vmin, vmax)
+                     azdeg=315, altdeg=45, vert_exag=0.5, mask_nan_dem=True,
+                     mask_nan_data=False, fill_value=0):
+    """Prepare the illuminated RGB array given the data and DEM, using shaded relief from a light source,
+    like the `gmt grdimage -I` feature, i.e. hillshade + DEM-blended data.
+
+    Parameters: data          - 2D np.ndarray in size of (m, n), data to be blended
+                dem           - 2D np.ndarray in size of (m, n), dem data
+                vmin          - float, lower display limit of the data
+                vmax          - float, upper display limit of the data
+                cmap          - str or matplotlib.colors.colormap class
+                base_color    - float or color hex codes
+                shade_frac    - float, increases or decreases the contrast of the hillshade
+                blend_mode    - {'hsv', 'overlay', 'soft'} or callable
+                vert_exag     - float, the amount to exaggerate the elevation values by when calculating illumination
+                mask_nan_dem  - bool, whether to mask blended image based on nan dem pixels
+                mask_nan_data - bool, whether to mask blended image based on nan data pixels
+                fill_value    - float, set the masked pixels as alpha = fill_value (transparent)
+    Returns:    illum_rgb     - 3D np.ndarray of float32 in size of (m, n, 4), ranging between 0-1.
+                                1st to 3rd layers are the RGB values; 4th layer is the transparency
+    Examples:   illum_rgb = pp.prep_blend_image(data, dem, vmin, vmax)
     """
     from matplotlib.colors import LightSource
 
@@ -2126,10 +2122,11 @@ def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
     dem  = np.ma.masked_invalid(dem)
 
     # data normalization
-    if not vmin: vmin = np.nanmin(data)
-    if not vmax: vmax = np.nanmax(data)
-    data_norm = (data-vmin) / (vmax-vmin)
+    vmin = vmin if vmin else np.nanmin(data)
+    vmax = vmax if vmax else np.nanmax(data)
+    data_norm = (data - vmin) / (vmax - vmin)
 
+    ## create data RGB array
     # cmap norm and ScalarMappable
     mappable = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(0,1), cmap=cmap)
 
@@ -2137,29 +2134,27 @@ def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
     img_rgb = mappable.to_rgba(data_norm)[:, :, :3]
 
     # assign a greyish basemap color to the masked pixels
-    img_rgb[data.mask,:] = base_color
+    img_rgb[data.mask, :] = base_color
 
     # check if the dimensions are coherent
+    # Note: in the future, resample one into the grid of the other one
     if dem.shape != img_rgb.shape[:-1]:
-        print('DEM and Data dimension mismatch. Expecting errors in LightSource.shade_rgb()')
-        print(f'DEM shape {dem.shape};  Data shape {data.shape}')
+        raise ValueError(f'Dimension mismatch between DEM ({dem.shape}) and data ({data.shape})!')
 
-    # add shaded relief to illuminate rgb image
+    ## add shaded relief to illuminate the RGB array
     ls = LightSource(azdeg=azdeg, altdeg=altdeg)
     illum_rgb = ls.shade_rgb(img_rgb, dem, fraction=shade_frac, blend_mode=blend_mode, vert_exag=vert_exag)
 
     # add tranparency layer to the array (defualt: all ones = opaque)
-    illum_rgb = np.dstack([illum_rgb, np.ones_like(illum_rgb[:,:,0])])
+    illum_rgb = np.dstack([illum_rgb, np.ones_like(illum_rgb[:, :, 0])])
 
-    # masking the shaded-relief image:
+    ## masking the shaded-relief image:
     #  - can set rgb (first 3 columns) to [0: black ,1: white, np.nan: transparent]
     #  - or can set the fourth column transparency to 0 (default)
-    if mask_dem_dataNan:
-        # mask demShade on nan data pixels (default no)
-        illum_rgb[data.mask, -1] = mask_value
-    if mask_dem_demNan:
-        # mask demShade on nan dem pixels (default yes)
-        illum_rgb[dem.mask, -1] = mask_value
+    if mask_nan_dem:
+        illum_rgb[dem.mask, -1] = fill_value
+    if mask_nan_data:
+        illum_rgb[data.mask, -1] = fill_value
 
     return illum_rgb
 
@@ -2195,7 +2190,7 @@ def plot_blend_image(ax, data, dem, inps):
         azdeg=inps.shade_azdeg,
         altdeg=inps.shade_altdeg,
         vert_exag=inps.shade_exag,
-        mask_dem_dataNan=inps.mask_dem,
+        mask_nan_data=inps.mask_dem,
     )
 
     # plot
@@ -2203,194 +2198,3 @@ def plot_blend_image(ax, data, dem, inps):
     im = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(inps.vlim[0], inps.vlim[1]), cmap=inps.colormap)
 
     return im
-
-
-def plot_blend_image2(ax, data, dem, geo_box=None, inps=None, print_msg=True,
-                      blend_img=None, dem_contour=None, dem_contour_seq=None):
-    """Plot image with DEM if provided
-    Parameters :    ax      matplotlib.pyplot.Axes or BasemapExt object
-                    data    2D np.array
-                    dem     2D np.int16 matrix, dem data
-                    extent  scalars (left, right, bottom, top) for pyplot.imshow()
-                    geo_box tuple of 4 float in order of (E, N, W, S), geo bounding box
-                    inps    inps : Namespace with the following 7 items:
-                            'dem_file'          : string; file path to the intput DEM
-                            'colormap'          : string or matplotlib.colors.colormap class
-                            'vlim'              : list, tuple of [float, float]
-                            'interpolation'     : string
-                            'transparency'      : float
-                            'animation'         : string
-                            'disp_dem_blend'    : bool,  True/False
-                            and other inps needed in plot_blend_image()
-    Returns :       ax      matplotlib.pyplot.Axes or BasemapExt object
-                    im      matplotlob.pyplot.AxesImage
-
-    Examples :      ax, im = pp.plot_image4view(ax, data, dem, inps=inps)
-    """
-
-    # prepare DEM-blended dataset if not given
-    if blend_img is None and dem is not None:
-        # default return
-        blend_img = None
-        # prepare shade relief
-        if inps.disp_dem_blend:
-            # blended image requires an input data array
-            if not isinstance(data, type(None)):
-                vlim = inps.vlim
-                vlim = vlim if vlim is not None else [np.nanmin(data), np.nanmax(data)]
-                blend_img = prep_blend_image(
-                    data, dem,
-                    vmin=vlim[0], vmax=vlim[1],
-                    cmap=inps.colormap,
-                    base_color=inps.base_color,
-                    shade_frac=inps.shade_frac,
-                    blend_mode=inps.blend_mode,
-                    vert_exag=inps.shade_exag,
-                    mask_dem_dataNan=inps.mask_dem)
-
-            if print_msg:
-                msg = f'show DEM shaded relief blended with data array (contrast={inps.shade_frac:.1f} base_color={inps.base_color:.1f}; '
-                msg += f'exag={inps.shade_exag}; az/alt={inps.shade_azdeg}/{inps.shade_altdeg} deg)'
-                print(msg)
-
-
-    # prepare DEM contour dataset if not given
-    if any(i is None for i in [dem_contour, dem_contour_seq]) and dem is not None:
-        # default returns
-        dem_contour = None
-        dem_contour_seq = None
-        # prepare contour
-        if inps.disp_dem_contour:
-            if (np.nanmax(dem) - np.nanmin(dem)) < inps.dem_contour_step * 2:
-                msg = f'WARNING: elevation range ({np.nanmin(dem):.1f}-{np.nanmax(dem):.1f} m)'
-                msg += f' < 2 contour levels ({inps.dem_contour_step*2:.1f} m)'
-                msg += ' --> skip plotting DEM contour and continue'
-                print(msg)
-
-            else:
-                from scipy import ndimage
-                dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
-                dem_contour_seq = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
-                if print_msg:
-                    msg = f'show contour in step of {inps.dem_contour_step} m '
-                    msg += f'with a smoothing factor of {inps.dem_contour_smooth}'
-                    print(msg)
-
-        # masking
-        if inps and inps.mask_dem and dem_contour is not None:
-            dem_shape = [x.shape[:2] for x in [dem_contour] if x is not None][0]
-            if inps.msk.shape == dem_shape:
-                if print_msg:
-                    print('mask DEM to be consistent with valid data coverage')
-                if dem_contour is not None:
-                    dem_contour[inps.msk == 0] = np.nan
-            else:
-                print('WARNING: DEM has different size than mask, ignore --mask-dem and continue.')
-
-
-    # get extent - (left, right, bottom, top) in data coordinates
-    if geo_box is not None:
-        geo_extent = (geo_box[0], geo_box[2],
-                      geo_box[3], geo_box[1])
-    else:
-        if hasattr(inps, 'pix_box'):
-            pix_box = tuple(inps.pix_box)
-        else:
-            data = [i for i in [dem, dem_contour] if i is not None][0]
-            pix_box = (0, 0, data.shape[1], data.shape[0])
-        rdr_extent = (pix_box[0]-0.5, pix_box[2]-0.5,
-                      pix_box[3]-0.5, pix_box[1]-0.5)
-
-
-    # prepare plotting
-    im = None
-    kwargs = dict(interpolation='spline16', zorder=0, origin='upper')
-
-    # plot the blended image
-    if blend_img is not None:
-        vlim = inps.vlim
-        vlim = vlim if vlim is not None else [np.nanmin(data), np.nanmax(data)]
-        # geo coordinates
-        if geo_box is not None:
-            ax.imshow(blend_img, extent=geo_extent, **kwargs)
-        # radar coordinates
-        elif isinstance(ax, plt.Axes):
-            ax.imshow(blend_img, extent=rdr_extent, **kwargs)
-        im = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(vlim[0], vlim[1]), cmap=inps.colormap)
-
-    # plot topo contour
-    if dem_contour is not None and dem_contour_seq is not None:
-        # config
-        kwargs = dict(origin='upper', colors='black',
-                      linewidths=inps.dem_contour_linewidth,
-                      alpha=0.5, zorder=1)
-        # plot contour line above data (zorder=1) if no DEM shade
-        if blend_img is None:
-            kwargs['zorder'] = 2
-
-        # geo coordinates
-        if geo_box is not None:
-            yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
-                              geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent, **kwargs)
-
-        # radar coordinates
-        elif isinstance(ax, plt.Axes):
-            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent, **kwargs)
-
-    return ax, im
-
-
-def plot_image4view(ax, data, extent, dem=None, inps=None):
-    """Plot image with DEM if provided
-    Parameters :    ax      matplotlib.pyplot.Axes or BasemapExt object
-                    data    2D np.array
-                    dem     2D np.int16 matrix, dem data
-                    extent  scalars (left, right, bottom, top) for pyplot.imshow()
-                    geo_box tuple of 4 float in order of (E, N, W, S), geo bounding box
-                    inps    inps : Namespace with the following 7 items:
-                            'dem_file'          : string; file path to the intput DEM
-                            'colormap'          : string or matplotlib.colors.colormap class
-                            'vlim'              : list, tuple of [float, float]
-                            'interpolation'     : string
-                            'transparency'      : float
-                            'animation'         : string
-                            'disp_dem_blend'    : bool,  True/False
-                            and other inps needed in plot_blend_image()
-    Returns :       ax      matplotlib.pyplot.Axes or BasemapExt object
-                    im      matplotlob.pyplot.AxesImage
-
-    Examples :      ax, im = pp.plot_image4view(ax, data, dem, inps=inps)
-    """
-    im = None
-    imshow_data = True
-    vprint = print if inps.print_msg else lambda *args, **kwargs: None
-
-    # shown dem style
-    if inps.dem_file:
-        if inps.disp_dem_blend:
-            dem_style = 'GMT-like image blended with DEM'
-            imshow_data = False
-        else:
-            dem_style = 'DEM background'
-
-    # Plot DEM
-    if inps.dem_file:
-        vprint(f'plotting {dem_style} ...')
-        kwargs = dict(dem=dem, geo_box=inps.geo_box, inps=inps, print_msg=inps.print_msg)
-        if inps.disp_dem_blend:
-            # hillshade + DEM-blended data: like `gmt grdimage -I` feature
-            ax, im = plot_blend_image(ax, data, **kwargs)
-        elif inps.disp_dem_shade:
-            # hillshade
-            ax = plot_dem_background(ax, **kwargs)
-
-    # Plot Data
-    if imshow_data:
-        vprint('plotting data array ...')
-        im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=extent, origin='upper', interpolation=inps.interpolation,
-                       alpha=inps.transparency, animated=inps.animation, zorder=1)
-
-    return ax, im
