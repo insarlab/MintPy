@@ -538,8 +538,9 @@ def plot_slice(ax, data, metadata, inps):
 
         # Plot data
         if inps.disp_dem_blend:
-            im = pp.plot_blend_image(ax, data, dem, inps)
+            im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
         else:
+            print('plotting data ...')
             im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
                            extent=inps.extent, origin='upper', interpolation=inps.interpolation,
                            alpha=inps.transparency, animated=inps.animation, zorder=1)
@@ -648,21 +649,15 @@ def plot_slice(ax, data, metadata, inps):
                 print_msg=inps.print_msg,
             )
 
-        # Plot Data
-        msg = 'plotting data '
-        if inps.disp_dem_blend:
-            msg += f'blended by DEM shaded relief (contrast={inps.shade_frac:.1f}, '
-            msg += f'base_color={inps.base_color:.1f}, exag={inps.shade_exag}, '
-            msg += f'az/alt={inps.shade_azdeg}/{inps.shade_altdeg} deg)'
-        vprint(msg+' ...')
-
-        # (left, right, bottom, top) in data coordinates
+        # extent = (left, right, bottom, top) in data coordinates
         inps.extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
                        inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
 
+        # Plot Data
         if inps.disp_dem_blend:
-            im = pp.plot_blend_image(ax, data, dem, inps)
+            im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
         else:
+            print('plotting data ...')
             im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
                            extent=inps.extent, interpolation=inps.interpolation,
                            alpha=inps.transparency, zorder=1)

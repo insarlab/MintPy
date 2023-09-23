@@ -2214,13 +2214,13 @@ def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
     return illum_rgb
 
 
-def plot_blend_image(ax, data, dem, inps):
+def plot_blend_image(ax, data, dem, inps, print_msg=True):
     """Plot DEM-blended image.
 
     Parameters: ax - matplotlib.pyplot.Axes or BasemapExt object
                 data - 2D np.ndarray, image to be blended
                 dem  - 2D np.ndarray, topography used for blending
-                inps - Namespace object with the following 7 items:
+                inps - Namespace object with the following items:
                        'base_color'   : float
                        'blend_mode'   : str
                        'colormap'     : str or matplotlib.colors.colormap class
@@ -2231,8 +2231,16 @@ def plot_blend_image(ax, data, dem, inps):
                        'shade_frac'   : float
                        'mask_dem'     : bool
                        'vlim'         : list of 2 float
+                print_msg - bool, print verbose message or not
     Returns:    im   - matplotlob.pyplot.AxesImage
     """
+    if print_msg:
+        msg = 'plotting data '
+        msg += f'blended by DEM shaded relief (contrast={inps.shade_frac:.1f}, '
+        msg += f'base_color={inps.base_color:.1f}, exag={inps.shade_exag}, '
+        msg += f'az/alt={inps.shade_azdeg}/{inps.shade_altdeg} deg) ...'
+        print(msg)
+
     # prepare
     blend_img = prep_blend_image(
         data, dem,
