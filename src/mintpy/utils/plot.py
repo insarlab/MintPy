@@ -1380,59 +1380,96 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
 
 def plot_colorbar(inps, im, cax):
 
-    # expand vlim by 0.01% to account for potential numerical precision leak
-    # e.g. wrapped phase
-    epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.0001
-    vmin = inps.vlim[0] - epsilon
-    vmax = inps.vlim[1] + epsilon
-
-    # extend
-    if not inps.cbar_ext:
-        if   vmin <= inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='neither'
-        elif vmin >  inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='min'
-        elif vmin <= inps.dlim[0] and vmax <  inps.dlim[1]: inps.cbar_ext='max'
-        else:  inps.cbar_ext='both'
-
     # orientation
     if inps.cbar_loc in ['left', 'right']:
         orientation = 'vertical'
     else:
         orientation = 'horizontal'
 
-    # plot colorbar
-    unique_values = getattr(inps, 'unique_values', None)
+    # expand vlim by 0.01% to account for potential numerical precision leak
+    # e.g. wrapped phase
+    epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.0001
+    vmin = inps.vlim[0] - epsilon
+    vmax = inps.vlim[1] + epsilon
+
+    # extend type
+    if not inps.cbar_ext:
+        if   vmin <= inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='neither'
+        elif vmin >  inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='min'
+        elif vmin <= inps.dlim[0] and vmax <  inps.dlim[1]: inps.cbar_ext='max'
+        else:  inps.cbar_ext='both'
+
+    # ticks for special cases
     if abs(vmin + np.pi) / np.pi < 0.001 and abs(vmax - np.pi) / np.pi < 0.001:
-        cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=[-np.pi, 0, np.pi])
-        if orientation == 'vertical':
-            cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
-        else:
-            cbar.ax.set_xticklabels([r'-$\pi$', '0', r'$\pi$'])
-
-    elif unique_values is not None and len(inps.unique_values) <= 5:
-        # show the exact tick values
-        cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=inps.unique_values)
-
+        ticks = [-np.pi, 0, np.pi]   # special case 1: -pi/pi
+    elif hasattr(inps, 'unique_values') and inps.unique_values and len(inps.unique_values) <= 5:
+        ticks = inps.unique_values   # special case 2: show finite exact tick values
     else:
-        cbar = plt.colorbar(im, cax=cax, orientation=orientation, extend=inps.cbar_ext)
+        ticks = None
 
+    # plot colorbar
+    if not inps.disp_dem_blend:
+        # regular colorbar
+        cbar = plt.colorbar(im, cax=cax, orientation=orientation, extend=inps.cbar_ext, ticks=ticks)
+    else:
+        # illuminated colorbar for DEM-blended images
+        blend_colorbar(cax, inps, vlim=[vmin, vmax], orientation=orientation, ticks=ticks)
+        cbar = None
+
+    # ticks for generic cases
     if inps.cbar_nbins:
         if inps.cbar_nbins <= 2:
             # manually set tick for better positions when the color step is not a common number
             # e.g. for numInvIfgram.h5
-            cbar.set_ticks(inps.dlim)
+            if cbar is not None:
+                cbar.set_ticks(inps.dlim)
+            elif orientation == 'vertical':
+                cax.set_yticks(inps.dlim)
+            else:
+                cax.set_xticks(inps.dlim)
+
         else:
-            cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
-            cbar.update_ticks()
+            if cbar is not None:
+                cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
+                cbar.update_ticks()
+            elif orientation == 'vertical':
+                cax.yaxis.set_major_locator(ticker.MaxNLocator(nbins=inps.cbar_nbins))
+            else:
+                cax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=inps.cbar_nbins))
+
     elif inps.cbar_ticks:
-        cbar.set_ticks(inps.cbar_ticks)
+        if cbar is not None:
+            cbar.set_ticks(inps.cbar_ticks)
+        elif orientation == 'vertical':
+            cax.set_yticks(inps.cbar_ticks)
+        else:
+            cax.set_xticks(inps.cbar_ticks)
 
-    cbar.ax.tick_params(which='both', direction='out', labelsize=inps.font_size, colors=inps.font_color)
+    # update tick labels for special symbol: pi
+    if ticks == [-np.pi, 0, np.pi]:
+        if orientation == 'vertical':
+            cax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+        else:
+            cax.set_xticklabels([r'-$\pi$', '0', r'$\pi$'])
 
-    # add label
+    cax.tick_params(which='both', direction='out', labelsize=inps.font_size, colors=inps.font_color)
+
+    # colorbar label
     if inps.cbar_label:
-        cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
+        cbar_label = inps.cbar_label
     elif inps.disp_unit != '1':
-        cbar.set_label(inps.disp_unit,  fontsize=inps.font_size, color=inps.font_color)
+        cbar_label = inps.disp_unit
+    else:
+        cbar_label = None
+
+    if cbar_label is not None:
+        kwargs = dict(fontsize=inps.font_size, color=inps.font_color)
+        if cbar is not None:
+            cbar.set_label(cbar_label, **kwargs)
+        elif orientation == 'vertical':
+            cax.set_ylabel(cbar_label, **kwargs)
+        else:
+            cax.set_xlabel(cbar_label, **kwargs)
 
     return inps, cbar
 
@@ -2038,58 +2075,76 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
     return ax
 
 
-########################################## Plot slice with DEM ###########################################
-def plot_blend_colorbar(inps, cax, fraction=0.75, blend_mode='soft', vert_exag=6000):
-    """Create a shaded illuminated colorbar
-    Parameters: inps       - inps : Namespace with the following 5 items:
-                             'vlim'        : list [float, float] display data limit
-                             'shade_azdeg' : float,  True/False
-                             'shade_alt'   : float, 200.0
-                             'colormap'    : string or matplotlib.colors.colormap class
-                             'cbar_label'  : string
-                cax        - colorbar axis
-                fraction   - float; Increases or decreases the contrast of the hillshade
-                blend_mode - {'hsv', 'overlay', 'soft'} or callable
-                vert_exag  - float; The amount to exaggerate the elevation values by when calculating illumination
-    Returns:    cax        - updated colorbar axis
-    Examples:   cax = pp.shaded_colorbar(inps, cax)
+########################################## DEM-blended data ###########################################
+def blend_colorbar(cax, inps, vlim, orientation='vertical', ticks=None,
+                   fraction=0.75, blend_mode='soft', vert_exag=6000):
+    """Create a shade-illuminated colorbar.
+
+    Parameters: cax         - colorbar axis
+                inps        - inps : Namespace with the following items:
+                              'shade_azdeg' : float,  True/False
+                              'shade_alt'   : float, 200.0
+                              'colormap'    : string or matplotlib.colors.colormap class
+                              'cbar_label'  : string
+                vlim        - list of 2 float, colorbar range
+                orientation - str, vertical or horizontal
+                ticks       - list of float or None, colorbar ticks
+                fraction    - float, increases or decreases the contrast of the hillshade
+                blend_mode  - {'hsv', 'overlay', 'soft'} or callable
+                vert_exag   - float; The amount to exaggerate the elevation values by when calculating illumination
+    Examples:   blend_colorbar(cax, inps, vlim=[-3, 6], orientation='vertical')
     """
     from matplotlib.colors import LightSource
 
-    # expand vlim by 0.01% to account for potential numerical precision leak
-    # e.g. wrapped phase
-    epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.0001
-    vmin = inps.vlim[0] - epsilon
-    vmax = inps.vlim[1] + epsilon
-
-    ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
-
+    # create normalized array for colorbar
     nx = 1000  # array size along the illumination profile
     ny = 255   # array size along the cmap
-    arr = np.linspace(vmax, vmin, ny)  # data value array
-    arr = np.tile(arr, (nx,1)).T
+    arr = np.tile(np.linspace(1, 0, ny).reshape(-1, 1), (1, nx))
 
+    # create an artificial topography for illumination
     x = np.linspace(-np.pi/4, np.pi/4, nx)     # x position along the illum. profile
     elev = np.ones_like(arr) * np.cos(0.6*x)   # altitude as a cosine along teh illum. profile
 
-    dnorm = (arr - vmin) / (vmax - vmin)
-    cMap = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(0,1), cmap=inps.colormap)
-    image = cMap.to_rgba(dnorm)[:, :, :3]
-    rgb = ls.shade_rgb(image, elev, fraction=fraction, blend_mode=blend_mode, vert_exag=vert_exag)
+    if orientation == 'vertical':
+        extent = [0, nx, vlim[0], vlim[1]]  # (left, right, bottom, top)
+    else:
+        extent = [vlim[0], vlim[1], 0, nx]  # (left, right, bottom, top)
+        arr = arr.T
+        elev = elev.T
 
-    # show custom colorbar
-    cax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=True)
-    cax.set_xticklabels([])
-    cax.imshow(rgb, extent=[0, nx, vmin, vmax], aspect='auto')
-    cax.set_ylim((vmin, vmax))
-    cax.set_xlim((0, nx))
+    # create illuminated RGB array
+    ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
+    mappable = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(0,1), cmap=inps.colormap)
+    img_rgb = mappable.to_rgba(arr)[:, :, :3]
+    illum_rgb = ls.shade_rgb(img_rgb, elev, fraction=fraction, blend_mode=blend_mode, vert_exag=vert_exag)
 
-    # can modify below outside this function for better visual
-    cax.set_ylabel(inps.cbar_label, rotation=-90, labelpad=15)
-    cax.yaxis.set_label_position("right")
-    cax.yaxis.tick_right()
+    # plot colorbar as an image
+    cax.imshow(illum_rgb, extent=extent, aspect='auto')
 
-    return cax
+    # axis format
+    tick_kwargs = dict(labelsize=inps.font_size, colors=inps.font_color)
+    label_kwargs = dict(fontsize=inps.font_size, color=inps.font_color)
+    if orientation == 'vertical':
+        cax.tick_params(which='both', bottom=False, top=False, labelbottom=False, **tick_kwargs)
+        cax.set_ylabel(inps.cbar_label, rotation=90, **label_kwargs)
+        cax.yaxis.set_label_position("right")
+        cax.yaxis.tick_right()
+        cax.set_xticks([])
+    else:
+        cax.tick_params(which='both', left=False, right=False, labeltop=False, **tick_kwargs)
+        cax.set_xlabel(inps.cbar_label, **label_kwargs)
+        cax.xaxis.set_label_position("bottom")
+        cax.xaxis.tick_bottom()
+        cax.set_yticks([])
+
+    # update ticks if given
+    if ticks is not None:
+        if orientation == 'vertical':
+            cax.set_yticks(ticks)
+        else:
+            cax.set_xticks(ticks)
+
+    return
 
 
 def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',

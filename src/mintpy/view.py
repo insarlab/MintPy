@@ -749,11 +749,7 @@ def plot_slice(ax, data, metadata, inps):
     if inps.disp_cbar:
         divider = make_axes_locatable(ax)
         cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size, axes_class=plt.Axes)
-
-        if not inps.disp_dem_blend:
-            inps, cbar = pp.plot_colorbar(inps, im, cax)
-        else:
-            cax = pp.plot_blend_colorbar(inps, cax)
+        inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     # 3.2 Title
     if inps.disp_title:
@@ -777,7 +773,7 @@ def plot_slice(ax, data, metadata, inps):
     if inps.disp_tick:
         # move x-axis tick label to the top if colorbar is at the bottom
         if inps.cbar_loc == 'bottom':
-            ax.tick_params(labelbottom=False, labeltop=True)
+            ax.tick_params(bottom=False, top=True, labelbottom=False, labeltop=True)
 
         # manually turn ON to enable tick labels for UTM with cartopy
         # link: https://github.com/SciTools/cartopy/issues/491
