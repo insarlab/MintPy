@@ -540,7 +540,7 @@ def plot_slice(ax, data, metadata, inps):
         if inps.disp_dem_blend:
             im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
         else:
-            print('plotting data ...')
+            vprint('plotting data ...')
             im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
                            extent=inps.extent, origin='upper', interpolation=inps.interpolation,
                            alpha=inps.transparency, animated=inps.animation, zorder=1)
@@ -657,7 +657,7 @@ def plot_slice(ax, data, metadata, inps):
         if inps.disp_dem_blend:
             im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
         else:
-            print('plotting data ...')
+            vprint('plotting data ...')
             im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
                            extent=inps.extent, interpolation=inps.interpolation,
                            alpha=inps.transparency, zorder=1)

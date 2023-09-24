@@ -1402,7 +1402,7 @@ def plot_colorbar(inps, im, cax):
     # ticks for special cases
     if abs(vmin + np.pi) / np.pi < 0.001 and abs(vmax - np.pi) / np.pi < 0.001:
         ticks = [-np.pi, 0, np.pi]   # special case 1: -pi/pi
-    elif hasattr(inps, 'unique_values') and inps.unique_values and len(inps.unique_values) <= 5:
+    elif hasattr(inps, 'unique_values') and inps.unique_values is not None and len(inps.unique_values) <= 5:
         ticks = inps.unique_values   # special case 2: show finite exact tick values
     else:
         ticks = None
@@ -2091,7 +2091,8 @@ def blend_colorbar(cax, inps, vlim, orientation='vertical', ticks=None,
                 ticks       - list of float or None, colorbar ticks
                 fraction    - float, increases or decreases the contrast of the hillshade
                 blend_mode  - {'hsv', 'overlay', 'soft'} or callable
-                vert_exag   - float; The amount to exaggerate the elevation values by when calculating illumination
+                vert_exag   - float, the amount to exaggerate the elevation values by
+                              when calculating illumination
     Examples:   blend_colorbar(cax, inps, vlim=[-3, 6], orientation='vertical')
     """
     from matplotlib.colors import LightSource
@@ -2151,18 +2152,19 @@ def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
                      base_color=0.9, shade_frac=0.5, blend_mode='overlay',
                      azdeg=315, altdeg=45, vert_exag=0.5, mask_nan_dem=True,
                      mask_nan_data=False, fill_value=0):
-    """Prepare the illuminated RGB array given the data and DEM, using shaded relief from a light source,
+    """Prepare the illuminated RGB array for the data, using shaded relief DEM from a light source,
     like the `gmt grdimage -I` feature, i.e. hillshade + DEM-blended data.
 
     Parameters: data          - 2D np.ndarray in size of (m, n), data to be blended
                 dem           - 2D np.ndarray in size of (m, n), dem data
-                vmin          - float, lower display limit of the data
-                vmax          - float, upper display limit of the data
+                vmin/max      - float, lower/upper display limit of the data
                 cmap          - str or matplotlib.colors.colormap class
                 base_color    - float or color hex codes
                 shade_frac    - float, increases or decreases the contrast of the hillshade
                 blend_mode    - {'hsv', 'overlay', 'soft'} or callable
-                vert_exag     - float, the amount to exaggerate the elevation values by when calculating illumination
+                az/altdeg     - float, azimuth/altitude angle of the light source
+                vert_exag     - float, the amount to exaggerate the elevation values by
+                                when calculating illumination
                 mask_nan_dem  - bool, whether to mask blended image based on nan dem pixels
                 mask_nan_data - bool, whether to mask blended image based on nan data pixels
                 fill_value    - float, set the masked pixels as alpha = fill_value (transparent)
