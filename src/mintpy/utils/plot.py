@@ -1401,9 +1401,9 @@ def plot_colorbar(inps, im, cax):
 
     # ticks for special cases
     if abs(vmin + np.pi) / np.pi < 0.001 and abs(vmax - np.pi) / np.pi < 0.001:
-        ticks = [-np.pi, 0, np.pi]   # special case 1: -pi/pi
+        ticks = [-np.pi, 0, np.pi]         # special case 1: -pi/pi
     elif hasattr(inps, 'unique_values') and inps.unique_values is not None and len(inps.unique_values) <= 5:
-        ticks = inps.unique_values   # special case 2: show finite exact tick values
+        ticks = list(inps.unique_values)   # special case 2: show finite exact tick values
     else:
         ticks = None
 
@@ -1411,9 +1411,11 @@ def plot_colorbar(inps, im, cax):
     if not inps.disp_dem_blend:
         # regular colorbar
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, extend=inps.cbar_ext, ticks=ticks)
+        cbar_type = 'mpl'
     else:
         # illuminated colorbar for DEM-blended images
         blend_colorbar(cax, inps, vlim=[vmin, vmax], orientation=orientation, ticks=ticks)
+        cbar_type = 'img'
         cbar = None
 
     # ticks for generic cases
@@ -1421,32 +1423,32 @@ def plot_colorbar(inps, im, cax):
         if inps.cbar_nbins <= 2:
             # manually set tick for better positions when the color step is not a common number
             # e.g. for numInvIfgram.h5
-            if cbar is not None:
+            if cbar_type == 'mpl':
                 cbar.set_ticks(inps.dlim)
             elif orientation == 'vertical':
                 cax.set_yticks(inps.dlim)
-            else:
+            elif orientation == 'horizontal':
                 cax.set_xticks(inps.dlim)
 
         else:
-            if cbar is not None:
+            if cbar_type == 'mpl':
                 cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
                 cbar.update_ticks()
             elif orientation == 'vertical':
                 cax.yaxis.set_major_locator(ticker.MaxNLocator(nbins=inps.cbar_nbins))
-            else:
+            elif orientation == 'horizontal':
                 cax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=inps.cbar_nbins))
 
     elif inps.cbar_ticks:
-        if cbar is not None:
+        if cbar_type == 'mpl':
             cbar.set_ticks(inps.cbar_ticks)
         elif orientation == 'vertical':
             cax.set_yticks(inps.cbar_ticks)
-        else:
+        elif orientation == 'horizontal':
             cax.set_xticks(inps.cbar_ticks)
 
     # update tick labels for special symbol: pi
-    if ticks is not None and ticks[:] == [-np.pi, 0, np.pi]:
+    if ticks and len(ticks) == 3 and ticks == [-np.pi, 0, np.pi]:
         if orientation == 'vertical':
             cax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
         else:
@@ -1464,11 +1466,11 @@ def plot_colorbar(inps, im, cax):
 
     if cbar_label is not None:
         kwargs = dict(fontsize=inps.font_size, color=inps.font_color)
-        if cbar is not None:
+        if cbar_type == 'mpl':
             cbar.set_label(cbar_label, **kwargs)
         elif orientation == 'vertical':
             cax.set_ylabel(cbar_label, **kwargs)
-        else:
+        elif orientation == 'horizontal':
             cax.set_xlabel(cbar_label, **kwargs)
 
     return inps, cbar
