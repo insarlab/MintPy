@@ -143,6 +143,12 @@ def cmd_line_parse(iargs=None):
     if inps.flip_lr or inps.flip_ud:
         inps.auto_flip = False
 
+    if inps.disp_dem_blend:
+        inps.disp_dem_shade = False
+        # --dem-blend option requires --dem option
+        if inps.dem_file is None:
+            parser.error("--dem-blend requires -d/-dem.")
+
     # check: conflicted options (geo-only options if inpput file is in radar-coordinates)
     geo_opt_names = ['--coord', '--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar', '--faultline']
     geo_opt_names = list(set(geo_opt_names) & set(inps.argv))

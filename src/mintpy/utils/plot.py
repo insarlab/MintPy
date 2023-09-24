@@ -1380,59 +1380,98 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
 
 def plot_colorbar(inps, im, cax):
 
-    # expand vlim by 0.01% to account for potential numerical precision leak
-    # e.g. wrapped phase
-    epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.0001
-    vmin = inps.vlim[0] - epsilon
-    vmax = inps.vlim[1] + epsilon
-
-    # extend
-    if not inps.cbar_ext:
-        if   vmin <= inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='neither'
-        elif vmin >  inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='min'
-        elif vmin <= inps.dlim[0] and vmax <  inps.dlim[1]: inps.cbar_ext='max'
-        else:  inps.cbar_ext='both'
-
     # orientation
     if inps.cbar_loc in ['left', 'right']:
         orientation = 'vertical'
     else:
         orientation = 'horizontal'
 
-    # plot colorbar
-    unique_values = getattr(inps, 'unique_values', None)
+    # expand vlim by 0.01% to account for potential numerical precision leak
+    # e.g. wrapped phase
+    epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.0001
+    vmin = inps.vlim[0] - epsilon
+    vmax = inps.vlim[1] + epsilon
+
+    # extend type
+    if not inps.cbar_ext:
+        if   vmin <= inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='neither'
+        elif vmin >  inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='min'
+        elif vmin <= inps.dlim[0] and vmax <  inps.dlim[1]: inps.cbar_ext='max'
+        else:  inps.cbar_ext='both'
+
+    # ticks for special cases
     if abs(vmin + np.pi) / np.pi < 0.001 and abs(vmax - np.pi) / np.pi < 0.001:
-        cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=[-np.pi, 0, np.pi])
-        if orientation == 'vertical':
-            cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
-        else:
-            cbar.ax.set_xticklabels([r'-$\pi$', '0', r'$\pi$'])
-
-    elif unique_values is not None and len(inps.unique_values) <= 5:
-        # show the exact tick values
-        cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=inps.unique_values)
-
+        ticks = [-np.pi, 0, np.pi]         # special case 1: -pi/pi
+    elif hasattr(inps, 'unique_values') and inps.unique_values is not None and len(inps.unique_values) <= 5:
+        ticks = list(inps.unique_values)   # special case 2: show finite exact tick values
     else:
-        cbar = plt.colorbar(im, cax=cax, orientation=orientation, extend=inps.cbar_ext)
+        ticks = None
 
+    # plot colorbar
+    if not inps.disp_dem_blend:
+        # regular colorbar
+        cbar = plt.colorbar(im, cax=cax, orientation=orientation, extend=inps.cbar_ext, ticks=ticks)
+        cbar_type = 'mpl'
+    else:
+        # illuminated colorbar for DEM-blended images
+        blend_colorbar(cax, inps, vlim=[vmin, vmax], orientation=orientation, ticks=ticks)
+        cbar_type = 'img'
+        cbar = None
+
+    # ticks for generic cases
     if inps.cbar_nbins:
         if inps.cbar_nbins <= 2:
             # manually set tick for better positions when the color step is not a common number
             # e.g. for numInvIfgram.h5
-            cbar.set_ticks(inps.dlim)
+            if cbar_type == 'mpl':
+                cbar.set_ticks(inps.dlim)
+            elif orientation == 'vertical':
+                cax.set_yticks(inps.dlim)
+            elif orientation == 'horizontal':
+                cax.set_xticks(inps.dlim)
+
         else:
-            cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
-            cbar.update_ticks()
+            if cbar_type == 'mpl':
+                cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
+                cbar.update_ticks()
+            elif orientation == 'vertical':
+                cax.yaxis.set_major_locator(ticker.MaxNLocator(nbins=inps.cbar_nbins))
+            elif orientation == 'horizontal':
+                cax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=inps.cbar_nbins))
+
     elif inps.cbar_ticks:
-        cbar.set_ticks(inps.cbar_ticks)
+        if cbar_type == 'mpl':
+            cbar.set_ticks(inps.cbar_ticks)
+        elif orientation == 'vertical':
+            cax.set_yticks(inps.cbar_ticks)
+        elif orientation == 'horizontal':
+            cax.set_xticks(inps.cbar_ticks)
 
-    cbar.ax.tick_params(which='both', direction='out', labelsize=inps.font_size, colors=inps.font_color)
+    # update tick labels for special symbol: pi
+    if ticks and len(ticks) == 3 and ticks == [-np.pi, 0, np.pi]:
+        if orientation == 'vertical':
+            cax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+        else:
+            cax.set_xticklabels([r'-$\pi$', '0', r'$\pi$'])
 
-    # add label
+    cax.tick_params(which='both', direction='out', labelsize=inps.font_size, colors=inps.font_color)
+
+    # colorbar label
     if inps.cbar_label:
-        cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
+        cbar_label = inps.cbar_label
     elif inps.disp_unit != '1':
-        cbar.set_label(inps.disp_unit,  fontsize=inps.font_size, color=inps.font_color)
+        cbar_label = inps.disp_unit
+    else:
+        cbar_label = None
+
+    if cbar_label is not None:
+        kwargs = dict(fontsize=inps.font_size, color=inps.font_color)
+        if cbar_type == 'mpl':
+            cbar.set_label(cbar_label, **kwargs)
+        elif orientation == 'vertical':
+            cax.set_ylabel(cbar_label, **kwargs)
+        elif orientation == 'horizontal':
+            cax.set_xlabel(cbar_label, **kwargs)
 
     return inps, cbar
 
@@ -1877,7 +1916,7 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     return dem, dem_meta, dem_pix_box
 
 
-def prepare_dem_background(dem, inps, print_msg=True):
+def prep_dem_background(dem, inps, print_msg=True):
     """Prepare to plot DEM on background
     Parameters: dem : 2D np.int16 matrix, dem data
                 inps : Namespace with the following 4 items:
@@ -1887,14 +1926,14 @@ def prepare_dem_background(dem, inps, print_msg=True):
                     'dem_contour_smooth': float, 3.0
     Returns:    dem_shade : 3D np.array in size of (length, width, 4)
                 dem_contour : 2D np.array in size of (length, width)
-                dem_contour_sequence : 1D np.array
+                dem_contour_seq : 1D np.array
     Examples:
         from mintpy.cli import view
         from mintpy.utils import plot as pp
 
         inps = view.cmd_line_parse()
         dem = readfile.read('inputs/geometryRadar.h5')[0]
-        dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(
+        dem_shade, dem_contour, dem_contour_seq = pp.prep_dem_background(
             dem=dem,
             inps=inps,
         )
@@ -1902,7 +1941,7 @@ def prepare_dem_background(dem, inps, print_msg=True):
     # default returns
     dem_shade = None
     dem_contour = None
-    dem_contour_sequence = None
+    dem_contour_seq = None
 
     # default inputs
     if inps.shade_max == 999.:
@@ -1938,7 +1977,7 @@ def prepare_dem_background(dem, inps, print_msg=True):
         else:
             from scipy import ndimage
             dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
-            dem_contour_sequence = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
+            dem_contour_seq = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
             if print_msg:
                 msg = f'show contour in step of {inps.dem_contour_step} m '
                 msg += f'with a smoothing factor of {inps.dem_contour_smooth}'
@@ -1957,7 +1996,7 @@ def prepare_dem_background(dem, inps, print_msg=True):
         else:
             print('WARNING: DEM has different size than mask, ignore --mask-dem and continue.')
 
-    return dem_shade, dem_contour, dem_contour_sequence
+    return dem_shade, dem_contour, dem_contour_seq
 
 
 def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_contour_seq=None,
@@ -1967,7 +2006,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
                 geo_box : tuple of 4 float in order of (E, N, W, S), geo bounding box
                 dem_shade : 3D np.array in size of (length, width, 4)
                 dem_contour : 2D np.array in size of (length, width)
-                dem_contour_sequence : 1D np.array
+                dem_contour_seq : 1D np.array
                 dem : 2D np.array of DEM data
                 inps : Namespace with the following 4 items:
                     'disp_dem_shade'    : bool,  True/False
@@ -1985,7 +2024,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
     # prepare DEM shade/contour datasets
     if all(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:
-        dem_shade, dem_contour, dem_contour_seq = prepare_dem_background(
+        dem_shade, dem_contour, dem_contour_seq = prep_dem_background(
             dem,
             inps=inps,
             print_msg=print_msg,
@@ -2006,15 +2045,12 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
     # plot shaded relief
     if dem_shade is not None:
-        # config
         kwargs = dict(interpolation='spline16', zorder=0, origin='upper')
-
-        # geo coordinates
         if geo_box is not None:
+            # geo coordinates
             ax.imshow(dem_shade, extent=geo_extent, **kwargs)
-
-        # radar coordinates
         elif isinstance(ax, plt.Axes):
+            # radar coordinates
             ax.imshow(dem_shade, extent=rdr_extent, **kwargs)
 
     # plot topo contour
@@ -2039,3 +2075,193 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
             ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent, **kwargs)
 
     return ax
+
+
+########################################## DEM-blended data ###########################################
+def blend_colorbar(cax, inps, vlim, orientation='vertical', ticks=None,
+                   fraction=0.75, blend_mode='soft', vert_exag=6000):
+    """Create a shade-illuminated colorbar.
+
+    Parameters: cax         - colorbar axis
+                inps        - inps : Namespace with the following items:
+                              'shade_azdeg' : float,  True/False
+                              'shade_alt'   : float, 200.0
+                              'colormap'    : string or matplotlib.colors.colormap class
+                              'cbar_label'  : string
+                vlim        - list of 2 float, colorbar range
+                orientation - str, vertical or horizontal
+                ticks       - list of float or None, colorbar ticks
+                fraction    - float, increases or decreases the contrast of the hillshade
+                blend_mode  - {'hsv', 'overlay', 'soft'} or callable
+                vert_exag   - float, the amount to exaggerate the elevation values by
+                              when calculating illumination
+    Examples:   blend_colorbar(cax, inps, vlim=[-3, 6], orientation='vertical')
+    """
+    from matplotlib.colors import LightSource
+
+    # create normalized array for colorbar
+    nx = 1000  # array size along the illumination profile
+    ny = 255   # array size along the cmap
+    arr = np.tile(np.linspace(1, 0, ny).reshape(-1, 1), (1, nx))
+
+    # create an artificial topography for illumination
+    x = np.linspace(-np.pi/4, np.pi/4, nx)     # x position along the illum. profile
+    elev = np.ones_like(arr) * np.cos(0.6*x)   # altitude as a cosine along teh illum. profile
+
+    if orientation == 'vertical':
+        extent = [0, nx, vlim[0], vlim[1]]  # (left, right, bottom, top)
+    else:
+        extent = [vlim[0], vlim[1], 0, nx]  # (left, right, bottom, top)
+        arr = arr.T
+        elev = elev.T
+
+    # create illuminated RGB array
+    ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
+    mappable = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(0,1), cmap=inps.colormap)
+    img_rgb = mappable.to_rgba(arr)[:, :, :3]
+    illum_rgb = ls.shade_rgb(img_rgb, elev, fraction=fraction, blend_mode=blend_mode, vert_exag=vert_exag)
+
+    # plot colorbar as an image
+    cax.imshow(illum_rgb, extent=extent, aspect='auto')
+
+    # axis format
+    tick_kwargs = dict(labelsize=inps.font_size, colors=inps.font_color)
+    label_kwargs = dict(fontsize=inps.font_size, color=inps.font_color)
+    if orientation == 'vertical':
+        cax.tick_params(which='both', bottom=False, top=False, labelbottom=False, **tick_kwargs)
+        cax.set_ylabel(inps.cbar_label, rotation=90, **label_kwargs)
+        cax.yaxis.set_label_position("right")
+        cax.yaxis.tick_right()
+        cax.set_xticks([])
+    else:
+        cax.tick_params(which='both', left=False, right=False, labeltop=False, **tick_kwargs)
+        cax.set_xlabel(inps.cbar_label, **label_kwargs)
+        cax.xaxis.set_label_position("bottom")
+        cax.xaxis.tick_bottom()
+        cax.set_yticks([])
+
+    # update ticks if given
+    if ticks is not None:
+        if orientation == 'vertical':
+            cax.set_yticks(ticks)
+        else:
+            cax.set_xticks(ticks)
+
+    return
+
+
+def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
+                     base_color=0.9, shade_frac=0.5, blend_mode='overlay',
+                     azdeg=315, altdeg=45, vert_exag=0.5, mask_nan_dem=True,
+                     mask_nan_data=False, fill_value=0):
+    """Prepare the illuminated RGB array for the data, using shaded relief DEM from a light source,
+    like the `gmt grdimage -I` feature, i.e. hillshade + DEM-blended data.
+
+    Parameters: data          - 2D np.ndarray in size of (m, n), data to be blended
+                dem           - 2D np.ndarray in size of (m, n), dem data
+                vmin/max      - float, lower/upper display limit of the data
+                cmap          - str or matplotlib.colors.colormap class
+                base_color    - float or color hex codes
+                shade_frac    - float, increases or decreases the contrast of the hillshade
+                blend_mode    - {'hsv', 'overlay', 'soft'} or callable
+                az/altdeg     - float, azimuth/altitude angle of the light source
+                vert_exag     - float, the amount to exaggerate the elevation values by
+                                when calculating illumination
+                mask_nan_dem  - bool, whether to mask blended image based on nan dem pixels
+                mask_nan_data - bool, whether to mask blended image based on nan data pixels
+                fill_value    - float, set the masked pixels as alpha = fill_value (transparent)
+    Returns:    illum_rgb     - 3D np.ndarray of float32 in size of (m, n, 4), ranging between 0-1.
+                                1st to 3rd layers are the RGB values; 4th layer is the transparency
+    Examples:   illum_rgb = pp.prep_blend_image(data, dem, vmin, vmax)
+    """
+    from matplotlib.colors import LightSource
+
+    # use numpy.ma to mask missing or invalid entries
+    data = np.ma.masked_invalid(data)
+    dem  = np.ma.masked_invalid(dem)
+
+    # data normalization
+    vmin = vmin if vmin else np.nanmin(data)
+    vmax = vmax if vmax else np.nanmax(data)
+    data_norm = (data - vmin) / (vmax - vmin)
+
+    ## create data RGB array
+    # cmap norm and ScalarMappable
+    mappable = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(0,1), cmap=cmap)
+
+    # convert data norm to image and remove alpha channel (the fourth dimension)
+    img_rgb = mappable.to_rgba(data_norm)[:, :, :3]
+
+    # assign a greyish basemap color to the masked pixels
+    img_rgb[data.mask, :] = base_color
+
+    # check if the dimensions are coherent
+    # Note: in the future, resample one into the grid of the other one
+    if dem.shape != img_rgb.shape[:-1]:
+        raise ValueError(f'Dimension mismatch between DEM ({dem.shape}) and data ({data.shape})!')
+
+    ## add shaded relief to illuminate the RGB array
+    ls = LightSource(azdeg=azdeg, altdeg=altdeg)
+    illum_rgb = ls.shade_rgb(img_rgb, dem, fraction=shade_frac, blend_mode=blend_mode, vert_exag=vert_exag)
+
+    # add tranparency layer to the array (defualt: all ones = opaque)
+    illum_rgb = np.dstack([illum_rgb, np.ones_like(illum_rgb[:, :, 0])])
+
+    ## masking the shaded-relief image:
+    #  - can set rgb (first 3 columns) to [0: black ,1: white, np.nan: transparent]
+    #  - or can set the fourth column transparency to 0 (default)
+    if mask_nan_dem:
+        illum_rgb[dem.mask, -1] = fill_value
+    if mask_nan_data:
+        illum_rgb[data.mask, -1] = fill_value
+
+    return illum_rgb
+
+
+def plot_blend_image(ax, data, dem, inps, print_msg=True):
+    """Plot DEM-blended image.
+
+    Parameters: ax - matplotlib.pyplot.Axes or BasemapExt object
+                data - 2D np.ndarray, image to be blended
+                dem  - 2D np.ndarray, topography used for blending
+                inps - Namespace object with the following items:
+                       'base_color'   : float
+                       'blend_mode'   : str
+                       'colormap'     : str or matplotlib.colors.colormap class
+                       'extent'       : tuple of 4 float
+                       'shade_altdeg' : float
+                       'shade_azdeg'  : float
+                       'shade_exag'   : float
+                       'shade_frac'   : float
+                       'mask_dem'     : bool
+                       'vlim'         : list of 2 float
+                print_msg - bool, print verbose message or not
+    Returns:    im   - matplotlob.pyplot.AxesImage
+    """
+    if print_msg:
+        msg = 'plotting data '
+        msg += f'blended by DEM shaded relief (contrast={inps.shade_frac:.1f}, '
+        msg += f'base_color={inps.base_color:.1f}, exag={inps.shade_exag}, '
+        msg += f'az/alt={inps.shade_azdeg}/{inps.shade_altdeg} deg) ...'
+        print(msg)
+
+    # prepare
+    blend_img = prep_blend_image(
+        data, dem,
+        vmin=inps.vlim[0],
+        vmax=inps.vlim[1],
+        cmap=inps.colormap,
+        base_color=inps.base_color,
+        shade_frac=inps.shade_frac,
+        blend_mode=inps.blend_mode,
+        azdeg=inps.shade_azdeg,
+        altdeg=inps.shade_altdeg,
+        vert_exag=inps.shade_exag,
+        mask_nan_data=inps.mask_dem,
+    )
+
+    # plot
+    ax.imshow(blend_img, extent=inps.extent, interpolation='spline16', zorder=1, origin='upper')
+    im = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(inps.vlim[0], inps.vlim[1]), cmap=inps.colormap)
+
+    return im

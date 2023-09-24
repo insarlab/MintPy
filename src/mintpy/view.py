@@ -504,7 +504,7 @@ def plot_slice(ax, data, metadata, inps):
         vprint('plot in geo-coordinate')
 
         # extent info for matplotlib.imshow and other functions
-        extent = (inps.geo_box[0], inps.geo_box[2], inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
+        inps.extent = (inps.geo_box[0], inps.geo_box[2], inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
         SNWE = (inps.geo_box[3], inps.geo_box[1], inps.geo_box[0], inps.geo_box[2])
 
         # Draw coastline using cartopy resolution parameters
@@ -523,9 +523,8 @@ def plot_slice(ax, data, metadata, inps):
                 print_msg=inps.print_msg,
             )
 
-        # Plot Data
+        # Reference (InSAR) data to a GNSS site
         coord = ut.coordinate(metadata)
-        vprint('plotting image ...')
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
             ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
@@ -537,9 +536,14 @@ def plot_slice(ax, data, metadata, inps):
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False
 
-        im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=extent, origin='upper', interpolation=inps.interpolation,
-                       alpha=inps.transparency, animated=inps.animation, zorder=1)
+        # Plot data
+        if inps.disp_dem_blend:
+            im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
+        else:
+            vprint('plotting data ...')
+            im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+                           extent=inps.extent, origin='upper', interpolation=inps.interpolation,
+                           alpha=inps.transparency, animated=inps.animation, zorder=1)
 
         # Draw faultline using GMT lonlat file
         if inps.faultline_file:
@@ -599,8 +603,6 @@ def plot_slice(ax, data, metadata, inps):
 
         # Show UNR GPS stations
         if inps.disp_gps:
-            SNWE = (inps.geo_box[3], inps.geo_box[1],
-                    inps.geo_box[0], inps.geo_box[2])
             ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
 
         # Status bar
@@ -647,13 +649,18 @@ def plot_slice(ax, data, metadata, inps):
                 print_msg=inps.print_msg,
             )
 
-        # Plot Data
-        vprint('plotting Data ...')
         # extent = (left, right, bottom, top) in data coordinates
-        extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-                  inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
-        im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=extent, interpolation=inps.interpolation, alpha=inps.transparency, zorder=1)
+        inps.extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+                       inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
+
+        # Plot Data
+        if inps.disp_dem_blend:
+            im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
+        else:
+            vprint('plotting data ...')
+            im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+                           extent=inps.extent, interpolation=inps.interpolation,
+                           alpha=inps.transparency, zorder=1)
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
@@ -688,8 +695,8 @@ def plot_slice(ax, data, metadata, inps):
             ])
             ax.plot(pts_yx[:, 1], pts_yx[:, 0], '-', ms=inps.ref_marker_size, mec='black', mew=1.)
 
-        ax.set_xlim(extent[0:2])
-        ax.set_ylim(extent[2:4])
+        ax.set_xlim(inps.extent[0:2])
+        ax.set_ylim(inps.extent[2:4])
 
         # Status bar
 
@@ -761,7 +768,7 @@ def plot_slice(ax, data, metadata, inps):
     if inps.disp_tick:
         # move x-axis tick label to the top if colorbar is at the bottom
         if inps.cbar_loc == 'bottom':
-            ax.tick_params(labelbottom=False, labeltop=True)
+            ax.tick_params(bottom=False, top=True, labelbottom=False, labeltop=True)
 
         # manually turn ON to enable tick labels for UTM with cartopy
         # link: https://github.com/SciTools/cartopy/issues/491
@@ -1203,14 +1210,12 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             print_msg=inps.print_msg)
 
     # Plot Data
-    vlim = inps.vlim
-    vlim = vlim if vlim is not None else [np.nanmin(data), np.nanmax(data)]
-    extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-              inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
-
+    vlim = inps.vlim if inps.vlim is not None else [np.nanmin(data), np.nanmax(data)]
+    inps.extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+                   inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
     im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
                    interpolation=inps.interpolation, alpha=inps.transparency,
-                   extent=extent, zorder=1)
+                   extent=inps.extent, zorder=1)
 
     # Plot Seed Point
     if inps.disp_ref_pixel:
@@ -1223,11 +1228,11 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
         if ref_y and ref_x:
             ax.plot(ref_x, ref_y, inps.ref_marker, ms=inps.ref_marker_size)
 
-    ax.set_xlim(extent[0:2])
-    ax.set_ylim(extent[2:4])
+    ax.set_xlim(inps.extent[0:2])
+    ax.set_ylim(inps.extent[2:4])
 
-    # Subplot Setting
-    ## Tick and Label
+    ## Subplot Setting
+    # Tick and Label
     if not inps.disp_tick or inps.fig_row_num * inps.fig_col_num > 10:
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
@@ -1395,11 +1400,11 @@ def plot_figure(j, inps, metadata):
             vprint('Note: different color scale for EACH subplot!')
             vprint('Adjust figsize for the colorbar of each subplot.')
             fig.set_size_inches(inps.fig_size[0] * 1.1, inps.fig_size[1])
-
             adjust_subplots_layout(fig, inps)
+
         else:
             adjust_subplots_layout(fig, inps)
-
+            # plot common colorbar
             cbar_length = 0.4
             if inps.fig_size[1] > 8.0:
                 cbar_length /= 2
@@ -1494,7 +1499,7 @@ def prepare4multi_subplots(inps, metadata):
                 print_msg=False,
             )[0]
 
-            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prepare_dem_background(
+            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prep_dem_background(
                 dem=dem,
                 inps=inps,
                 print_msg=inps.print_msg,
