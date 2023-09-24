@@ -1446,7 +1446,7 @@ def plot_colorbar(inps, im, cax):
             cax.set_xticks(inps.cbar_ticks)
 
     # update tick labels for special symbol: pi
-    if ticks == [-np.pi, 0, np.pi]:
+    if ticks is not None and ticks[:] == [-np.pi, 0, np.pi]:
         if orientation == 'vertical':
             cax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
         else:
