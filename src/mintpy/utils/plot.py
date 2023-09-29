@@ -2106,7 +2106,7 @@ def blend_colorbar(cax, inps, vlim, orientation='vertical', ticks=None,
 
     # create an artificial topography for illumination
     x = np.linspace(-np.pi/4, np.pi/4, nx)     # x position along the illum. profile
-    elev = np.ones_like(arr) * np.cos(0.6*x)   # altitude as a cosine along teh illum. profile
+    elev = np.ones_like(arr) * np.cos(0.6*x)   # altitude as a cosine along the illum. profile
 
     if orientation == 'vertical':
         extent = [0, nx, vlim[0], vlim[1]]  # (left, right, bottom, top)
@@ -2119,22 +2119,27 @@ def blend_colorbar(cax, inps, vlim, orientation='vertical', ticks=None,
     ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
     mappable = plt.cm.ScalarMappable(norm=mpl.colors.Normalize(0,1), cmap=inps.colormap)
     img_rgb = mappable.to_rgba(arr)[:, :, :3]
-    illum_rgb = ls.shade_rgb(img_rgb, elev, fraction=fraction, blend_mode=blend_mode, vert_exag=vert_exag)
+    illum_rgb = ls.shade_rgb(
+        img_rgb, elev,
+        fraction=fraction,
+        blend_mode=blend_mode,
+        vert_exag=vert_exag,
+    )
 
     # plot colorbar as an image
     cax.imshow(illum_rgb, extent=extent, aspect='auto')
 
     # axis format
-    tick_kwargs = dict(labelsize=inps.font_size, colors=inps.font_color)
+    tick_kwargs = dict(labelsize=inps.font_size, colors=inps.font_color, which='both')
     label_kwargs = dict(fontsize=inps.font_size, color=inps.font_color)
     if orientation == 'vertical':
-        cax.tick_params(which='both', bottom=False, top=False, labelbottom=False, **tick_kwargs)
+        cax.tick_params(bottom=False, top=False, labelbottom=False, **tick_kwargs)
         cax.set_ylabel(inps.cbar_label, rotation=90, **label_kwargs)
         cax.yaxis.set_label_position("right")
         cax.yaxis.tick_right()
         cax.set_xticks([])
     else:
-        cax.tick_params(which='both', left=False, right=False, labeltop=False, **tick_kwargs)
+        cax.tick_params(left=False, right=False, labeltop=False, **tick_kwargs)
         cax.set_xlabel(inps.cbar_label, **label_kwargs)
         cax.xaxis.set_label_position("bottom")
         cax.xaxis.tick_bottom()
@@ -2151,7 +2156,7 @@ def blend_colorbar(cax, inps, vlim, orientation='vertical', ticks=None,
 
 
 def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
-                     base_color=0.9, shade_frac=0.5, blend_mode='overlay',
+                     base_color=0.7, shade_frac=0.5, blend_mode='overlay',
                      azdeg=315, altdeg=45, vert_exag=0.5, mask_nan_dem=True,
                      mask_nan_data=False, fill_value=0):
     """Prepare the illuminated RGB array for the data, using shaded relief DEM from a light source,
@@ -2176,6 +2181,20 @@ def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
     """
     from matplotlib.colors import LightSource
 
+    # resample the lower resolution matrix into higher resolution
+    # link: https://scikit-image.org/docs/stable/api/skimage.transform.html#skimage.transform.resize
+    if data.shape != dem.shape:
+        from skimage.transform import resize
+        print(f'different dimension detected between data {data.shape} and DEM {dem.shape}!')
+        msg = 'via skimage.transform.resize(order=1)'
+        kwargs = dict(order=1, mode='edge', anti_aliasing=True, preserve_range=True)
+        if data.size < dem.size:
+            print(f'resampling data from {data.shape} to {dem.shape} {msg}...')
+            data = resize(data, dem.shape, **kwargs)
+        else:
+            print(f'resampling DEM from {dem.shape} to {data.shape} {msg}...')
+            dem = resize(dem, data.shape, **kwargs)
+
     # use numpy.ma to mask missing or invalid entries
     data = np.ma.masked_invalid(data)
     dem  = np.ma.masked_invalid(dem)
@@ -2195,14 +2214,15 @@ def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
     # assign a greyish basemap color to the masked pixels
     img_rgb[data.mask, :] = base_color
 
-    # check if the dimensions are coherent
-    # Note: in the future, resample one into the grid of the other one
-    if dem.shape != img_rgb.shape[:-1]:
-        raise ValueError(f'Dimension mismatch between DEM ({dem.shape}) and data ({data.shape})!')
-
     ## add shaded relief to illuminate the RGB array
+    # link: https://matplotlib.org/stable/api/_as_gen/matplotlib.colors.LightSource.html
     ls = LightSource(azdeg=azdeg, altdeg=altdeg)
-    illum_rgb = ls.shade_rgb(img_rgb, dem, fraction=shade_frac, blend_mode=blend_mode, vert_exag=vert_exag)
+    illum_rgb = ls.shade_rgb(
+        img_rgb, dem,
+        fraction=shade_frac,
+        blend_mode=blend_mode,
+        vert_exag=vert_exag,
+    )
 
     # add tranparency layer to the array (defualt: all ones = opaque)
     illum_rgb = np.dstack([illum_rgb, np.ones_like(illum_rgb[:, :, 0])])

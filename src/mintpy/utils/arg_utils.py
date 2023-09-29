@@ -134,7 +134,7 @@ def add_dem_argument(parser):
     # DEM-blended image
     dem.add_argument('--shade-frac', dest='shade_frac', type=float, default=0.5, metavar='NUM',
                      help='[Blend] Increases/decreases the contrast of the hillshade (default: %(default)s).')
-    dem.add_argument('--base-color', dest='base_color', type=float, default=0.9, metavar='NUM',
+    dem.add_argument('--base-color', dest='base_color', type=float, default=0.7, metavar='NUM',
                      help='[Blend] Topograhpy basemap greyish color ranges in [0,1] (default: %(default)s).')
     dem.add_argument('--blend-mode', dest='blend_mode', type=str, default='overlay',
                      choices={'hsv','overlay','soft'}, metavar='STR',
