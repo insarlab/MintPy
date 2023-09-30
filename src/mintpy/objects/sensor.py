@@ -19,6 +19,7 @@ SENSOR_NAME_VARIATION = {
     'gf3'   : ['gfen3', 'gaofen3', 'g3', 'gaofen'],
     'jers'  : ['jers', 'jers1'],
     'ksat5' : ['ksat5', 'kompsat5', 'kompsat', 'kmps5'],
+    'lt1'   : ['lt1', 'lt', 'lutan', 'lutan1'],
     'ni'    : ['ni', 'nisar'],
     'rs1'   : ['rs1', 'rsat', 'rsat1', 'radarsat', 'radarsat1'],
     'rs2'   : ['rs2', 'rsat2', 'radarsat2'],
@@ -415,6 +416,22 @@ SAOCOM = {
     'sampling_frequency'         : 50.0e6,    # Hz
 }
 
+# LuTan-1 (stripmap mode)
+# preliminary version: the azimuth bandwidth/frequency/pixelsize might change
+LT1 = {
+    'carrier_frequency'          : 1.26e9,    # Hz
+    'altitude'                   : 607e3,     # m, mean value
+    'antenna_length'             : 9.8,       # m
+    'antenna_width'              : 3.4,       # m
+    'doppler_bandwidth'          : 2544,      # Hz
+    'pulse_repetition_frequency' : 2934,      # Hz
+    'chirp_bandwidth'            : 60.0e6,    # Hz
+    'azimuth_pixel_size'         : 2.35,      # m
+    'range_pixel_size'           : 1.67,      # m
+    'azimuth_resolution'         : 7.15,      # m
+    'range_resolution'           : 2.50,      # m
+}
+
 # NISAR
 # https://nisar.jpl.nasa.gov/system/documents/files/26_NISAR_FINAL_9-6-19.pdf
 NISAR_L = {
@@ -446,5 +463,6 @@ SENSOR_DICT = {
     'jers'  : JERS,
     'alos'  : ALOS,
     'alos2' : ALOS2,
+    'lt1'   : LT1,
     'ni'    : NISAR_L,
 }
