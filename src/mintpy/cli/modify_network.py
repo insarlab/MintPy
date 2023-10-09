@@ -88,9 +88,9 @@ def create_parser(subparsers=None):
     cohBased.add_argument('--mask', dest='maskFile', default='waterMask.h5',
                           help='Mask file used to calculate the spatial coherence '
                                '(default: waterMask.h5 or None)')
-    cohBased.add_argument('--aoi-yx', dest='aoi_pix_box', type=int, nargs=4, metavar=('X0', 'Y0', 'X1', 'Y1'), default=None,
+    cohBased.add_argument('--aoi-yx', dest='aoiYX', type=int, nargs=4, metavar=('X0', 'Y0', 'X1', 'Y1'), default=None,
                           help='AOI in row/column range for coherence calculation (default: %(default)s).')
-    cohBased.add_argument('--aoi-lalo', dest='aoi_geo_box', type=float, nargs=4, metavar=('W', 'S', 'E', 'N'), default=None,
+    cohBased.add_argument('--aoi-lalo', dest='aoiLALO', type=float, nargs=4, metavar=('W', 'S', 'E', 'N'), default=None,
                           help='AOI in lat/lon range for coherence calculation (default: %(default)s).')
     cohBased.add_argument('--lookup', dest='lookupFile',
                           help='Lookup table/mapping transformation file for geo/radar coordinate conversion.\n' +
@@ -109,7 +109,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from mintpy.utils import utils as ut
+    from mintpy.utils import readfile, utils as ut
 
     # check: --mask option
     if not os.path.isfile(inps.maskFile):
@@ -136,6 +136,15 @@ def cmd_line_parse(iargs=None):
     # default: --lookup option
     if not inps.lookupFile:
         inps.lookupFile = ut.get_lookup_file()
+
+    # check: --aoi-lalo option (not for radar-coded products without lookup files)
+    if inps.aoiLALO:
+        atr = readfile.read_attribute(inps.file)
+        if not inps.lookupFile and 'Y_FIRST' not in atr.keys():
+            msg = 'WARNING: Can NOT use --aoi-lalo option for files in radar coordinates '
+            msg += 'without lookup file. Ignore this option and continue.'
+            print(msg)
+            inps.aoiLALO = None
 
     # default: turn --reset ON if:
     # 1) no input options found to drop ifgram AND
@@ -178,19 +187,13 @@ def read_template2inps(template_file, inps):
                 tmp = [i.strip() for i in value.split(',')]
                 sub_y = sorted(int(i.strip()) for i in tmp[0].split(':'))
                 sub_x = sorted(int(i.strip()) for i in tmp[1].split(':'))
-                inps.aoi_pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
+                inps.aoiYX = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
 
             elif key == 'aoiLALO':
                 tmp = [i.strip() for i in value.split(',')]
                 sub_lat = sorted(float(i.strip()) for i in tmp[0].split(':'))
                 sub_lon = sorted(float(i.strip()) for i in tmp[1].split(':'))
-                inps.aoi_geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
-
-                # Check lookup file
-                if not inps.lookupFile:
-                    print(f'Warning: NO lookup table file found! Can not use {key} option without it.')
-                    print('Skip this option.')
-                    inps.aoi_pix_box = None
+                inps.aoiLALO = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
 
             elif key in ['startDate', 'endDate']:
                 iDict[key] = ptime.yyyymmdd(value)

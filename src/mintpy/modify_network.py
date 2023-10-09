@@ -231,7 +231,7 @@ def get_date12_to_drop(inps):
         print('use coherence-based network modification')
 
         # get area of interest for coherence calculation
-        pix_box = get_aoi_pix_box(obj.metadata, inps.lookupFile, inps.aoi_pix_box, inps.aoi_geo_box)
+        pix_box = get_aoi_pix_box(obj.metadata, inps.lookupFile, inps.aoiYX, inps.aoiLALO)
 
         # calculate spatial average coherence
         cohList = ut.spatial_average(inps.file,
@@ -263,7 +263,7 @@ def get_date12_to_drop(inps):
         print('use area-ratio-based network modification')
 
         # get area of interest for coherence calculation
-        pix_box = get_aoi_pix_box(obj.metadata, inps.lookupFile, inps.aoi_pix_box, inps.aoi_geo_box)
+        pix_box = get_aoi_pix_box(obj.metadata, inps.lookupFile, inps.aoiYX, inps.aoiLALO)
 
         # calculate average coherence in masked out areas as threshold
         meanMaskCoh = np.nanmean(ut.spatial_average(inps.file,
