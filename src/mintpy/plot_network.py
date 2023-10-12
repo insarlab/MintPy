@@ -30,6 +30,7 @@ def read_network_info(inps):
         inps.date12List = stack_obj.get_date12_list(dropIfgram=False)
         inps.dateList = stack_obj.get_date_list(dropIfgram=False)
         inps.pbaseList = stack_obj.get_perp_baseline_timeseries(dropIfgram=False)
+        pbase12List = stack_obj.pbaseIfgram
 
         if inps.dsetName in readfile.get_dataset_list(inps.file):
             inps.cohList = ut.spatial_average(
@@ -92,6 +93,18 @@ def read_network_info(inps):
         print(f'number of acquisitions marked as drop: {len(inps.dateList_drop)}')
         if len(inps.dateList_drop) > 0:
             print(inps.dateList_drop)
+
+    # check: pairs with invalid coherence / Bperp values (nan)
+    # due to processing issues in the upstream insar processing
+    flag_nan = np.logical_or(np.isnan(inps.cohList), np.isnan(pbase12List))
+    if np.sum(flag_nan) > 0:
+        date12_nan = np.array(inps.date12List)[flag_nan].tolist()
+        date12_nan = [x for x in date12_nan if x not in inps.date12List_drop]
+        if len(date12_nan) > 0:
+            msg = 'Invalid NaN value found in the following kept pairs for Bperp or coherence! '
+            msg += '\n\tThey likely have issues, check them and maybe exclude them in your network.'
+            msg += f'\n\t{date12_nan}'
+            raise ValueError(msg)
 
     return inps
 
