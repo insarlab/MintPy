@@ -31,7 +31,7 @@ def get_overlap_lalo(atr_list):
     return S, N, W, E
 
 
-def get_design_matrix4east_north_up(los_inc_angle, los_az_angle, obs_direction):
+def get_design_matrix4east_north_up(los_inc_angle, los_az_angle, obs_direction=None):
     """Design matrix G to convert multi-track range/azimuth displacement into east/north/up direction.
     Parameters: los_inc_angle - 1D np.ndarray in size of (num_obs,) in float32, LOS incidence angle in degree
                 los_az_angle  - 1D np.ndarray in size of (num_obs,) in float32, LOS azimuth   angle in degree
@@ -40,6 +40,14 @@ def get_design_matrix4east_north_up(los_inc_angle, los_az_angle, obs_direction):
     """
     num_obs = los_inc_angle.shape[0]
     G = np.zeros((num_obs, 3), dtype=np.float32)
+
+    # obs_direction: default value
+    if not obs_direction:
+        obs_direction = ['range'] * num_obs
+
+    # obs_direction: check var type
+    if not isinstance(obs_direction, (list, np.ndarray)):
+        raise ValueError(f'input obs_direction ({obs_direction}) is NOT a list or numpy.ndarray!')
 
     for i, (inc_angle, az_angle, obs_dir) in enumerate(zip(los_inc_angle, los_az_angle, obs_direction)):
         # calculate the unit vector

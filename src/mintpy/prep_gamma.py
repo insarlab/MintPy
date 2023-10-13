@@ -179,7 +179,7 @@ def extract_metadata4interferogram(fname, sensor_name=None):
         rg_pixel_size = float(atr['RANGE_PIXEL_SIZE']) / float(atr['RLOOKS'])
         rg_fact = rg_resolution / rg_pixel_size
 
-        antenna_length = sensor.SENSOR_DICT[sensor_name]['antenna_length']
+        antenna_length = sensor.SENSOR_DICT[sensor_name.lower()]['antenna_length']
         az_resolution = antenna_length / 2
         az_pixel_size = float(atr['AZIMUTH_PIXEL_SIZE']) / float(atr['ALOOKS'])
         az_fact = az_resolution / az_pixel_size
@@ -341,7 +341,7 @@ def prep_gamma(inps):
     for fname in inps.file:
         # interferograms
         if inps.file_ext in ['.unw', '.cor', '.int']:
-            extract_metadata4interferogram(fname, sensor_name=inps.sensor.lower())
+            extract_metadata4interferogram(fname, sensor_name=inps.sensor)
 
         # geometry - geo
         elif inps.file_ext.endswith(('to_rdc', '2_rdc', '2rdc')) or fname.endswith('.utm.dem'):
