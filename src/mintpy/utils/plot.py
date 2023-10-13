@@ -487,30 +487,32 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_
     return ax, xmin, xmax
 
 
-def auto_adjust_yaxis(ax, dataList, fontsize=12, ymin=None, ymax=None):
-    """Adjust Y axis
-    Input:
-        ax       : matplot figure axes object
-        dataList : list of float, value in y axis
-        fontsize : float, font size
-        ymin     : float, lower y axis limit
-        ymax     : float, upper y axis limit
-    Output:
-        ax
+def auto_adjust_yaxis(ax, data_list, fontsize=12, ymin=None, ymax=None):
+    """Adjust Y axis lower/upper limit.
+
+    Parameters: ax        - matplotlib figure axes object
+                data_list - list(float), Y-axis values
+                fontsize  - float, font size
+                ymin/max  - float, lower/upper Y-axis limit
+    Returns:    ax        - matplotlib figure axes object
     """
-    # Min/Max
-    dataRange = max(dataList) - min(dataList)
-    if ymin is None:
-        ymin = min(dataList) - 0.1*dataRange
-    if ymax is None:
-        ymax = max(dataList) + 0.1*dataRange
+    # check
+    if np.all(np.isnan(data_list)):
+        raise ValueError('All NaN values detected in the input data_list!')
+
+    # calc ymin/max
+    dmin = np.nanmin(data_list)
+    dmax = np.nanmax(data_list)
+    drange = dmax - dmin
+    ymin = ymin if ymin is not None else dmin - 0.1 * drange
+    ymax = ymax if ymax is not None else dmax + 0.1 * drange
+    # set ymin/max
     ax.set_ylim([ymin, ymax])
     # Tick/Label setting
     #xticklabels = plt.getp(ax, 'xticklabels')
     #yticklabels = plt.getp(ax, 'yticklabels')
     #plt.setp(yticklabels, 'color', 'k', fontsize=fontsize)
     #plt.setp(xticklabels, 'color', 'k', fontsize=fontsize)
-
     return ax
 
 
@@ -558,23 +560,20 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
 
 def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop=[], print_msg=True):
     """Plot Temporal-Perp baseline Network
-    Inputs
-        ax : matplotlib axes object
-        date12List : list of string for date12 in YYYYMMDD_YYYYMMDD format
-        dateList   : list of string, for date in YYYYMMDD format
-        pbaseList  : list of float, perp baseline, len=number of acquisition
-        p_dict   : dictionary with the following items:
-                      fontsize
-                      linewidth
-                      markercolor
-                      markersize
-
-                      cohList : list of float, coherence value of each interferogram, len = number of ifgrams
-                      colormap : string, colormap name
-                      disp_title : bool, show figure title or not, default: True
-                      disp_drop: bool, show dropped interferograms or not, default: True
-    Output
-        ax : matplotlib axes object
+    Parameters: ax         - matplotlib axes object
+                date12List - list(str) for date12 in YYYYMMDD_YYYYMMDD format
+                dateList   - list(str), for date in YYYYMMDD format
+                pbaseList  - list(float), perp baseline, len=number of acquisition
+                p_dict     - dictionary with the following items:
+                                fontsize
+                                linewidth
+                                markercolor
+                                markersize
+                cohList    - list(float), coherence value of each interferogram, len = number of ifgrams
+                colormap   - str, colormap name
+                disp_title - bool, show figure title or not, default: True
+                disp_drop  - bool, show dropped interferograms or not, default: True
+    Returns:    ax         - matplotlib axes object
     """
 
     # Figure Setting
@@ -731,21 +730,19 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
 
 def plot_perp_baseline_hist(ax, dateList, pbaseList, p_dict={}, dateList_drop=[]):
     """ Plot Perpendicular Spatial Baseline History
-    Inputs
-        ax : matplotlib axes object
-        dateList : list of string, date in YYYYMMDD format
-        pbaseList : list of float, perp baseline
-        p_dict : dictionary with the following items:
-                    fontsize
-                    linewidth
-                    markercolor
-                    markersize
-                    disp_title : bool, show figure title or not, default: True
-                    every_year : int, number of years for the major tick on xaxis
-        dateList_drop : list of string, date dropped in YYYYMMDD format
-                          e.g. ['20080711', '20081011']
-    Output:
-        ax : matplotlib axes object
+    Parameters: ax            - matplotlib axes object
+                dateList      - list(str), date in YYYYMMDD format
+                pbaseList     - list(float), perp baseline
+                p_dict        - dictionary with the following items:
+                                   fontsize
+                                   linewidth
+                                   markercolor
+                                   markersize
+                                   disp_title : bool, show figure title or not, default: True
+                                   every_year : int, number of years for the major tick on xaxis
+                dateList_drop - list(str), date dropped in YYYYMMDD format
+                                e.g. ['20080711', '20081011']
+    Returns:    ax            - matplotlib axes object
     """
     # Figure Setting
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
@@ -851,7 +848,7 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
 def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}):
     """Plot Coherence Matrix of input network
     if date12List_drop is not empty, plot KEPT pairs in the upper triangle and
-                                           ALL  pairs in the lower triangle.
+                                          ALL  pairs in the lower triangle.
     Parameters: ax : matplotlib.pyplot.Axes,
                 date12List : list of date12 in YYYYMMDD_YYYYMMDD format
                 cohList    : list of float, coherence value
@@ -1603,14 +1600,12 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-
 
 def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     """Scale data based on data unit and display unit
-    Inputs:
-        data    : 2D np.array
-        metadata  : dictionary, meta data
-        disp_unit : str, display unit
-    Outputs:
-        data    : 2D np.array, data after scaling
-        disp_unit : str, display unit
-    Default data file units in MintPy are:  m, m/yr, radian, 1
+    Parameters: data      - 2D np.ndarray
+                metadata  - dictionary, meta data
+                disp_unit - str, display unit
+    Returns:    data      - 2D np.ndarray, data after scaling
+                disp_unit - str, display unit
+                            Default data file units in MintPy are:  m, m/yr, radian, 1
     """
     if not metadata:
         metadata['UNIT'] = 'm'
@@ -1710,18 +1705,16 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
 def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, wrap_range=[-1.*np.pi, np.pi],
                                     print_msg=True):
     """Scale 2D matrix value according to display unit and re-wrapping flag
-    Inputs:
-        data - 2D np.array
-        metadata  - dict, including the following attributes:
-               UNIT
-               FILE_TYPE
-               WAVELENGTH
-        disp_unit  - string, optional
-        wrap - bool, optional
-    Outputs:
-        data
-        disp_unit
-        wrap
+    Parameters: data      - 2D np.ndarray
+                metadata  - dict, including the following attributes:
+                            UNIT
+                            FILE_TYPE
+                            WAVELENGTH
+                disp_unit  - str, optional
+                wrap       - bool, optional
+    Returns:    data       - 2D np.ndarray, scaled data matrix
+                disp_unit  - str
+                wrap       - bool
     """
     if not disp_unit:
         disp_unit, wrap = check_disp_unit_and_wrap(
@@ -1752,12 +1745,12 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
 def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=1,
               vmin=None, vmax=None, print_msg=True):
     """Find and read mask for input data file fname
-    Parameters: fname       : string, data file name/path
-                mask_file   : string, optional, mask file name
-                datasetName : string, optional, dataset name for HDFEOS file type
-                box         : tuple of 4 int, for reading part of data
-    Returns:    mask        : 2D np.ndarray in bool, mask data
-                mask_file   : string, file name of mask data
+    Parameters: fname       - str, data file name/path
+                mask_file   - str, optional, mask file name
+                datasetName - str, optional, dataset name for HDFEOS file type
+                box         - tuple of 4 int, for reading part of data
+    Returns:    mask        - 2D np.ndarray in bool, mask data
+                mask_file   - str, file name of mask data
     """
     vprint = print if print_msg else lambda *args, **kwargs: None
     atr = readfile.read_attribute(fname)
@@ -1918,15 +1911,15 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
 
 def prep_dem_background(dem, inps, print_msg=True):
     """Prepare to plot DEM on background
-    Parameters: dem : 2D np.int16 matrix, dem data
-                inps : Namespace with the following 4 items:
-                    'disp_dem_shade'    : bool,  True/False
-                    'disp_dem_contour'  : bool,  True/False
-                    'dem_contour_step'  : float, 200.0
-                    'dem_contour_smooth': float, 3.0
-    Returns:    dem_shade : 3D np.array in size of (length, width, 4)
-                dem_contour : 2D np.array in size of (length, width)
-                dem_contour_seq : 1D np.array
+    Parameters: dem  - 2D np.int16 matrix, dem data
+                inps - Namespace with the following 4 items:
+                       'disp_dem_shade'    : bool,  True/False
+                       'disp_dem_contour'  : bool,  True/False
+                       'dem_contour_step'  : float, 200.0
+                       'dem_contour_smooth': float, 3.0
+    Returns:    dem_shade       - 3D np.ndarray in size of (length, width, 4)
+                dem_contour     - 2D np.ndarray in size of (length, width)
+                dem_contour_seq - 1D np.ndarray
     Examples:
         from mintpy.cli import view
         from mintpy.utils import plot as pp
@@ -2002,19 +1995,19 @@ def prep_dem_background(dem, inps, print_msg=True):
 def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_contour_seq=None,
                         dem=None, inps=None, print_msg=True):
     """Plot DEM as background.
-    Parameters: ax : matplotlib.pyplot.Axes or BasemapExt object
-                geo_box : tuple of 4 float in order of (E, N, W, S), geo bounding box
-                dem_shade : 3D np.array in size of (length, width, 4)
-                dem_contour : 2D np.array in size of (length, width)
-                dem_contour_seq : 1D np.array
-                dem : 2D np.array of DEM data
-                inps : Namespace with the following 4 items:
-                    'disp_dem_shade'    : bool,  True/False
-                    'disp_dem_contour'  : bool,  True/False
-                    'dem_contour_step'  : float, 200.0
-                    'dem_contour_smooth': float, 3.0
-                    'pix_box'           : 4-tuple of int, (x0, y0, x1, y1)
-    Returns:    ax : matplotlib.pyplot.Axes or BasemapExt object
+    Parameters: ax   - matplotlib.pyplot.Axes or BasemapExt object
+                geo_box         - tuple of 4 float in order of (E, N, W, S), geo bounding box
+                dem_shade       - 3D np.ndarray in size of (length, width, 4)
+                dem_contour     - 2D np.ndarray in size of (length, width)
+                dem_contour_seq - 1D np.ndarray
+                dem  - 2D np.array of DEM data
+                inps - Namespace with the following 4 items:
+                       'disp_dem_shade'    : bool,  True/False
+                       'disp_dem_contour'  : bool,  True/False
+                       'dem_contour_step'  : float, 200.0
+                       'dem_contour_smooth': float, 3.0
+                       'pix_box'           : 4-tuple of int, (x0, y0, x1, y1)
+    Returns:    ax   - matplotlib.pyplot.Axes or BasemapExt object
     Examples:   ax = pp.plot_dem_background(ax, geo_box=inps.geo_box, dem=dem, inps=inps)
                 ax = pp.plot_dem_background(ax, geo_box=None, inps=inps,
                                             dem_shade=dem_shade,
