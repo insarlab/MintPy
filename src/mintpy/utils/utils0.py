@@ -318,7 +318,11 @@ def utm2latlon(meta, easting, northing):
     import utm
     zone_num = int(meta['UTM_ZONE'][:-1])
     northern = meta['UTM_ZONE'][-1].upper() == 'N'
-    lat, lon = utm.to_latlon(easting, northing, zone_num, northern=northern)
+    # set 'strict=False' to allow coordinates outside the range of a typical single UTM zone,
+    # which can be common for large area analysis, e.g. the Norwegian mapping authority
+    # publishes a height data in UTM zone 33 coordinates for the whole country, even though
+    # most of it is technically outside zone 33.
+    lat, lon = utm.to_latlon(easting, northing, zone_num, northern=northern, strict=False)
     return lat, lon
 
 
