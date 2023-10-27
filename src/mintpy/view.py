@@ -570,6 +570,7 @@ def plot_slice(ax, data, metadata, inps):
                 loc=inps.scalebar,
                 labelpad=inps.scalebar_pad,
                 font_size=inps.font_size,
+                linewidth=inps.scalebar_linewidth,
             )
 
         # Lat Lon labels

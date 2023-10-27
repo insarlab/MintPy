@@ -344,6 +344,8 @@ def add_map_argument(parser):
                       action='store_false', help='do not display scale bar.')
     mapg.add_argument('--scalebar-pad','--sbar-pad', dest='scalebar_pad', type=float, default=0.05,
                       help='scale bar label pad in ratio of scalebar width (default: %(default)s).')
+    mapg.add_argument('--scalebar-lw','--scalebar-linewidth', dest='scalebar_linewidth', type=float,
+                      default=2.0, help='scale bar symbol line width (default: %(default)s).')
     return parser
 
 

@@ -114,7 +114,8 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
 
 ############################################  Scale Bar  #############################################
 
-def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
+def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12,
+                  color='k', linewidth=2):
     """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
     ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
     Parameters: ax       : matplotlib.pyplot.axes object
@@ -165,9 +166,10 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
     lon1 = lon_c + length_disp / 2.0
 
     ## plot scale bar
-    ax.plot([lon0, lon1], [lat_c, lat_c], color=color)
-    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length_disp], color=color)
-    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], color=color)
+    kwargs = dict(color=color, linewidth=linewidth)
+    ax.plot([lon0, lon1], [lat_c, lat_c], **kwargs)
+    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length_disp], **kwargs)
+    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], **kwargs)
 
     ## plot scale bar label
     unit = 'm'
