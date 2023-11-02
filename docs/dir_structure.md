@@ -479,7 +479,7 @@ $DATA_DIR/StHelensEnvDT156
     └── StHelensEnvDT156.txt
 ```
 
-The corresponding template opptions for `load_data`:
+The corresponding template options for `load_data`:
 
 ```cfg
 ## manually specify the following attributes since they are missing from gmtsar products
