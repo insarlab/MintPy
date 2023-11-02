@@ -386,7 +386,7 @@ mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
 
 2. Clip DEM and all interferograms to the same area using hyp3lib/[cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
 
-Here is an example workflow: [smallbaselineApp_hyp3](https://nbviewer.jupyter.org/github/insarlab/MintPy-tutorial/blob/main/smallbaselineApp_hyp3.ipynb).
+Here is an example workflow: [smallbaselineApp_hyp3](https://nbviewer.org/github/insarlab/MintPy-tutorial/blob/main/workflows/smallbaselineApp_hyp3.ipynb).
 
 HyP3 produces two types of InSAR products: 1) scene-wide products using Gamma and 2) burst-wide products using ISCE2.
 
