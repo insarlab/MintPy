@@ -207,7 +207,8 @@ def plot_network(inps):
             print(f'save figure to {fig_names[2]}')
 
         # Fig 3 - Coherence Matrix
-        fig, ax = plt.subplots(figsize=[max(inps.fig_size), max(inps.fig_size)])
+        fig_size3 = np.mean(inps.fig_size)
+        fig, ax = plt.subplots(figsize=[fig_size3, fig_size3])
         ax = pp.plot_coherence_matrix(
             ax,
             inps.date12List,
