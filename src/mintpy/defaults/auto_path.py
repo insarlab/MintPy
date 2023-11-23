@@ -39,7 +39,7 @@ mintpy.load.bperpFile       = None
 
 AUTO_PATH_ISCE_STRIPMAP = '''##----------Default file path of ISCE/stripmapStack products
 mintpy.load.processor       = isce
-mintpy.load.metaFile        = ${m_shelve}/data.dat
+mintpy.load.metaFile        = ${ref_shelve}/data.dat
 mintpy.load.baselineDir     = ../baselines
 
 mintpy.load.unwFile         = ../Igrams/*/filt*.unw
@@ -57,15 +57,31 @@ mintpy.load.waterMaskFile   = ../geom_reference/waterMask.rdr
 mintpy.load.bperpFile       = None
 '''
 
+AUTO_PATH_ISCE_ALOS = '''##----------Default file path of ISCE/alosStack products
+mintpy.load.metaFile         = ../dates_res*/${ref_date}/${ref_date}.track.xml
+mintpy.load.baselineDir      = ../baseline
+
+mintpy.load.unwFile          = ../pairs/*-*/insar/filt_*-*_5rlks_28alks.unw
+mintpy.load.corFile          = ../pairs/*-*/insar/*-*_5rlks_28alks.cor
+mintpy.load.connCompFile     = ../pairs/*-*/insar/filt_*-*_5rlks_28alks.unw.conncomp
+
+mintpy.load.demFile          = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.hgt
+mintpy.load.lookupYFile      = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.lat
+mintpy.load.lookupXFile      = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.lon
+mintpy.load.incAngleFile     = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.los
+mintpy.load.azAngleFile      = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.los
+mintpy.load.waterMaskFile    = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.wbd
+'''
+
 AUTO_PATH_ROIPAC = '''##----------Default file path of ROI_PAC products
 mintpy.load.processor       = roipac
 mintpy.load.unwFile         = ../PROCESS/DONE/IFG*/filt*.unw
 mintpy.load.corFile         = ../PROCESS/DONE/IFG*/filt*.cor
 mintpy.load.connCompFile    = ../PROCESS/DONE/IFG*/filt*snap_connect.byt
 
-mintpy.load.demFile         = ../PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
-mintpy.load.lookupYFile     = ../PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
-mintpy.load.lookupXFile     = ../PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
+mintpy.load.demFile         = ../PROCESS/DONE/*${ref_date12}*/radar_*rlks.hgt
+mintpy.load.lookupYFile     = ../PROCESS/GEO/geo_${ref_date12}/geomap_*rlks.trans
+mintpy.load.lookupXFile     = ../PROCESS/GEO/geo_${ref_date12}/geomap_*rlks.trans
 mintpy.load.incAngleFile    = None
 mintpy.load.azAngleFile     = None
 mintpy.load.shadowMaskFile  = None
@@ -78,9 +94,9 @@ mintpy.load.unwFile         = ../PROCESS/DONE/IFG*/diff*rlks.unw
 mintpy.load.corFile         = ../PROCESS/DONE/IFG*/*filt*rlks.cor
 mintpy.load.connCompFile    = None
 
-mintpy.load.demFile         = ../PROCESS/SIM/sim_${m_date12}/sim*.hgt_sim
-mintpy.load.lookupYFile     = ../PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
-mintpy.load.lookupXFile     = ../PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
+mintpy.load.demFile         = ../PROCESS/SIM/sim_${ref_date12}/sim*.hgt_sim
+mintpy.load.lookupYFile     = ../PROCESS/SIM/sim_${ref_date12}/sim*.UTM_TO_RDC
+mintpy.load.lookupXFile     = ../PROCESS/SIM/sim_${ref_date12}/sim*.UTM_TO_RDC
 mintpy.load.incAngleFile    = None
 mintpy.load.azAngleFile     = None
 mintpy.load.shadowMaskFile  = None
@@ -110,6 +126,7 @@ mintpy.load.demFile         = ../dem.tiff
 AUTO_PATH_DICT = {
     'isce_tops'     : AUTO_PATH_ISCE_TOPS,
     'isce_stripmap' : AUTO_PATH_ISCE_STRIPMAP,
+    'isce_alos'     : AUTO_PATH_ISCE_ALOS,
     'roipac'        : AUTO_PATH_ROIPAC,
     'gamma'         : AUTO_PATH_GAMMA,
     'aria'          : AUTO_PATH_ARIA,
@@ -160,6 +177,8 @@ def get_auto_path(processor, work_dir, template):
             processor = 'isce_tops'
         elif os.path.exists(proj_dir + '/Igrams'):
             processor = 'isce_stripmap'
+        elif os.path.exists(proj_dir + '/dates_resampled'):
+            processor = 'isce_alos'
         else:
             raise ValueError('un-recognized ISCE file directory, thus, cannot use auto path setting!')
 
@@ -167,21 +186,24 @@ def get_auto_path(processor, work_dir, template):
     auto_path_dict = read_str2dict(AUTO_PATH_DICT[processor], print_msg=False)
 
     ## 2. translate variables in *AutoPath
-    ## e.g.: m_shelve, m_date12
+    ## e.g.: ref_shelve, ref_date12
     var_dict = {}
 
     if processor in ['roipac', 'gamma']:
-        m_date12 = get_reference_date12(proj_dir, processor)
-        if m_date12:
-            var_dict['${m_date12}'] = m_date12
+        ref_date12 = get_reference_date12(proj_dir, processor)
+        if ref_date12:
+            var_dict['${ref_date12}'] = ref_date12
 
-        dem_file = get_dem_file(proj_dir, m_date12, processor)
+        dem_file = get_dem_file(proj_dir, ref_date12, processor)
         if dem_file:
             auto_path_dict[prefix+'demFile'] = dem_file
 
     elif processor == 'isce_stripmap':
         date_str = os.listdir(os.path.join(proj_dir, 'merged/SLC'))[0]
-        var_dict['${m_shelve}'] = os.path.join(proj_dir, 'merged/SLC', date_str, 'referenceShelve')
+        var_dict['${ref_shelve}'] = os.path.join(proj_dir, 'merged/SLC', date_str, 'referenceShelve')
+
+    elif processor == 'isce_alos':
+        var_dict['${ref_date}'] = get_reference_date(proj_dir)
 
     # update auto_path_dict
     for key, value in auto_path_dict.items():
@@ -204,42 +226,69 @@ def get_reference_date12(proj_dir, processor='roipac'):
     """date12 of reference interferogram in YYMMDD-YYMMDD format"""
     import numpy as np
 
-    m_date12 = None
+    ref_date12 = None
 
     # opt 1 - reference_ifgram.txt
-    m_ifg_file = os.path.join(proj_dir, 'PROCESS', 'reference_ifgram.txt')
-    if os.path.isfile(m_ifg_file):
-        m_date12 = str(np.loadtxt(m_ifg_file, dtype=bytes).astype(str))
-        return m_date12
+    ref_ifg_file = os.path.join(proj_dir, 'PROCESS', 'reference_ifgram.txt')
+    if os.path.isfile(ref_ifg_file):
+        ref_date12 = str(np.loadtxt(ref_ifg_file, dtype=bytes).astype(str))
+        return ref_date12
 
     # opt 2 - folders under GEO/SIM
     if processor == 'roipac':
         try:
             lookup_file = glob.glob(os.path.join(proj_dir, 'PROCESS/GEO/geo_*/geomap*.trans'))[0]
-            m_date12 = re.findall(r'\d{6}-\d{6}', lookup_file)[0]
+            ref_date12 = re.findall(r'\d{6}-\d{6}', lookup_file)[0]
         except:
             print("No reference interferogram found! Check the PROCESS/GEO/geo_* folder")
 
     elif processor == 'gamma':
         geom_dir = os.path.join(proj_dir, 'PROCESS/SIM')
         try:
-            m_date12 = os.walk(geom_dir).next()[1][0].split('sim_')[1]
+            ref_date12 = os.walk(geom_dir).next()[1][0].split('sim_')[1]
         except:
             print("No reference interferogram found! Check the PROCESS/SIM/sim_* folder")
 
-    return m_date12
+    return ref_date12
 
 
-def get_dem_file(proj_dir, m_date12, processor):
+def get_reference_date(proj_dir):
+    """Get reference date of the stack for isce2/alosStack from its XML config file."""
+    import xml.etree.ElementTree as ET
+
+    ref_date = None
+    ref_key = 'reference date of the stack'
+
+    xml_file = os.path.join(proj_dir, 'alosStack.xml')
+    print('Grab reference date from the config file: {xml_file}.')
+    if not os.path.exists(xml_file):
+        raise FileNotFoundError(f'Config file {xml_file} NOT found!')
+
+    # read the XML file
+    root = ET.parse(xml_file).getroot()
+    for child in root[0].findall('property'):
+        key = child.get('name').lower()
+        if key.replace(' ', '') == ref_key.replace(' ', ''):
+            ref_date = child.text
+            print('reference date of the stack:', ref_date)
+            break
+
+    if ref_date is None:
+        raise ValueError('NO element named: {ref_key} found in the config file!')
+
+    return ref_date
+
+
+def get_dem_file(proj_dir, ref_date12, processor):
     """get DEM file in case both radar_2rlks.hgt and radar_8rlks.hgt exist"""
     dem_file = None
 
-    if m_date12 and processor == 'roipac':
+    if ref_date12 and processor == 'roipac':
         # get the number of looks used in lookup table file
-        lookup_file = os.path.join(proj_dir, f'PROCESS/GEO/geo_{m_date12}/geomap*.trans')
+        lookup_file = os.path.join(proj_dir, f'PROCESS/GEO/geo_{ref_date12}/geomap*.trans')
         lks = re.findall(r'_\d+rlks', glob.glob(lookup_file)[0])[0]
 
         # use the one with same multilook info as the lookup table file.
-        dem_file = os.path.join(proj_dir, 'PROCESS/DONE/*${m_date12}*', f'radar{lks}.hgt')
+        dem_file = os.path.join(proj_dir, 'PROCESS/DONE/*${ref_date12}*', f'radar{lks}.hgt')
 
     return dem_file
