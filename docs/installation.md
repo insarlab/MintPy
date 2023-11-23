@@ -19,7 +19,7 @@ mamba install -c conda-forge mintpy
 </details>
 
 <details>
-<p><summary>via docker</summary></p>
+<p><summary>or via docker</summary></p>
 
 Docker allows one to run MintPy in a dedicated container, which is essentially an efficient virtual machine, and to be independent of the platform OS. First, install <a href="https://docs.docker.com/install">docker</a> if you have not already done so. Then run the following to pull the latest stable released container image version from <a href="https://github.com/insarlab/MintPy/pkgs/container/mintpy">MintPy GitHub Container Registry</a> to your local machine:
 
@@ -31,7 +31,7 @@ docker pull ghcr.io/insarlab/mintpy:latest
 </details>
 
 <details>
-<p><summary>via apt (Linux Debian)</summary></p>
+<p><summary>or via apt (for Linux Debian)</summary></p>
 
 MintPy is available in the main archive of the <a href="https://tracker.debian.org/pkg/mintpy">Debian</a> GNU/Linux OS. It can be installed by using your favorite package manager or running the following command:
 
@@ -79,7 +79,6 @@ bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/tools/miniconda3
 Install the dependencies into a custom existing environment [recommended] by running:
 
 ```bash
-# To create a new custom environment, e.g. named "insar", run "conda create --name insar; conda activate insar"
 # To speedup, try "conda install mamba", then use "mamba install" to replace "conda install" below
 
 # Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
@@ -89,13 +88,13 @@ conda install -c conda-forge --file ~/tools/MintPy/requirements.txt
 
 <p>
 <details>
-<p><summary>Or install the dependencies to a new environment, e.g. named "mintpy", by running:</summary></p>
+<p><summary>Or install the dependencies to a new environment, e.g. named "insar", by running:</summary></p>
 
 ```bash
 # Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
 # Add "isce2"     below to install extra dependencies if you use ISCE-2
-conda create --name mintpy --file ~/tools/MintPy/requirements.txt
-conda activate mintpy
+conda create --name insar --file ~/tools/MintPy/requirements.txt
+conda activate insar
 ```
 </details>
 </p>
@@ -113,7 +112,7 @@ python -m pip install -e ~/tools/MintPy
 </details>
 
 <details>
-<p><summary>via path setup</summary></p>
+<p><summary>or via path setup</summary></p>
 
 Add below in your source file, e.g. <code>\~/.bash_profile</code> for <em>bash</em> users or <code>\~/.cshrc</code> for <em>csh/tcsh</em> users:
 
@@ -152,7 +151,7 @@ sudo xcodebuild -license</code></pre>
 <details>
 <p><summary>Or install MintPy via MacPorts</summary></p>
 
-Same as the instruction for Linux, except for the "b. Install dependencies" section, which is as below:
+Same as the instruction for Linux, except for the "b. Install dependencies" section, which is as below. Note that the installation procedure via MacPorts has not been maintained since Sep 2022, and will likely be phased out at some point, since conda/mamba works seamlessly on both MacOS and Linux.
 
 Install <a href="https://www.macports.org/install.php">macports</a> if you have not done so. Add the following at the bottom of your <code>~/.bash_profile</code> file:
 

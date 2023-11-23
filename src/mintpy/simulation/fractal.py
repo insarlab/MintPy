@@ -121,7 +121,7 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
     # get the fractal spectrum and transform to spatial domain
     Hfrac = np.divide(H, fraction)
     fsurf = pyfftw.interfaces.numpy_fft.ifft2(Hfrac)
-    fsurf = np.abs(fsurf, dtype=np.float32)
+    fsurf = np.abs(fsurf).astype(np.float32)
     fsurf -= np.mean(fsurf)
 
     # calculate the power spectral density of 1st realization
@@ -130,7 +130,7 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
     # scale the spectrum to match the input power spectral density.
     Hfrac *= np.sqrt(p0/p1)
     fsurf = pyfftw.interfaces.numpy_fft.ifft2(Hfrac)
-    fsurf = np.abs(fsurf, dtype=np.float32)
+    fsurf = np.abs(fsurf).astype(np.float32)
     fsurf -= np.mean(fsurf)
     return fsurf
 

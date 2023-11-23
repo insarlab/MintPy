@@ -150,7 +150,7 @@ def cmd_line_parse(iargs=None):
             parser.error("--dem-blend requires -d/-dem.")
         # --cbar-ext option is ignored
         if '--cbar-ext' in inps.argv:
-            print('WARNING: --cbar-ext is NOT compatiable with --dem-blend, ignore --cbar-ext and continue.')
+            print('WARNING: --cbar-ext is NOT compatible with --dem-blend, ignore --cbar-ext and continue.')
 
     # check: conflicted options (geo-only options if inpput file is in radar-coordinates)
     geo_opt_names = ['--coord', '--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar', '--faultline']
