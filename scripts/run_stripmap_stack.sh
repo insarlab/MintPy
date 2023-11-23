@@ -2,7 +2,7 @@
 
 # clean folders before re-run
 if [ -d "Igrams" ]; then
-    echo "clean obsolete files/folders before reruning"
+    echo "clean obsolete files/folders before rerunning"
     rm -r baselines/ configs/ coregSLC/ geom_reference/ Igrams/ merged/ offsets/ refineSecondaryTiming/ run_files/ SLC/
     rm run_unPackALOS
     cd download

@@ -2217,7 +2217,7 @@ def prep_blend_image(data, dem, vmin=None, vmax=None, cmap='viridis',
         vert_exag=vert_exag,
     )
 
-    # add tranparency layer to the array (defualt: all ones = opaque)
+    # add tranparency layer to the array (default: all ones = opaque)
     illum_rgb = np.dstack([illum_rgb, np.ones_like(illum_rgb[:, :, 0])])
 
     ## masking the shaded-relief image:
