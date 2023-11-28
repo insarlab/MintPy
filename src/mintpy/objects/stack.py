@@ -658,8 +658,8 @@ class geometry:
             if print_msg:
                 print(f'reading {familyName:<15} data from file: {self.file} ...')
 
-            if len(ds.shape) == 1:
-                data = ds[:]
+            if len(ds.shape) <= 1:
+                data = ds[()]
             elif len(ds.shape) == 2:
                 data = ds[box[1]:box[3], box[0]:box[2]]
             else:

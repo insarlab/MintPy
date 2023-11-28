@@ -14,7 +14,7 @@ import shutil
 import h5py
 import numpy as np
 
-from mintpy.utils import readfile
+from mintpy.utils import prep_utils, readfile
 
 
 def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None, ds_unit_dict=None, print_msg=True):
@@ -309,9 +309,9 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                     ds = fr[key]
                     if isinstance(ds, h5py.Dataset):
 
-                        # auxliary dataset
+                        # auxiliary dataset
                         if ds.shape[-2:] != shape2d_orig:
-                            ds_name_dict[key] = [ds.dtype, ds.shape, ds[:]]
+                            ds_name_dict[key] = [ds.dtype, ds.shape, ds[()]]
 
                         # dataset
                         else:
@@ -360,16 +360,16 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                                                 t=str(data_type),
                                                 s=str(data_shape),
                                                 c=ds_comp))
-            ds = f.create_dataset(key,
-                                  shape=data_shape,
-                                  maxshape=max_shape,
-                                  dtype=data_type,
-                                  chunks=True,
-                                  compression=ds_comp)
+            if len(data_shape) < 1:
+                # scalar datasets can't be chunked
+                kwargs = {}
+            else:
+                kwargs = dict(maxshape=max_shape, chunks=True, compression=ds_comp)
+            ds = f.create_dataset(key, shape=data_shape, dtype=data_type, **kwargs)
 
-            # write auxliary data
+            # write auxiliary data
             if len(ds_name_dict[key]) > 2 and ds_name_dict[key][2] is not None:
-                ds[:] = np.array(ds_name_dict[key][2])
+                ds[()] = np.array(ds_name_dict[key][2])
 
         # write attributes in root level
         for key, value in meta.items():
@@ -381,6 +381,13 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                 if key in f.keys() and value is not None:
                     f[key].attrs['UNIT'] = value
                     vprint(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
+
+    if ds_name_dict:
+        vprint(f'Adding coordinate metadata to all datasets in {fname}')
+        try:
+            prep_utils.write_coordinate_system(fname, list(ds_name_dict.keys()))
+        except prep_utils.CoordinateError:
+            vprint('Skipping, not geocoded.')
 
     vprint(f'close  HDF5 file: {fname}')
 
