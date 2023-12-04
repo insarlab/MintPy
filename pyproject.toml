@@ -6,11 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "mintpy"
 description = "Miami INsar Time-series software in PYthon"
 authors = [
-    { name = "Zhang Yunjun", email="yunjunz@outlook.com" },
-    { name = "Heresh Fattahi" },
+    { name = "Zhang Yunjun", email = "yunjunz@outlook.com" },
+    { name = "Heresh Fattahi", email = "hersh.fattahi@gmail.com" },
 ]
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.8"
+
 keywords = ["InSAR", "deformation", "time-series", "volcano", "tectonics", "geodesy", "geophysics", "remote-sensing"]
 license = {text = "GPL-3.0-or-later"}
 classifiers=[
@@ -28,8 +29,9 @@ classifiers=[
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
 [project.urls]
-"Homepage" = "https://github.com/insarlab/MintPy"
-"Bug Tracker" = "https://github.com/insarlab/MintPy/issues"
+Homepage = "https://github.com/insarlab/MintPy"
+Documentation = "https://mintpy.readthedocs.io/"
+Issues = "https://github.com/insarlab/MintPy/issues"
 
 # Entry points for the command line interface
 [project.scripts]
