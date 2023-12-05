@@ -1,4 +1,4 @@
-[![Language](https://img.shields.io/badge/python-3.6%2B-blue.svg?style=flat-square)](https://www.python.org/)
+[![Language](https://img.shields.io/badge/python-3.8%2B-blue.svg?style=flat-square)](https://www.python.org/)
 [![Docs Status](https://readthedocs.org/projects/mintpy/badge/?version=latest&style=flat-square)](https://mintpy.readthedocs.io/?badge=latest)
 [![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?logo=circleci&label=tests&style=flat-square)](https://circleci.com/gh/insarlab/MintPy)
 [![Docker Status](https://img.shields.io/github/actions/workflow/status/insarlab/MintPy/build-docker.yml?label=docker&style=flat-square&logo=docker&logoColor=white)](https://github.com/insarlab/MintPy/pkgs/container/mintpy)

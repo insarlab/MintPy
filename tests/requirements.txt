@@ -1,0 +1,5 @@
+gdal>=3         # for ISCE-2/3, ARIA, FRInGE, HyP3, GMTSAR users
+isce2           # for ISCE-2 users
+pre-commit      # for developers
+pyfftw
+setuptools_scm
