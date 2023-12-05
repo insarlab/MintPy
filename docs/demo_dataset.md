@@ -74,7 +74,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/SanFranBaySenD42.txt
 
 Relevant literature:
 
-+ Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct connection between the Hayward and Calaveras Faults, _Geophysical Research Letters,_ 42(8), 2734-2741, doi:10.1002/2015GL063575.
++ Xu, X., Sandwell, D. T., Klein, E., & Bock, Y. (2021). Integrated Sentinel-1 InSAR and GNSS Time-Series Along the San Andreas Fault System. _Journal of Geophysical Research: Solid Earth, 126_(11), e2021JB022579, doi:10.1029/2021JB022579
 
 ### Envisat of the 2008 Wells, Nevada earthquake with Gamma ###
 
