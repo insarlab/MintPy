@@ -160,10 +160,13 @@ def read_init_info(inps):
     if not inps.ref_yx and 'REF_Y' in atr.keys():
         inps.ref_yx = (int(atr['REF_Y']), int(atr['REF_X']))
 
-    # ref_yx --> ref_lalo if in geo-coord
-    # for plotting purpose only
-    if inps.ref_yx and 'Y_FIRST' in atr.keys():
-        inps.ref_lalo = inps.coord.radar2geo(inps.ref_yx[0], inps.ref_yx[1], print_msg=False)[0:2]
+    # print/plot ref_yx/lalo info
+    if inps.ref_yx:
+        vprint(f'reference point in y/x: {inps.ref_yx}')
+        # ref_yx --> ref_lalo if in geo-coord [for plotting purpose only]
+        if 'Y_FIRST' in atr.keys():
+            inps.ref_lalo = inps.coord.radar2geo(inps.ref_yx[0], inps.ref_yx[1], print_msg=False)[0:2]
+            vprint(f'reference point in lat/lon: {inps.ref_lalo}')
 
     # do not plot native reference point if it's out of the coverage due to subset
     if (inps.ref_yx and 'Y_FIRST' in atr.keys()
@@ -171,7 +174,7 @@ def read_init_info(inps):
         and not (    inps.pix_box[0] <= inps.ref_yx[1] < inps.pix_box[2]
                  and inps.pix_box[1] <= inps.ref_yx[0] < inps.pix_box[3])):
         inps.disp_ref_pixel = False
-        print('the native REF_Y/X is out of subset box, thus do not display')
+        vprint('the native REF_Y/X is out of subset box, thus do not display')
 
     ## initial pixel coord
     if inps.lalo:
