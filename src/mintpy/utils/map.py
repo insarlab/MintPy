@@ -77,6 +77,11 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
     Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
                 lats, lons, step = m.auto_lalo_sequence(geo_box)
     """
+    # check input arguments
+    if geo_box[1] <= geo_box[3] or geo_box[2] < geo_box[0]:
+        raise ValueError(f'Input geo_box {geo_box} has N <= S or E <= W! Check the order of (W, N, E, S).')
+    if lalo_step and lalo_step <= 0:
+        raise ValueError(f'Input lalo_step ({lalo_step}) must be positive!')
 
     max_lalo_dist = max([geo_box[1] - geo_box[3], geo_box[2] - geo_box[0]])
 

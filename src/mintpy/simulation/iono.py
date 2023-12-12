@@ -198,7 +198,7 @@ def incidence_angle_ground2iono(inc_angle, iono_height=450e3):
 def lalo_ground2iono(lat, lon, inc_angle, az_angle=None, head_angle=None, iono_height=450e3, method='spherical_distance'):
     """Calculate lat/lon of IPP with the given lat/lon on the ground and LOS geometry
 
-    Equation (12) in Yunjun et al. (2021, TGRS).
+    Equation (12) in Yunjun et al. (2022, TGRS).
 
     Parameters: lat/lon      - float, latitude/longitude of the point on the ground in degrees
                 inc_angle    - float/np.ndarray, incidence angle of the line-of-sight vector on the ground in degrees
