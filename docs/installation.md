@@ -47,7 +47,7 @@ The same procedure, in principle, can be used in <a href="https://ubuntu.com">Ub
 
 Note: The installation note below is tested on Linux and macOS, and is still experimental on Windows (may have bugs).
 
-MintPy is written in Python 3 and relies on several Python modules, check the <a href="https://github.com/insarlab/MintPy/blob/main/requirements.txt">requirements.txt</a> file for details. We recommend using <a href="https://docs.conda.io/en/latest/miniconda.html">conda</a> or <a href="https://www.macports.org/install.php">macports</a> to install the python environment and the prerequisite packages, because of the convenient management and default performance setting with <a href="http://markus-beuckelmann.de/blog/boosting-numpy-blas.html">numpy/scipy</a> and <a href="https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree">pyresample</a>.
+MintPy is written in Python 3 and relies on several Python modules, check the <a href="https://github.com/insarlab/MintPy/blob/main/requirements.txt">requirements.txt</a> file for details. We recommend using <a href="https://docs.conda.io/projects/conda/en/stable/">conda</a> to install the python environment and the prerequisite packages, because of the convenient management and default performance setting with <a href="http://markus-beuckelmann.de/blog/boosting-numpy-blas.html">numpy/scipy</a> and <a href="https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree">pyresample</a>.
 
 ### 2.1 Install on Linux ###
 
@@ -64,40 +64,33 @@ cd ~/tools
 git clone https://github.com/insarlab/MintPy.git
 ```
 
-<h4>b. Install dependencies via conda</h4>
+<h4>b. Install dependencies via conda / mamba</h4>
 
-Install <a href="https://docs.conda.io/en/latest/miniconda.html">miniconda</a> if you have not already done so. You may need to close and restart the shell for changes to take effect.
+Install <a href="https://github.com/conda-forge/miniforge">miniforge</a> if you have not already done so. You may need to close and restart the shell for changes to take effect.
 
 ```bash
 # use wget or curl to download in the command line or click from the web browser
-# for macOS, use Miniconda3-latest-MacOSX-x86_64.sh instead.
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/tools/miniconda3
-~/tools/miniconda3/bin/conda init bash
+# for macOS, use Miniforge3-MacOSX-x86_64.sh instead.
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+bash Miniforge3-Linux-x86_64.sh -b -p ~/tools/miniforge
+~/tools/miniforge/bin/mamba init bash
 ```
 
-Install the dependencies into a custom existing environment [recommended] by running:
-
-```bash
-# To speedup, try "conda install mamba", then use "mamba install" to replace "conda install" below
-
-# Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
-# Add "isce2"     below to install extra dependencies if you use ISCE-2
-conda install -c conda-forge --file ~/tools/MintPy/requirements.txt
-```
-
-<p>
-<details>
-<p><summary>Or install the dependencies to a new environment, e.g. named "insar", by running:</summary></p>
+Install dependencies into a new environment, e.g. named "insar":
 
 ```bash
 # Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
 # Add "isce2"     below to install extra dependencies if you use ISCE-2
-conda create --name insar --file ~/tools/MintPy/requirements.txt
-conda activate insar
+mamba create --name insar --file ~/tools/MintPy/requirements.txt
 ```
-</details>
-</p>
+
+or install dependencies into an existing environment:
+
+```bash
+# Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
+# Add "isce2"     below to install extra dependencies if you use ISCE-2
+mamba update --name my-existing-env --file ~/tools/MintPy/requirements.txt
+```
 
 <h4>c. Install MintPy</h4>
 
@@ -145,11 +138,11 @@ sudo xcodebuild -license</code></pre>
 <li>Install <a href="https://www.xquartz.org">XQuartz</a>, then restart the terminal.</li>
 </ul>
 
-<p>Install MintPy via conda, which is the same as the <a href="#21-install-on-linux">instruction for Linux</a>.</p>
+<p>Install MintPy via conda [recommended], which is the same as the <a href="#21-install-on-linux">instruction for Linux</a>.</p>
 
 <p>
 <details>
-<p><summary>Or install MintPy via MacPorts</summary></p>
+<p><summary>Or install MintPy via MacPorts [obsolete] </summary></p>
 
 Same as the instruction for Linux, except for the "b. Install dependencies" section, which is as below. Note that the installation procedure via MacPorts has not been maintained since Sep 2022, and will likely be phased out at some point, since conda/mamba works seamlessly on both MacOS and Linux.
 
