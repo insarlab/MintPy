@@ -668,6 +668,7 @@ def prepare_metadata(iDict):
         # --baseline-dir / --geometry-dir
         baseline_dir = iDict['mintpy.load.baselineDir']
         geom_dir = os.path.dirname(iDict['mintpy.load.demFile'])
+        geom_dir = os.path.abspath(geom_dir)
 
         # --dset-dir / --file-pattern
         obs_keys = [
