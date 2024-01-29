@@ -4,7 +4,7 @@ jobs:
     docker:
       - image: ubuntu:bionic
         environment:
-          CONDA_PREFIX: /root/tools/mambaforge
+          CONDA_PREFIX: /root/tools/miniforge
           MINTPY_HOME: /root/tools/MintPy
         user: root
     working_directory: /root/tools/MintPy
@@ -13,17 +13,17 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Setting Up Environment with Mambaforge
+          name: Setting Up Environment with Miniforge
           command: |
             apt update
             apt-get update --yes && apt-get upgrade --yes
             apt-get install --yes git wget
-            # install mambaforge
+            # install miniforge
             mkdir -p ${HOME}/tools
             cd ${HOME}/tools
-            wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
-            bash Mambaforge-Linux-x86_64.sh -b -p ${HOME}/tools/mambaforge
-            ${HOME}/tools/mambaforge/bin/mamba init bash
+            wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+            bash Miniforge3-Linux-x86_64.sh -b -p ${HOME}/tools/miniforge
+            ${HOME}/tools/miniforge/bin/mamba init bash
             # modify/export env var PATH to BASH_ENV to be shared across run steps
             echo 'export PATH=${CONDA_PREFIX}/bin:${PATH}' >> ${BASH_ENV}
 
