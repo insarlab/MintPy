@@ -47,7 +47,7 @@ def get_processor(meta_file):
     """
     Get the name of ISCE processor (imaging mode)
     """
-    meta_dir = os.path.dirname(meta_file)
+    meta_dir = os.path.dirname(os.path.abspath(meta_file))
     tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
     alos_meta_file = os.path.join(meta_dir, '*.track.xml')
     stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.db', 'data.dat', 'data']]
@@ -366,29 +366,40 @@ def extract_alosStack_metadata(meta_file, geom_dir):
     meta['azimuthPixelSize'] *= meta['ALOOKS']
 
     # LAT/LON_REF1/2/3/4
+    lat_files = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lat'))
+    if len(lat_files) > 0:
+        # geometry files from alosStack
+        lat_files = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lat'))
+        lon_files = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lon'))
+        los_files = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.los'))
+    else:
+        # geometry files from alos2App / dense offset, which are then multilooked by mintpy
+        lat_files = [os.path.join(geom_dir, 'lat.rdr.mli')]
+        lon_files = [os.path.join(geom_dir, 'lon.rdr.mli')]
+        los_files = [os.path.join(geom_dir, 'los.rdr.mli')]
+
     edge = 3
-    lat_file = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lat'))[0]
     img = isceobj.createImage()
-    img.load(lat_file+'.xml')
+    img.load(lat_files[0] + '.xml')
     width = img.width
     length = img.length
-    data = np.memmap(lat_file, dtype='float64', mode='r', shape=(length, width))
+
+    data = np.memmap(lat_files[0], dtype='float64', mode='r', shape=(length, width))
     meta['LAT_REF1'] = str(data[ 0+edge,  0+edge])
     meta['LAT_REF2'] = str(data[ 0+edge, -1-edge])
     meta['LAT_REF3'] = str(data[-1-edge,  0+edge])
     meta['LAT_REF4'] = str(data[-1-edge, -1-edge])
 
-    lon_file = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lon'))[0]
-    data = np.memmap(lon_file, dtype='float64', mode='r', shape=(length, width))
+    data = np.memmap(lon_files[0], dtype='float64', mode='r', shape=(length, width))
     meta['LON_REF1'] = str(data[ 0+edge,  0+edge])
     meta['LON_REF2'] = str(data[ 0+edge, -1-edge])
     meta['LON_REF3'] = str(data[-1-edge,  0+edge])
     meta['LON_REF4'] = str(data[-1-edge, -1-edge])
 
     # CENTER_INCIDENCE_ANGLE is optional
-    los_files = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.los'))
     if len(los_files) > 0:
-        data = np.memmap(los_files[0], dtype='float32', mode='r', shape=(length*2, width))[0:length*2:2, :]
+        # use readfile.read() instead of np.memmap() to better handle different interleaves
+        data = readfile.read(los_files[0], datasetName='incidenceAngle')[0]
         inc_angle = data[int(length/2), int(width/2)]
         meta['CENTER_INCIDENCE_ANGLE'] = str(inc_angle)
 
@@ -414,20 +425,30 @@ def alos2_acquisition_modes():
 
 
 def extract_image_size_alosStack(geom_dir):
-    import isce
-    import isceobj
 
     # grab the number of looks in azimuth / range direction
-    lats = glob.glob(os.path.join(geom_dir, '*_*rlks_*alks.lat'))
-    rlooks = max(int(os.path.splitext(os.path.basename(x))[0].split('_')[1].strip('rlks')) for x in lats)
-    alooks = max(int(os.path.splitext(os.path.basename(x))[0].split('_')[2].strip('alks')) for x in lats)
+    lat_files = glob.glob(os.path.join(geom_dir, '*_*rlks_*alks.lat'))
+    lat_xml_files = [os.path.join(geom_dir, f'lat.rdr{x}.xml') for x in ['', '.mli']]
+    lat_xml_files = [x for x in lat_xml_files if os.path.exists(x)]
+    if len(lat_files) > 0:
+        # alosStack for InSAR
+        rlooks = max(int(os.path.splitext(os.path.basename(x))[0].split('_')[1].strip('rlks')) for x in lat_files)
+        alooks = max(int(os.path.splitext(os.path.basename(x))[0].split('_')[2].strip('alks')) for x in lat_files)
+        lat_xml_file = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lat.xml'))[0]
+    elif len(lat_xml_files) == 2:
+        # alos2App for dense offset, which are multilooked by mintpy
+        meta_ori = readfile.read_isce_xml(lat_xml_files[0])
+        meta_mli = readfile.read_isce_xml(lat_xml_files[1])
+        rlooks = int(np.floor( int(meta_ori['WIDTH']) / int(meta_mli['WIDTH']) ))
+        alooks = int(np.floor( int(meta_ori['LENGTH']) / int(meta_mli['LENGTH']) ))
+        lat_xml_file = lat_xml_files[1]
+    else:
+        raise ValueError(f'Un-recognized lookup table files in directory: {geom_dir}!')
 
     # grab the number of rows / coluns
-    lat = glob.glob(os.path.join(geom_dir, f'*_{rlooks}rlks_{alooks}alks.lat'))[0]
-    img = isceobj.createImage()
-    img.load(lat+'.xml')
-    width = img.width
-    length = img.length
+    meta_mli = readfile.read_isce_xml(lat_xml_file)
+    width = int(meta_mli['WIDTH'])
+    length = int(meta_mli['LENGTH'])
 
     return (rlooks, alooks, width, length)
 

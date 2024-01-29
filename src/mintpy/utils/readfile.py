@@ -838,10 +838,17 @@ def get_slice_list(fname, no_complex=False):
         elif 'offset' in fbase and num_band == 2:
             # ampcor offset file, e.g. offset.bip, dense_offsets.bil
             slice_list = ['azimuthOffset', 'rangeOffset']
+            if fname.endswith('_denseoffset.off'):
+                # for alos2App dense offset, the file has the opposite band order
+                # e.g. 231206-240103_denseoffset.off
+                slice_list = ['rangeOffset', 'azimuthOffset']
 
-        elif 'offset' in fbase and '_cov' in fbase and num_band == 3:
+        elif 'offset' in fbase and 'cov' in fname and num_band == 3:
             # ampcor offset covariance file, e.g. offset_cov.bip, dense_offsets_cov.bil
             slice_list = ['azimuthOffsetVar', 'rangeOffsetVar', 'offsetCovar']
+            if fname.endswith('_denseoffset.cov'):
+                # for alos2App dense offset, e.g. 231206-240103_denseoffset.cov
+                slice_list = ['rangeOffsetVar', 'azimuthOffsetVar', 'offsetCovar']
 
         elif fext in ['.lkv']:
             slice_list = ['east', 'north', 'up']
@@ -1364,8 +1371,16 @@ def auto_no_data_value(meta):
 
         # known file types
         # isce2: dense offsets from topsApp.py
-        if processor == 'isce' and fname.endswith('dense_offsets.bil') and num_band == 2:
-            no_data_value = -10000.
+        if processor == 'isce' and num_band == 2:
+            # isce2 dense offset
+            if fname.endswith('dense_offsets.bil'):
+                # from topsApp.py
+                no_data_value = -10000.
+            elif fname.endswith('_denseoffset.off'):
+                # from alos2App.py
+                no_data_value = 0.
+            else:
+                no_data_value = None
 
         else:
             # default value for unknown file types
