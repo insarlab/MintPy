@@ -21,7 +21,7 @@ EXAMPLE = """example:
   generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
 
   # exclude pixel cluster based on minimum number of pixels
-  generate_mask.py  maskTempCoh.h5 -p 10 mask_1.h5
+  generate_mask.py  maskTempCoh.h5 -p 10 -o mask_1.h5
 
   # exclude pixels with large velocity STD: |velocity| > cutoff (2 by default) * velocityStd
   generate_mask.py  velocity.h5 --vstd
