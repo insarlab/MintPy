@@ -541,9 +541,24 @@ def plot_slice(ax, data, metadata, inps):
             im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
         else:
             vprint('plotting data ...')
-            im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+            if not inps.scatterplot:
+                im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
                            extent=inps.extent, origin='upper', interpolation=inps.interpolation,
                            alpha=inps.transparency, animated=inps.animation, zorder=1)
+            else:
+                vprint('Scatterplot, can take some time ...')
+                # Create arrays of x and y coordinates, flatten coordinate and data arrays for use with scatter
+                height, width = data.shape
+                x = np.linspace(inps.extent[0], inps.extent[1], width)
+                y = np.linspace(inps.extent[2], inps.extent[3], height)[::-1]  # Reverse the y array
+                xv, yv = np.meshgrid(x, y)
+                xv = xv.flatten()
+                yv = yv.flatten()
+                data = data.flatten()
+                
+                im = ax.scatter(xv, yv, c=data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1], 
+                           marker='o', s=inps.scatterplot, alpha=inps.transparency, zorder=1)
+                ax.axis('equal')
 
         # Draw faultline using GMT lonlat file
         if inps.faultline_file:
@@ -659,9 +674,23 @@ def plot_slice(ax, data, metadata, inps):
             im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
         else:
             vprint('plotting data ...')
-            im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+            if not inps.scatterplot:
+                im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
                            extent=inps.extent, interpolation=inps.interpolation,
                            alpha=inps.transparency, zorder=1)
+            else:
+                vprint('Scatterplot, can take time ...')
+                # Create arrays of x and y coordinates, flatten coordinate and data arrays for use with scatter
+                height, width = data.shape
+                x = np.linspace(inps.extent[0], inps.extent[1], width)
+                y = np.linspace(inps.extent[2], inps.extent[3], height)[::-1]  # Reverse the y array
+                xv, yv = np.meshgrid(x, y)
+                xv = xv.flatten()
+                yv = yv.flatten()
+                data = data.flatten()
+                
+                im = ax.scatter(xv, yv, c=data, s=inps.scatterplot, cmap=inps.colormap, marker='o')
+                ax.axis('equal')
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point

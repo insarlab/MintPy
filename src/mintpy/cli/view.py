@@ -78,7 +78,10 @@ def create_parser(subparsers=None):
                              '  sqrt    = x^1/2\n'
                              '  reverse = x * -1\n'
                              '  inverse = 1 / x')
-
+    
+    parser.add_argument('--scatterplot', nargs='?', metavar='POINTSIZE', const=10, default=None, type=int,
+                    help='Scatterplot (no argument: point size 10) (default: no scatterplot)')
+    
     parser = arg_utils.add_data_disp_argument(parser)
     parser = arg_utils.add_dem_argument(parser)
     parser = arg_utils.add_figure_argument(parser)
@@ -170,6 +173,7 @@ def cmd_line_parse(iargs=None):
 #########################################  Main Function  ########################################
 def main(iargs=None):
     # parse
+
     inps = cmd_line_parse(iargs)
 
     # import
