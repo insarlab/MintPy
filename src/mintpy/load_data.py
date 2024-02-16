@@ -24,7 +24,7 @@ from mintpy.objects.stackDict import geometryDict, ifgramDict, ifgramStackDict
 from mintpy.utils import ptime, readfile, utils as ut
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr', 'nisar']
+PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'hyp3_stac', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr', 'nisar']
 
 # primary observation dataset names
 OBS_DSET_NAMES = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
@@ -452,7 +452,7 @@ def read_inps_dict2geometry_dict_object(iDict, dset_name2template_key):
         # for processors with lookup table in geo-coordinates, remove latitude/longitude
         dset_name2template_key.pop('latitude')
         dset_name2template_key.pop('longitude')
-    elif iDict['processor'] in ['aria', 'gmtsar', 'hyp3', 'snap', 'cosicorr']:
+    elif iDict['processor'] in ['aria', 'gmtsar', 'hyp3', 'hyp3_stac', 'snap', 'cosicorr']:
         # for processors with geocoded products support only, do nothing for now.
         # check again when adding products support in radar-coordiantes
         pass
@@ -772,6 +772,9 @@ def prepare_metadata(iDict):
         except:
             warnings.warn('prep_gmtsar.py failed. Assuming its result exists and continue...')
 
+    elif processor == 'hyp3_stac':
+        prep_module.main()
+
     return
 
 
@@ -807,8 +810,8 @@ def load_data(inps):
     prepare_metadata(iDict)
     extraDict = get_extra_metadata(iDict)
 
-    # skip data writing as it is included in prep_aria/nisar
-    if iDict['processor'] in ['aria', 'nisar']:
+    # skip data writing as it is included in prep_aria/nisar/hyp3_stac
+    if iDict['processor'] in ['aria', 'nisar', 'hyp3_stac']:
         return
 
     ## 2. search & write data files
