@@ -773,7 +773,10 @@ def prepare_metadata(iDict):
             warnings.warn('prep_gmtsar.py failed. Assuming its result exists and continue...')
 
     elif processor == 'hyp3_stac':
-        prep_module.main()
+        custom_temp_files = [fname for fname in iDict['template_file'] if not fname.endswith('smallbaselineApp.cfg')]
+        iargs = ['--template', custom_temp_files[0]]
+        ut.print_command_line(script_name, iargs)
+        prep_module.main(iargs)
 
     return
 
