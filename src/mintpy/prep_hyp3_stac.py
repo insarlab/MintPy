@@ -18,6 +18,9 @@ from mintpy.utils import readfile, writefile
 from mintpy.utils import utils1 as ut
 
 
+osr.UseExceptions()
+
+
 #########################################################################
 def get_metadata(dataset):
     """Read/extract attribute data from HyP3 metadata file and add to metadata dictionary
@@ -173,18 +176,25 @@ def write_geometry(outfile, dastaset):
         f['waterMask'][:, :] = first_product.sel(band='water_mask').to_numpy().astype(np.bool_)
 
 
-def load_hyp3_stac(stac_path, subset_projected=None, subset_index=None):
-    collection = pystac.Collection.from_file(stac_path)
+def load_hyp3_stac(
+    stac_file,
+    subset_yx=None,
+    subset_geo=None,
+    compression=None,
+    ifg_outfile='./inputs/ifgramStack.h5',
+    geom_outfile='./inputs/geometryGeo.h5',
+):
+    collection = pystac.Collection.from_file(stac_file)
     items = list(collection.get_all_items())
     dataset = stackstac.stack(items[:3])
-    if subset_projected and subset_index:
-        raise ValueError('Cannot subset using both projected and index methods')
-    elif subset_projected:
-        dataset = dataset.sel(
-            x=slice(subset_projected[0], subset_projected[1]), y=slice(subset_projected[2], subset_projected[3])
-        )
-    elif subset_index:
-        dataset = dataset.isel(x=slice(subset_index[0], subset_index[1]), y=slice(subset_index[2], subset_index[3]))
+
+    if subset_geo and subset_yx:
+        print('Both geographic and index subsets were provided. Using geographic subset method.')
+    
+    if subset_geo:
+        dataset = dataset.sel(y=slice(subset_geo[0], subset_geo[1]), x=slice(subset_geo[2], subset_geo[3]))
+    elif subset_yx:
+        dataset = dataset.isel(y=slice(subset_yx[0], subset_yx[1]), x=slice(subset_yx[2], subset_yx[3]))
 
     meta, date12s, perp_baselines = get_metadata(dataset)
 
@@ -199,11 +209,9 @@ def load_hyp3_stac(stac_path, subset_projected=None, subset_index=None):
         'coherence': (np.float32, (num_pair, length, width)),
         'connectComponent': (int, (num_pair, length, width)),
     }
-    outfile = 'inputs/ifgramStack.h5'
-    compression = None
     meta['FILE_TYPE'] = 'ifgramStack'
-    writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta, compression=compression)
-    write_ifgram_stack(outfile, dataset, date12s, perp_baselines)
+    writefile.layout_hdf5(ifg_outfile, ds_name_dict, metadata=meta, compression=compression)
+    write_ifgram_stack(ifg_outfile, dataset, date12s, perp_baselines)
 
     # create geometryGeo.h5 file
     ds_name_dict = {
@@ -213,12 +221,10 @@ def load_hyp3_stac(stac_path, subset_projected=None, subset_index=None):
         'slantRangeDistance': (np.float32, (length, width)),
         'waterMask': (np.bool_, (length, width)),
     }
-    outfile = 'inputs/geometryGeo.h5'
-    compression = None
     meta['FILE_TYPE'] = 'geometry'
-    writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta, compression=compression)
-    write_geometry(outfile, dataset)
+    writefile.layout_hdf5(geom_outfile, ds_name_dict, metadata=meta, compression=compression)
+    write_geometry(geom_outfile, dataset)
 
 
 def prep_hyp3_stac(inps):
-    load_hyp3_stac('collection/collection.json')
+    load_hyp3_stac(inps.stacFile, inps.yx, inps.lalo, inps.compression, inps.outfile[0], inps.outfile[1])
