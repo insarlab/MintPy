@@ -23,16 +23,6 @@ osr.UseExceptions()
 
 #########################################################################
 def get_metadata(dataset):
-    """Read/extract attribute data from HyP3 metadata file and add to metadata dictionary
-    Inputs:
-        *unw_phase.tif, *corr.tif file name, *dem.tif, *inc_map.tif, e.g.
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase_clip.tif
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr_clip.tif
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif
-        Metadata dictionary (meta)
-    Output:
-        Metadata dictionary (meta)
-    """
     keys = list(dataset.coords.keys())
     hyp3_meta = {}
     for key in keys:
@@ -111,17 +101,6 @@ def get_metadata(dataset):
     else:
         raise NotImplementedError('Only Sentinel-1 data is currently supported')
 
-    # note: HyP3 (incidence, azimuth) angle datasets are in the unit of radian
-    # which is different from the isce-2 convention of degree
-    # if any(x in os.path.basename(fname) for x in ['lv_theta', 'lv_phi']):
-    #     meta['UNIT'] = 'radian'
-
-    # add metadata that is only relevant to interferogram files
-    # if is_ifg:
-    #     meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
-    #     meta['P_BASELINE_TOP_HDR'] = hyp3_meta['Baseline']
-    #     meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
-
     meta = readfile.standardize_metadata(meta)
 
     date1s = [dt.datetime.fromisoformat(x).strftime('%Y%m%d') for x in hyp3_meta['start_datetime']]
@@ -190,7 +169,7 @@ def load_hyp3_stac(
 
     if subset_geo and subset_yx:
         print('Both geographic and index subsets were provided. Using geographic subset method.')
-    
+
     if subset_geo:
         dataset = dataset.sel(y=slice(subset_geo[0], subset_geo[1]), x=slice(subset_geo[2], subset_geo[3]))
     elif subset_yx:
