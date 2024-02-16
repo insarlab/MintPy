@@ -42,7 +42,10 @@ def get_metadata(dataset):
     meta = {}
     n_dates, n_bands, meta['LENGTH'], meta['WIDTH'] = dataset.shape
     example_image = dataset.isel(time=0)
-    meta['X_STEP'], _, meta['X_FIRST'], _, meta['Y_STEP'], meta['Y_FIRST'], *_ = dataset.attrs['transform']
+    meta['X_FIRST'] = dataset.coords['x'].to_numpy()[0]
+    meta['Y_FIRST'] = dataset.coords['y'].to_numpy()[0]
+    meta['X_STEP'], _, _, _, meta['Y_STEP'], *_ = dataset.attrs['transform']
+    breakpoint()
     meta['DATA_TYPE'] = example_image['data_type'].values.item()
     meta['EPSG'] = example_image['epsg'].values.item()
     meta['X_UNIT'] = 'meters'
