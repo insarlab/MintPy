@@ -129,26 +129,6 @@ def get_metadata(dataset):
     return meta, date12s, perp_baseline
 
 
-# def get_geospatial_metadata(dataset):
-#     """Get geopsatial metadata from xarray"""
-#     # Not currently implemented
-#     # atr['UTM_ZONE']
-#     # atr['BANDS']
-#     # atr['INTERLEAVE']
-#     meta = {}
-#     n_dates, n_bands, meta['WIDTH'], meta['LENGTH'] = dataset.shape
-#     example_image = dataset.isel(time=0)
-#     meta['X_STEP'], _, meta['X_FIRST'], _, meta['Y_STEP'], meta['Y_FIRST'] = dataset.attrs['transform'][0]
-#     meta['DATA_TYPE'] = example_image['data_type'].values.item()
-#     meta['EPSG'] = example_image['epsg'].values.item()
-#     meta['X_UNIT'] = 'meters'
-#     meta['Y_UNIT'] = 'meters'
-#     meta['NoDataValue'] = example_image['nodata'].values.item()
-#     meta = readfile.standardize_metadata(meta)
-#
-#     return meta
-
-
 def write_ifgram_stack(outfile, dataset, date12s, perp_baselines):
     with h5py.File(outfile, 'a') as f:
         f['date'][:, 0] = [d1.split('_')[0].encode('utf-8') for d1 in date12s]
@@ -157,7 +137,7 @@ def write_ifgram_stack(outfile, dataset, date12s, perp_baselines):
         f['bperp'][:] = perp_baselines
         f['unwrapPhase'][:, :, :] = dataset.sel(band='unw_phase').to_numpy().astype(np.float32)
         f['coherence'][:, :, :] = dataset.sel(band='corr').to_numpy().astype(np.float32)
-        f['connectComponent'][:, :, :] = dataset.sel(band='conncomp').to_numpy().astype(np.int16)
+        f['connectComponent'][:, :, :] = dataset.sel(band='conncomp').to_numpy().astype(int)
 
         # add MODIFICATION_TIME metadata to each 3D dataset
         for dsName in ['unwrapPhase', 'coherence', 'connectComponent']:
@@ -166,10 +146,30 @@ def write_ifgram_stack(outfile, dataset, date12s, perp_baselines):
 
 def write_geometry(outfile, dastaset):
     first_product = dastaset.isel(time=0)
+
+    # Convert from hyp3/gamma to mintpy/isce2 convention
+    incidence_angle = first_product.sel(band='lv_theta').to_numpy().astype(np.float32)
+    incidence_angle[incidence_angle == 0] = np.nan
+    incidence_angle = 90 - (incidence_angle * 180 / np.pi)
+
+    # Calculate Slant Range distance
+    atr = {
+        'HEIGHT': first_product.coords['spacecraft_height'].item(),
+        'EARTH_RADIUS': first_product.coords['earth_radius_at_nadir'].item(),
+    }
+    slant_range_distance = ut.incidence_angle2slant_range_distance(atr, incidence_angle)
+
+    # Convert from hyp3/gamma to mintpy/isce2 convention
+    azimuth_angle = first_product.sel(band='lv_phi').to_numpy().astype(np.float32)
+    azimuth_angle[azimuth_angle == 0] = np.nan
+    azimuth_angle = azimuth_angle * 180 / np.pi - 90  # hyp3/gamma to mintpy/isce2 convention
+    azimuth_angle = ut.wrap(azimuth_angle, wrap_range=[-180, 180])  # rewrap within -180 to 180
+
     with h5py.File(outfile, 'a') as f:
         f['height'][:, :] = first_product.sel(band='dem').to_numpy().astype(np.float32)
-        f['incidenceAngle'][:, :] = first_product.sel(band='lv_theta').to_numpy().astype(np.float32)
-        f['azimuthAngle'][:, :] = first_product.sel(band='lv_phi').to_numpy().astype(np.float32)
+        f['incidenceAngle'][:, :] = incidence_angle
+        f['slantRangeDistance'][:, :] = slant_range_distance
+        f['azimuthAngle'][:, :] = azimuth_angle
         f['waterMask'][:, :] = first_product.sel(band='water_mask').to_numpy().astype(np.bool_)
 
 
@@ -197,7 +197,7 @@ def load_hyp3_stac(stac_path, subset_projected=None, subset_index=None):
         'bperp': (np.float32, (num_pair,)),
         'unwrapPhase': (np.float32, (num_pair, length, width)),
         'coherence': (np.float32, (num_pair, length, width)),
-        'connectComponent': (np.int16, (num_pair, length, width)),
+        'connectComponent': (int, (num_pair, length, width)),
     }
     outfile = 'inputs/ifgramStack.h5'
     compression = None
@@ -210,6 +210,7 @@ def load_hyp3_stac(stac_path, subset_projected=None, subset_index=None):
         'height': (np.float32, (length, width)),
         'incidenceAngle': (np.float32, (length, width)),
         'azimuthAngle': (np.float32, (length, width)),
+        'slantRangeDistance': (np.float32, (length, width)),
         'waterMask': (np.bool_, (length, width)),
     }
     outfile = 'inputs/geometryGeo.h5'
