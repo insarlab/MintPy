@@ -33,7 +33,6 @@ def get_metadata(dataset):
         if value.shape == ():
             value = value.item()
         else:
-            # value = list(dict.fromkeys(value))
             value = list(value)
 
         hyp3_meta[key] = value
@@ -45,7 +44,6 @@ def get_metadata(dataset):
     meta['X_FIRST'] = dataset.coords['x'].to_numpy()[0]
     meta['Y_FIRST'] = dataset.coords['y'].to_numpy()[0]
     meta['X_STEP'], _, _, _, meta['Y_STEP'], *_ = dataset.attrs['transform']
-    breakpoint()
     meta['DATA_TYPE'] = example_image['data_type'].values.item()
     meta['EPSG'] = example_image['epsg'].values.item()
     meta['X_UNIT'] = 'meters'
@@ -59,8 +57,8 @@ def get_metadata(dataset):
     meta['PROCESSOR'] = 'hyp3'
     meta['ALOOKS'] = hyp3_meta['azimuth_looks']
     meta['RLOOKS'] = hyp3_meta['range_looks']
-    meta['EARTH_RADIUS'] = hyp3_meta['earth_radius_at_nadir']
-    meta['HEIGHT'] = hyp3_meta['spacecraft_height']
+    meta['EARTH_RADIUS'] = np.mean(hyp3_meta['earth_radius_at_nadir'])
+    meta['HEIGHT'] = np.mean(hyp3_meta['spacecraft_height'])
     meta['STARTING_RANGE'] = np.mean(hyp3_meta['slant_range_near'])
     meta['CENTER_LINE_UTC'] = np.mean(hyp3_meta['utc_time'])
     meta['HEADING'] = np.mean(hyp3_meta['heading']) % 360.0 - 360.0  # ensure negative value for the heading angle
@@ -114,7 +112,9 @@ def get_metadata(dataset):
     return meta, date12s, perp_baseline
 
 
-def write_ifgram_stack(outfile, dataset, date12s, perp_baselines):
+def write_ifgram_stack(outfile, dataset, date12s, perp_baselines, has_conncomp):
+    stack_dataset_names = ['unwrapPhase', 'coherence']
+
     with h5py.File(outfile, 'a') as f:
         f['date'][:, 0] = [d1.split('_')[0].encode('utf-8') for d1 in date12s]
         f['date'][:, 1] = [d2.split('_')[1].encode('utf-8') for d2 in date12s]
@@ -122,10 +122,12 @@ def write_ifgram_stack(outfile, dataset, date12s, perp_baselines):
         f['bperp'][:] = perp_baselines
         f['unwrapPhase'][:, :, :] = dataset.sel(band='unw_phase').to_numpy().astype(np.float32)
         f['coherence'][:, :, :] = dataset.sel(band='corr').to_numpy().astype(np.float32)
-        f['connectComponent'][:, :, :] = dataset.sel(band='conncomp').to_numpy().astype(int)
+        if has_conncomp:
+            f['connectComponent'][:, :, :] = dataset.sel(band='conncomp').to_numpy().astype(int)
+            stack_dataset_names.append('connectComponent')
 
         # add MODIFICATION_TIME metadata to each 3D dataset
-        for dsName in ['unwrapPhase', 'coherence', 'connectComponent']:
+        for dsName in stack_dataset_names:
             f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
 
 
@@ -168,13 +170,13 @@ def load_hyp3_stac(
 ):
     collection = pystac.Collection.from_file(stac_file)
     items = list(collection.get_all_items())
-    dataset = stackstac.stack(items[:3])
+    dataset = stackstac.stack(items)
 
     if subset_geo and subset_yx:
         print('Both geographic and index subsets were provided. Using geographic subset method.')
 
     if subset_geo:
-        dataset = dataset.sel(y=slice(subset_geo[0], subset_geo[1]), x=slice(subset_geo[2], subset_geo[3]))
+        dataset = dataset.sel(y=slice(subset_geo[1], subset_geo[0]), x=slice(subset_geo[2], subset_geo[3]))
     elif subset_yx:
         dataset = dataset.isel(y=slice(subset_yx[0], subset_yx[1]), x=slice(subset_yx[2], subset_yx[3]))
 
@@ -189,11 +191,14 @@ def load_hyp3_stac(
         'bperp': (np.float32, (num_pair,)),
         'unwrapPhase': (np.float32, (num_pair, length, width)),
         'coherence': (np.float32, (num_pair, length, width)),
-        'connectComponent': (int, (num_pair, length, width)),
     }
+    has_conncomp = 'conncomp' in list(dataset.coords['band'].to_numpy())
+    if has_conncomp:
+        ds_name_dict['connectComponent'] = (int, (num_pair, length, width))
+
     meta['FILE_TYPE'] = 'ifgramStack'
     writefile.layout_hdf5(ifg_outfile, ds_name_dict, metadata=meta, compression=compression)
-    write_ifgram_stack(ifg_outfile, dataset, date12s, perp_baselines)
+    write_ifgram_stack(ifg_outfile, dataset, date12s, perp_baselines, has_conncomp)
 
     # create geometryGeo.h5 file
     ds_name_dict = {
