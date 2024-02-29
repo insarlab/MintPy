@@ -6,6 +6,7 @@
 import datetime as dt
 import time
 
+import dask
 import h5py
 import numpy as np
 import pystac
@@ -113,7 +114,12 @@ def get_metadata(dataset):
 
 
 def write_ifgram_stack(outfile, dataset, date12s, perp_baselines, has_conncomp):
+    dask.config.set(scheduler='threads', num_workers=15)
     stack_dataset_names = ['unwrapPhase', 'coherence']
+    # bands = ['unw_phase', 'corr']
+    # if has_conncomp:
+    #     bands.append('conncomp')
+    # dataset = dataset.sel(band=bands).load()
 
     with h5py.File(outfile, 'a') as f:
         f['date'][:, 0] = [d1.split('_')[0].encode('utf-8') for d1 in date12s]
@@ -132,7 +138,10 @@ def write_ifgram_stack(outfile, dataset, date12s, perp_baselines, has_conncomp):
 
 
 def write_geometry(outfile, dastaset):
-    first_product = dastaset.isel(time=0)
+    import dask
+
+    dask.config.set(scheduler='threads', num_workers=15)
+    first_product = dastaset.isel(time=0).load()
 
     # Convert from hyp3/gamma to mintpy/isce2 convention
     incidence_angle = first_product.sel(band='lv_theta').to_numpy().astype(np.float32)
@@ -167,10 +176,11 @@ def load_hyp3_stac(
     compression=None,
     ifg_outfile='./inputs/ifgramStack.h5',
     geom_outfile='./inputs/geometryGeo.h5',
+    chunksize='5 MB',
 ):
     collection = pystac.Collection.from_file(stac_file)
     items = list(collection.get_all_items())
-    dataset = stackstac.stack(items)
+    dataset = stackstac.stack(items, chunksize=chunksize, fill_value=0)
 
     if subset_geo and subset_yx:
         print('Both geographic and index subsets were provided. Using geographic subset method.')
