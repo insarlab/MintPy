@@ -61,16 +61,20 @@ AUTO_PATH_ISCE_ALOS = '''##----------Default file path of ISCE/alosStack product
 mintpy.load.metaFile         = ../dates_res*/${ref_date}/${ref_date}.track.xml
 mintpy.load.baselineDir      = ../baseline
 
-mintpy.load.unwFile          = ../pairs/*-*/insar/filt_*-*_5rlks_28alks.unw
-mintpy.load.corFile          = ../pairs/*-*/insar/*-*_5rlks_28alks.cor
-mintpy.load.connCompFile     = ../pairs/*-*/insar/filt_*-*_5rlks_28alks.unw.conncomp
+mintpy.load.unwFile          = ../pairs/*-*/insar/filt_*-*_${multilook}.unw
+mintpy.load.corFile          = ../pairs/*-*/insar/*-*_${multilook}.cor
+mintpy.load.connCompFile     = ../pairs/*-*/insar/filt_*-*_${multilook}.unw.conncomp
 
-mintpy.load.demFile          = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.hgt
-mintpy.load.lookupYFile      = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.lat
-mintpy.load.lookupXFile      = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.lon
-mintpy.load.incAngleFile     = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.los
-mintpy.load.azAngleFile      = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.los
-mintpy.load.waterMaskFile    = ../dates_res*/${ref_date}/insar/*_5rlks_28alks.wbd
+mintpy.load.ionUnwFile       = ../pairs_ion/*-*/ion/ion_cal/filt_ion_*.ion
+mintpy.load.ionCorFile       = ../pairs_ion/*-*/ion/ion_cal/diff_*.cor
+mintpy.load.ionConnCompFile  = None
+
+mintpy.load.demFile          = ../dates_res*/${ref_date}/insar/*_${multilook}.hgt
+mintpy.load.lookupYFile      = ../dates_res*/${ref_date}/insar/*_${multilook}.lat
+mintpy.load.lookupXFile      = ../dates_res*/${ref_date}/insar/*_${multilook}.lon
+mintpy.load.incAngleFile     = ../dates_res*/${ref_date}/insar/*_${multilook}.los
+mintpy.load.azAngleFile      = ../dates_res*/${ref_date}/insar/*_${multilook}.los
+mintpy.load.waterMaskFile    = ../dates_res*/${ref_date}/insar/*_${multilook}.wbd
 '''
 
 AUTO_PATH_ROIPAC = '''##----------Default file path of ROI_PAC products
@@ -204,6 +208,7 @@ def get_auto_path(processor, work_dir, template):
 
     elif processor == 'isce_alos':
         var_dict['${ref_date}'] = get_reference_date(proj_dir)
+        var_dict['${multilook}'] = get_multilook_suffix(proj_dir)
 
     # update auto_path_dict
     for key, value in auto_path_dict.items():
@@ -213,6 +218,7 @@ def get_auto_path(processor, work_dir, template):
             auto_path_dict[key] = value
 
     ## 3. update input template option with auto value
+    ## so that one could overwrite part of the auto path with custom template option inputs
     max_digit = max(len(key) for key in auto_path_dict.keys())
     for key, value in auto_path_dict.items():
         if value and template[key] == 'auto':
@@ -222,8 +228,48 @@ def get_auto_path(processor, work_dir, template):
     return template
 
 
+def get_multilook_suffix(proj_dir):
+    """Get multilook suffix in the interferogram file name for isce2/alosStack from its pairs dir.
+    There could be two multilooked versions for most files, the larger one should be used.
+    """
+    insar_dir = glob.glob(os.path.join(proj_dir, 'pairs/*-*/insar'))[0]
+    int_file = sorted(glob.glob(os.path.join(insar_dir, 'filt_*-*.int')))[-1]
+    print(f'Grab multilook suffix from file: {int_file}')
+    rlks, alks = os.path.splitext(os.path.basename(int_file))[0].split('_')[-2:]
+    lks_suffix = f'{rlks}_{alks}'
+    print(f'multilook suffix of the interferogram stack: {lks_suffix}')
+    return lks_suffix
+
+
+def get_reference_date(proj_dir):
+    """Get reference date of the stack for isce2/alosStack from its XML config file."""
+    import xml.etree.ElementTree as ET
+
+    ref_date = None
+    ref_key = 'reference date of the stack'
+
+    xml_file = os.path.join(proj_dir, 'alosStack.xml')
+    print(f'Grab reference date from the config file: {xml_file}.')
+    if not os.path.exists(xml_file):
+        raise FileNotFoundError(f'Config file {xml_file} NOT found!')
+
+    # read the XML file
+    root = ET.parse(xml_file).getroot()
+    for child in root[0].findall('property'):
+        key = child.get('name').lower()
+        if key.replace(' ', '') == ref_key.replace(' ', ''):
+            ref_date = child.text
+            print('reference date of the stack:', ref_date)
+            break
+
+    if ref_date is None:
+        raise ValueError('NO element named: {ref_key} found in the config file!')
+
+    return ref_date
+
+
 def get_reference_date12(proj_dir, processor='roipac'):
-    """date12 of reference interferogram in YYMMDD-YYMMDD format"""
+    """date12 of reference interferogram in YYMMDD-YYMMDD format (for UMiami)."""
     import numpy as np
 
     ref_date12 = None
@@ -252,35 +298,8 @@ def get_reference_date12(proj_dir, processor='roipac'):
     return ref_date12
 
 
-def get_reference_date(proj_dir):
-    """Get reference date of the stack for isce2/alosStack from its XML config file."""
-    import xml.etree.ElementTree as ET
-
-    ref_date = None
-    ref_key = 'reference date of the stack'
-
-    xml_file = os.path.join(proj_dir, 'alosStack.xml')
-    print('Grab reference date from the config file: {xml_file}.')
-    if not os.path.exists(xml_file):
-        raise FileNotFoundError(f'Config file {xml_file} NOT found!')
-
-    # read the XML file
-    root = ET.parse(xml_file).getroot()
-    for child in root[0].findall('property'):
-        key = child.get('name').lower()
-        if key.replace(' ', '') == ref_key.replace(' ', ''):
-            ref_date = child.text
-            print('reference date of the stack:', ref_date)
-            break
-
-    if ref_date is None:
-        raise ValueError('NO element named: {ref_key} found in the config file!')
-
-    return ref_date
-
-
 def get_dem_file(proj_dir, ref_date12, processor):
-    """get DEM file in case both radar_2rlks.hgt and radar_8rlks.hgt exist"""
+    """get DEM file in case both radar_2rlks.hgt and radar_8rlks.hgt exist (for UMiami)"""
     dem_file = None
 
     if ref_date12 and processor == 'roipac':
