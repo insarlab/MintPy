@@ -46,6 +46,7 @@ MPL_COLORS = [
     '#bcbd22',
     '#17becf',
 ]
+plt.rcParams["axes.formatter.limits"] = (-1e10, 1e10)
 
 
 ########################################### Parser utilities ##############################################
