@@ -63,7 +63,9 @@ def create_parser(subparsers=None):
                              'i.e. ifgramStack.h5, date12_list.txt')
     parser.add_argument('--exclude-ifg-index', dest='excludeIfgIndex', nargs='*',
                         help='index of interferograms to remove/drop.\n1 as the first')
-    parser.add_argument('--exclude-date', dest='excludeDate', nargs='*',
+    parser.add_argument('--exclude-ifg','--ex-ifg','--ex-date12', dest='excludeDate12', nargs='*',
+                        help='pair(s) to remove/drop in YYYYMMDD_YYYYMMDD format.')
+    parser.add_argument('--exclude-date','--ex-date', dest='excludeDate', nargs='*',
                         help='date(s) to remove/drop, all interferograms included date(s) will be removed')
     parser.add_argument('--start-date', '--min-date', dest='startDate',
                         help='remove/drop interferograms with date earlier than start-date in YYMMDD or YYYYMMDD format')
@@ -109,7 +111,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from mintpy.utils import readfile, utils as ut
+    from mintpy.utils import ptime, readfile, utils as ut
 
     # check: --mask option
     if not os.path.isfile(inps.maskFile):
@@ -118,6 +120,12 @@ def cmd_line_parse(iargs=None):
     # check: --exclude-ifg-index option (convert input index to continuous index list)
     inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
 
+    # check: --ex-date(12) options
+    if inps.excludeDate:
+        inps.exlcudeDate = ptime.yyyymmdd(inps.excludeDate)
+    if inps.excludeDate12:
+        inps.excludeDate12 = ptime.yyyymmdd_date12(inps.excludeDate12)
+
     # check: -t / --template option
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
@@ -125,8 +133,8 @@ def cmd_line_parse(iargs=None):
     # check: input arguments (required at least one)
     required_args = [
         inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-        inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaRatioBased,
-        inps.startDate, inps.endDate, inps.reset, inps.manual,
+        inps.excludeIfgIndex, inps.excludeDate, inps.excludeDate12, inps.coherenceBased,
+        inps.areaRatioBased, inps.startDate, inps.endDate, inps.reset, inps.manual,
     ]
     if all(not i for i in required_args + [inps.template_file]):
         msg = 'No input option found to remove interferogram, exit.\n'
@@ -199,6 +207,8 @@ def read_template2inps(template_file, inps):
                 iDict[key] = ptime.yyyymmdd(value)
             elif key == 'excludeDate':
                 iDict[key] = ptime.yyyymmdd(value.split(','))
+            elif key == 'excludeDate12':
+                iDict[key] = ptime.yyyymmdd_date12(value.split(','))
             elif key == 'excludeIfgIndex':
                 iDict[key] += value.split(',')
                 iDict[key] = read_input_index_list(iDict[key], stackFile=inps.file)

@@ -544,16 +544,17 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
     ax.bar(x_list, np.nanmax(coh_mat, axis=0), bar_width.days, label='Max {}'.format(p_dict['ds_name']))
     ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min {}'.format(p_dict['ds_name']))
 
+    # axis format
     if p_dict['disp_title']:
         ax.set_title('{} History: Min/Max of All Related Pairs'.format(p_dict['ds_name']))
-
     ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
                                 every_year=p_dict['every_year'])[0]
     ax.set_ylim([p_dict['vlim'][0], p_dict['vlim'][1]])
-
     #ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
-    ax.set_ylabel(p_dict['ds_name'], fontsize=p_dict['fontsize'])
+    ax.set_ylabel(p_dict['cbar_label'], fontsize=p_dict['fontsize'])
     ax.legend(loc='best')
+    ax.tick_params(which='both', direction='in', labelsize=p_dict['fontsize'],
+                   bottom=True, top=True, left=True, right=True)
 
     return ax
 
