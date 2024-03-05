@@ -89,7 +89,7 @@ class coordinate:
         self.open()
         if not self.geocoded:
             raise ValueError('Input file is not geocoded.')
-        
+
         lat_coord_in = self._clean_coord(lat_coord_in)
         lon_coord_in = self._clean_coord(lon_coord_in)
     
