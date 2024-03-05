@@ -1128,6 +1128,11 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     start_date = inps.gps_start_date if inps.gps_start_date else metadata.get('START_DATE', None)
     end_date = inps.gps_end_date if inps.gps_end_date else metadata.get('END_DATE', None)
 
+    if 'UTM_ZONE' in metadata:
+        south, west = ut0.utm2latlon(atr, SNWE[2], SNWE[0])
+        north, east = ut0.utm2latlon(atr, SNWE[3], SNWE[1])
+        SNWE = (south, north, west, east)
+
     # query for GNSS stations
     site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
     if site_names.size == 0:
@@ -1214,6 +1219,9 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         if np.sum(nan_flag) > 0:
             vprint(f'ignore the following {np.sum(nan_flag)} stations due to limited overlap/observations in time')
             vprint(f'  {site_names[nan_flag]}')
+
+        if 'UTM_ZONE' in metadata:
+            site_lats, site_lons = ut0.latlon2utm(site_lats, site_lons)
 
         # plot
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):

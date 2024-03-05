@@ -68,18 +68,7 @@ class coordinate:
             if self.lookup_file:
                 self.lut_metadata = readfile.read_attribute(self.lookup_file[0])
 
-    def lalo2yx(self, coord_in, coord_type):
-        """convert geo coordinates into radar coordinates for Geocoded file only
-        Parameters: geoCoord   - list / tuple / 1D np.ndarray / float, coordinate(s) in latitude or longitude
-                    metadata   - dict, dictionary of file attributes
-                    coord_type - str, coordinate type: latitude or longitude
-        Example:    300 = coordinate.lalo2yx(32.104990,    metadata,'lat')
-                    [1000,1500] = coordinate.lalo2yx([130.5,131.4],metadata,'lon')
-        """
-        self.open()
-        if not self.geocoded:
-            raise ValueError('Input file is not geocoded.')
-
+    def _clean_coord(self, coord_in):
         # input format
         if isinstance(coord_in, np.ndarray):
             coord_in = coord_in.tolist()
@@ -87,25 +76,41 @@ class coordinate:
         if isinstance(coord_in, (float, np.float16, np.float32, np.float64, np.longdouble)):
             coord_in = [coord_in]
         coord_in = list(coord_in)
+        return coord_in
+
+    def lalo2yx(self, lat_coord_in, lon_coord_in):
+        """convert geo coordinates into radar coordinates for Geocoded file only
+        Parameters: lat_coord_in  - list / tuple / 1D np.ndarray / float, coordinate(s) in latitude
+                    lon_coord_in  - list / tuple / 1D np.ndarray / float, coordinate(s) in longitude
+        Example:    300, 1000 = coordinate.lalo2yx(32.1, 130.5)
+                    [(300, 301), (1000, 1001)] = coordinate.lalo2yx((32.1, 32.101), (130.5, 130.501))
+        """
+        self.open()
+        if not self.geocoded:
+            raise ValueError('Input file is not geocoded.')
+        
+        lat_coord_in = self._clean_coord(lat_coord_in)
+        lon_coord_in = self._clean_coord(lon_coord_in)
+    
+        if 'UTM_ZONE' in self.src_metadata:
+            lat_coord_in, lon_coord_in = ut0.latlon2utm(np.array(lat_coord_in), np.array(lon_coord_in))
 
         # convert coordinates
-        coord_type = coord_type.lower()
-        coord_out = []
-        for coord_i in coord_in:
+        lat_coord_out = []
+        lon_coord_out = []
+        for lat_coord_i, lon_coord_i in zip(lat_coord_in, lon_coord_in):
             # plus 0.01 to be more robust in practice
-            if coord_type.startswith('lat'):
-                coord_o = int(np.floor((coord_i - self.lat0) / self.lat_step + 0.01))
-            elif coord_type.startswith('lon'):
-                coord_o = int(np.floor((coord_i - self.lon0) / self.lon_step + 0.01))
-            else:
-                raise ValueError('Unrecognized coordinate type: '+coord_type)
-            coord_out.append(coord_o)
+            lat_coord_o = int(np.floor((lat_coord_i - self.lat0) / self.lat_step + 0.01))
+            lon_coord_o = int(np.floor((lon_coord_i - self.lon0) / self.lon_step + 0.01))
+            lat_coord_out.append(lat_coord_o)
+            lon_coord_out.append(lon_coord_o)
 
         # output format
-        if len(coord_out) == 1:
-            coord_out = coord_out[0]
-        elif isinstance(coord_in, tuple):
-            coord_out = tuple(coord_out)
+        if len(lat_coord_out) == 1 and len(lon_coord_out) == 1:
+            coord_out = tuple([lat_coord_out[0], lon_coord_out[0]])
+        else:
+            coord_out = tuple([lat_coord_out, lon_coord_out])
+
         return coord_out
 
 
@@ -246,8 +251,7 @@ class coordinate:
 
         self.open()
         if self.geocoded:
-            az = self.lalo2yx(lat, coord_type='lat')
-            rg = self.lalo2yx(lon, coord_type='lon')
+            az, rg = self.lalo2yx(lat, lon)
             return az, rg, 0, 0
 
         if not isinstance(lat, np.ndarray):
@@ -420,8 +424,7 @@ class coordinate:
         Returns:    pixel_box - list/tuple of 4 int   in (x0, y0, x1, y1)
         """
         try:
-            y = self.lalo2yx([geo_box[1], geo_box[3]], coord_type='latitude')
-            x = self.lalo2yx([geo_box[0], geo_box[2]], coord_type='longitude')
+            y, x = self.lalo2yx([geo_box[1], geo_box[3]], [geo_box[0], geo_box[2]])
             pixel_box = (x[0], y[0], x[1], y[1])
         except:
             pixel_box = None
