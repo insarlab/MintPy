@@ -53,6 +53,7 @@ The following attributes vary for each interferogram:
 +  NCORRLOOKS = number of independent looks, as explained in [SNAPHU](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full)
 +  UTM_ZONE = UTM zone, comprises a zone number and a hemisphere, e.g. 11N, 60S, for geocoded file with UTM projection only.
 +  EPSG = EPSG code for coordinate systems, for geocoded files only.
++  CENTER_INCIDENCE_ANGLE = incidence angle in degrees at the scene center, read from the 2D incidence angle matrix, for isce2 files only.
 
 ### Reference ###
 
