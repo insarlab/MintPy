@@ -335,7 +335,8 @@ def latlon2utm(lat, lon):
                 northing - scalar or 1/2D np.ndarray, UTM    coordinates in y direction
     """
     import utm
-    return utm.from_latlon(lat, lon)[:2]
+    easting, northing = utm.from_latlon(lat, lon)[:2]
+    return northing, easting
 
 
 def snwe_to_wkt_polygon(snwe):

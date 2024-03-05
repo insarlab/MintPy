@@ -183,18 +183,13 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
     # Use subset_lat/lon input if existed,  priority: lat/lon > y/x > len/wid
     coord = ut.coordinate(meta_dict)
-    if subset_dict.get('subset_lat', None):
-        sub_y = coord.lalo2yx(subset_dict['subset_lat'], coord_type='latitude')
-    elif subset_dict['subset_y']:
+    if subset_dict.get('subset_lat', None) and subset_dict.get('subset_lon', None):
+        sub_y, sub_x = coord.lalo2yx(subset_dict['subset_lat'], subset_dict['subset_lon'])
+    elif subset_dict['subset_y'] and subset_dict['subset_x']:
         sub_y = subset_dict['subset_y']
-    else:
-        sub_y = [0, length]
-
-    if subset_dict.get('subset_lon', None):
-        sub_x = coord.lalo2yx(subset_dict['subset_lon'], coord_type='longitude')
-    elif subset_dict['subset_x']:
         sub_x = subset_dict['subset_x']
     else:
+        sub_y = [0, length]
         sub_x = [0, width]
 
     # Get subset box in y/x

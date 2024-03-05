@@ -211,8 +211,7 @@ class coherenceMatrixViewer():
     def update_coherence_matrix(self, event):
         if event.inaxes == self.ax_img:
             if self.fig_coord == 'geo':
-                yx = [self.coord.lalo2yx(event.ydata, coord_type='lat'),
-                      self.coord.lalo2yx(event.xdata, coord_type='lon')]
+                yx = self.coord.lalo2yx(event.ydata, event.xdata)
             else:
                 yx = [int(event.ydata+0.5),
                       int(event.xdata+0.5)]

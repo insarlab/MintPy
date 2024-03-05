@@ -358,8 +358,7 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
 def transect_lalo(z, atr, start_lalo, end_lalo, interpolation='nearest'):
     """Extract 2D matrix (z) value along the line [start_lalo, end_lalo]"""
     coord = coordinate(atr)
-    [y0, y1] = coord.lalo2yx([start_lalo[0], end_lalo[0]], coord_type='lat')
-    [x0, x1] = coord.lalo2yx([start_lalo[1], end_lalo[1]], coord_type='lon')
+    [[y0, y1], [x0, x1]] = coord.lalo2yx([start_lalo[0], end_lalo[0]], [start_lalo[1], end_lalo[1]])
     transect = transect_yx(z, atr, [y0, x0], [y1, x1], interpolation)
     return transect
 

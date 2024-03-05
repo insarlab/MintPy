@@ -615,15 +615,17 @@ def plot_slice(ax, data, metadata, inps):
             # lat/lon
             msg = f'E={x:.{lalo_digit}f}, N={y:.{lalo_digit}f}'
             # value
-            col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
-            row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
+            row, col = coord.lalo2yx(y, x)
+            row -= inps.pix_box[1]
+            col -= inps.pix_box[0]
             if 0 <= col < num_col and 0 <= row < num_row:
                 v = data[row, col]
                 msg += ', v=[]' if np.isnan(v) or np.ma.is_masked(v) else f', v={v:.3f}'
                 # DEM
                 if inps.dem_file:
-                    dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
-                    dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
+                    dem_row, dem_col = coord_dem.lalo2yx(y, x)
+                    dem_row -= dem_pix_box[1]
+                    dem_col -= dem_pix_box[0]
                     if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
                         h = dem[dem_row, dem_col]
                         msg += ', h=[]' if np.isnan(h) else f', h={h:.1f}'
