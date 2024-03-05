@@ -104,7 +104,8 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
                      EARTH_RADIUS
                      HEIGHT
                      WIDTH
-                     LENGTH     #for dimension=2
+                     LENGTH                  #for dimension=2
+                     CENTER_INCIDENCE_ANGLE  #for dimension=0
                 dem : 2D array for height to calculate local incidence angle
                 dimension : int,
                             2 for 2d matrix
@@ -116,17 +117,17 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
                 atr = readfile.read_attribute('filt_fine.unw')
                 inc_angle = ut.incidence_angle(atr, dem=dem)
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
     # Return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
-        if print_msg:
-            print('input file is geocoded, return center incident angle only')
+        vprint('input file is geocoded, return center incident angle only')
 
-    # Check if the center inc angle already exist in atr file.
-    if 'CENTER_INCIDENCE_ANGLE' in atr.keys():
+    # Check if the center inc angle already exist in the metadata
+    if dimension == 0 and 'CENTER_INCIDENCE_ANGLE' in atr.keys():
         inc_angle = float(atr['CENTER_INCIDENCE_ANGLE'])
-        if print_msg:
-            print('using center inc angle from atr file')
+        vprint(f'center incidence angle : {inc_angle:.4f} degree (grabbed from metadata directly)')
         return inc_angle
 
     # Read Attributes
@@ -137,14 +138,13 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
     width = int(atr['WIDTH'])
 
     # Calculation
-    range_f = range_n+dR*width
+    range_f = range_n + dR * width
     inc_angle_n = (np.pi - np.arccos((r**2 + range_n**2 - (r+H)**2)/(2*r*range_n))) * 180.0/np.pi
     inc_angle_f = (np.pi - np.arccos((r**2 + range_f**2 - (r+H)**2)/(2*r*range_f))) * 180.0/np.pi
     inc_angle_c = (inc_angle_n + inc_angle_f) / 2.0
-    if print_msg:
-        print(f'near   incidence angle : {inc_angle_n:.4f} degree')
-        print(f'center incidence angle : {inc_angle_c:.4f} degree')
-        print(f'far    incidence angle : {inc_angle_f:.4f} degree')
+    vprint(f'near   incidence angle : {inc_angle_n:.4f} degree')
+    vprint(f'center incidence angle : {inc_angle_c:.4f} degree')
+    vprint(f'far    incidence angle : {inc_angle_f:.4f} degree')
 
     if dimension == 0:
         inc_angle = inc_angle_c
