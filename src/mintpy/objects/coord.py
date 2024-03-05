@@ -92,7 +92,7 @@ class coordinate:
 
         lat_coord_in = self._clean_coord(lat_coord_in)
         lon_coord_in = self._clean_coord(lon_coord_in)
-    
+
         if 'UTM_ZONE' in self.src_metadata and np.max(lat_coord_in) <= 90 and np.max(lon_coord_in) <= 360:
             lat_coord_in, lon_coord_in = ut0.latlon2utm(np.array(lat_coord_in), np.array(lon_coord_in))
 
