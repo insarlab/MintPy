@@ -125,6 +125,9 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
         vprint('input file is geocoded, return center incident angle only')
 
     # Check if the center inc angle already exist in the metadata
+    # Notes on Mar 2024 by Alex Handwerger & Talib Oliver-Cabrera:
+    # Proposing these changes after encountering a range_n value smaller than the platform height
+    # for UAVSAR dataset swatch_00540, thus, the calc equation w/o considering topography won't work.
     if dimension == 0 and 'CENTER_INCIDENCE_ANGLE' in atr.keys():
         inc_angle = float(atr['CENTER_INCIDENCE_ANGLE'])
         vprint(f'center incidence angle : {inc_angle:.4f} degree (grabbed from metadata directly)')
