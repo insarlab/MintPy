@@ -92,7 +92,7 @@ class coordinate:
         lat_coord_in = self._clean_coord(lat_coord_in)
         lon_coord_in = self._clean_coord(lon_coord_in)
     
-        if 'UTM_ZONE' in self.src_metadata:
+        if 'UTM_ZONE' in self.src_metadata and np.max(lat_coord_in) <= 90 and np.max(lon_coord_in) <= 360:
             lat_coord_in, lon_coord_in = ut0.latlon2utm(np.array(lat_coord_in), np.array(lon_coord_in))
 
         # convert coordinates
@@ -224,6 +224,9 @@ class coordinate:
                     az/rg_res - float, residul/uncertainty of coordinate conversion
         """
         # ensure longitude convention to be consistent with src_metadata
+        if 'UTM_ZONE' in self.src_metadata and (np.max(lat) > 90 or np.max(lon) > 360):
+            lat, lon = ut0.utm2latlon(self.src_metadata, lon, lat)
+
         if 'X_FIRST' in self.src_metadata.keys():
             width = int(self.src_metadata['WIDTH'])
             lon_step = float(self.src_metadata['X_STEP'])
