@@ -79,7 +79,8 @@ class coordinate:
         return coord_in
 
     def lalo2yx(self, lat_coord_in, lon_coord_in):
-        """convert geo coordinates into radar coordinates for Geocoded file only
+        """convert geo coordinates into radar coordinates for Geocoded file only.
+        Attempts to convert lat/lon to utm coordinates if needed.
         Parameters: lat_coord_in  - list / tuple / 1D np.ndarray / float, coordinate(s) in latitude
                     lon_coord_in  - list / tuple / 1D np.ndarray / float, coordinate(s) in longitude
         Example:    300, 1000 = coordinate.lalo2yx(32.1, 130.5)
@@ -219,6 +220,7 @@ class coordinate:
 
     def geo2radar(self, lat, lon, print_msg=True, debug_mode=False):
         """Convert geo coordinates into radar coordinates.
+        Attempts to convert utm coordinates to lat/lon if needed.
         Parameters: lat/lon   - np.array / float, latitude/longitude
         Returns:    az/rg     - np.array / int, range/azimuth pixel number
                     az/rg_res - float, residul/uncertainty of coordinate conversion
