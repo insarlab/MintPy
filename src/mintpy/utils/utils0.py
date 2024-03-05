@@ -122,6 +122,13 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
         if print_msg:
             print('input file is geocoded, return center incident angle only')
 
+    # Check if the center inc angle already exist in atr file.
+    if 'CENTER_INCIDENCE_ANGLE' in atr.keys():
+        inc_angle = float(atr['CENTER_INCIDENCE_ANGLE'])
+        if print_msg:
+            print('using center inc angle from atr file')
+        return inc_angle
+
     # Read Attributes
     range_n = float(atr['STARTING_RANGE'])
     dR = float(atr['RANGE_PIXEL_SIZE'])
