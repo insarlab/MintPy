@@ -357,19 +357,20 @@ class connectComponent:
     def plot_bridge(self, ax, cmap='jet', radius=50):
         # label background
         ax.imshow(self.labelImg, cmap=cmap, interpolation='nearest')
-        # bridges
+
+        # plot bridges
         for bridge in self.bridges:
             ax.plot([bridge['x0'], bridge['x1']],
                     [bridge['y0'], bridge['y1']], 'w-', lw=1)
+
             # endpoint window
             if radius > 0:
                 aoi_mask0, aoi_mask1 = self.get_bridge_endpoint_aoi_mask(bridge, radius=radius)
-                label_mask0 = self.labelImg == bridge['label0']
-                label_mask1 = self.labelImg == bridge['label1']
-                mask0 = np.ma.masked_where(~(aoi_mask0*label_mask0), np.zeros(self.labelImg.shape))
-                mask1 = np.ma.masked_where(~(aoi_mask1*label_mask1), np.zeros(self.labelImg.shape))
-                ax.imshow(mask0, cmap='gray', alpha=0.3, vmin=0, vmax=1)
-                ax.imshow(mask1, cmap='gray', alpha=0.3, vmin=0, vmax=1)
+
+                # Overlay bridge regions directly using plot function
+                ax.plot(np.nonzero(aoi_mask0)[1], np.nonzero(aoi_mask0)[0], 'gray', alpha=0.3)
+                ax.plot(np.nonzero(aoi_mask1)[1], np.nonzero(aoi_mask1)[0], 'gray', alpha=0.3)
+
         # reference pixel
         ax.plot(self.refX, self.refY, 'ks', ms=2)
         return ax
