@@ -476,6 +476,18 @@ def plot_slice(ax, data, metadata, inps):
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
+    def extent2meshgrid(extent: tuple, ds_shape: list):
+        """Get mesh grid coordinates for a given extent and shape.
+        Parameters: extent - tuple of float for (left, right, bottom, top) in data coordinates
+                    shape  - list of int for [length, width] of the data
+        Returns:    xx/yy  - 1D np.ndarray of the data coordinates
+        """
+        height, width = ds_shape
+        x = np.linspace(extent[0], extent[1], width)
+        y = np.linspace(extent[2], extent[3], height)[::-1]  # reverse the Y-axis
+        xx, yy = np.meshgrid(x, y)
+        return xx.flatten(), yy.flatten()
+
     # colormap: str -> object
     if isinstance(inps.colormap, str):
         inps.colormap = pp.ColormapExt(
@@ -496,6 +508,9 @@ def plot_slice(ax, data, metadata, inps):
     vprint('display data in transparency: '+str(inps.transparency))
     num_row, num_col = data.shape
     lalo_digit = ut.get_lalo_digit4display(metadata, coord_unit=inps.coord_unit)
+
+    # common options for data visualization
+    kwargs = dict(cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1], alpha=inps.transparency, zorder=1)
 
     #----------------------- Plot in Geo-coordinate --------------------------------------------#
     if (inps.geo_box
@@ -539,26 +554,20 @@ def plot_slice(ax, data, metadata, inps):
         # Plot data
         if inps.disp_dem_blend:
             im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
+
+        elif inps.style == 'image':
+            vprint(f'plotting data as {inps.style} via matplotlib.pyplot.imshow ...')
+            im = ax.imshow(data, extent=inps.extent, origin='upper', interpolation=inps.interpolation,
+                           animated=inps.animation, **kwargs)
+
+        elif inps.style == 'scatter':
+            vprint(f'plotting data as {inps.style} via matplotlib.pyplot.scatter (can take some time) ...')
+            xx, yy = extent2meshgrid(inps.extent, data.shape)
+            im = ax.scatter(xx, yy, c=data.flatten(), marker='o', s=inps.scatter_marker_size, **kwargs)
+            ax.axis('equal')
+
         else:
-            vprint('plotting data ...')
-            if not inps.scatterplot:
-                im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                           extent=inps.extent, origin='upper', interpolation=inps.interpolation,
-                           alpha=inps.transparency, animated=inps.animation, zorder=1)
-            else:
-                vprint('Scatterplot, can take some time ...')
-                # Create arrays of x and y coordinates, flatten coordinate and data arrays for use with scatter
-                height, width = data.shape
-                x = np.linspace(inps.extent[0], inps.extent[1], width)
-                y = np.linspace(inps.extent[2], inps.extent[3], height)[::-1]  # Reverse the y array
-                xv, yv = np.meshgrid(x, y)
-                xv = xv.flatten()
-                yv = yv.flatten()
-                data = data.flatten()
-                
-                im = ax.scatter(xv, yv, c=data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1], 
-                           marker='o', s=inps.scatterplot, alpha=inps.transparency, zorder=1)
-                ax.axis('equal')
+            raise ValueError(f'Un-recognized plotting style: {inps.style}!')
 
         # Draw faultline using GMT lonlat file
         if inps.faultline_file:
@@ -672,25 +681,19 @@ def plot_slice(ax, data, metadata, inps):
         # Plot Data
         if inps.disp_dem_blend:
             im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
+
+        elif inps.style == 'image':
+            vprint('plotting data via matplotlib.pyplot.imshow ...')
+            im = ax.imshow(data, extent=inps.extent, interpolation=inps.interpolation, **kwargs)
+
+        elif inps.style == 'scatter':
+            vprint('plotting data via matplotlib.pyplot.scatter (can take some time) ...')
+            xx, yy = extent2meshgrid(inps.extent, data.shape)
+            im = ax.scatter(xx, yy, c=data.flatten(), marker='o', s=inps.scatter_marker_size, **kwargs)
+            ax.axis('equal')
+
         else:
-            vprint('plotting data ...')
-            if not inps.scatterplot:
-                im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                           extent=inps.extent, interpolation=inps.interpolation,
-                           alpha=inps.transparency, zorder=1)
-            else:
-                vprint('Scatterplot, can take time ...')
-                # Create arrays of x and y coordinates, flatten coordinate and data arrays for use with scatter
-                height, width = data.shape
-                x = np.linspace(inps.extent[0], inps.extent[1], width)
-                y = np.linspace(inps.extent[2], inps.extent[3], height)[::-1]  # Reverse the y array
-                xv, yv = np.meshgrid(x, y)
-                xv = xv.flatten()
-                yv = yv.flatten()
-                data = data.flatten()
-                
-                im = ax.scatter(xv, yv, c=data, s=inps.scatterplot, cmap=inps.colormap, marker='o')
-                ax.axis('equal')
+            raise ValueError(f'Un-recognized plotting style: {inps.style}!')
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
@@ -812,11 +815,11 @@ def plot_slice(ax, data, metadata, inps):
     # rotate Y-axis tick labels
     # link: https://stackoverflow.com/questions/10998621
     if inps.ylabel_rot:
-        kwargs = dict(rotation=inps.ylabel_rot)
+        tick_kwargs = dict(rotation=inps.ylabel_rot)
         # center the vertical alignment for vertical tick labels
         if inps.ylabel_rot % 90 == 0:
-            kwargs['va'] = 'center'
-        plt.setp(ax.get_yticklabels(), **kwargs)
+            tick_kwargs['va'] = 'center'
+        plt.setp(ax.get_yticklabels(), **tick_kwargs)
         vprint(f'rotate Y-axis tick labels by {inps.ylabel_rot} deg')
 
     return ax, inps, im, cbar
