@@ -20,6 +20,7 @@ EXAMPLE = """example:
   view.py velocity.h5 --ref-yx  210 566                              #change reference pixel for display
   view.py velocity.h5 --sub-lat 31.05 31.10 --sub-lon 130.05 130.10  #subset in lalo / yx
   view.py velocity.h5 velocity --mask waterBody.h5 --mask-vmax 1
+  view.py velocity.h5 velocity --style scatter --scatter-size 12
 
   view.py timeseries.h5
   view.py timeseries.h5 --ref-date 20101120     #change reference date
@@ -78,6 +79,12 @@ def create_parser(subparsers=None):
                              '  sqrt    = x^1/2\n'
                              '  reverse = x * -1\n'
                              '  inverse = 1 / x')
+
+    # plot data in different styles: image, scatter, contour etc.
+    parser.add_argument('--style', dest='style', choices={'image', 'scatter'}, default='image',
+                        help='Plot data as image or scatter (default: %(default)s).')
+    parser.add_argument('--scatter-size', dest='scatter_marker_size', type=float, metavar='SIZE', default=10,
+                        help='Scatter marker size in points**2 (default: %(default)s).')
 
     parser = arg_utils.add_data_disp_argument(parser)
     parser = arg_utils.add_dem_argument(parser)
