@@ -20,6 +20,7 @@ EXAMPLE = """example:
   view.py velocity.h5 --ref-yx  210 566                              #change reference pixel for display
   view.py velocity.h5 --sub-lat 31.05 31.10 --sub-lon 130.05 130.10  #subset in lalo / yx
   view.py velocity.h5 velocity --mask waterBody.h5 --mask-vmax 1
+  view.py velocity.h5 velocity --style scatter --scatter-size 12
 
   view.py timeseries.h5
   view.py timeseries.h5 --ref-date 20101120     #change reference date
