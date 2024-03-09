@@ -466,7 +466,7 @@ def plot_slice(ax, data, metadata, inps):
     Parameters: ax       : matplot.pyplot axes object
                 data     : 2D np.ndarray,
                 metadata : dictionary, attributes of data
-                inps     : Namespace, optional, input options for display
+                inps     : Namespace, input options for display
     Returns:    ax       : matplot.pyplot axes object
                 inps     : Namespace for input options
                 im       : matplotlib.image.AxesImage object

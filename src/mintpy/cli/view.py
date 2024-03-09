@@ -80,12 +80,6 @@ def create_parser(subparsers=None):
                              '  reverse = x * -1\n'
                              '  inverse = 1 / x')
 
-    # plot data in different styles: image, scatter, contour etc.
-    parser.add_argument('--style', dest='style', choices={'image', 'scatter'}, default='image',
-                        help='Plot data as image or scatter (default: %(default)s).')
-    parser.add_argument('--scatter-size', dest='scatter_marker_size', type=float, metavar='SIZE', default=10,
-                        help='Scatter marker size in points**2 (default: %(default)s).')
-
     parser = arg_utils.add_data_disp_argument(parser)
     parser = arg_utils.add_dem_argument(parser)
     parser = arg_utils.add_figure_argument(parser)
