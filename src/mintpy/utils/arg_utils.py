@@ -60,17 +60,22 @@ def add_data_disp_argument(parser):
     data.add_argument('--nd','--no-data-val','--no-data-value', dest='no_data_value', type=float,
                       help='Specify the no-data-value to be ignored and masked.')
 
-    data.add_argument('--interp','--interpolation', dest='interpolation', default='nearest',
-                      help='matplotlib interpolation method for imshow, e.g.:\n'
-                           'none, antialiased, nearest, bilinear, bicubic, spline16, sinc, etc. Check more at:\n'
-                           'https://matplotlib.org/stable/gallery/images_contours_and_fields/'
-                           'interpolation_methods.html')
     data.add_argument('--wrap', action='store_true',
                       help='re-wrap data to display data in fringes.')
     data.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2,
                       default=[-1.*math.pi, math.pi], metavar=('MIN', 'MAX'),
                       help='range of one cycle after wrapping (default: %(default)s).')
 
+    data.add_argument('--interp','--interpolation', dest='interpolation', default='nearest',
+                      help='matplotlib interpolation method for imshow, e.g.:\n'
+                           'none, antialiased, nearest, bilinear, bicubic, spline16, sinc, etc. Check more at:\n'
+                           'https://matplotlib.org/stable/gallery/images_contours_and_fields/'
+                           'interpolation_methods.html')
+    data.add_argument('--alpha', dest='transparency', type=float,
+                      help='Data transparency. \n'
+                           '0.0 - fully transparent, 1.0 - no transparency.')
+
+    # flip X/Y-axis
     data.add_argument('--flip-lr', dest='flip_lr',
                       action='store_true', help='flip left-right')
     data.add_argument('--flip-ud', dest='flip_ud',
@@ -78,6 +83,7 @@ def add_data_disp_argument(parser):
     data.add_argument('--noflip', dest='auto_flip', action='store_false',
                       help='turn off auto flip for radar coordinate file')
 
+    # multilook / average for data reduction
     data.add_argument('--nmli','--num-multilook','--multilook-num', dest='multilook_num',
                       type=int, default=1, metavar='NUM',
                       help='multilook data in X and Y direction with a factor for display '
@@ -87,9 +93,13 @@ def add_data_disp_argument(parser):
                            'If multilook is True and multilook_num=1, '
                            'multilook_num will be estimated automatically.\n'
                            'Useful when displaying big datasets.')
-    data.add_argument('--alpha', dest='transparency', type=float,
-                      help='Data transparency. \n'
-                           '0.0 - fully transparent, 1.0 - no transparency.')
+
+    # plot data in different styles: image, scatter, contour etc.
+    parser.add_argument('--style', dest='style', choices={'image', 'scatter'}, default='image',
+                        help='Plot data as image or scatter (default: %(default)s).')
+    parser.add_argument('--scatter-size', dest='scatter_marker_size', type=float, metavar='SIZE', default=10,
+                        help='Scatter marker size in points**2 (default: %(default)s).')
+
     return parser
 
 
