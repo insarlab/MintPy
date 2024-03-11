@@ -16,6 +16,7 @@
 # Recommend import:
 #   from mintpy.utils import utils as ut
 
+from __future__ import annotations
 
 import math
 import os
@@ -285,34 +286,74 @@ def utm_zone2epsg_code(utm_zone):
     return epsg_code
 
 
+def reproject(x, y, *, from_epsg: int, to_epsg: int):
+    """Convert x, y in the projection EPSG:`from_epsg` to EPSG:`to_epsg`.
+
+    For lon/lat, the EPSG code is 4326.
+
+    Parameters: x/y       - scalar or 1/2D np.ndarray, coordinates in x and y direction
+                from_epsg - int, EPSG code of `x/y`
+                to_epsg   - int, EPSG code of `new_x/y`
+    Returns:    new_x/y   - scalar or 1/2D np.ndarray, coordinates in new projection
+    """
+    from pyproj import CRS, Transformer
+
+    transformer = Transformer.from_crs(
+        CRS.from_epsg(from_epsg), CRS.from_epsg(to_epsg), always_xy=True
+    )
+    new_x, new_y = transformer.transform(x, y)
+    return new_x, new_y
+
+
+def get_image_rowcol(atr: dict, lat: float, lon: float, print_msg: bool = False):
+    """Get the (row, column) of `lat`,`lon` for an image with attributes `atr`.
+
+    For images not using EPSG:4326 (as in lat/lon), will reproject the latitude/longitude
+    to the same projection as `atr['EPSG']`.
+
+    Parameters: atr       - dict, mintpy attributes that includes "EPSG"
+                lat/lon   - float, latitude/longitude of point of interest
+                print_msg - bool, enable verbose printing
+    Returns:    row, col  - integers for the closest row/column in `atr`.
+    """
+    from mintpy.objects.coord import coordinate
+    file_epsg = int(atr["EPSG"])
+    if file_epsg != 4326:
+        # Convert the GPS position to the same projection as `geom_obj`
+        x, y = reproject(lon, lat, from_epsg=4326, to_epsg=file_epsg)
+    else:
+        x, y = lon, lat
+
+    coord = coordinate(atr)
+    row, col = coord.geo2radar(y, x, print_msg=print_msg)[0:2]
+
+    if row < 0 or col < 0 or row > int(atr['LENGTH'])-1 or col > int(atr['WIDTH'])-1:
+        raise ValueError(f"{lat = }, {lon = } is outside the image bounds")
+    return row, col
+
+
 def to_latlon(infile, x, y):
     """Convert x, y in the projection coordinates of the file to lat/lon in degree.
 
     Similar functionality also exists in utm.to_latlon() at:
         https://github.com/Turbo87/utm#utm-to-latitudelongitude
 
-    Parameters: infile - str, GDAL supported file path
-                x/y    - scalar or 1/2D np.ndarray, coordinates in x and y direction
-    Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
+    Parameters: infile  - str, GDAL supported file path
+                x/y     - scalar or 1/2D np.ndarray, coordinates in x and y direction
+    Returns:    lat/lon - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
     """
     from osgeo import gdal
-    from pyproj import Proj, Transformer
 
     # read projection info using gdal
     ds = gdal.Open(infile)
-    srs = ds.GetSpatialRef()
+    epsg = ds.GetSpatialRef().GetAuthorityCode(None)
 
     # if input file is already in lat/lon, do nothing and return
-    if (not srs.IsProjected()) and (srs.GetAttrValue('unit') == 'degree'):
+    if int(epsg) == 4326:
         return y, x
 
-    # convert coordinates using pyproj
-    # note that Transform.from_proj(x, y, always_xy=True) convert the x, y to lon, lat
-    p_in = Proj(ds.GetProjection())
-    p_out = Proj('epsg:4326')
-    transformer = Transformer.from_proj(p_in, p_out)
-    y, x = transformer.transform(x, y)
-    return y, x
+    lon, lat = reproject(x, y, from_epsg=epsg, to_epsg=4326)
+    return lat, lon
 
 
 def utm2latlon(meta, easting, northing):

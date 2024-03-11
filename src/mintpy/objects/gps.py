@@ -17,8 +17,13 @@ from urllib.request import urlretrieve
 import numpy as np
 from pyproj import Geod
 
-from mintpy.objects.coord import coordinate
-from mintpy.utils import ptime, readfile, time_func, utils1 as ut
+from mintpy.utils import (
+    ptime,
+    readfile,
+    time_func,
+    utils0 as ut0,
+    utils1 as ut,
+)
 
 UNR_SITE_LIST_FILE = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
 
@@ -457,7 +462,7 @@ class GPS:
         """Convert displacement in ENU to LOS direction.
 
         Parameters: inc_angle     - float, LOS incidence angle in degree
-                    az_angle      - float, LOS aziuth angle in degree
+                    az_angle      - float, LOS azimuth angle in degree
                                     from the north, defined as positive in clock-wise direction
                     gps_comp      - str, GPS components used to convert to LOS direction
                     horz_az_angle - float, fault azimuth angle used to convert horizontal to fault-parallel
@@ -493,12 +498,8 @@ class GPS:
         if isinstance(geom_obj, str):
             # geometry file
             atr = readfile.read_attribute(geom_obj)
-            coord = coordinate(atr, lookup_file=geom_obj)
-            y, x = coord.geo2radar(lat, lon, print_msg=print_msg)[0:2]
-            # check against image boundary
-            y = max(0, y);  y = min(int(atr['LENGTH'])-1, y)
-            x = max(0, x);  x = min(int(atr['WIDTH'])-1, x)
-            box = (x, y, x+1, y+1)
+            row, col = ut0.get_image_rowcol(atr, lat=lat, lon=lon)
+            box = (col, row, col+1, row+1)
             inc_angle = readfile.read(geom_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
             az_angle  = readfile.read(geom_obj, datasetName='azimuthAngle',   box=box, print_msg=print_msg)[0][0,0]
 
@@ -510,8 +511,28 @@ class GPS:
         else:
             raise ValueError(f'input geom_obj is neither str nor dict: {geom_obj}')
 
-        return inc_angle, az_angle
+        return inc_angle or np.nan, az_angle or np.nan
 
+    def get_image_values(self, filename, datasetName=None, pad: int = 0, print_msg=False):
+        """Read the value from `filename` at the pixel nearest to the GPS station.
+
+        Parameters: atr         - dict, mintpy attributes that includes "EPSG"
+                    datasetName - str, If `filename` is an HDF5 file, dataset to read from
+                    pad         - int, default = 0. Number of pixels of padding to read around
+                                  the nearest pixel.
+                                  `pad=0` only reads the closes pixel.
+                                  `pad=1` will return a 3x3 ndarray of image values.
+        Returns:    scalar, (or ndarray if `pad > 1`)
+                                  The values closes to the GPS station in `filename`.
+        """
+        lat, lon = self.get_stat_lat_lon(print_msg=print_msg)
+
+        atr = readfile.read_attribute(filename)
+        row, col = ut0.get_image_rowcol(atr, lat=lat, lon=lon)
+
+        box = (col - pad, row - pad, col + pad + 1, row + pad + 1)
+        values = readfile.read(filename, datasetName=datasetName, box=box, print_msg=print_msg)[0]
+        return np.squeeze(values)
 
     def read_gps_los_displacement(self, geom_obj, start_date=None, end_date=None, ref_site=None,
                                   gps_comp='enu2los', horz_az_angle=-90., print_msg=False):
