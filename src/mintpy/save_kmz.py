@@ -265,7 +265,7 @@ def write_kmz_overlay(data, meta, out_file, inps):
     ax.set_ylim([length, 0])
 
     out_file_base = os.path.splitext(out_file)[0]
-    data_png_file = out_file_base + '.png'
+    data_png_file = out_file_base + '_data.png'
     print(f'writing {data_png_file} with dpi={inps.fig_dpi}')
     plt.savefig(data_png_file, pad_inches=0.0, transparent=True, dpi=inps.fig_dpi)
 

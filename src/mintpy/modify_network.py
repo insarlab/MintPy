@@ -199,6 +199,15 @@ def get_date12_to_drop(inps):
         for ifg_idx, date12 in zip(inps.excludeIfgIndex, tempList):
             print(f'{ifg_idx} : {date12}')
 
+    # excludeDate12
+    if inps.excludeDate12:
+        tempList = [i for i in inps.excludeDate12 if i in date12ListAll]
+        date12_to_drop += tempList
+        print('--------------------------------------------------')
+        print(f'Drop ifgrams with the following date12: {len(tempList)}')
+        for date12 in tempList:
+            print(date12)
+
     # excludeDate
     if inps.excludeDate:
         tempList = [i for i in date12ListAll if any(j in inps.excludeDate for j in i.split('_'))]
