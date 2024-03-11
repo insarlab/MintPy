@@ -419,7 +419,11 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
 
     # Download grib file using PyAPS
     if len(date_list2dload) > 0:
-        hour = re.findall(r'\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))[0].replace('-', '_').split('_')[1]
+        pattern = re.findall(r'\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))
+        if len(pattern) == 0:
+            pattern = re.findall(r'\d{8}T\d{6}[-_]\d{2}', os.path.basename(grib_files2dload[0]))
+        hour = pattern[0].replace('-', '_').split('_')[1]
+        #hour = re.findall(r'\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))[0].replace('-', '_').split('_')[1]
         grib_dir = os.path.dirname(grib_files2dload[0])
 
         # Check for non-empty account info in PyAPS config file
