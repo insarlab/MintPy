@@ -247,9 +247,9 @@ def read_subset(inp_file, bbox, geometry=False):
 
 
 def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
-    """Read the DEM and mask, change projection and interpolate to data grid, 
+    """Read the DEM and mask, change projection and interpolate to data grid,
        interpolate slant range and incidence angle to data grid"""
-    dem_dataset = gdal.Open(dem_file, gdal.GA_ReadOnly) 
+    dem_dataset = gdal.Open(dem_file, gdal.GA_ReadOnly)
     geotransform = dem_dataset.GetGeoTransform()
     proj = gdal.osr.SpatialReference(wkt=dem_dataset.GetProjection())
     dem_src_epsg = int(proj.GetAttrValue('AUTHORITY', 1))
@@ -306,14 +306,14 @@ def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
                 x_mask, y_mask = coord_transform.transform(X_2d.flatten(), Y_2d.flatten())
             else:
                 x_mask, y_mask = X_2d.flatten(), Y_2d.flatten()
-            
+
             cols = ((y_mask - geotransform[3]) / geotransform[5]).astype(int)
             rows = ((x_mask - geotransform[0]) / geotransform[1]).astype(int)
-            mask_subset_array = mask_raster_array[cols.reshape(subset_rows, subset_cols), 
+            mask_subset_array = mask_raster_array[cols.reshape(subset_rows, subset_cols),
                                                 rows.reshape(subset_rows, subset_cols)]
         except:
-            raise IOError('*** Mask is not gdal readable ***')
-    
+            raise OSError('*** Mask is not gdal readable ***')
+
 
     return dem_subset_array, slant_range, incidence_angle, mask_subset_array
 
@@ -366,7 +366,7 @@ def prepare_geometry(
 
     # Read waterMask, LayoverShadowMask, xybbox:
     geo_ds = read_subset(metaFile, bbox, geometry=True)
-    dem_subset_array, slant_range, incidence_angle, mask = read_and_interpolate_geometry(metaFile, demFile, 
+    dem_subset_array, slant_range, incidence_angle, mask = read_and_interpolate_geometry(metaFile, demFile,
                                                                                    geo_ds['xybbox'], mask_file=maskFile)
 
     length, width = dem_subset_array.shape

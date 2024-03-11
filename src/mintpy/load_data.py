@@ -635,7 +635,7 @@ def prepare_metadata(iDict):
         dem_file = iDict['mintpy.load.demFile']
         gunw_files = iDict['mintpy.load.unwFile']
         water_mask = iDict['mintpy.load.waterMaskFile']
-        
+
         # run prep_*.py
         iargs = ['-i', gunw_files, '-d', dem_file]
 
