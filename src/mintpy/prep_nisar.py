@@ -61,9 +61,9 @@ def load_nisar(inps):
     print(f"Found {len(input_files)} unwrapped files")
 
     if inps.subset_lat:
-        bbox = (inps.subset_lat[0], inps.subset_lon[0], inps.subset_lat[1], inps.subset_lon[1])
+        bbox = (inps.subset_lon[0], inps.subset_lat[0], inps.subset_lon[1], inps.subset_lat[1])
     else:
-        bbox=None
+        bbox = None
 
     # extract metadata
     metadata, bounds = extract_metadata(input_files, bbox)
@@ -164,7 +164,6 @@ def extract_metadata(input_files, bbox=None, polarization='HH'):
         utm_bbox = None
     bounds = common_raster_bound(input_files, utm_bbox)
     meta['bbox'] = ",".join([str(b) for b in bounds])
-
     col1, row1, col2, row2 = get_rows_cols(xcoord, ycoord, bounds)
     length = row2 - row1
     width = col2 - col1
@@ -204,8 +203,8 @@ def common_raster_bound(input_files, utm_bbox=None):
         x_bounds.append([west, east])
         y_bounds.append([south, north])
     if not utm_bbox is None:
-        x_bounds.append([utm_bbox[1], utm_bbox[3]])
-        y_bounds.append([utm_bbox[0], utm_bbox[2]])
+        x_bounds.append([utm_bbox[0], utm_bbox[2]])
+        y_bounds.append([utm_bbox[1], utm_bbox[3]])
 
     bounds = max(x_bounds)[0], max(y_bounds)[0], min(x_bounds)[1], min(y_bounds)[1]
     return bounds
