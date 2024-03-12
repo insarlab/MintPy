@@ -297,7 +297,8 @@ def plot_transect_location(ax, inps):
 
     coord = ut.coordinate(atr0)
     if inps.start_lalo and inps.end_lalo:
-        [y0, y1], [x0, x1] = coord.lalo2yx([inps.start_lalo[0], inps.end_lalo[0]], [inps.start_lalo[1], inps.end_lalo[1]])
+        [y0, y1], [x0, x1] = coord.lalo2yx([inps.start_lalo[0], inps.end_lalo[0]],
+                                           [inps.start_lalo[1], inps.end_lalo[1]])
         inps.start_yx = [y0, x0]
         inps.end_yx = [y1, x1]
 
