@@ -46,6 +46,8 @@ MPL_COLORS = [
     '#bcbd22',
     '#17becf',
 ]
+# ensur UTM coordinate plot axes do not use scientific notation
+plt.rcParams["axes.formatter.limits"] = (-1e10, 1e10)
 
 
 ########################################### Parser utilities ##############################################
@@ -1127,12 +1129,22 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     start_date = inps.gps_start_date if inps.gps_start_date else metadata.get('START_DATE', None)
     end_date = inps.gps_end_date if inps.gps_end_date else metadata.get('END_DATE', None)
 
+    # pre-query: convert UTM to lat/lon for query
+    if 'UTM_ZONE' in metadata.keys():
+        south, west = ut0.utm2latlon(atr, SNWE[2], SNWE[0])
+        north, east = ut0.utm2latlon(atr, SNWE[3], SNWE[1])
+        SNWE = (south, north, west, east)
+
     # query for GNSS stations
     site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
     if site_names.size == 0:
         warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
         print('  continue without GNSS plots.')
         return ax
+
+    # post-query: convert lat/lon to UTM for plotting
+    if 'UTM_ZONE' in metadata.keys():
+        site_lats, site_lons = ut0.latlon2utm(site_lats, site_lons)
 
     # mask out stations not coincident with InSAR data
     if inps.mask_gps and inps.msk is not None:
