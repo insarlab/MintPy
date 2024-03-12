@@ -73,7 +73,7 @@ class coordinate:
         if isinstance(coord_in, np.ndarray):
             coord_in = coord_in.tolist()
         # note: np.float128 is not supported on Windows OS, use np.longdouble as a platform neutral syntax
-        if isinstance(coord_in, (float, np.float16, np.float32, np.float64, np.longdouble)):
+        if isinstance(coord_in, (int, float, np.float16, np.float32, np.float64, np.longdouble)):
             coord_in = [coord_in]
         coord_in = list(coord_in)
         return coord_in
@@ -97,59 +97,48 @@ class coordinate:
             lat_coord_in, lon_coord_in = ut0.latlon2utm(np.array(lat_coord_in), np.array(lon_coord_in))
 
         # convert coordinates
-        lat_coord_out = []
-        lon_coord_out = []
+        y_coord_out = []
+        x_coord_out = []
         for lat_coord_i, lon_coord_i in zip(lat_coord_in, lon_coord_in):
             # plus 0.01 to be more robust in practice
-            lat_coord_o = int(np.floor((lat_coord_i - self.lat0) / self.lat_step + 0.01))
-            lon_coord_o = int(np.floor((lon_coord_i - self.lon0) / self.lon_step + 0.01))
-            lat_coord_out.append(lat_coord_o)
-            lon_coord_out.append(lon_coord_o)
+            y_coord_out.append(int(np.floor((lat_coord_i - self.lat0) / self.lat_step + 0.01)))
+            x_coord_out.append(int(np.floor((lon_coord_i - self.lon0) / self.lon_step + 0.01)))
 
         # output format
-        if len(lat_coord_out) == 1 and len(lon_coord_out) == 1:
-            coord_out = tuple([lat_coord_out[0], lon_coord_out[0]])
+        if len(y_coord_out) == 1 and len(x_coord_out) == 1:
+            coord_out = tuple([y_coord_out[0], x_coord_out[0]])
         else:
-            coord_out = tuple([lat_coord_out, lon_coord_out])
+            coord_out = tuple([y_coord_out, x_coord_out])
 
         return coord_out
 
 
-    def yx2lalo(self, coord_in, coord_type):
+    def yx2lalo(self, y_coord_in, x_coord_in):
         """convert radar coordinates into geo coordinates (pixel center)
             for Geocoded file only
-        Parameters: coord_in   _ list / tuple / 1D np.ndarray / int, coordinate(s) in row or col in int
-                    metadata   _ dict, dictionary of file attributes
-                    coord_type _ str, coordinate type: row / col / y / x
-        Example:    32.104990 = coord_yx2lalo(300, metadata, 'y')
-                    [130.5,131.4] = coord_yx2lalo([1000,1500], metadata, 'x')
+        Parameters: y_in   list / tuple / 1D np.ndarray / int, coordinate(s) in row in int
+                    x_in   list / tuple / 1D np.ndarray / int, coordinate(s) in col in int
+        Example:    32.1, 130.5 = coordinate.yx2lalo(300, 1000)
+                    (32.1, 32.101), (130.5, 130.501) = coordinate.lalo2yx([(300, 301), (1000, 1001)])
         """
         self.open()
         if not self.geocoded:
             raise ValueError('Input file is not geocoded.')
 
         # Convert to List if input is String
-        if isinstance(coord_in, np.ndarray):
-            coord_in = coord_in.tolist()
-        if isinstance(coord_in, (int, np.int16, np.int32, np.int64)):
-            coord_in = [coord_in]
-        coord_in = list(coord_in)
+        y_in = self._clean_coord(y_coord_in)
+        x_in = self._clean_coord(x_coord_in)
 
-        coord_type = coord_type.lower()
-        coord_out = []
-        for i in range(len(coord_in)):
-            if coord_type.startswith(('row', 'y', 'az', 'azimuth')):
-                coord = (coord_in[i] + 0.5) * self.lat_step + self.lat0
-            elif coord_type.startswith(('col', 'x', 'rg', 'range')):
-                coord = (coord_in[i] + 0.5) * self.lon_step + self.lon0
-            else:
-                raise ValueError('Unrecognized coordinate type: '+coord_type)
-            coord_out.append(coord)
+        lat_coord_out = []
+        lon_coord_out = []
+        for y_i, x_i in zip(y_in, x_in):
+            lat_coord_out.append((y_i + 0.5) * self.lat_step + self.lat0)
+            lon_coord_out.append(x_i + 0.5) * self.lon_step + self.lon0
 
-        if len(coord_out) == 1:
-            coord_out = coord_out[0]
-        elif isinstance(coord_in, tuple):
-            coord_out = tuple(coord_out)
+        if len(lat_coord_out) == 1 and len(lon_coord_out) == 1:
+            coord_out = tuple([lat_coord_out[0], lon_coord_out[0]])
+        else:
+            coord_out = tuple([lat_coord_out, lon_coord_out])
         return coord_out
 
 
