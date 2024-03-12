@@ -282,7 +282,47 @@ def utm_zone2epsg_code(utm_zone):
         'south': utm_zone[-1].upper() == 'S',
     })
     epsg_code = crs.to_authority()[1]
+
+    # Link: https://gis.stackexchange.com/questions/365584/convert-utm-zone-into-epsg-code
+    '''
+    zone = '36'
+    south = True
+    epsg_code = 32600
+    epsg_code += int(zone)
+    if south is True:
+        epsg_code += 100
+    '''
+
     return epsg_code
+
+
+def epsg_code2utm_zone(epsg_code):
+    """Convert EPSG code (in UTM coordinates) to UTM Zone string.
+
+    Parameters: epsg_code - str / int, EPSG code
+    Returns:    utm_zone  - str, atr['UTM_ZONE'], comprises a zone number
+                            and a hemisphere, e.g. 11N, 36S, etc. None for
+                            a EPSG code not in a UTM coordnate system
+    Examples:   utm_zone = epsg_code2utm_zone('32736')
+    """
+    from pyproj import CRS
+    crs = CRS.from_epsg(epsg_code)
+    utm_zone = crs.utm_zone
+    if not utm_zone:
+        print(f'WARNING: input EPSG code ({epsg_code}) is NOT a UTM zone, return None and continue.')
+
+    '''
+    epsg_code = str(epsg_code)
+    if epsg_code.startswith('326'):
+        utm_zone = epsg_code[3:] + 'N'
+    elif epsg_code.startswith('327'):
+        utm_zone = epsg_code[3:] + 'S'
+    else:
+        utm_zone = None
+        print(f'WARNING: input EPSG code ({epsg_code}) is NOT a UTM zone, return None and continue.')
+    '''
+
+    return utm_zone
 
 
 def to_latlon(infile, x, y):
