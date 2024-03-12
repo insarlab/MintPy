@@ -327,7 +327,7 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
     if 'Y_FIRST' in atr.keys():
         y_step = float(atr['Y_STEP'])
         x_step = float(atr['X_STEP'])
-        if 'UTM_ZONE' not in atr:
+        if not atr.get('UTM_ZONE', None):   # WGS84 lat/lon
             [lat0, lat1], _ = coordinate(atr).yx2lalo([y0, y1], [x0, x1])
             lat_c = (lat0 + lat1) / 2.
             y_step *= np.pi/180.0 * earth_radius
@@ -361,7 +361,8 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
 def transect_lalo(z, atr, start_lalo, end_lalo, interpolation='nearest'):
     """Extract 2D matrix (z) value along the line [start_lalo, end_lalo]"""
     coord = coordinate(atr)
-    [[y0, y1], [x0, x1]] = coord.lalo2yx([start_lalo[0], end_lalo[0]], [start_lalo[1], end_lalo[1]])
+    [y0, y1], [x0, x1] = coord.lalo2yx([start_lalo[0], end_lalo[0]],
+                                       [start_lalo[1], end_lalo[1]])
     transect = transect_yx(z, atr, [y0, x0], [y1, x1], interpolation)
     return transect
 
