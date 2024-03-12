@@ -133,7 +133,7 @@ class coordinate:
         lon_coord_out = []
         for y_i, x_i in zip(y_in, x_in):
             lat_coord_out.append((y_i + 0.5) * self.lat_step + self.lat0)
-            lon_coord_out.append(x_i + 0.5) * self.lon_step + self.lon0
+            lon_coord_out.append((x_i + 0.5) * self.lon_step + self.lon0)
 
         if len(lat_coord_out) == 1 and len(lon_coord_out) == 1:
             coord_out = tuple([lat_coord_out[0], lon_coord_out[0]])
