@@ -1140,6 +1140,9 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         print('  continue without GNSS plots.')
         return ax
 
+    if 'UTM_ZONE' in metadata:
+        site_lats, site_lons = ut0.latlon2utm(site_lats, site_lons)
+
     # mask out stations not coincident with InSAR data
     if inps.mask_gps and inps.msk is not None:
         msk = inps.msk if inps.msk.ndim == 2 else np.prod(inps.msk, axis=-1)
@@ -1219,9 +1222,6 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         if np.sum(nan_flag) > 0:
             vprint(f'ignore the following {np.sum(nan_flag)} stations due to limited overlap/observations in time')
             vprint(f'  {site_names[nan_flag]}')
-
-        if 'UTM_ZONE' in metadata:
-            site_lats, site_lons = ut0.latlon2utm(site_lats, site_lons)
 
         # plot
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
