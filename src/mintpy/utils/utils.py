@@ -328,7 +328,7 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
         y_step = float(atr['Y_STEP'])
         x_step = float(atr['X_STEP'])
         if 'UTM_ZONE' not in atr:
-            [lat0, lat1], [lon0, lon1] = coordinate(atr).yx2lalo([y0, y1], [x0, x1])
+            [lat0, lat1], _ = coordinate(atr).yx2lalo([y0, y1], [x0, x1])
             lat_c = (lat0 + lat1) / 2.
             y_step *= np.pi/180.0 * earth_radius
             x_step *= np.pi/180.0 * earth_radius * np.cos(lat_c * np.pi/180)
