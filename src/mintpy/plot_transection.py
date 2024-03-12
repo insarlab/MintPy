@@ -168,8 +168,7 @@ class transectionViewer():
 
         # convert coordinates accordingly
         if 'Y_FIRST' in self.atr.keys():
-            ys = self.coord.yx2lalo([start_yx[0], end_yx[0]], coord_type='y')
-            xs = self.coord.yx2lalo([start_yx[1], end_yx[1]], coord_type='x')
+            ys, xs = self.coord.yx2lalo([start_yx[0], end_yx[0]], [start_yx[1], end_yx[1]])
         else:
             ys = [start_yx[0], end_yx[0]]
             xs = [start_yx[1], end_yx[1]]
