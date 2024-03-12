@@ -419,8 +419,10 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
 
     # Download grib file using PyAPS
     if len(date_list2dload) > 0:
+        # This was the default for a file pattern of "ERA5_N30_N50_W130_W110_20200403_14.grb"
         pattern = re.findall(r'\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))
         if len(pattern) == 0:
+            # This is an exception for when the file has a naming format like: "ERA5_N30_N40_W130_W110_20080125T000000_06.grb"
             pattern = re.findall(r'\d{8}T\d{6}[-_]\d{2}', os.path.basename(grib_files2dload[0]))
         hour = pattern[0].replace('-', '_').split('_')[1]
         #hour = re.findall(r'\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))[0].replace('-', '_').split('_')[1]
