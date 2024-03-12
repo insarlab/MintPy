@@ -334,8 +334,7 @@ class coordinate:
         """
         self.open()
         if self.geocoded:
-            lat = self.yx2lalo(az, coord_type='az')
-            lon = self.yx2lalo(rg, coord_type='rg')
+            lat, lon = self.yx2lalo(az, rg)
             return lat, lon, 0, 0
 
         if not isinstance(az, np.ndarray):
@@ -402,8 +401,7 @@ class coordinate:
         Returns:    geo_box   - tuple      of 4 float in (W, N, E, S)
         """
         try:
-            lat = self.yx2lalo([pixel_box[1], pixel_box[3]], coord_type='y')
-            lon = self.yx2lalo([pixel_box[0], pixel_box[2]], coord_type='x')
+            lat, lon = self.yx2lalo([pixel_box[1], pixel_box[3]], [pixel_box[0], pixel_box[2]])
             # shift lat from pixel center to the UL corner
             lat = [i - self.lat_step / 2.0 for i in lat]
             lon = [i - self.lon_step / 2.0 for i in lon]

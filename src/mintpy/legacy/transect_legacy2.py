@@ -314,8 +314,7 @@ def plot_transect_location(ax, inps):
         if 0 <= col < data0.shape[1] and 0 <= row < data0.shape[0]:
             z = data0[row, col]
             if 'X_FIRST' in atr0.keys():
-                lat = coord.yx2lalo(row, coord_type='row')
-                lon = coord.yx2lalo(col, coord_type='col')
+                lat, lon = coord.yx2lalo(row, col)
                 return f'lon={lon:.4f}, lat={lat:.4f}, x={x:.0f},  y={y:.0f},  value={z:.4f}'
             else:
                 return f'x={x:.0f},  y={y:.0f},  value={z:.4f}'

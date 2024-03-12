@@ -325,10 +325,13 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
     earth_radius = 6.3781e6    # in meter
     dist_unit = 'm'
     if 'Y_FIRST' in atr.keys():
-        [lat0, lat1] = coordinate(atr).yx2lalo([y0, y1], coord_type='y')
-        lat_c = (lat0 + lat1) / 2.
-        x_step = float(atr['X_STEP']) * np.pi/180.0 * earth_radius * np.cos(lat_c * np.pi/180)
-        y_step = float(atr['Y_STEP']) * np.pi/180.0 * earth_radius
+        y_step = float(atr['Y_STEP'])
+        x_step = float(atr['X_STEP'])
+        if 'UTM_ZONE' not in atr:
+            [lat0, lat1], [lon0, lon1] = coordinate(atr).yx2lalo([y0, y1], [x0, x1])
+            lat_c = (lat0 + lat1) / 2.
+            y_step *= np.pi/180.0 * earth_radius
+            x_step *= np.pi/180.0 * earth_radius * np.cos(lat_c * np.pi/180)
     else:
         try:
             x_step = range_ground_resolution(atr)
