@@ -171,7 +171,7 @@ def reference_point_attribute(atr, y, x):
     atrNew['REF_X'] = str(x)
     coord = ut.coordinate(atr)
     if 'X_FIRST' in atr.keys():
-        atrNew['REF_LAT'], atrNew['REF_LON'] = [str(val) for val in coord.yx2lalo(y, x)]
+        atrNew['REF_LAT'], atrNew['REF_LON'] = (str(val) for val in coord.yx2lalo(y, x))
     return atrNew
 
 
