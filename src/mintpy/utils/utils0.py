@@ -295,7 +295,7 @@ def utm_zone2epsg_code(utm_zone):
 
 
 def epsg_code2utm_zone(epsg_code):
-    """Convert EPSG code (in UTM coordinates) to UTM Zone string.
+    """Convert EPSG code to UTM Zone string.
 
     Parameters: epsg_code - str / int, EPSG code
     Returns:    utm_zone  - str, atr['UTM_ZONE'], comprises a zone number
