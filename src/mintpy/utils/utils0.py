@@ -284,14 +284,12 @@ def utm_zone2epsg_code(utm_zone):
     epsg_code = crs.to_authority()[1]
 
     # Link: https://gis.stackexchange.com/questions/365584/convert-utm-zone-into-epsg-code
-    '''
-    zone = '36'
-    south = True
-    epsg_code = 32600
-    epsg_code += int(zone)
-    if south is True:
-        epsg_code += 100
-    '''
+    # zone = '36'
+    # south = True
+    # epsg_code = 32600
+    # epsg_code += int(zone)
+    # if south is True:
+    #     epsg_code += 100
 
     return epsg_code
 
@@ -311,16 +309,14 @@ def epsg_code2utm_zone(epsg_code):
     if not utm_zone:
         print(f'WARNING: input EPSG code ({epsg_code}) is NOT a UTM zone, return None and continue.')
 
-    '''
-    epsg_code = str(epsg_code)
-    if epsg_code.startswith('326'):
-        utm_zone = epsg_code[3:] + 'N'
-    elif epsg_code.startswith('327'):
-        utm_zone = epsg_code[3:] + 'S'
-    else:
-        utm_zone = None
-        print(f'WARNING: input EPSG code ({epsg_code}) is NOT a UTM zone, return None and continue.')
-    '''
+    # epsg_code = str(epsg_code)
+    # if epsg_code.startswith('326'):
+    #     utm_zone = epsg_code[3:] + 'N'
+    # elif epsg_code.startswith('327'):
+    #     utm_zone = epsg_code[3:] + 'S'
+    # else:
+    #     utm_zone = None
+    #     print(f'WARNING: input EPSG code ({epsg_code}) is NOT a UTM zone, return None and continue.')
 
     return utm_zone
 
