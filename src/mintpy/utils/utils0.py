@@ -304,6 +304,9 @@ def epsg_code2utm_zone(epsg_code):
     Examples:   utm_zone = epsg_code2utm_zone('32736')
     """
     from pyproj import CRS
+
+    # link: https://pyproj4.github.io/pyproj/stable/examples.html#initializing-crs
+    # alternatively, use CRS.from_user_input(epsg_code) or CRS.from_string(f'EPSG:{epsg_code}')
     crs = CRS.from_epsg(epsg_code)
     utm_zone = crs.utm_zone
     if not utm_zone:
