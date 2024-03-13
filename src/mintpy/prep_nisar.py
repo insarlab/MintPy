@@ -28,7 +28,6 @@ DATASETS = {
     'cor'              : f"{DATASET_ROOT_UNW}/POL/coherenceMagnitude",
     'connComp'         : f"{DATASET_ROOT_UNW}/POL/connectedComponents",
     'mask'             : f"{DATASET_ROOT_UNW}/mask",
-    # 'waterMask'        : f"{DATASET_ROOT_UNW}/mask",
     'epsg'             : f"{DATASET_ROOT_UNW}/projection",
     'xSpacing'         : f"{DATASET_ROOT_UNW}/xCoordinateSpacing",
     'ySpacing'         : f"{DATASET_ROOT_UNW}/yCoordinateSpacing",
@@ -69,8 +68,8 @@ def load_nisar(inps):
     metadata, bounds = extract_metadata(input_files, bbox)
 
     # output filename
-    stack_file = os.path.join("./inputs/ifgramStack.h5")
-    geometry_file = os.path.join("./inputs/geometryGeo.h5")
+    stack_file = os.path.join(inps.out_dir, "inputs/ifgramStack.h5")
+    geometry_file = os.path.join(inps.out_dir, "inputs/geometryGeo.h5")
 
     # get date info: date12_list
     date12_list = _get_date_pairs(input_files)
@@ -232,8 +231,6 @@ def read_subset(inp_file, bbox, geometry=False):
         col1, row1, col2, row2 = get_rows_cols(xcoord, ycoord, bbox)
 
         if geometry:
-            # Set all values to 1 temporarily because water mask is zero
-            # dataset['water_mask'] = ds[DATASETS['waterMask']][row1:row2, col1:col2] * 0 + 1
             dataset['mask'] = ds[DATASETS['mask']][row1:row2, col1:col2]
             dataset['xybbox'] = (col1, row1, col2, row2)
         else:
@@ -249,10 +246,8 @@ def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
     """Read the DEM and mask, change projection and interpolate to data grid,
        interpolate slant range and incidence angle to data grid"""
     dem_dataset = gdal.Open(dem_file, gdal.GA_ReadOnly)
-    geotransform = dem_dataset.GetGeoTransform()
     proj = gdal.osr.SpatialReference(wkt=dem_dataset.GetProjection())
     dem_src_epsg = int(proj.GetAttrValue('AUTHORITY', 1))
-    dem_raster_array = dem_dataset.ReadAsArray()
     del dem_dataset
 
     rdr_coords = {}
@@ -271,45 +266,45 @@ def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
 
     subset_rows = len(ycoord)
     subset_cols = len(xcoord)
-    # dem_subset_array = np.zeros((subset_rows, subset_cols), dtype=raster_array.dtype)
+    
     Y_2d, X_2d = np.meshgrid(ycoord, xcoord, indexing='ij')
+    bounds = (min(xcoord), min(ycoord), max(xcoord), max(ycoord))
+    output_projection = f"EPSG:{dst_epsg}"
+    
+    # Warp DEM to the interferograms grid 
+    input_projection = f"EPSG:{dem_src_epsg}"
+    output_dem = os.path.join(os.path.dirname(dem_file), 'dem_transformed.tif' )
+    gdal.Warp(output_dem, dem_file, outputBounds=bounds, format='GTiff',
+              srcSRS=input_projection, dstSRS=output_projection, resampleAlg=gdal.GRA_Bilinear, 
+              width=subset_cols, height=subset_rows,
+              options=['COMPRESS=DEFLATE'])
 
-    if not dem_src_epsg == dst_epsg:
-        coord_transform = Transformer.from_crs(dst_epsg, dem_src_epsg, always_xy=True)
-        x_dem, y_dem = coord_transform.transform(X_2d.flatten(), Y_2d.flatten())
-    else:
-        x_dem, y_dem = X_2d.flatten(), Y_2d.flatten()
+    dem_subset_array =  gdal.Open(output_dem, gdal.GA_ReadOnly).ReadAsArray()
 
-    cols = ((y_dem - geotransform[3]) / geotransform[5]).astype(int)
-    rows = ((x_dem - geotransform[0]) / geotransform[1]).astype(int)
-
-    dem_subset_array = dem_raster_array[cols.reshape(subset_rows, subset_cols), rows.reshape(subset_rows, subset_cols)]
-
+    # Interpolate slant_range and incidence_angle
     slant_range, incidence_angle = interpolate_geometry(X_2d, Y_2d, dem_subset_array, rdr_coords)
 
-
+    # Read and warp mask if necessary
     if mask_file in ['auto', 'None', None]:
         print('*** No mask was found ***')
         mask_subset_array = np.ones(dem_subset_array.shape, dtype='byte')
     else:
         try:
             mask_dataset = gdal.Open(mask_file, gdal.GA_ReadOnly)
-            geotransform = mask_dataset.GetGeoTransform()
             proj = gdal.osr.SpatialReference(wkt=mask_dataset.GetProjection())
             mask_src_epsg = int(proj.GetAttrValue('AUTHORITY', 1))
-            mask_raster_array = mask_dataset.ReadAsArray()
             del mask_dataset
 
-            if not mask_src_epsg == dst_epsg:
-                coord_transform = Transformer.from_crs(dst_epsg, mask_src_epsg, always_xy=True)
-                x_mask, y_mask = coord_transform.transform(X_2d.flatten(), Y_2d.flatten())
-            else:
-                x_mask, y_mask = X_2d.flatten(), Y_2d.flatten()
+            # Warp mask to the interferograms grid 
+            input_projection = f"EPSG:{mask_src_epsg}"
+            output_mask = os.path.join(os.path.dirname(mask_file), 'mask_transformed.tif' )
+            gdal.Warp(output_mask, mask_file, outputBounds=bounds, format='GTiff',
+              srcSRS=input_projection, dstSRS=output_projection, resampleAlg=gdal.GRA_Byte, 
+              width=subset_cols, height=subset_rows,
+              options=['COMPRESS=DEFLATE'])
 
-            cols = ((y_mask - geotransform[3]) / geotransform[5]).astype(int)
-            rows = ((x_mask - geotransform[0]) / geotransform[1]).astype(int)
-            mask_subset_array = mask_raster_array[cols.reshape(subset_rows, subset_cols),
-                                                rows.reshape(subset_rows, subset_cols)]
+            mask_subset_array = gdal.Open(output_mask, gdal.GA_ReadOnly).ReadAsArray()
+
         except:
             raise OSError('*** Mask is not gdal readable ***')
 
@@ -447,9 +442,9 @@ def prepare_stack(
 
             # read/write perpendicular baseline file
             f['bperp'][i] = dataset['pbase']
-
+                
             prog_bar.update(i + 1, suffix=date12_list[i])
         prog_bar.close()
-
+    
     print(f"finished writing to HDF5 file: {outfile}")
     return outfile

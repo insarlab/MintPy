@@ -50,6 +50,15 @@ def create_parser(subparsers=None):
     )
 
     parser.add_argument(
+        "-o",
+        "--out-dir",
+        dest="out_dir",
+        type=str,
+        default=".",
+        help="output directory (default: %(default)s).",
+    )
+
+    parser.add_argument(
         '--force',
         dest='update_mode',
         action='store_false',
