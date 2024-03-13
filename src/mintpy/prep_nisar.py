@@ -266,16 +266,16 @@ def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
 
     subset_rows = len(ycoord)
     subset_cols = len(xcoord)
-    
+
     Y_2d, X_2d = np.meshgrid(ycoord, xcoord, indexing='ij')
     bounds = (min(xcoord), min(ycoord), max(xcoord), max(ycoord))
     output_projection = f"EPSG:{dst_epsg}"
-    
-    # Warp DEM to the interferograms grid 
+
+    # Warp DEM to the interferograms grid
     input_projection = f"EPSG:{dem_src_epsg}"
     output_dem = os.path.join(os.path.dirname(dem_file), 'dem_transformed.tif' )
     gdal.Warp(output_dem, dem_file, outputBounds=bounds, format='GTiff',
-              srcSRS=input_projection, dstSRS=output_projection, resampleAlg=gdal.GRA_Bilinear, 
+              srcSRS=input_projection, dstSRS=output_projection, resampleAlg=gdal.GRA_Bilinear,
               width=subset_cols, height=subset_rows,
               options=['COMPRESS=DEFLATE'])
 
@@ -295,11 +295,11 @@ def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
             mask_src_epsg = int(proj.GetAttrValue('AUTHORITY', 1))
             del mask_dataset
 
-            # Warp mask to the interferograms grid 
+            # Warp mask to the interferograms grid
             input_projection = f"EPSG:{mask_src_epsg}"
             output_mask = os.path.join(os.path.dirname(mask_file), 'mask_transformed.tif' )
             gdal.Warp(output_mask, mask_file, outputBounds=bounds, format='GTiff',
-              srcSRS=input_projection, dstSRS=output_projection, resampleAlg=gdal.GRA_Byte, 
+              srcSRS=input_projection, dstSRS=output_projection, resampleAlg=gdal.GRA_Byte,
               width=subset_cols, height=subset_rows,
               options=['COMPRESS=DEFLATE'])
 
@@ -442,9 +442,9 @@ def prepare_stack(
 
             # read/write perpendicular baseline file
             f['bperp'][i] = dataset['pbase']
-                
+
             prog_bar.update(i + 1, suffix=date12_list[i])
         prog_bar.close()
-    
+
     print(f"finished writing to HDF5 file: {outfile}")
     return outfile
