@@ -76,18 +76,39 @@ class coordinate:
                 self.src_metadata.pop(key)
 
 
-    def _clean_coord(self, coord_in):
-        # note: np.float128 is not supported on Windows OS, use np.longdouble as a platform neutral syntax
-        float_types = (float, np.float16, np.float32, np.float64, np.longdouble)
-        int_types = (int, np.int16, np.int32, np.int64)
+    def _clean_coord(self, coord1, coord2):
+        """Ensure input coordinate as list type and same size."""
 
-        if isinstance(coord_in, np.ndarray):
-            coord_in = coord_in.tolist()
-        if isinstance(coord_in, int_types + float_types):
-            coord_in = [coord_in]
-        coord_in = list(coord_in)
+        def _to_list(x):
+            # note: np.float128 is not supported on Windows OS,
+            # use np.longdouble as a platform neutral syntax
+            float_types = (float, np.float16, np.float32, np.float64, np.longdouble)
+            int_types = (int, np.int16, np.int32, np.int64)
+            # convert known types: numpy array, numbers and None
+            if isinstance(x, np.ndarray):
+                x = x.tolist()
+            elif isinstance(x, int_types + float_types):
+                x = [x]
+            elif x is None:
+                x = [None]
+            else:
+                x = list(x)
+            return x
 
-        return coord_in
+        # convert to list type
+        coord1 = _to_list(coord1)
+        coord2 = _to_list(coord2)
+
+        # ensure the same size
+        if len(coord1) != len(coord2):
+            if len(coord1) == 1 and len(coord2) > 1:
+                coord1 *= len(coord2)
+            elif len(coord1) > 1 and len(coord2) == 1:
+                coord2 *= len(coord1)
+            else:
+                raise ValueError('Input two coordinates do NOT have the same size!')
+
+        return coord1, coord2
 
 
     def lalo2yx(self, lat_in, lon_in):
@@ -97,17 +118,18 @@ class coordinate:
                     lon_in    - list / tuple / 1D np.ndarray / float, coordinate(s) in longitude / easting
         Returns:    coord_out - tuple(list / float / 1D np.ndarray), coordinates(s) in (row, col) numbers
         Example:    300, 1000 = coordinate.lalo2yx(32.1, 130.5)
+                    300 = coordinate.lalo2yx(32.1, None)[0]
                     ([300, 301], [1000, 1001]) = coordinate.lalo2yx((32.1, 32.101), (130.5, 130.501))
         """
         self.open()
         if not self.geocoded:
             raise ValueError('Input file is NOT geocoded.')
 
-        lat_in = self._clean_coord(lat_in)
-        lon_in = self._clean_coord(lon_in)
+        lat_in, lon_in = self._clean_coord(lat_in, lon_in)
 
         # attempts to convert lat/lon to utm coordinates if needed.
-        if ('UTM_ZONE' in self.src_metadata
+        if (lat_in is not None and lon_in is not None
+                and 'UTM_ZONE' in self.src_metadata
                 and np.max(np.abs(lat_in)) <= 90
                 and np.max(np.abs(lon_in)) <= 360):
             lat_in, lon_in = ut0.latlon2utm(np.array(lat_in), np.array(lon_in))
@@ -117,8 +139,10 @@ class coordinate:
         x_out = []
         for lat_i, lon_i in zip(lat_in, lon_in):
             # plus 0.01 to be more robust in practice
-            y_out.append(int(np.floor((lat_i - self.lat0) / self.lat_step + 0.01)))
-            x_out.append(int(np.floor((lon_i - self.lon0) / self.lon_step + 0.01)))
+            y_i = None if lat_i is None else int(np.floor((lat_i - self.lat0) / self.lat_step + 0.01))
+            x_i = None if lon_i is None else int(np.floor((lon_i - self.lon0) / self.lon_step + 0.01))
+            y_out.append(y_i)
+            x_out.append(x_i)
 
         # output format
         if len(y_out) == 1 and len(x_out) == 1:
@@ -137,22 +161,25 @@ class coordinate:
                     x_in      - list / tuple / 1D np.ndarray / int, coordinate(s) in col number
         Returns:    coord_out - tuple(list / 1D np.ndarray / int), coordinate(s) in (lat/northing, lon/easting)
         Example:    32.1, 130.5 = coordinate.yx2lalo(300, 1000)
+                    32.1 = coordinate.yx2lalo(300, None)[0]
                     ([32.1, 32.101], [130.5, 130.501]) = coordinate.lalo2yx([(300, 301), (1000, 1001)])
         """
         self.open()
         if not self.geocoded:
             raise ValueError('Input file is NOT geocoded.')
 
-        # Convert to List if input is String
-        y_in = self._clean_coord(y_in)
-        x_in = self._clean_coord(x_in)
+        y_in, x_in = self._clean_coord(y_in, x_in)
 
+        # convert coordinates
         lat_out = []
         lon_out = []
         for y_i, x_i in zip(y_in, x_in):
-            lat_out.append((y_i + 0.5) * self.lat_step + self.lat0)
-            lon_out.append((x_i + 0.5) * self.lon_step + self.lon0)
+            lat_i = None if y_i is None else (y_i + 0.5) * self.lat_step + self.lat0
+            lon_i = None if x_i is None else (x_i + 0.5) * self.lon_step + self.lon0
+            lat_out.append(lat_i)
+            lon_out.append(lon_i)
 
+        # output format
         if len(lat_out) == 1 and len(lon_out) == 1:
             coord_out = tuple([lat_out[0], lon_out[0]])
         else:
