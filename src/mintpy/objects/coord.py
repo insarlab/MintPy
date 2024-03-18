@@ -91,8 +91,7 @@ class coordinate:
                 x = [x]
             elif x is None:
                 x = [None]
-            else:
-                x = list(x)
+            x = list(x)
             return x
 
         # convert to list type
