@@ -80,14 +80,15 @@ class coordinate:
         """Ensure input coordinate as list type and same size."""
 
         def _to_list(x):
-            # note: np.float128 is not supported on Windows OS,
-            # use np.longdouble as a platform neutral syntax
-            float_types = (float, np.float16, np.float32, np.float64, np.longdouble)
-            int_types = (int, np.int16, np.int32, np.int64)
-            # convert known types: numpy array, numbers and None
+            # convert numpy array to list or scalar
             if isinstance(x, np.ndarray):
                 x = x.tolist()
-            elif isinstance(x, int_types + float_types):
+            # convert scalar / None to list
+            # Note: np.float128 is not supported on Windows OS,
+            #   use np.longdouble as a platform neutral syntax
+            float_types = (float, np.float16, np.float32, np.float64, np.longdouble)
+            int_types = (int, np.int16, np.int32, np.int64)
+            if isinstance(x, int_types + float_types):
                 x = [x]
             elif x is None:
                 x = [None]
