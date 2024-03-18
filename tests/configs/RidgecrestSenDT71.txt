@@ -19,4 +19,9 @@ mintpy.troposphericDelay.method     = pyaps
 mintpy.topographicResidual          = yes
 mintpy.topographicResidual.stepFuncDate         = 20190706T0320
 mintpy.topographicResidual.pixelwiseGeometry    = no
+mintpy.save.hdfEos5         = yes
+mintpy.save.hdfEos5.subset  = yes
 mintpy.plot.maxMemory       = 2
+
+##————————————————————————————— HDF-EOS5 Attributes -—————————————————————————##
+relative_orbit      = 71

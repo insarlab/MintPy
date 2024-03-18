@@ -345,10 +345,10 @@ def utm2latlon(meta, easting, northing):
 
     Parameters: meta     - dict, mintpy attributes that includes:
                            UTM_ZONE
-                easting  - scalar or 1/2D np.ndarray, UTM    coordinates in x direction
-                northing - scalar or 1/2D np.ndarray, UTM    coordinates in y direction
-    Returns:    lat      - scalar or 1/2D np.ndarray, WGS 84 coordinates in y direction
-                lon      - scalar or 1/2D np.ndarray, WGS 84 coordinates in x direction
+                easting  - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in y direction
+    Returns:    lat      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in x direction
     """
     import utm
     zone_num = int(meta['UTM_ZONE'][:-1])
@@ -357,20 +357,33 @@ def utm2latlon(meta, easting, northing):
     # which can be common for large area analysis, e.g. the Norwegian mapping authority
     # publishes a height data in UTM zone 33 coordinates for the whole country, even though
     # most of it is technically outside zone 33.
-    lat, lon = utm.to_latlon(easting, northing, zone_num, northern=northern, strict=False)
+    lat, lon = utm.to_latlon(np.array(easting), np.array(northing), zone_num,
+                             northern=northern, strict=False)
+
+    # output format
+    if any(isinstance(x, (list, tuple)) for x in [easting, northing]):
+        lat = lat.tolist()
+        lon = lon.tolist()
+
     return lat, lon
 
 
 def latlon2utm(lat, lon):
     """Convert latitude/longitude in degrees to UTM easting/northing in meters.
 
-    Parameters: lat      - scalar or 1/2D np.ndarray, WGS 84 coordinates in y direction
-                lon      - scalar or 1/2D np.ndarray, WGS 84 coordinates in x direction
-    Returns:    easting  - scalar or 1/2D np.ndarray, UTM    coordinates in x direction
-                northing - scalar or 1/2D np.ndarray, UTM    coordinates in y direction
+    Parameters: lat      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in x direction
+    Returns:    easting  - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in y direction
     """
     import utm
-    easting, northing = utm.from_latlon(lat, lon)[:2]
+    easting, northing = utm.from_latlon(np.array(lat), np.array(lon))[:2]
+
+    # output format
+    if any(isinstance(x, (list, tuple)) for x in [lat, lon]):
+        easting = easting.tolist()
+        northing = northing.tolist()
+
     return northing, easting
 
 

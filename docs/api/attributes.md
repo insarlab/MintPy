@@ -9,7 +9,7 @@ If using ROI_PAC as the InSAR processor, both **baseline parameter RSC** file (i
 +  X/Y_FIRST = (for geocoded product) Longitude/easting/X and latitude/northing/Y coordinate in degrees/meters of the upper left corner of the first pixel.
 +  X/Y_STEP = (for geocoded product) Ground resolution in degrees/meters in X/Y direction.
 +  X/Y_UNIT = (for geocoded product) Coordinate unit in X/Y direction: degrees or meters.
-+  LAT/LON_REF1/2/3/4 = Latitude/longitude at corner 1/2/3/4 (degree), used in save_unavco, PyAPS (DEM file in radar coord), not accurate; number named in order of first line near/far range, last line near/far range.
++  LAT/LON_REF1/2/3/4 = Latitude/northing and longitude/easting at corner 1/2/3/4 (in degrees or meters), used in save_unavco, PyAPS (DEM file in radar coord), not accurate; number named in order of first line near/far range, last line near/far range.
 +  WAVELENGTH = Radar wavelength in meters.
 +  RANGE_PIXEL_SIZE = Slant range pixel size (search for pixel_ratio to convert to ground size, in m), used in dem_error, incidence_angle, multilook, transect.
 +  EARTH_RADIUS = Best fitting spheroid radius in meters, used in dem_error, incidence_angle, convert2mat.
@@ -30,7 +30,7 @@ The following attributes vary for each interferogram:
 
 +  ANTENNA_SIDE = -1 for right looking radar, used in save_unavco
 +  AZIMUTH_PIXEL_SIZE = Azimuth pixel size at orbital altitude (multiply by Re/(Re+h) for ground size (m), where Re is the local earth radius), used in baseline_error/trop and multilook.
-+  HEADING = Spacecraft heading at peg point (degree), measured from the north with clock-wise as positive, used in asc_desc
++  HEADING = Spacecraft heading at peg point (degrees), measured from the north with clock-wise as positive, used in asc_desc
 +  PRF = Pulse repetition frequency (Hz), used in save_unavco
 
 ### Self-generated attributes ###
@@ -47,7 +47,8 @@ The following attributes vary for each interferogram:
 +  NO_DATA_VALUE = No data value, value that should be ignored.
 +  UNIT = data unit, i.e. m, m/yr, radian, and 1 for file without unit, such as coherence [[source]](https://github.com/insarlab/MintPy/blob/main/src/mintpy/objects/stack.py#L75)
 +  REF_DATE = reference date
-+  REF_X/Y/LAT/LON = column/row/latitude/longitude of reference point
++  REF_X/Y = column/row of the reference point
++  REF_LAT/LON = latitude/northing and longitude/easting of the reference point (in degrees or meters)
 +  SUBSET_XMIN/XMAX/YMIN/YMAX = start/end column/row number of subset in the original coverage
 +  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for "--update" option of unwrap error corrections.
 +  NCORRLOOKS = number of independent looks, as explained in [SNAPHU](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full)

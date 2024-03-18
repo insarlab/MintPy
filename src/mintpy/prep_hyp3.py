@@ -67,10 +67,6 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
     S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])
     E = W + float(meta['X_STEP']) * int(meta['WIDTH'])
 
-    # convert UTM to lat/lon
-    N, W = ut.utm2latlon(meta, W, N)
-    S, E = ut.utm2latlon(meta, E, S)
-
     if meta['ORBIT_DIRECTION'] == 'ASCENDING':
         meta['LAT_REF1'] = str(S)
         meta['LAT_REF2'] = str(S)
@@ -109,6 +105,11 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
         meta['P_BASELINE_TOP_HDR'] = hyp3_meta['Baseline']
         meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
+
+    # HDF-EOS5 metadata
+    if hyp3_meta['ReferenceGranule'].startswith('S1'):
+        meta['beam_mode'] = 'IW'
+    meta['unwrap_method'] = hyp3_meta['Unwrappingtype']
 
     return(meta)
 
