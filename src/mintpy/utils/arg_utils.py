@@ -447,14 +447,14 @@ def add_save_argument(parser):
 def add_subset_argument(parser, geo=True):
     """Argument group parser for subset options"""
     sub = parser.add_argument_group('Subset', 'Display dataset in subset range')
-    sub.add_argument('--sub-x','--subx','--subset-x', dest='subset_x', type=int, nargs=2,
+    sub.add_argument('--sub-x','--subset-x', dest='subset_x', type=int, nargs=2,
                      metavar=('XMIN', 'XMAX'), help='subset display in x/cross-track/range direction')
-    sub.add_argument('--sub-y','--suby','--subset-y', dest='subset_y', type=int, nargs=2,
+    sub.add_argument('--sub-y','--subset-y', dest='subset_y', type=int, nargs=2,
                      metavar=('YMIN', 'YMAX'), help='subset display in y/along-track/azimuth direction')
     if geo:
-        sub.add_argument('--sub-lat','--sublat','--subset-lat', dest='subset_lat', type=float, nargs=2,
+        sub.add_argument('--sub-lat','--subset-lat', dest='subset_lat', type=float, nargs=2,
                          metavar=('LATMIN', 'LATMAX'), help='subset display in latitude')
-        sub.add_argument('--sub-lon','--sublon','--subset-lon', dest='subset_lon', type=float, nargs=2,
+        sub.add_argument('--sub-lon','--subset-lon', dest='subset_lon', type=float, nargs=2,
                          metavar=('LONMIN', 'LONMAX'), help='subset display in longitude')
     return parser
 

@@ -52,7 +52,7 @@ The following attributes vary for each interferogram:
 +  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for "--update" option of unwrap error corrections.
 +  NCORRLOOKS = number of independent looks, as explained in [SNAPHU](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full)
 +  UTM_ZONE = [UTM zone](https://docs.up42.com/data/reference/utm#utm-wgs84), comprises a zone number and a hemisphere, e.g. 11N, 60S, for geocoded file with UTM projection only.
-+  EPSG = EPSG code for coordinate systems, for geocoded files only. Check [here] for its relationship with UTM zone.
++  EPSG = EPSG code for coordinate systems, for geocoded files only. Check [here](https://docs.up42.com/data/reference/utm#utm-wgs84) for its relationship with UTM zone.
 +  CENTER_INCIDENCE_ANGLE = incidence angle in degrees at the scene center, read from the 2D incidence angle matrix, for isce2 files only.
 
 ### Reference ###
