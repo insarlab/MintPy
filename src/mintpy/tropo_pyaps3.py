@@ -275,10 +275,8 @@ def get_bounding_box(meta, geom_file=None):
         lat1 = lat0 + lat_step * (length - 1)
         lon1 = lon0 + lon_step * (width - 1)
 
-        # 'Y_FIRST' not in 'degree'
-        # e.g. meters for UTM projection from ASF HyP3
-        y_unit = meta.get('Y_UNIT', 'degrees').lower()
-        if not y_unit.startswith('deg'):
+        # for UTM projection, e.g. ASF HyP3
+        if not meta.get('Y_UNIT', 'degrees').lower().startswith('deg'):
             lat0, lon0 = ut.utm2latlon(meta, easting=lon0, northing=lat0)
             lat1, lon1 = ut.utm2latlon(meta, easting=lon1, northing=lat1)
 
@@ -300,8 +298,12 @@ def get_bounding_box(meta, geom_file=None):
             lon1 = np.nanmax(lons)
 
         else:
+            # use the rough (not accurate) lat/lon info of the four corners
             lats = [float(meta[f'LAT_REF{i}']) for i in [1,2,3,4]]
             lons = [float(meta[f'LON_REF{i}']) for i in [1,2,3,4]]
+            # for UTM projection, e.g. ASF HyP3
+            if not meta.get('Y_UNIT', 'degrees').lower().startswith('deg'):
+                lats, lons = ut.utm2latlon(meta, easting=lons, northing=lats)
             lat0 = np.mean(lats[0:2])
             lat1 = np.mean(lats[2:4])
             lon0 = np.mean(lons[0:3:2])
