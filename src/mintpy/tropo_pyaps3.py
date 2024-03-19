@@ -5,6 +5,7 @@
 ############################################################
 
 
+import glob
 import os
 import re
 from configparser import ConfigParser
@@ -87,6 +88,56 @@ def get_grib_info(inps):
         inps.snwe
         inps.grib_files
     """
+    # utils sub-functions
+    def snwe_str2num(snwe_str):
+        snwe = snwe_str.split('_')
+        snwe = [x.replace('S','-').replace('N','').replace('W','-').replace('E','') for x in snwe]
+        snwe = [int(x) for x in snwe]
+        return snwe
+
+    def snwe1_contains_snwe2(snwe1, snwe2):
+        s1, n1, w1, e1 = snwe1
+        s2, n2, w2, e2 = snwe2
+        if s1 <= s2 and n1 >= n2 and w1 <= w2 and e1 >= e2:
+            return True
+        else:
+            return False
+
+    def get_larger_snwe_in_local_files(gfile):
+        # default output
+        larger_snwe = None
+
+        # 0. input grib file info
+        gdir = os.path.dirname(gfile)
+        gparts = os.path.basename(gfile).split('_')
+        # ignore grib files in global scale
+        if len(gparts) < 7:
+            return larger_snwe
+        snwe_str = '_'.join(gparts[1:5])
+        snwe = snwe_str2num(snwe_str)
+        suffix = os.path.basename(gfile).split(snwe_str)[1]
+
+        # 1. find candidate snwe in local files
+        cand_gfiles = glob.glob(os.path.join(gdir, f'*{suffix}'))
+        # ignore grib files in global scale
+        cand_gfiles = [x for x in cand_gfiles if len(os.path.basename(x).split('_')) >= 7]
+        if len(cand_gfiles) > 0:
+            cand_snwe_str_list = ['_'.join(os.path.basename(x).split('_')[1:5]) for x in cand_gfiles]
+            cand_snwe_list = [snwe_str2num(x) for x in cand_snwe_str_list]
+
+            # 2. find candidate snwe that contains the input snwe, i.e. larger_snwe
+            larger_snwe_list = []
+            for cand_snwe in cand_snwe_list:
+                if snwe1_contains_snwe2(cand_snwe, snwe):
+                    larger_snwe_list.append(cand_snwe)
+
+            # 3. locate the larger_snwe with the most existing files
+            if len(larger_snwe_list) > 0:
+                num_file_list = [len(glob.glob(os.path.join(gdir, f'*{x}*{suffix}'))) for x in larger_snwe_list]
+                larger_snwe = larger_snwe_list[np.argmax(num_file_list)]
+
+        return larger_snwe
+
     # grib data directory, under weather_dir
     inps.grib_dir = os.path.join(inps.weather_dir, inps.tropo_model)
     if not os.path.isdir(inps.grib_dir):
@@ -102,10 +153,7 @@ def get_grib_info(inps):
         inps.atr = dict()
 
     # area extent for ERA5 grib data download
-    if inps.atr:
-        inps.snwe = get_snwe(inps.atr, geom_file=inps.geom_file)
-    else:
-        inps.snwe = None
+    inps.snwe = get_snwe(inps.atr, geom_file=inps.geom_file) if inps.atr else None
 
     # grib file list
     inps.grib_files = get_grib_filenames(
@@ -114,6 +162,25 @@ def get_grib_info(inps):
         model=inps.tropo_model,
         grib_dir=inps.grib_dir,
         snwe=inps.snwe)
+
+    # check existing local files (with the same grib source and time) with larger area extent
+    larger_snwe = get_larger_snwe_in_local_files(inps.grib_files[0])
+    if larger_snwe is not None:
+        larger_grib_files = get_grib_filenames(
+            date_list=inps.date_list,
+            hour=inps.hour,
+            model=inps.tropo_model,
+            grib_dir=inps.grib_dir,
+            snwe=larger_snwe)
+
+        # use the larger grib file if more local files exist than the current snwe
+        #   to avoid re-downloading as much as possible
+        grib_files_exist = check_exist_grib_file(inps.grib_files, print_msg=False)
+        larger_grib_files_exist = check_exist_grib_file(larger_grib_files, print_msg=False)
+        if len(larger_grib_files_exist) > len(grib_files_exist):
+            print('Sweet! Find more local grib files with larger SNWE extent, use the larger SNWE instead.')
+            inps.snwe = larger_snwe
+            inps.grib_files = larger_grib_files
 
     return inps
 
@@ -128,6 +195,18 @@ def get_grib_filenames(date_list, hour, model, grib_dir, snwe=None):
     Returns:    grib_files - list of str, local grib file path
     """
     # area extent
+    def snwe2str(snwe):
+        """Get area extent in string"""
+        if not snwe:
+            return None
+        s, n, w, e = snwe
+        area = ''
+        area += f'_S{abs(s)}' if s < 0 else f'_N{abs(s)}'
+        area += f'_S{abs(n)}' if n < 0 else f'_N{abs(n)}'
+        area += f'_W{abs(w)}' if w < 0 else f'_E{abs(w)}'
+        area += f'_W{abs(e)}' if e < 0 else f'_E{abs(e)}'
+        return area
+
     area = snwe2str(snwe)
 
     grib_files = []
@@ -172,6 +251,22 @@ def closest_weather_model_hour(sar_acquisition_time, grib_source='ERA5'):
 def safe2date_time(safe_file, tropo_model):
     """generate date_list and hour from safe_list"""
 
+    def define_date(string):
+        """extract date from *.SAFE"""
+        filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
+        date = filename.split(str.encode('_'))[5][0:8]
+        return date
+
+    def define_second(string):
+        """extract CENTER_LINE_UTC from *.SAFE"""
+        filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
+        time1 = filename.split(str.encode('_'))[5][9:15]
+        time2 = filename.split(str.encode('_'))[6][9:15]
+        time1_second = int(time1[0:2]) * 3600 + int(time1[2:4]) * 60 + int(time1[4:6])
+        time2_second = int(time2[0:2]) * 3600 + int(time2[2:4]) * 60 + int(time2[4:6])
+        utc_sec = (time1_second + time2_second) / 2
+        return utc_sec
+
     def seconds_UTC(seconds):
         """generate second list"""
         if isinstance(seconds, list):
@@ -181,7 +276,6 @@ def safe2date_time(safe_file, tropo_model):
         else:
             print('\nUn-recognized CENTER_LINE_UTC input!')
             return None
-
         return secondsOut
 
     date_list = ptime.yyyymmdd(np.loadtxt(safe_file, dtype=bytes, converters={0:define_date}).astype(str).tolist())
@@ -194,39 +288,21 @@ def safe2date_time(safe_file, tropo_model):
     return date_list, hour
 
 
-def define_date(string):
-    """extract date from *.SAFE"""
-    filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
-    date = filename.split(str.encode('_'))[5][0:8]
-    return date
-
-
-def define_second(string):
-    """extract CENTER_LINE_UTC from *.SAFE"""
-    filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
-    time1 = filename.split(str.encode('_'))[5][9:15]
-    time2 = filename.split(str.encode('_'))[6][9:15]
-    time1_second = int(time1[0:2]) * 3600 + int(time1[2:4]) * 60 + int(time1[4:6])
-    time2_second = int(time2[0:2]) * 3600 + int(time2[2:4]) * 60 + int(time2[4:6])
-    utc_sec = (time1_second + time2_second) / 2
-    return utc_sec
-
-
-def ceil2multiple(x, step=10):
-    """Given a number x, find the smallest number in multiple of step >= x."""
-    assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
-    if x % step == 0:
-        return x
-    return x + (step - x % step)
-
-
-def floor2multiple(x, step=10):
-    """Given a number x, find the largest number in multiple of step <= x."""
-    assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
-    return x - x % step
-
-
 def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
+    # utils sub-functions
+    def ceil2multiple(x, step=10):
+        """Given a number x, find the smallest number in multiple of step >= x."""
+        assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
+        if x % step == 0:
+            return x
+        else:
+            return x + (step - x % step)
+
+    def floor2multiple(x, step=10):
+        """Given a number x, find the largest number in multiple of step <= x."""
+        assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
+        return x - x % step
+
     # get bounding box
     lat0, lat1, lon0, lon1 = get_bounding_box(meta, geom_file=geom_file)
 
@@ -242,22 +318,8 @@ def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
         W = floor2multiple(W, step=step)
         N = ceil2multiple(N, step=step)
         E = ceil2multiple(E, step=step)
+
     return (S, N, W, E)
-
-
-def snwe2str(snwe):
-    """Get area extent in string"""
-    if not snwe:
-        return None
-    s, n, w, e = snwe
-
-    area = ''
-    area += f'_S{abs(s)}' if s < 0 else f'_N{abs(s)}'
-    area += f'_S{abs(n)}' if n < 0 else f'_N{abs(n)}'
-    area += f'_W{abs(w)}' if w < 0 else f'_E{abs(w)}'
-    area += f'_W{abs(e)}' if e < 0 else f'_E{abs(e)}'
-
-    return area
 
 
 def get_bounding_box(meta, geom_file=None):
@@ -317,7 +379,7 @@ def check_exist_grib_file(gfile_list, print_msg=True):
     """Check input list of grib files, and return the existing ones with right size."""
     gfile_exist = ut.get_file_list(gfile_list)
     if gfile_exist:
-        file_sizes = [os.path.getsize(i) for i in gfile_exist] # if os.path.getsize(i) > 10e6]
+        file_sizes = [os.path.getsize(i) for i in gfile_exist]
         if file_sizes:
             comm_size = ut.most_common([i for i in file_sizes])
             if print_msg:
