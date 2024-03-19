@@ -366,10 +366,11 @@ class connectComponent:
             # endpoint window
             if radius > 0:
                 aoi_mask0, aoi_mask1 = self.get_bridge_endpoint_aoi_mask(bridge, radius=radius)
-
+                label_mask0 = self.labelImg == bridge['label0']
+                label_mask1 = self.labelImg == bridge['label1']
                 # Overlay bridge regions directly using plot function
-                ax.plot(np.nonzero(aoi_mask0)[1], np.nonzero(aoi_mask0)[0], 'gray', alpha=0.3)
-                ax.plot(np.nonzero(aoi_mask1)[1], np.nonzero(aoi_mask1)[0], 'gray', alpha=0.3)
+                ax.plot(np.nonzero(aoi_mask0*label_mask0)[1], np.nonzero(aoi_mask0*label_mask0)[0], 'gray', alpha=0.3)
+                ax.plot(np.nonzero(aoi_mask1*label_mask1)[1], np.nonzero(aoi_mask1*label_mask1)[0], 'gray', alpha=0.3)
 
         # reference pixel
         ax.plot(self.refX, self.refY, 'ks', ms=2)
