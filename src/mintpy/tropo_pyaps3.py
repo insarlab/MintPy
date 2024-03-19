@@ -98,7 +98,7 @@ def get_grib_info(inps):
     def snwe1_contains_snwe2(snwe1, snwe2):
         s1, n1, w1, e1 = snwe1
         s2, n2, w2, e2 = snwe2
-        if s1 <= s1 and n1 >= n2 and w1 <= w2 and e1 >= e1:
+        if s1 <= s2 and n1 >= n2 and w1 <= w2 and e1 >= e2:
             return True
         else:
             return False
@@ -127,7 +127,7 @@ def get_grib_info(inps):
 
             # 2. find candidate snwe that contains the input snwe, i.e. larger_snwe
             larger_snwe_list = []
-            for i, cand_snwe in enumerate(cand_snwe_list):
+            for cand_snwe in cand_snwe_list:
                 if snwe1_contains_snwe2(cand_snwe, snwe):
                     larger_snwe_list.append(cand_snwe)
 
