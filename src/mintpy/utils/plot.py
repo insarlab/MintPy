@@ -8,6 +8,7 @@
 #   from mintpy.utils import plot as pp
 
 
+import csv
 import datetime as dt
 import os
 import warnings
@@ -1198,6 +1199,19 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             redo=inps.gps_redo,
         )
 
+        # create CSV reflecting plotting changes imposed on input GPS data
+        # read GPS velocity from CSV file
+        csv_file = f'gps_{inps.gps_component}.csv'
+        vprint(f'write rereferenced GPS observations to file: {csv_file}')
+        og_csv = os.path.join(os.path.dirname(metadata['FILE_PATH']),
+                              os.path.basename(csv_file))
+        update_csv = os.path.join(os.path.dirname(metadata['FILE_PATH']),
+                                  'reref_' + os.path.basename(csv_file))
+        col_names = ['Site', 'Lon', 'Lat', 'Displacement', 'Velocity']
+        num_col = len(col_names)
+        col_types = ['U10'] + ['f8'] * (num_col - 1)
+        fc = np.genfromtxt(og_csv, dtype=col_types, delimiter=',', names=True)
+
         # reference GPS
         if inps.ref_gps_site:
             ref_ind = site_names.tolist().index(inps.ref_gps_site)
@@ -1208,8 +1222,23 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             if not np.isnan(ref_val):
                 site_obs -= ref_val
 
+            # update CSV values
+            fc[col_names[-1]] -= fc[col_names[-1]][ref_ind]
+            fc[col_names[-2]] -= fc[col_names[-2]][ref_ind]
+
         # scale to the same unit as InSAR
         site_obs *= unit_fac
+        fc[col_names[-1]] *= unit_fac
+        fc[col_names[-2]] *= unit_fac
+
+        # write updated CSV file
+        data_list_update = []
+        for i in fc:
+            data_list_update.append(i)
+        with open(update_csv, 'w') as fc2:
+            fcw = csv.writer(fc2)
+            fcw.writerow(col_names)
+            fcw.writerows(data_list_update)
 
         # exclude sites
         if inps.ex_gps_sites:
