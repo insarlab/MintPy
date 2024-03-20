@@ -355,11 +355,11 @@ class connectComponent:
 
 
     def plot_bridge(self, ax, cmap='jet', radius=50):
-        # label background
+        # background label
         ax.imshow(self.labelImg, cmap=cmap, interpolation='nearest')
 
-        # plot bridges
         for bridge in self.bridges:
+            # bridges
             ax.plot([bridge['x0'], bridge['x1']],
                     [bridge['y0'], bridge['y1']], 'w-', lw=1)
 
@@ -368,7 +368,9 @@ class connectComponent:
                 aoi_mask0, aoi_mask1 = self.get_bridge_endpoint_aoi_mask(bridge, radius=radius)
                 label_mask0 = self.labelImg == bridge['label0']
                 label_mask1 = self.labelImg == bridge['label1']
-                # Overlay bridge regions directly using plot function
+                # Note by Emre Mar 2024: overlay bridge regions directly using plot() function,
+                # instead of using np.ma.masked_where() with imshow(),
+                # to save memory while calling this func in a loop (https://github.com/insarlab/MintPy/pull/1155)
                 ax.plot(np.nonzero(aoi_mask0*label_mask0)[1], np.nonzero(aoi_mask0*label_mask0)[0], 'gray', alpha=0.3)
                 ax.plot(np.nonzero(aoi_mask1*label_mask1)[1], np.nonzero(aoi_mask1*label_mask1)[0], 'gray', alpha=0.3)
 
