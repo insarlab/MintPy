@@ -18,22 +18,23 @@ from scipy.interpolate import RegularGridInterpolator
 from mintpy.constants import EARTH_RADIUS, SPEED_OF_LIGHT
 from mintpy.utils import ptime, writefile
 
-DATASET_ROOT_UNW = '/science/LSAR/GUNW/grids/frequencyA/interferogram/unwrapped'
+DATASET_ROOT_UNW = '/science/LSAR/GUNW/grids/frequencyA/unwrappedInterferogram'
+PARAMETERS = '/science/LSAR/GUNW/metadata/processingInformation/parameters/unwrappedInterferogram/frequencyA'
 IDENTIFICATION = '/science/LSAR/identification'
 RADARGRID_ROOT = 'science/LSAR/GUNW/metadata/radarGrid'
 DATASETS = {
-    'xcoord'           : f"{DATASET_ROOT_UNW}/xCoordinates",
-    'ycoord'           : f"{DATASET_ROOT_UNW}/yCoordinates",
+    'xcoord'           : f"{DATASET_ROOT_UNW}/POL/xCoordinates",
+    'ycoord'           : f"{DATASET_ROOT_UNW}/POL/yCoordinates",
     'unw'              : f"{DATASET_ROOT_UNW}/POL/unwrappedPhase",
     'cor'              : f"{DATASET_ROOT_UNW}/POL/coherenceMagnitude",
     'connComp'         : f"{DATASET_ROOT_UNW}/POL/connectedComponents",
-    'mask'             : f"{DATASET_ROOT_UNW}/mask",
+    #'mask'             : f"{DATASET_ROOT_UNW}/mask",
     'epsg'             : f"{DATASET_ROOT_UNW}/projection",
     'xSpacing'         : f"{DATASET_ROOT_UNW}/xCoordinateSpacing",
     'ySpacing'         : f"{DATASET_ROOT_UNW}/yCoordinateSpacing",
-    'polarization'     : f"{DATASET_ROOT_UNW}/listOfPolarizations",
-    'range_look'       : f"{DATASET_ROOT_UNW}/numberOfRangeLooks",
-    'azimuth_look'     : f"{DATASET_ROOT_UNW}/numberOfAzimuthLooks",
+    'polarization'     : f"/science/LSAR/GUNW/grids/frequencyA/listOfPolarizations",
+    'range_look'       : f"{PARAMETERS}/numberOfRangeLooks",
+    'azimuth_look'     : f"{PARAMETERS}/numberOfAzimuthLooks",
 }
 PROCESSINFO = {
     'centerFrequency': "/science/LSAR/GUNW/grids/frequencyA/centerFrequency",
@@ -231,7 +232,7 @@ def read_subset(inp_file, bbox, geometry=False):
         col1, row1, col2, row2 = get_rows_cols(xcoord, ycoord, bbox)
 
         if geometry:
-            dataset['mask'] = ds[DATASETS['mask']][row1:row2, col1:col2]
+            # dataset['mask'] = ds[DATASETS['mask']][row1:row2, col1:col2]
             dataset['xybbox'] = (col1, row1, col2, row2)
         else:
             dataset['unw_data'] = ds[DATASETS['unw']][row1:row2, col1:col2]
@@ -369,7 +370,7 @@ def prepare_geometry(
         "height": [np.float32, (length, width), dem_subset_array],
         "incidenceAngle": [np.float32, (length, width), incidence_angle],
         "slantRangeDistance": [np.float32, (length, width), slant_range],
-        "shadowMask": [np.bool_, (length, width), geo_ds['mask']],
+        #"shadowMask": [np.bool_, (length, width), geo_ds['mask']],
         #"waterMask": [np.bool_, (length, width), geo_ds['water_mask']],
     }
     if maskFile:
