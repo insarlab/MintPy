@@ -18,23 +18,23 @@ from scipy.interpolate import RegularGridInterpolator
 from mintpy.constants import EARTH_RADIUS, SPEED_OF_LIGHT
 from mintpy.utils import ptime, writefile
 
-DATASET_ROOT_UNW = '/science/LSAR/GUNW/grids/frequencyA/interferogram/unwrapped'
+DATASET_ROOT_UNW = '/science/LSAR/GUNW/grids/frequencyA/unwrappedInterferogram'
+PARAMETERS = '/science/LSAR/GUNW/metadata/processingInformation/parameters/unwrappedInterferogram/frequencyA'
 IDENTIFICATION = '/science/LSAR/identification'
 RADARGRID_ROOT = 'science/LSAR/GUNW/metadata/radarGrid'
 DATASETS = {
-    'xcoord'           : f"{DATASET_ROOT_UNW}/xCoordinates",
-    'ycoord'           : f"{DATASET_ROOT_UNW}/yCoordinates",
+    'xcoord'           : f"{DATASET_ROOT_UNW}/POL/xCoordinates",
+    'ycoord'           : f"{DATASET_ROOT_UNW}/POL/yCoordinates",
     'unw'              : f"{DATASET_ROOT_UNW}/POL/unwrappedPhase",
     'cor'              : f"{DATASET_ROOT_UNW}/POL/coherenceMagnitude",
     'connComp'         : f"{DATASET_ROOT_UNW}/POL/connectedComponents",
-    'layoverShadowMask': f"{DATASET_ROOT_UNW}/layoverShadowMask",
-    'waterMask'        : f"{DATASET_ROOT_UNW}/waterMask",
+    #'mask'             : f"{DATASET_ROOT_UNW}/mask",
     'epsg'             : f"{DATASET_ROOT_UNW}/projection",
     'xSpacing'         : f"{DATASET_ROOT_UNW}/xCoordinateSpacing",
     'ySpacing'         : f"{DATASET_ROOT_UNW}/yCoordinateSpacing",
-    'polarization'     : f"{DATASET_ROOT_UNW}/listOfPolarizations",
-    'range_look'       : f"{DATASET_ROOT_UNW}/numberOfRangeLooks",
-    'azimuth_look'     : f"{DATASET_ROOT_UNW}/numberOfAzimuthLooks",
+    'polarization'     : "/science/LSAR/GUNW/grids/frequencyA/listOfPolarizations",
+    'range_look'       : f"{PARAMETERS}/numberOfRangeLooks",
+    'azimuth_look'     : f"{PARAMETERS}/numberOfAzimuthLooks",
 }
 PROCESSINFO = {
     'centerFrequency': "/science/LSAR/GUNW/grids/frequencyA/centerFrequency",
@@ -61,9 +61,9 @@ def load_nisar(inps):
     print(f"Found {len(input_files)} unwrapped files")
 
     if inps.subset_lat:
-        bbox = (inps.subset_lat[0], inps.subset_lon[0], inps.subset_lat[1], inps.subset_lon[1])
+        bbox = (inps.subset_lon[0], inps.subset_lat[0], inps.subset_lon[1], inps.subset_lat[1])
     else:
-        bbox=None
+        bbox = None
 
     # extract metadata
     metadata, bounds = extract_metadata(input_files, bbox)
@@ -80,7 +80,8 @@ def load_nisar(inps):
         metaFile=input_files[0],
         bbox=bounds,
         metadata=metadata,
-        demFile=inps.dem_file
+        demFile=inps.dem_file,
+        maskFile=inps.mask_file
         )
 
     prepare_stack(
@@ -136,7 +137,15 @@ def extract_metadata(input_files, bbox=None, polarization='HH'):
     meta["Y_FIRST"] = y_origin - pixel_height//2
     meta["X_STEP"] = pixel_width
     meta["Y_STEP"] = pixel_height
-    meta["X_UNIT"] = meta["Y_UNIT"] = "meters"
+
+    if meta["EPSG"] == 4326:
+        meta["X_UNIT"] = meta["Y_UNIT"] = 'degree'
+    else:
+        meta["X_UNIT"] = meta["Y_UNIT"] = "meters"
+        if str(meta["EPSG"]).startswith('326'):
+             meta["UTM_ZONE"] = str(meta["EPSG"])[3:] + 'N'
+        else:
+             meta["UTM_ZONE"] = str(meta["EPSG"])[3:] + 'S'
     meta["EARTH_RADIUS"] = EARTH_RADIUS
 
     # NISAR Altitude
@@ -155,7 +164,6 @@ def extract_metadata(input_files, bbox=None, polarization='HH'):
         utm_bbox = None
     bounds = common_raster_bound(input_files, utm_bbox)
     meta['bbox'] = ",".join([str(b) for b in bounds])
-
     col1, row1, col2, row2 = get_rows_cols(xcoord, ycoord, bounds)
     length = row2 - row1
     width = col2 - col1
@@ -224,9 +232,7 @@ def read_subset(inp_file, bbox, geometry=False):
         col1, row1, col2, row2 = get_rows_cols(xcoord, ycoord, bbox)
 
         if geometry:
-            # Set all values to 1 temporarily because water mask is zero
-            dataset['water_mask'] = ds[DATASETS['waterMask']][row1:row2, col1:col2] * 0 + 1
-            dataset['layover_shadow_mask'] = ds[DATASETS['layoverShadowMask']][row1:row2, col1:col2]
+            # dataset['mask'] = ds[DATASETS['mask']][row1:row2, col1:col2]
             dataset['xybbox'] = (col1, row1, col2, row2)
         else:
             dataset['unw_data'] = ds[DATASETS['unw']][row1:row2, col1:col2]
@@ -237,13 +243,14 @@ def read_subset(inp_file, bbox, geometry=False):
     return dataset
 
 
-def read_and_interpolate_geometry(gunw_file, dem_file, xybbox):
-    """Read the DEM, change projection and interpolate to data grid, interpolate slant range and incidence angle to data grid"""
-    dataset = gdal.Open(dem_file, gdal.GA_ReadOnly)
-    geotransform = dataset.GetGeoTransform()
-    proj = gdal.osr.SpatialReference(wkt=dataset.GetProjection())
-    src_epsg = int(proj.GetAttrValue('AUTHORITY', 1))
-    raster_array = dataset.ReadAsArray()
+def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
+    """Read the DEM and mask, change projection and interpolate to data grid,
+       interpolate slant range and incidence angle to data grid"""
+    dem_dataset = gdal.Open(dem_file, gdal.GA_ReadOnly)
+    proj = gdal.osr.SpatialReference(wkt=dem_dataset.GetProjection())
+    dem_src_epsg = int(proj.GetAttrValue('AUTHORITY', 1))
+    del dem_dataset
+
     rdr_coords = {}
 
     with h5py.File(gunw_file, 'r') as ds:
@@ -260,23 +267,50 @@ def read_and_interpolate_geometry(gunw_file, dem_file, xybbox):
 
     subset_rows = len(ycoord)
     subset_cols = len(xcoord)
-    # dem_subset_array = np.zeros((subset_rows, subset_cols), dtype=raster_array.dtype)
+
     Y_2d, X_2d = np.meshgrid(ycoord, xcoord, indexing='ij')
+    bounds = (min(xcoord), min(ycoord), max(xcoord), max(ycoord))
+    output_projection = f"EPSG:{dst_epsg}"
 
-    if not src_epsg == dst_epsg:
-        coord_transform = Transformer.from_crs(dst_epsg, src_epsg, always_xy=True)
-        x_dem, y_dem = coord_transform.transform(X_2d.flatten(), Y_2d.flatten())
-    else:
-        x_dem, y_dem = X_2d.flatten(), Y_2d.flatten()
+    # Warp DEM to the interferograms grid
+    input_projection = f"EPSG:{dem_src_epsg}"
+    output_dem = os.path.join(os.path.dirname(dem_file), 'dem_transformed.tif' )
+    gdal.Warp(output_dem, dem_file, outputBounds=bounds, format='GTiff',
+              srcSRS=input_projection, dstSRS=output_projection, resampleAlg=gdal.GRA_Bilinear,
+              width=subset_cols, height=subset_rows,
+              options=['COMPRESS=DEFLATE'])
 
-    cols = ((y_dem - geotransform[3]) / geotransform[5]).astype(int)
-    rows = ((x_dem - geotransform[0]) / geotransform[1]).astype(int)
+    dem_subset_array =  gdal.Open(output_dem, gdal.GA_ReadOnly).ReadAsArray()
 
-    dem_subset_array = raster_array[cols.reshape(subset_rows, subset_cols), rows.reshape(subset_rows, subset_cols)]
-
+    # Interpolate slant_range and incidence_angle
     slant_range, incidence_angle = interpolate_geometry(X_2d, Y_2d, dem_subset_array, rdr_coords)
 
-    return dem_subset_array, slant_range, incidence_angle
+    # Read and warp mask if necessary
+    if mask_file in ['auto', 'None', None]:
+        print('*** No mask was found ***')
+        mask_subset_array = np.ones(dem_subset_array.shape, dtype='byte')
+    else:
+        try:
+            mask_dataset = gdal.Open(mask_file, gdal.GA_ReadOnly)
+            proj = gdal.osr.SpatialReference(wkt=mask_dataset.GetProjection())
+            mask_src_epsg = int(proj.GetAttrValue('AUTHORITY', 1))
+            del mask_dataset
+
+            # Warp mask to the interferograms grid
+            input_projection = f"EPSG:{mask_src_epsg}"
+            output_mask = os.path.join(os.path.dirname(mask_file), 'mask_transformed.tif' )
+            gdal.Warp(output_mask, mask_file, outputBounds=bounds, format='GTiff',
+              srcSRS=input_projection, dstSRS=output_projection, resampleAlg=gdal.GRA_Byte,
+              width=subset_cols, height=subset_rows,
+              options=['COMPRESS=DEFLATE'])
+
+            mask_subset_array = gdal.Open(output_mask, gdal.GA_ReadOnly).ReadAsArray()
+
+        except:
+            raise OSError('*** Mask is not gdal readable ***')
+
+
+    return dem_subset_array, slant_range, incidence_angle, mask_subset_array
 
 
 def interpolate_geometry(X_2d, Y_2d, dem, rdr_coords):
@@ -315,7 +349,8 @@ def prepare_geometry(
         metaFile,
         metadata,
         bbox,
-        demFile
+        demFile,
+        maskFile
 ):
     """Prepare the geometry file."""
     print("-" * 50)
@@ -326,7 +361,8 @@ def prepare_geometry(
 
     # Read waterMask, LayoverShadowMask, xybbox:
     geo_ds = read_subset(metaFile, bbox, geometry=True)
-    dem_subset_array, slant_range, incidence_angle = read_and_interpolate_geometry(metaFile, demFile, geo_ds['xybbox'])
+    dem_subset_array, slant_range, incidence_angle, mask = read_and_interpolate_geometry(metaFile, demFile,
+                                                                                   geo_ds['xybbox'], mask_file=maskFile)
 
     length, width = dem_subset_array.shape
 
@@ -334,9 +370,11 @@ def prepare_geometry(
         "height": [np.float32, (length, width), dem_subset_array],
         "incidenceAngle": [np.float32, (length, width), incidence_angle],
         "slantRangeDistance": [np.float32, (length, width), slant_range],
-        "shadowMask": [np.bool_, (length, width), geo_ds['layover_shadow_mask']],
-        "waterMask": [np.bool_, (length, width), geo_ds['water_mask']],
+        #"shadowMask": [np.bool_, (length, width), geo_ds['mask']],
+        #"waterMask": [np.bool_, (length, width), geo_ds['water_mask']],
     }
+    if maskFile:
+        ds_name_dict['waterMask'] = [np.bool_, (length, width), mask]
 
     # initiate HDF5 file
     meta["FILE_TYPE"] = "geometry"
