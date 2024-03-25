@@ -32,7 +32,7 @@ DATASETS = {
     'epsg'             : f"{DATASET_ROOT_UNW}/projection",
     'xSpacing'         : f"{DATASET_ROOT_UNW}/xCoordinateSpacing",
     'ySpacing'         : f"{DATASET_ROOT_UNW}/yCoordinateSpacing",
-    'polarization'     : f"/science/LSAR/GUNW/grids/frequencyA/listOfPolarizations",
+    'polarization'     : "/science/LSAR/GUNW/grids/frequencyA/listOfPolarizations",
     'range_look'       : f"{PARAMETERS}/numberOfRangeLooks",
     'azimuth_look'     : f"{PARAMETERS}/numberOfAzimuthLooks",
 }
