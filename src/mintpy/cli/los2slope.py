@@ -17,6 +17,11 @@ REFERENCE = """reference:
     The Cryosphere, 7, 1109–1119.
     https://doi.org/10.5194/tc-7-1109-2013
 
+    
+  Handwerger, A.L., Huang, MH., Fielding, E.J. et al (2019). A shift from drought to extreme rainfall
+    drives a stable landslide to catastrophic failure. Sci Rep 9, 1569.
+    https://doi.org/10.1038/s41598-018-38300-0
+
 """
 
 EXAMPLE = """example:
