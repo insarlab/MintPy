@@ -7,8 +7,8 @@
 #########################################################################
 
 import numpy as np
-from scipy.ndimage import gaussian_filter
 from osgeo import gdal
+from scipy.ndimage import gaussian_filter
 
 from mintpy.utils import ptime, readfile, writefile
 

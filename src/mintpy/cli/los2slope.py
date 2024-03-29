@@ -17,7 +17,6 @@ REFERENCE = """reference:
     The Cryosphere, 7, 1109–1119.
     https://doi.org/10.5194/tc-7-1109-2013
 
-    
   Handwerger, A.L., Huang, MH., Fielding, E.J. et al (2019). A shift from drought to extreme rainfall
     drives a stable landslide to catastrophic failure. Sci Rep 9, 1569.
     https://doi.org/10.1038/s41598-018-38300-0
@@ -29,11 +28,11 @@ EXAMPLE = """example:
  cd ./mintpy
  mask.py velocity.h5 -m maskTempCoh.h5
  geocode.py velocity_msk.h5 -l inputs/geometryRadar.h5 -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5
- 
+
  # To run this program do the following
  los2slope.py -file ./geo_velocity.h5 -g ./geo_geometryRadar.h5 -o ./geo_velocity_slp.h5 -m 15 --slp_thresh 1.0 --scaling_factor_thresh 10
 
- # Or simply 
+ # Or simply
  los2slope.py -file ./geo_velocity.h5 -g ./geo_geometryRadar.h5 -o ./geo_velocity_slp.h5
 """
 
