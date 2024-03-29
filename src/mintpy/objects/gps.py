@@ -1,141 +1,238 @@
-"""Class / utilities for GPS download / operations."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Jul 2018                           #
 ############################################################
+# Utility scripts for GPS handling
 # Recommend import:
 #     from mintpy.objects.gps import GPS
 
 
-import csv
-import datetime as dt
-import glob
 import os
-from urllib.request import urlretrieve
-
+import csv
+import glob
+import datetime as dt
 import numpy as np
 from pyproj import Geod
+from urllib.request import urlretrieve
+import pandas as pd
+import zipfile
+import matplotlib.pyplot as plt
 
 from mintpy.objects.coord import coordinate
-from mintpy.utils import ptime, readfile, time_func, utils1 as ut
-
-UNR_SITE_LIST_FILE = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
+from mintpy.utils import ptime, time_func, readfile, utils1 as ut
 
 
-def dload_site_list(out_file=None, url=UNR_SITE_LIST_FILE, print_msg=True):
-    """download DataHoldings.txt.
+supported_sources = ['UNR', 'ESESES']
 
-    Parameters: out_file - str, path to the local file.
-    Returns:    out_file - str, path to the local file.
-                           default: './GPS/DataHoldings.txt'
+UNR_site_list_file_url = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
+
+ESESES_site_list_file_url = 'http://garner.ucsd.edu/pub/measuresESESES_products/Velocities/ESESES_Velocities.txt'
+
+
+
+def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
+    """Download single file with list of GPS site locations.
     """
-    # output file path
-    if not out_file:
-        out_dir = os.path.abspath('./GPS')
-        out_file = os.path.join(out_dir, os.path.basename(url))
-    else:
-        out_dir = os.path.abspath(os.path.dirname(out_file))
+    # Check source is supported
+    assert source in supported_sources, \
+        f'Source {source:s} not supported. Use one of {supported_sources}'
 
-    # output file directory
-    if not os.path.isdir(out_dir):
-        if print_msg:
-            print('create directory:', out_dir)
-        os.makedirs(out_dir)
+    # Determine URL
+    if source == 'UNR':
+        site_list_file_url = UNR_site_list_file_url
+    elif source == 'ESESES':
+        site_list_file_url = ESESES_site_list_file_url
 
+    # Handle output file
+    if out_file is None:
+        out_file = os.path.basename(site_list_file_url)
+
+    # Report if requested
     if print_msg:
-        print(f'downloading site list from UNR Geod Lab: {url} to {out_file}')
-    urlretrieve(url, out_file)
+        print(f'Downloading site list from {source}: {site_list_file_url} to {out_file}')
+
+    # Download file
+    urlretrieve(site_list_file_url, out_file)
+
     return out_file
 
 
-def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_num_solution=50, print_msg=True):
-    """Search available GPS sites within the geo bounding box from UNR website.
-    Parameters: SNWE             - tuple of 4 float, indicating (South, North, West, East) in degrees
-                start_date       - str in YYYYMMDD format
-                end_date         - str in YYYYMMDD format
-                site_list_file   - str.
-                min_num_solution - int, minimum number of solutions available
-    Returns:    site_names       - 1D np.array of string for GPS station names
-                site_lats        - 1D np.array for lat
-                site_lons        - 1D np.array for lon
+def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
+               site_list_file=None, min_num_solution=None, print_msg=True):
+    """Search available GPS sites within the geo bounding box from UNR website
+    Parameters: SNWE       : tuple of 4 float, indicating (South, North, West, East) in degrees
+                start_date : string in YYYYMMDD format
+                end_date   : string in YYYYMMDD format
+                site_list_file : string.
+                min_num_solution : int, minimum number of solutions available
+    Returns:    site_names : 1D np.array of string for GPS station names
+                site_lats  : 1D np.array for lat
+                site_lons  : 1D np.array for lon
     """
-    # download site list file if it's not found in current directory
-    if site_list_file is None:
-        site_list_file = os.path.basename(UNR_SITE_LIST_FILE)
+    print('Searching!', source)
+    # Check start and end dates if provided
+    if start_date is not None:
+        start_date = dt.datetime.strptime(start_date, '%Y%m%d')
+    if end_date is not None:
+        end_date = dt.datetime.strptime(end_date, '%Y%m%d')
+    if start_date is not None and end_date is not None:
+        assert(start_date < end_date), 'Start date must be before end date'
 
+    # Check file name
+    if site_list_file is None:
+        if source == 'UNR':
+            print('Using UNR!')
+            site_list_file = os.path.basename(UNR_site_list_file_url)
+        elif source == 'ESESES':
+            site_list_file = os.path.basename(ESESES_site_list_file_url)
+
+    # Check whether site list file is in current directory
     if not os.path.isfile(site_list_file):
+        # Download file
         dload_site_list(site_list_file, print_msg=print_msg)
 
-    txt_data = np.loadtxt(site_list_file,
-                          dtype=bytes,
-                          skiprows=1,
-                          usecols=(0,1,2,3,4,5,6,7,8,9,10)).astype(str)
-    site_names = txt_data[:, 0]
-    site_lats, site_lons = txt_data[:, 1:3].astype(np.float32).T
-    site_lons -= np.round(site_lons / (360.)) * 360.
-    t0s = np.array([dt.datetime.strptime(i, "%Y-%m-%d") for i in txt_data[:, 7].astype(str)])
-    t1s = np.array([dt.datetime.strptime(i, "%Y-%m-%d") for i in txt_data[:, 8].astype(str)])
-    num_solution = txt_data[:, 10].astype(np.int16)
+    # Parse data from file
+    if source == 'UNR':
+        site_data = read_UNR_station_list(site_list_file)
+    elif source == 'ESESES':
+        site_data = read_ESESES_station_list(site_list_file)
 
-    # limit in space
-    idx = ((site_lats >= SNWE[0]) * (site_lats <= SNWE[1]) *
-           (site_lons >= SNWE[2]) * (site_lons <= SNWE[3]))
+    if print_msg == True:
+        print('Loaded data for fields: {:s}'.\
+            format(' '.join(list(site_data.columns))))
 
-    # limit in time
-    t0 = ptime.date_list2vector([start_date])[0][0] if start_date else None
-    t1 = ptime.date_list2vector([end_date])[0][0] if end_date else None
-    if start_date:
-        idx *= t1s >= t0
-    if end_date:
-        idx *= t0s <= t1
+    # Parse bounding box
+    lat_min, lat_max, lon_min, lon_max = SNWE
+    assert (lon_min < lon_max) and (lat_min < lat_max), \
+        'Check bounding box'
 
-    # limit on number of solutions
-    if min_num_solution is not None:
-        idx *= num_solution >= min_num_solution
+    if print_msg == True:
+        print('Cropping to')
+        print(f'lon range: {lon_min:.5f} to {lon_max:.5f}')
+        print(f'lat range: {lat_min:.5f} to {lat_max:.5f}')
 
-    return site_names[idx], site_lats[idx], site_lons[idx]
+    # Ensure lon values in (-180, 180]
+    site_data['lon'] = [lon - 360 if lon > 180 else lon \
+                        for lon in site_data['lon']]
+
+    # Limit in space
+    drop_ndx = (site_data.lat < lat_min) \
+                | (site_data.lat > lat_max) \
+                | (site_data.lon < lon_min) \
+                | (site_data.lon > lon_max)
+    site_data.drop(site_data[drop_ndx].index, inplace=True)
+
+    # Limit in time
+    if start_date is not None:
+        if hasattr(site_data, 'start_date'):
+            drop_ndx = site_data.start_date > start_date
+            site_data.drop(site_data[drop_ndx].index, inplace=True)
+        else:
+            print('No date information available--date range not applied to GPS site selection')
+
+    if end_date is not None:
+        if hasattr(site_data, 'end_date'):
+            drop_ndx = site_data.end_date < end_date
+            site_data.drop(site_data[drop_ndx].index, inplace=True)
+        else:
+            print('No date information available--date range not applied to GPS site selection')
+
+    # Limit based on number of solutions
+    if hasattr(site_data, 'num_solution'):
+        drop_ndx = site_data.num_solution < min_num_solution
+        site_data.drop(site_data[drop_ndx].index, inplace=True)
+
+    # Final reporting
+    if print_msg == True:
+        print('{:d} stations available'.format(site_data.shape[0]))
+
+    return (site_data.site.to_numpy(),
+            site_data.lat.to_numpy(),
+            site_data.lon.to_numpy())
+
+def read_UNR_station_list(site_list_file, print_msg=True):
+    """Return names and lon/lat values for UNR GNSS stations.
+    """
+    if print_msg == True:
+        print('Parsing UNR site list file')
+
+    # Read file contents
+    site_data = pd.read_fwf(site_list_file,
+                            widths=(4, 9, 12, 9, 14, 14, 14, 11, 11, 11, 7))
+
+    # Rename columns for uniformity
+    site_data.rename(columns={'Sta': 'site',
+        'Lat(deg)': 'lat', 'Long(deg)': 'lon',
+        'Dtbeg': 'start_date', 'Dtend': 'end_date',
+        'NumSol': 'num_solution'}, inplace=True)
+
+    # Format dates
+    site_data['start_date'] = [dt.datetime.strptime(date, '%Y-%m-%d') \
+                                for date in site_data.start_date]
+    site_data['end_date'] = [dt.datetime.strptime(date, '%Y-%m-%d') \
+                                for date in site_data.end_date]
+
+    return site_data
+
+def read_ESESES_station_list(site_list_file, print_msg=True):
+    """Return names and lon/lat values for JPL GNSS stations.
+    """
+    if print_msg == True:
+        print('Parsing ESESES site list file')
+
+    # Read file contents
+    site_data = pd.read_csv(site_list_file, header = 14, delim_whitespace=True)
+
+    # Rename columns for uniformity
+    site_data.rename(columns={'Site': 'site',
+        'Latitude': 'lat', 'Longitude': 'lon'}, inplace=True)
+
+    return site_data
 
 
 def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
                         dates2, pos_x2, pos_y2, pos_z2):
-    """Calculate the baseline change between two GPS displacement time-series.
-    Parameters: dates1/2     - 1D np.array of datetime.datetime object
-                pos_x/y/z1/2 - 1D np.ndarray of displacement in meters in np.float32
-    Returns:    dates        - 1D np.array of datetime.datetime object for the common dates
-                bases        - 1D np.ndarray of displacement in meters in np.float32 for the common dates
+    """Calculate the baseline change between two GPS displacement time-series
+    Parameters: dates1/2     : 1D np.array of datetime.datetime object
+                pos_x/y/z1/2 : 1D np.ndarray of displacement in meters in float32
+    Returns:    dates        : 1D np.array of datetime.datetime object for the common dates
+                bases        : 1D np.ndarray of displacement in meters in float32 for the common
+                               dates
     """
     dates = np.array(sorted(list(set(dates1) & set(dates2))))
-    bases = np.zeros(dates.shape, dtype=np.float64)
-    for i, date_str in enumerate(dates):
-        idx1 = np.where(dates1 == date_str)[0][0]
-        idx2 = np.where(dates2 == date_str)[0][0]
+    bases = np.zeros(dates.shape, dtype=float)
+    for i in range(len(dates)):
+        idx1 = np.where(dates1 == dates[i])[0][0]
+        idx2 = np.where(dates2 == dates[i])[0][0]
         basei = ((pos_x1[idx1] - pos_x2[idx2]) ** 2
                + (pos_y1[idx1] - pos_y2[idx2]) ** 2
                + (pos_z1[idx1] - pos_z2[idx2]) ** 2) ** 0.5
         bases[i] = basei
     bases -= bases[0]
-    bases = np.array(bases, dtype=np.float32)
+    bases = np.array(bases, dtype=float)
+
     return dates, bases
 
 
-def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='enu2los',
-                    horz_az_angle=-90., model=None, print_msg=True, redo=False):
+def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UNR',
+                    gps_comp='enu2los', horz_az_angle=-90., model=None,
+                    print_msg=True,redo=False):
     """Get the GPS LOS observations given the query info.
 
-    Parameters: meta          - dict, dictionary of metadata of the InSAR file
-                obs_type      - str, GPS observation data type, displacement or velocity.
-                site_names    - list of str, GPS sites, output of search_gps()
-                start_date    - str, date in YYYYMMDD format
-                end_date      - str, date in YYYYMMDD format
-                gps_comp      - str, flag of projecting 2/3D GPS into LOS
-                                e.g. enu2los, hz2los, up2los
+    Parameters: meta       - dict, dictionary of metadata of the InSAR file
+                obs_type   - str, GPS observation data type, displacement or velocity.
+                site_names - list of str, GPS sites, output of search_gps()
+                start_date - str, date in YYYYMMDD format
+                end_date   - str, date in YYYYMMDD format
+                gps_comp   - str, flag of projecting 2/3D GPS into LOS
+                             e.g. enu2los, hz2los, up2los
                 horz_az_angle - float, azimuth angle of the horizontal motion in degree
-                                measured from the north with anti-clockwise as positive
+                             measured from the north with anti-clockwise as positive
                 model         - dict, time function model, e.g. {'polynomial': 1, 'periodic': [1.0, 0.5]}
-                print_msg     - bool, print verbose info
-                redo          - bool, ignore existing CSV file and re-calculate
-    Returns:    site_obs      - 1D np.ndarray(), GPS LOS velocity or displacement in m or m/yr
+                print_msg  - bool, print verbose info
+                redo       - bool, ignore existing CSV file and re-calculate
+    Returns:    site_obs   - 1D np.ndarray(), GPS LOS velocity or displacement in m or m/yr
     Examples:   from mintpy.objects import gps
                 from mintpy.utils import readfile, utils as ut
                 meta = readfile.read_attribute('geo/geo_velocity.h5')
@@ -173,7 +270,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
 
     if not redo and os.path.isfile(csv_file) and num_row >= num_site:
         # read from existing CSV file
-        vprint(f'read GPS observations from file: {csv_file}')
+        vprint('read GPS observations from file: {}'.format(csv_file))
         fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
         site_obs = fc[col_names[obs_ind]]
 
@@ -181,8 +278,8 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
         # in case the site_names are not consistent with the CSV file.
         if num_row != num_site:
             temp_names = fc[col_names[0]]
-            temp_obs = np.array(site_obs, dtype=np.float32)
-            site_obs = np.zeros(num_site, dtype=np.float32) * np.nan
+            temp_obs = np.array(site_obs, dtype=float)
+            site_obs = np.zeros(num_site, dtype=float) * np.nan
             for i, site_name in enumerate(site_names):
                 if site_name in temp_names:
                     site_obs[i] = temp_obs[temp_names == site_name][0]
@@ -193,10 +290,12 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
         vprint('calculating GPS observation ...')
 
         # get geom_obj (meta / geom_file)
-        geom_file = ut.get_geometry_file(['incidenceAngle','azimuthAngle'], work_dir=file_dir, coord='geo')
+        geom_file = ut.get_geometry_file(['incidenceAngle','azimuthAngle'],
+                                         work_dir=file_dir, coord='geo')
         if geom_file:
             geom_obj = geom_file
-            vprint(f'use incidence / azimuth angle from file: {os.path.basename(geom_file)}')
+            vprint('use incidence / azimuth angle from file: {}'.\
+                   format(os.path.basename(geom_file)))
         else:
             geom_obj = meta
             vprint('use incidence / azimuth angle from metadata')
@@ -204,10 +303,11 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
         for i, site_name in enumerate(site_names):
-            prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {site_name}')
+            prog_bar.update(i+1, suffix='{}/{} {}'.format(i+1, num_site, site_name))
 
             # calculate gps data value
-            obj = GPS(site_name)
+            obj = GPS(site_name, source=source)
+            obj.open(print_msg=print_msg)
             vel, dis_ts = obj.get_gps_los_velocity(
                 geom_obj,
                 start_date=start_date,
@@ -230,7 +330,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
         # data_list = [x for x in data_list if not np.isnan(x[-1])]
 
         # write to CSV file
-        vprint(f'write GPS observations to file: {csv_file}')
+        vprint('write GPS observations to file: {}'.format(csv_file))
         with open(csv_file, 'w') as fc:
             fcw = csv.writer(fc)
             fcw.writerow(col_names)
@@ -240,7 +340,6 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
         site_obs = np.array([x[obs_ind] for x in data_list])
 
     return site_obs
-
 
 
 
@@ -255,14 +354,15 @@ def read_pos_file(fname):
     ds = fc[:,2].astype(int)
     dates = [dt.datetime(year=y, month=m, day=d) for y,m,d in zip(ys, ms, ds)]
 
-    X = fc[:,4].astype(np.float64).tolist()
-    Y = fc[:,5].astype(np.float64).tolist()
-    Z = fc[:,6].astype(np.float64).tolist()
+    X = fc[:,4].astype(float64).tolist()
+    Y = fc[:,5].astype(float64).tolist()
+    Z = fc[:,6].astype(float64).tolist()
+
     return dates, X, Y, Z
 
 
 def get_pos_years(gps_dir, site):
-    fnames = glob.glob(os.path.join(gps_dir, f'{site}.*.pos'))
+    fnames = glob.glob(os.path.join(gps_dir, '{}.*.pos'.format(site)))
     years = [os.path.basename(i).split('.')[1] for i in fnames]
     years = ptime.yy2yyyy(years)
     return years
@@ -276,7 +376,7 @@ def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
     dates, X, Y, Z = [], [], [], []
     for i in range(num_year):
         yeari = str(year0 + i)
-        fname = os.path.join(gps_dir, f'{site}.{yeari[2:]}.pos')
+        fname = os.path.join(gps_dir, '{}.{}.pos'.format(site, yeari[2:]))
         datesi, Xi, Yi, Zi = read_pos_file(fname)
         dates += datesi
         X += Xi
@@ -294,99 +394,152 @@ def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
     flag[dates > date1] = False
     return dates[flag], X[flag], Y[flag], Z[flag]
 
+
 #################################### End of GPS-GSI utility functions ##############################
 
 
 
-
-#################################### Beginning of GPS-UNR class ####################################
+#################################### Beginning of GPS class ########################################
 class GPS:
-    """GPS class for GPS time-series of daily solution
-
-    Example:
-      import matplotlib.pyplot as plt
-      from mintpy.objects.gps import GPS
-      from mintpy.utils import utils as ut
-      gps_obj = GPS(site='GV05', data_dir='~/insarlab/GPS')
-      gps_obj.open()
-      dis_los = ut.enu2los(gps_obj.dis_e,
-                           gps_obj.dis_n,
-                           gps_obj.dis_u)
-      dates = gps_obj.dates
-      plt.figure()
-      plt.scatter(dates, dis_los)
-      plt.show()
+    """GPS class for GPS time-series of daily solution.
     """
 
-    def __init__(self, site, data_dir='./GPS', version='IGS14'):
+    def __init__(self, site: str, source='UNR', data_dir='./GPS',
+                 version='IGS14'):
+        # Check inputs
+        assert source in supported_sources, \
+            f'Source {source:s} not supported. Use one of {supported_sources}'
+
+        # Record properties
         self.site = site
-        self.data_dir = os.path.abspath(data_dir)
+        self.source = source
         self.version = version
-        self.source = 'Nevada Geodetic Lab'
 
-        # time-series data from Nevada Geodetic Lab
-        # example link: http://geodesy.unr.edu/gps_timeseries/tenv3/IGS08/1LSU.IGS08.tenv3
-        #               http://geodesy.unr.edu/gps_timeseries/tenv3/IGS14/CASU.tenv3
-        if version == 'IGS08':
-            self.file = os.path.join(data_dir, f'{site}.{version}.tenv3')
-        elif version == 'IGS14':
-            self.file = os.path.join(data_dir, f'{site}.tenv3')
-        else:
-            raise ValueError(f'un-recognized GPS data version: {version}')
+        # Create data directory if not exist
+        self.data_dir = data_dir
+        if not os.path.exists(self.data_dir):
+            os.mkdir(self.data_dir)
 
-        url_prefix = 'http://geodesy.unr.edu/gps_timeseries/tenv3'
-        self.file_url = os.path.join(url_prefix, version, os.path.basename(self.file))
+        return None
 
-        # time-series plot from Nevada Geodetic Lab
-        # example link: http://geodesy.unr.edu/tsplots/IGS08/TimeSeries/CAMO.png
-        #               http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries/CASU.png
-        self.plot_file = os.path.join(data_dir, f'pic/{site}.png')
 
-        url_prefix = 'http://geodesy.unr.edu/tsplots'
-        if version == 'IGS08':
-            url_prefix += f'/{version}'
-        elif version == 'IGS14':
-            url_prefix += '/{0}/{0}'.format(version)
-        self.plot_file_url = os.path.join(url_prefix, f'TimeSeries/{site}.png')
+    def open(self, file=None, print_msg=True):
+        """Read the lat/lon and displacement data of the station.
+        Download if necessary.
+        """
+        # Download file if not present
+        if not hasattr(self, 'file'):
+            self.dload_site(print_msg=print_msg)
 
-        # list of stations from Nevada Geodetic Lab
-        self.site_list_file = os.path.join(data_dir, 'DataHoldings.txt')
-        if not os.path.isfile(self.site_list_file):
-            dload_site_list(self.site_list_file)
-        site_names = np.loadtxt(self.site_list_file, dtype=bytes, skiprows=1, usecols=(0)).astype(str)
-        if site not in site_names:
-            raise ValueError(f'Site {site} NOT found in file: {UNR_SITE_LIST_FILE}')
-
-        # directories for data files and plot files
-        for fdir in [data_dir, os.path.dirname(self.plot_file)]:
-            if not os.path.isdir(fdir):
-                os.makedirs(fdir)
-
-    def open(self, print_msg=True):
-        if not os.path.isfile(self.file):
-            self.dload_site()
+        # Retrieve data from file
         self.get_stat_lat_lon(print_msg=print_msg)
         self.read_displacement(print_msg=print_msg)
 
-    def dload_site(self, print_msg=True):
-        if print_msg:
-            print(f'downloading {self.site} from {self.file_url}')
+        return None
 
-        urlretrieve(self.file_url, self.file)
-        urlretrieve(self.plot_file_url, self.plot_file)
+
+    def dload_site(self, print_msg=True):
+        """Download the station displacement data from the
+        specified source.
+
+        Modifies:   self.file     : str for local file path/name
+                    self.file_url : str for file URL
+
+        Returns:    self.file
+        """
+        if print_msg == True:
+            print(f"Downloading data for site {self.site:s} from {self.source:s}")
+
+        # Download displacement data based on source
+        if self.source == 'UNR':
+            self.__download_unr_file__(print_msg=print_msg)
+        elif self.source == 'ESESES':
+            self.__download_eseses_file__(print_msg=print_msg)
 
         return self.file
 
+    def __download_unr_file__(self, print_msg):
+        """Download GPS displacement data from UNR.
+        """
+        # URL and file name specs
+        url_prefix = 'http://geodesy.unr.edu/gps_timeseries/tenv3'
+        if self.version == 'IGS08':
+            self.file = os.path.join(self.data_dir,
+                                     '{site:s}.{version:s}.tenv3'.\
+                                     format(site=self.site))
+        elif self.version == 'IGS14':
+            self.file = os.path.join(self.data_dir,
+                                    '{site:s}.tenv3'.\
+                                    format(site=self.site))
+        self.file_url = os.path.join(url_prefix, self.version,
+                                     os.path.basename(self.file))
+
+        # Download file if not present
+        if os.path.exists(self.file):
+            print(f'File {self.file} exists--reading')
+        else:
+            if print_msg == True:
+                print(f'... downloading {self.file_url:s} to {self.file:s}')
+            urlretrieve(self.file_url, self.file)
+
+        return None
+
+    def __download_eseses_file__(self, print_msg):
+        """Download GPS displacement data from ESESES.
+        """
+        # URL and file name specs
+        url_prefix = 'http://garner.ucsd.edu/pub/measuresESESES_products/Timeseries/CurrentUntarred/Clean_TrendNeuTimeSeries_comb_20240320'
+        self.file = os.path.join(self.data_dir,
+                                 '{site:s}CleanTrend.neu.Z'.\
+                                 format(site=self.site.lower()))
+        self.file_url = os.path.join(url_prefix, os.path.basename(self.file))
+
+        # Download file if not present
+        if os.path.exists(self.file):
+            print(f'File {self.file} exists--reading')
+        else:
+            if print_msg == True:
+                print(f'... downloading {self.file_url:s} to {self.file:s}')
+            urlretrieve(self.file_url, self.file)
+
+        # Unzip file
+        with zipfile.ZipFile(self.file, 'r') as Zfile:
+            Zfile.extractall(self.data_dir)
+
+        # Update file name
+        self.file = self.file.strip('.Z')
+        if print_msg == True:
+            print(f'... extracted to {self.file:s}')
+
+        return None
+
+
     def get_stat_lat_lon(self, print_msg=True):
-        """Get station lat/lon"""
-        if print_msg:
+        """Get station lat/lon based on processing source.
+        Retrieve data from the displacement file.
+        """
+        if print_msg == True:
             print('calculating station lat/lon')
         if not os.path.isfile(self.file):
             self.dload_site(print_msg=print_msg)
 
+        # Retrieve lat/lon based on processing source
+        if self.source == 'UNR':
+            self.__get_unr_lat_lon__()
+        elif self.source == 'ESESES':
+            self.__get_eseses_lat_lon__()
+
+        if print_msg == True:
+            print(f'\t{self.site_lat:f}, {self.site_lon:f}')
+
+        return self.site_lat, self.site_lon
+
+    def __get_unr_lat_lon__(self):
+        """Get station lat/lon for UNR data.
+        """
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
         ref_lon, ref_lat = float(data[0, 6]), 0.
-        e0, e_off, n0, n_off = data[0, 7:11].astype(np.float32)
+        e0, e_off, n0, n_off = data[0, 7:11].astype(float)
         e0 += e_off
         n0 += n_off
 
@@ -394,28 +547,85 @@ class GPS:
         dist = np.sqrt(e0**2 + n0**2)
         g = Geod(ellps='WGS84')
         self.site_lon, self.site_lat = g.fwd(ref_lon, ref_lat, az, dist)[0:2]
-        return self.site_lat, self.site_lon
 
-    def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):
-        """ Read GPS displacement time-series (defined by start/end_date).
-        Parameters: start/end_date - str in YYYYMMDD format
-        Returns:    dates          - 1D np.ndarray of datetime.datetime object
-                    dis_e/n/u      - 1D np.ndarray of displacement in meters in np.float32
-                    std_e/n/u      - 1D np.ndarray of displacement STD in meters in np.float32
+        return None
+
+    @staticmethod
+    def lon_360to180(lon: float) -> float:
+        """Convert longitude in the range [0, 360) to
+        range (-180, 180].
         """
-        # download file if it's not exists.
+        if lon > 180:
+            lon -= 360
+        return lon
+
+    def __get_eseses_lat_lon__(self):
+        """Get station lat/lon for ESESES data.
+        """
+        with open(self.file, 'r') as data_file:
+            # Read raw file contents
+            lines = data_file.readlines()
+
+            # Determine reference latitude
+            lat_line = [line for line in lines \
+                        if line.find('# Latitude') != -1]
+            lat_line = lat_line[0].strip('\n')
+            self.site_lat = float(lat_line.split()[-1])
+
+            # Determine reference longitude
+            lon_line = [line for line in lines \
+                        if line.find('# East Longitude') != -1]
+            lon_line = lon_line[0].strip('\n')
+            site_lon = float(lon_line.split()[-1])
+            self.site_lon = self.lon_360to180(site_lon)
+
+        return None
+
+
+    def read_displacement(self, start_date=None, end_date=None, print_msg=True,
+                          display=False):
+        """Read GPS displacement time-series (defined by start/end_date)
+        Parameters: start/end_date : str in YYYYMMDD format
+        Returns:    dates : 1D np.ndarray of datetime.datetime object
+                    dis_e/n/u : 1D np.ndarray of displacement in meters in float32
+                    std_e/n/u : 1D np.ndarray of displacement STD in meters in float32
+        """
+        # Download file if it does not exist
         if not os.path.isfile(self.file):
             self.dload_site(print_msg=print_msg)
 
-        # read dates, dis_e, dis_n, dis_u
-        if print_msg:
+        # Read dates, dis_e, dis_n, dis_u
+        if print_msg == True:
             print('reading time and displacement in east/north/vertical direction')
+
+        if self.source == 'UNR':
+            self.__read_unr_displacement__()
+        elif self.source == 'ESESES':
+            self.__read_eseses_displacement__()
+
+        # Cut out the specified time range
+        self.__crop_to_date_range__(start_date, end_date)
+
+        # Display if requested
+        if display == True:
+            self.display_data()
+
+        return (self.dates,
+                self.dis_e, self.dis_n, self.dis_u,
+                self.std_e, self.std_n, self.std_u)
+
+    def __read_unr_displacement__(self):
+        """Read GPS displacement time-series processed by UNR.
+        """
+        # Read data from file
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
 
-        self.dates = np.array([dt.datetime.strptime(i, "%y%b%d") for i in data[:, 1]])
-        #self.dates = np.array([ptime.decimal_year2datetime(i) for i in data[:, 2]])
+        # Parse dates
+        self.dates = np.array([dt.datetime.strptime(i, "%y%b%d") \
+                               for i in data[:,1]])
         self.date_list = [x.strftime('%Y%m%d') for x in self.dates]
 
+        # Parse displacement data
         (self.dis_e,
          self.dis_n,
          self.dis_u,
@@ -423,8 +633,37 @@ class GPS:
          self.std_n,
          self.std_u) = data[:, (8,10,12,14,15,16)].astype(np.float32).T
 
-        # cut out the specified time range
-        t_flag = np.ones(len(self.dates), np.bool_)
+        return None
+
+    def __read_eseses_displacement__(self):
+        """Read GPS displacement time-series processed by ESESES.
+        """
+        # Read data from file
+        data = np.loadtxt(self.file, usecols=tuple(range(0,12)))
+        n_data = data.shape[0]
+
+        # Parse dates
+        dates = [dt.datetime(int(data[i,1]), 1, 1) \
+                 + dt.timedelta(days=int(data[i,2])) \
+                 for i in range(n_data)]
+        self.dates = np.array(dates)
+        self.date_list = [date.strftime('%Y%m%d') for date in self.dates]
+
+        # Parse displacement data
+        (self.dis_n,
+         self.dis_e,
+         self.dis_u,
+         self.std_n,
+         self.std_e,
+         self.std_u) = data[:, 3:9].astype(np.float32).T / 1000
+
+        return None
+
+    def __crop_to_date_range__(self, start_date: str, end_date: str):
+        """Cut out the specified time range.
+        start/end_date in format YYYYMMDD
+        """
+        t_flag = np.ones(len(self.dates), bool)
         if start_date:
             t0 = ptime.date_list2vector([start_date])[0][0]
             t_flag[self.dates < t0] = 0
@@ -439,21 +678,34 @@ class GPS:
         self.std_n = self.std_n[t_flag]
         self.std_u = self.std_u[t_flag]
 
-        if display:
-            import matplotlib.pyplot as plt
-            _, ax = plt.subplots(nrows=3, ncols=1, sharex=True)
-            ax[0].scatter(self.dates, self.dis_e, s=2**2, label='East')
-            ax[1].scatter(self.dates, self.dis_n, s=2**2, label='North')
-            ax[2].scatter(self.dates, self.dis_u, s=2**2, label='Up')
-            plt.show()
+        return None
 
-        return (self.dates,
-                self.dis_e, self.dis_n, self.dis_u,
-                self.std_e, self.std_n, self.std_u)
+
+    def display_data(self):
+        """Display displacement data.
+        """
+        # Instantiate figure and axes
+        fig, ax = plt.subplots(nrows=3, ncols=1, sharex=True)
+
+        # Plot data
+        ax[0].scatter(self.dates, self.dis_e, s=2**2,
+                      c='k', label='East')
+        ax[1].scatter(self.dates, self.dis_n, s=2**2,
+                      c='k', label='North')
+        ax[2].scatter(self.dates, self.dis_u, s=2**2,
+                      c='k', label='Up')
+
+        # Format plot
+        fig.suptitle(f'{self.site:s} ({self.source:s})')
+
+        plt.show()
+
+        return fig, ax
 
 
     #####################################  Utility Functions ###################################
-    def displacement_enu2los(self, inc_angle:float, az_angle:float, gps_comp='enu2los', horz_az_angle=-90.):
+    def displacement_enu2los(self, inc_angle:float, az_angle:float, gps_comp='enu2los',
+                             horz_az_angle=-90., display=False, model=None):
         """Convert displacement in ENU to LOS direction.
 
         Parameters: inc_angle     - float, LOS incidence angle in degree
@@ -481,6 +733,22 @@ class GPS:
         self.std_los = (   (self.std_e * unit_vec[0])**2
                          + (self.std_n * unit_vec[1])**2
                          + (self.std_u * unit_vec[2])**2 ) ** 0.5
+
+        # display if requested
+        if display == True:
+            # Instantiate figure and axes
+            fig, ax = plt.subplots(sharex=True)
+
+            # Plot LOS displacement
+            ax.scatter(self.dates, self.dis_los, s=2**2,
+                       c='k', label='LOS')
+
+            # Plot fit if model specified
+            if model is not None:
+                # specific time_func model
+                date_list = [dt.datetime.strftime(i, '%Y%m%d') for i in dates]
+                A = time_func.get_design_matrix4time_func(date_list, model=model)
+                estm_dis = np.dot(np.linalg.pinv(A), self.dis_los)
 
         return self.dis_los, self.std_los
 
@@ -557,16 +825,37 @@ class GPS:
         return dates, dis, std, site_lalo, ref_site_lalo
 
 
-    def get_gps_los_velocity(self, geom_obj, start_date=None, end_date=None, ref_site=None,
-                             gps_comp='enu2los', horz_az_angle=-90., model=None):
+    def get_gps_los_velocity(self, geom_obj, start_date=None, end_date=None,
+                             ref_site=None, gps_comp='enu2los',
+                             horz_az_angle=-90., model=None,
+                             print_msg=True):
+        """Convert the three-component displacement data into LOS
+        velocity.
 
-        dates, dis = self.read_gps_los_displacement(
-            geom_obj,
-            start_date=start_date,
-            end_date=end_date,
-            ref_site=ref_site,
-            gps_comp=gps_comp,
-            horz_az_angle=horz_az_angle)[:2]
+        Parameters: geom_obj        : dict / str, metadata of InSAR file, or
+                                      geometry file path
+                    start_date      : string in YYYYMMDD format
+                    end_date        : string in YYYYMMDD format
+                    ref_site        : string, reference GPS site
+                    gps_comp        : string, GPS components used to convert to
+                                      LOS direction
+                    horz_az_angle   : float, fault azimuth angle used to convert
+                                 horizontal to fault-parallel
+                    model           : dict, time function model, e.g.
+                                      {'polynomial': 1, 'periodic': [1.0, 0.5]}
+        Returns:    dates : 1D np.array of datetime.datetime object
+                    dis   : 1D np.array of displacement in meters
+                    std   : 1D np.array of displacement uncertainty in meters
+                    site_lalo : tuple of 2 float, lat/lon of GPS site
+                    ref_site_lalo : tuple of 2 float, lat/lon of reference GPS site
+        """
+        # Retrieve displacement data
+        dates, dis = self.read_gps_los_displacement(geom_obj,
+                                                    start_date=start_date,
+                                                    end_date=end_date,
+                                                    ref_site=ref_site,
+                                                    gps_comp=gps_comp,
+                                                    horz_az_angle=horz_az_angle)[:2]
 
         # displacement -> velocity
         # if:
@@ -588,7 +877,10 @@ class GPS:
             self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
         else:
             self.velocity = np.nan
+            if print_msg == True:
+                print(f'Velocity calculation failed for site {self.site}')
 
         return self.velocity, dis
 
-#################################### End of GPS-UNR class ####################################
+
+#################################### End of GPS class ####################################

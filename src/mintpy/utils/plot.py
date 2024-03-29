@@ -1136,7 +1136,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         SNWE = (south, north, west, east)
 
     # query for GNSS stations
-    site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
+    site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date=start_date, end_date=end_date)
     if site_names.size == 0:
         warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
         print('  continue without GNSS plots.')
