@@ -30,6 +30,7 @@ STEP_LIST = [
     'invert_network',
     'correct_LOD',
     'correct_SET',
+    'correct_ionosphere',
     'correct_troposphere',
     'deramp',
     'correct_topography',
