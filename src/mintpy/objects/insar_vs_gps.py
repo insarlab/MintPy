@@ -16,8 +16,7 @@ from scipy import stats
 from scipy.interpolate import griddata
 
 from mintpy.defaults.plot import *
-from mintpy.objects import giantTimeseries, timeseries
-from mintpy.objects import gps
+from mintpy.objects import giantTimeseries, gps, timeseries
 from mintpy.utils import readfile, utils as ut
 
 

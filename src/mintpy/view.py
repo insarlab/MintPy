@@ -21,8 +21,12 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from mintpy import subset, version
 from mintpy.multilook import multilook_data
-from mintpy.objects import TIMESERIES_KEY_NAMES, giantIfgramStack, ifgramStack
-from mintpy.objects import gps
+from mintpy.objects import (
+    TIMESERIES_KEY_NAMES,
+    giantIfgramStack,
+    gps,
+    ifgramStack,
+)
 from mintpy.utils import plot as pp, ptime, readfile, utils as ut
 
 

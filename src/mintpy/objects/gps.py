@@ -8,20 +8,20 @@
 #     from mintpy.objects.gps import GPS
 
 
-import os
 import csv
-import glob
 import datetime as dt
-import numpy as np
-from pyproj import Geod
-from urllib.request import urlretrieve, urlopen
-import pandas as pd
+import glob
+import os
 import zipfile
+from urllib.request import urlopen, urlretrieve
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from pyproj import Geod
 
-from mintpy.utils import ptime, time_func, readfile, utils1 as ut
 from mintpy.objects.coord import coordinate
-
+from mintpy.utils import ptime, readfile, time_func, utils1 as ut
 
 supported_sources = ['UNR', 'ESESES']
 
