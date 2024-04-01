@@ -870,21 +870,24 @@ class ESESES_GPS(GPS):
             print(f'downloading data for site {self.site:s} from the ESESES source')
 
         # determine proper URL
-        url_fmt = 'http://garner.ucsd.edu/pub/measuresESESES_products/Timeseries/CurrentUntarred/Clean_TrendNeuTimeSeries_comb_{:d}'
+        url_fmt = 'http://garner.ucsd.edu/pub/measuresESESES_products/Timeseries/CurrentUntarred/Clean_TrendNeuTimeSeries_comb_{:s}'
 
         # start with today and check back in time
-        today = int(dt.date.today().strftime('%Y%m%d'))
+        today = dt.date.today()
         day_lim = 21
-        for days_ago in range(day_lim):
+        for days in range(day_lim):
+            # formulate "days ago"
+            days_ago = dt.timedelta(days=days)
+
             # formulate URL based on date
-            url_prefix = url_fmt.format(today - days_ago)
+            url_prefix = url_fmt.format((today - days_ago).strftime('%Y%m%d'))
 
             # check if page exists
             try:
-                urlopen(url_prefix)
+                urlopen(url_prefix)  #nosec
                 break
-            except:
-                if days_ago == day_lim - 1:
+            except Exception as excp:
+                if days_ago.days == (day_lim - 1):
                     raise FileNotFoundError('The ESESES source repository cannot be found.')
                 else:
                     pass
