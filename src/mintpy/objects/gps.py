@@ -759,7 +759,8 @@ class UNR_GPS(GPS):
 
         # download file if not present
         if os.path.exists(self.file):
-            print(f'File {self.file} exists--reading')
+            if print_msg == True:
+                print(f'File {self.file} exists--reading')
         else:
             if print_msg == True:
                 print(f'... downloading {self.file_url:s} to {self.file:s}')
@@ -900,7 +901,8 @@ class ESESES_GPS(GPS):
 
         # download file if not present
         if os.path.exists(self.file):
-            print(f'File {self.file} exists--reading')
+            if print_msg == True:
+                print(f'File {self.file} exists--reading')
         else:
             if print_msg == True:
                 print(f'... downloading {self.file_url:s} to {self.file:s}')
