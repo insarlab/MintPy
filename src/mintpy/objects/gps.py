@@ -560,7 +560,7 @@ class GPS:
         # display if requested
         if display == True:
             # instantiate figure and axes
-            fig, ax = plt.subplots(sharex=True)
+            _, ax = plt.subplots(sharex=True)
 
             # plot LOS displacement
             ax.scatter(self.dates, self.dis_los, s=2**2,
@@ -886,7 +886,7 @@ class ESESES_GPS(GPS):
             try:
                 urlopen(url_prefix)  #nosec
                 break
-            except Exception as excp:
+            except Exception:
                 if days_ago.days == (day_lim - 1):
                     raise FileNotFoundError('The ESESES source repository cannot be found.')
                 else:
