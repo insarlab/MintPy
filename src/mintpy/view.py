@@ -22,7 +22,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mintpy import subset, version
 from mintpy.multilook import multilook_data
 from mintpy.objects import TIMESERIES_KEY_NAMES, giantIfgramStack, ifgramStack
-from mintpy.objects.gps import GPS
+from mintpy.objects import gps
 from mintpy.utils import plot as pp, ptime, readfile, utils as ut
 
 
@@ -541,6 +541,10 @@ def plot_slice(ax, data, metadata, inps):
         # Reference (InSAR) data to a GNSS site
         coord = ut.coordinate(metadata)
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
+            # define GPS station object based on processing source
+            GPS = gps.GPS.get_gps_obj_by_source(inps.gps_source)
+
+            # GPS reference site
             ref_site_gps = GPS(site=inps.ref_gps_site)
             ref_site_gps.open()
             ref_site_lalo = ref_site_gps.get_stat_lat_lon(print_msg=False)

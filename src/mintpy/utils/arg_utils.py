@@ -247,6 +247,9 @@ def add_figure_argument(parser, figsize_img=False):
 def add_gps_argument(parser):
     """Argument group parser for GPS options"""
     gps = parser.add_argument_group('GPS', 'GPS data to display')
+    gps.add_argument('--gps-source', dest='gps_source', default='UNR',
+                     choices={'UNR', 'ESESES'},
+                     help='GPS processing source')
     gps.add_argument('--show-gps', dest='disp_gps', action='store_true',
                      help='Show UNR GPS location within the coverage.')
     gps.add_argument('--mask-gps', dest='mask_gps', action='store_true',

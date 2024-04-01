@@ -17,7 +17,7 @@ from scipy.interpolate import griddata
 
 from mintpy.defaults.plot import *
 from mintpy.objects import giantTimeseries, timeseries
-from mintpy.objects.gps import GPS
+from mintpy.objects import gps
 from mintpy.utils import readfile, utils as ut
 
 
@@ -28,6 +28,7 @@ class insar_vs_gps:
                 geom_file      : str, geometry HDF5 file
                 temp_coh_file  : str, temporal coherence HDF5 file
                 site_names     : list of str, GPS site names
+                gps_source     : str, program or institution that processed the GPS data
                 gps_dir        : str, directory of the local GPS data files
                 ref_site       : str, common reference site in space for InSAR and GPS
                 start/end_date : str, date in YYYYMMDD format for the start/end date
@@ -60,12 +61,13 @@ class insar_vs_gps:
     """
 
     def __init__(self, ts_file, geom_file, temp_coh_file,
-                 site_names, gps_dir='./GPS', ref_site='GV01',
+                 site_names, gps_source='UNR', gps_dir='./GPS', ref_site='GV01',
                  start_date=None, end_date=None, min_ref_date=None):
         self.insar_file = ts_file
         self.geom_file = geom_file
         self.temp_coh_file = temp_coh_file
         self.site_names = site_names
+        self.gps_source = gps_source
         self.gps_dir = gps_dir
         self.ref_site = ref_site
         self.num_site = len(site_names)
@@ -105,6 +107,13 @@ class insar_vs_gps:
         return
 
     def read_gps(self):
+        # define GPS station object based on processing source
+        if self.gps_source == 'UNR':
+            GPS = gps.UNR_GPS
+        elif self.gps_source == 'ESESES':
+            GPS = gps.ESESES_GPS
+
+        # read data for each GPS site
         for sname in self.site_names:
             site = {}
             site['name'] = sname

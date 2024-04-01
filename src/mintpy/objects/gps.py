@@ -61,16 +61,16 @@ def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
 def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
                site_list_file=None, min_num_solution=None, print_msg=True):
     """Search available GPS sites within the geo bounding box from UNR website
-    Parameters: SNWE       : tuple of 4 float, indicating (South, North, West, East) in degrees
-                start_date : string in YYYYMMDD format
-                end_date   : string in YYYYMMDD format
-                site_list_file : string.
-                min_num_solution : int, minimum number of solutions available
-    Returns:    site_names : 1D np.array of string for GPS station names
-                site_lats  : 1D np.array for lat
-                site_lons  : 1D np.array for lon
+    Parameters: SNWE             - tuple of 4 float, indicating (South, North, West, East) in degrees
+                source           - str, program or institution that processed the GPS data
+                start_date       - str, date in YYYYMMDD format
+                end_date         - str, date in YYYYMMDD format
+                site_list_file   - str
+                min_num_solution - int, minimum number of solutions available
+    Returns:    site_names       - 1D np.array of string, GPS station names
+                site_lats        - 1D np.array, lat
+                site_lons        - 1D np.array, lon
     """
-    print('Searching!', source)
     # Check start and end dates if provided
     if start_date is not None:
         start_date = dt.datetime.strptime(start_date, '%Y%m%d')
@@ -82,7 +82,6 @@ def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
     # Check file name
     if site_list_file is None:
         if source == 'UNR':
-            print('Using UNR!')
             site_list_file = os.path.basename(UNR_site_list_file_url)
         elif source == 'ESESES':
             site_list_file = os.path.basename(ESESES_site_list_file_url)
@@ -102,6 +101,9 @@ def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
         print('Loaded data for fields: {:s}'.\
             format(' '.join(list(site_data.columns))))
 
+    # Ensure that station name is consistent
+    site_data['site'] = [site_data.iloc[i,:].site.upper() for i in range(site_data.shape[0])]
+
     # Parse bounding box
     lat_min, lat_max, lon_min, lon_max = SNWE
     assert (lon_min < lon_max) and (lat_min < lat_max), \
@@ -113,8 +115,7 @@ def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
         print(f'lat range: {lat_min:.5f} to {lat_max:.5f}')
 
     # Ensure lon values in (-180, 180]
-    site_data['lon'] = [lon - 360 if lon > 180 else lon \
-                        for lon in site_data['lon']]
+    site_data['lon'] = [lon - 360 if lon > 180 else lon for lon in site_data['lon']]
 
     # Limit in space
     drop_ndx = (site_data.lat < lat_min) \
@@ -151,7 +152,7 @@ def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
             site_data.lat.to_numpy(),
             site_data.lon.to_numpy())
 
-def read_UNR_station_list(site_list_file, print_msg=True):
+def read_UNR_station_list(site_list_file:str, print_msg=True) -> pd.DataFrame:
     """Return names and lon/lat values for UNR GNSS stations.
     """
     if print_msg == True:
@@ -175,14 +176,14 @@ def read_UNR_station_list(site_list_file, print_msg=True):
 
     return site_data
 
-def read_ESESES_station_list(site_list_file, print_msg=True):
+def read_ESESES_station_list(site_list_file:str, print_msg=True) -> pd.DataFrame:
     """Return names and lon/lat values for JPL GNSS stations.
     """
     if print_msg == True:
         print('Parsing ESESES site list file')
 
     # Read file contents
-    site_data = pd.read_csv(site_list_file, header = 14, delim_whitespace=True)
+    site_data = pd.read_csv(site_list_file, header = 14, sep='\s+')
 
     # Rename columns for uniformity
     site_data.rename(columns={'Site': 'site',
@@ -194,11 +195,12 @@ def read_ESESES_station_list(site_list_file, print_msg=True):
 def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
                         dates2, pos_x2, pos_y2, pos_z2):
     """Calculate the baseline change between two GPS displacement time-series
-    Parameters: dates1/2     : 1D np.array of datetime.datetime object
-                pos_x/y/z1/2 : 1D np.ndarray of displacement in meters in float32
-    Returns:    dates        : 1D np.array of datetime.datetime object for the common dates
-                bases        : 1D np.ndarray of displacement in meters in float32 for the common
-                               dates
+    Parameters: dates1/2     - 1D np.array, datetime.datetime object
+                pos_x/y/z1/2 - 1D np.ndarray, displacement in meters in float32
+    Returns:    dates        - 1D np.array, datetime.datetime object for the
+                               common dates
+                bases        - 1D np.ndarray, displacement in meters in float32
+                               for the common dates
     """
     dates = np.array(sorted(list(set(dates1) & set(dates2))))
     bases = np.zeros(dates.shape, dtype=float)
@@ -323,12 +325,6 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
             data_list.append([obj.site, obj.site_lon, obj.site_lat, dis, vel])
         prog_bar.close()
 
-        # # discard invalid sites
-        # flag = np.isnan([x[-1] for x in data_list])
-        # vprint('discard extra {} stations due to limited overlap/observations in time:'.format(np.sum(flag)))
-        # vprint('  {}'.format(np.array(data_list)[flag][:,0].tolist()))
-        # data_list = [x for x in data_list if not np.isnan(x[-1])]
-
         # write to CSV file
         vprint('write GPS observations to file: {}'.format(csv_file))
         with open(csv_file, 'w') as fc:
@@ -402,26 +398,25 @@ def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
 #################################### Beginning of GPS class ########################################
 class GPS:
     """GPS class for GPS time-series of daily solution.
+
+    The GPS class is solely meant to be a parent class. Child classes, defined
+    below, support functions for downloading and parsing GPS position based on
+    the processing source (e.g., UNR, etc.). Use the `get_gps_obj_by_source`
+    method to determine appropriate child class.
     """
 
-    def __init__(self, site: str, source='UNR', data_dir='./GPS',
+    def __init__(self, site: str, data_dir='./GPS',
                  version='IGS14'):
-        # Check inputs
-        assert source in supported_sources, \
-            f'Source {source:s} not supported. Use one of {supported_sources}'
-
         # Record properties
         self.site = site
-        self.source = source
         self.version = version
 
         # Create data directory if not exist
-        self.data_dir = data_dir
+        self.data_dir = os.path.abspath(data_dir)
         if not os.path.exists(self.data_dir):
             os.mkdir(self.data_dir)
 
         return None
-
 
     def open(self, file=None, print_msg=True):
         """Read the lat/lon and displacement data of the station.
@@ -437,118 +432,25 @@ class GPS:
 
         return None
 
+    @staticmethod
+    def get_gps_obj_by_source(source:str):
+        """Return the appropriate GPS child class based on processing source.
+        """
+        if source == 'UNR':
+            return UNR_GPS
+        elif source == 'ESESES':
+            return ESESES_GPS
+        else:
+            raise ValueError(f'{source:s} source not supported.')
 
     def dload_site(self, print_msg=True):
-        """Download the station displacement data from the
-        specified source.
-
-        Modifies:   self.file     : str for local file path/name
-                    self.file_url : str for file URL
-
-        Returns:    self.file
-        """
-        if print_msg == True:
-            print(f"Downloading data for site {self.site:s} from {self.source:s}")
-
-        # Download displacement data based on source
-        if self.source == 'UNR':
-            self.__download_unr_file__(print_msg=print_msg)
-        elif self.source == 'ESESES':
-            self.__download_eseses_file__(print_msg=print_msg)
-
-        return self.file
-
-    def __download_unr_file__(self, print_msg):
-        """Download GPS displacement data from UNR.
-        """
-        # URL and file name specs
-        url_prefix = 'http://geodesy.unr.edu/gps_timeseries/tenv3'
-        if self.version == 'IGS08':
-            self.file = os.path.join(self.data_dir,
-                                     '{site:s}.{version:s}.tenv3'.\
-                                     format(site=self.site))
-        elif self.version == 'IGS14':
-            self.file = os.path.join(self.data_dir,
-                                    '{site:s}.tenv3'.\
-                                    format(site=self.site))
-        self.file_url = os.path.join(url_prefix, self.version,
-                                     os.path.basename(self.file))
-
-        # Download file if not present
-        if os.path.exists(self.file):
-            print(f'File {self.file} exists--reading')
-        else:
-            if print_msg == True:
-                print(f'... downloading {self.file_url:s} to {self.file:s}')
-            urlretrieve(self.file_url, self.file)
-
-        return None
-
-    def __download_eseses_file__(self, print_msg):
-        """Download GPS displacement data from ESESES.
-        """
-        # URL and file name specs
-        url_prefix = 'http://garner.ucsd.edu/pub/measuresESESES_products/Timeseries/CurrentUntarred/Clean_TrendNeuTimeSeries_comb_20240320'
-        self.file = os.path.join(self.data_dir,
-                                 '{site:s}CleanTrend.neu.Z'.\
-                                 format(site=self.site.lower()))
-        self.file_url = os.path.join(url_prefix, os.path.basename(self.file))
-
-        # Download file if not present
-        if os.path.exists(self.file):
-            print(f'File {self.file} exists--reading')
-        else:
-            if print_msg == True:
-                print(f'... downloading {self.file_url:s} to {self.file:s}')
-            urlretrieve(self.file_url, self.file)
-
-        # Unzip file
-        with zipfile.ZipFile(self.file, 'r') as Zfile:
-            Zfile.extractall(self.data_dir)
-
-        # Update file name
-        self.file = self.file.strip('.Z')
-        if print_msg == True:
-            print(f'... extracted to {self.file:s}')
-
-        return None
-
+        raise NotImplementedError('Func. dload_site not implemented. Override with child class.')
 
     def get_stat_lat_lon(self, print_msg=True):
-        """Get station lat/lon based on processing source.
-        Retrieve data from the displacement file.
-        """
-        if print_msg == True:
-            print('calculating station lat/lon')
-        if not os.path.isfile(self.file):
-            self.dload_site(print_msg=print_msg)
+        raise NotImplementedError('Func. get_stat_lat_lon not implemented. Override with child class.')
 
-        # Retrieve lat/lon based on processing source
-        if self.source == 'UNR':
-            self.__get_unr_lat_lon__()
-        elif self.source == 'ESESES':
-            self.__get_eseses_lat_lon__()
-
-        if print_msg == True:
-            print(f'\t{self.site_lat:f}, {self.site_lon:f}')
-
-        return self.site_lat, self.site_lon
-
-    def __get_unr_lat_lon__(self):
-        """Get station lat/lon for UNR data.
-        """
-        data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
-        ref_lon, ref_lat = float(data[0, 6]), 0.
-        e0, e_off, n0, n_off = data[0, 7:11].astype(float)
-        e0 += e_off
-        n0 += n_off
-
-        az = np.arctan2(e0, n0) / np.pi * 180.
-        dist = np.sqrt(e0**2 + n0**2)
-        g = Geod(ellps='WGS84')
-        self.site_lon, self.site_lat = g.fwd(ref_lon, ref_lat, az, dist)[0:2]
-
-        return None
+    def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):
+        raise NotImplementedError('Func. read_displacement not implemented. Override with child class.')
 
     @staticmethod
     def lon_360to180(lon: float) -> float:
@@ -558,106 +460,6 @@ class GPS:
         if lon > 180:
             lon -= 360
         return lon
-
-    def __get_eseses_lat_lon__(self):
-        """Get station lat/lon for ESESES data.
-        """
-        with open(self.file, 'r') as data_file:
-            # Read raw file contents
-            lines = data_file.readlines()
-
-            # Determine reference latitude
-            lat_line = [line for line in lines \
-                        if line.find('# Latitude') != -1]
-            lat_line = lat_line[0].strip('\n')
-            self.site_lat = float(lat_line.split()[-1])
-
-            # Determine reference longitude
-            lon_line = [line for line in lines \
-                        if line.find('# East Longitude') != -1]
-            lon_line = lon_line[0].strip('\n')
-            site_lon = float(lon_line.split()[-1])
-            self.site_lon = self.lon_360to180(site_lon)
-
-        return None
-
-
-    def read_displacement(self, start_date=None, end_date=None, print_msg=True,
-                          display=False):
-        """Read GPS displacement time-series (defined by start/end_date)
-        Parameters: start/end_date : str in YYYYMMDD format
-        Returns:    dates : 1D np.ndarray of datetime.datetime object
-                    dis_e/n/u : 1D np.ndarray of displacement in meters in float32
-                    std_e/n/u : 1D np.ndarray of displacement STD in meters in float32
-        """
-        # Download file if it does not exist
-        if not os.path.isfile(self.file):
-            self.dload_site(print_msg=print_msg)
-
-        # Read dates, dis_e, dis_n, dis_u
-        if print_msg == True:
-            print('reading time and displacement in east/north/vertical direction')
-
-        if self.source == 'UNR':
-            self.__read_unr_displacement__()
-        elif self.source == 'ESESES':
-            self.__read_eseses_displacement__()
-
-        # Cut out the specified time range
-        self.__crop_to_date_range__(start_date, end_date)
-
-        # Display if requested
-        if display == True:
-            self.display_data()
-
-        return (self.dates,
-                self.dis_e, self.dis_n, self.dis_u,
-                self.std_e, self.std_n, self.std_u)
-
-    def __read_unr_displacement__(self):
-        """Read GPS displacement time-series processed by UNR.
-        """
-        # Read data from file
-        data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
-
-        # Parse dates
-        self.dates = np.array([dt.datetime.strptime(i, "%y%b%d") \
-                               for i in data[:,1]])
-        self.date_list = [x.strftime('%Y%m%d') for x in self.dates]
-
-        # Parse displacement data
-        (self.dis_e,
-         self.dis_n,
-         self.dis_u,
-         self.std_e,
-         self.std_n,
-         self.std_u) = data[:, (8,10,12,14,15,16)].astype(np.float32).T
-
-        return None
-
-    def __read_eseses_displacement__(self):
-        """Read GPS displacement time-series processed by ESESES.
-        """
-        # Read data from file
-        data = np.loadtxt(self.file, usecols=tuple(range(0,12)))
-        n_data = data.shape[0]
-
-        # Parse dates
-        dates = [dt.datetime(int(data[i,1]), 1, 1) \
-                 + dt.timedelta(days=int(data[i,2])) \
-                 for i in range(n_data)]
-        self.dates = np.array(dates)
-        self.date_list = [date.strftime('%Y%m%d') for date in self.dates]
-
-        # Parse displacement data
-        (self.dis_n,
-         self.dis_e,
-         self.dis_u,
-         self.std_n,
-         self.std_e,
-         self.std_u) = data[:, 3:9].astype(np.float32).T / 1000
-
-        return None
 
     def __crop_to_date_range__(self, start_date: str, end_date: str):
         """Cut out the specified time range.
@@ -681,21 +483,30 @@ class GPS:
         return None
 
 
-    def display_data(self):
+    def display_data(self, marker_size=2, marker_color='k', plot_errors=True):
         """Display displacement data.
         """
         # Instantiate figure and axes
         fig, ax = plt.subplots(nrows=3, ncols=1, sharex=True)
 
-        # Plot data
-        ax[0].scatter(self.dates, self.dis_e, s=2**2,
-                      c='k', label='East')
-        ax[1].scatter(self.dates, self.dis_n, s=2**2,
-                      c='k', label='North')
-        ax[2].scatter(self.dates, self.dis_u, s=2**2,
-                      c='k', label='Up')
+        # Plot displacement data
+        ax[0].scatter(self.dates, self.dis_e, s=marker_size**2, c=marker_color)
+        ax[1].scatter(self.dates, self.dis_n, s=marker_size**2, c=marker_color)
+        ax[2].scatter(self.dates, self.dis_u, s=marker_size**2, c=marker_color)
+
+        # Plot displacement errors
+        if plot_errors == True:
+            ax[0].errorbar(self.dates, self.dis_e, yerr=self.std_e,
+                           linestyle='none', color=marker_color)
+            ax[1].errorbar(self.dates, self.dis_n, yerr=self.std_n,
+                           linestyle='none', color=marker_color)
+            ax[2].errorbar(self.dates, self.dis_u, yerr=self.std_u,
+                           linestyle='none', color=marker_color)
 
         # Format plot
+        ax[0].set_ylabel('East (m)')
+        ax[1].set_ylabel('North (m)')
+        ax[2].set_ylabel('Up (m)')
         fig.suptitle(f'{self.site:s} ({self.source:s})')
 
         plt.show()
@@ -786,11 +597,12 @@ class GPS:
         """Read GPS displacement in LOS direction.
 
         Parameters: geom_obj      - dict / str, metadata of InSAR file, or geometry file path
-                    start_date    - str in YYYYMMDD format
-                    end_date      - str in YYYYMMDD format
+                    start_date    - str, dates in YYYYMMDD format
+                    end_date      - str, dates in YYYYMMDD format
                     ref_site      - str, reference GPS site
                     gps_comp      - str, GPS components used to convert to LOS direction
-                    horz_az_angle - float, fault azimuth angle used to convert horizontal to fault-parallel
+                    horz_az_angle - float, fault azimuth angle used to convert horizontal
+                                    to fault-parallel
         Returns:    dates         - 1D np.array of datetime.datetime object
                     dis/std       - 1D np.array of displacement / uncertainty in meters
                     site_lalo     - tuple of 2 float, lat/lon of GPS site
@@ -799,15 +611,21 @@ class GPS:
         # read GPS object
         inc_angle, az_angle = self.get_los_geometry(geom_obj)
         dates = self.read_displacement(start_date, end_date, print_msg=print_msg)[0]
-        dis, std = self.displacement_enu2los(inc_angle, az_angle, gps_comp=gps_comp, horz_az_angle=horz_az_angle)
+        dis, std = self.displacement_enu2los(inc_angle, az_angle, gps_comp=gps_comp,
+                                             horz_az_angle=horz_az_angle)
         site_lalo = self.get_stat_lat_lon(print_msg=print_msg)
+
+        # define GPS station object based on processing source
+        GPS = self.get_gps_obj_by_source(self.source)
 
         # get LOS displacement relative to another GPS site
         if ref_site:
             ref_obj = GPS(site=ref_site, data_dir=self.data_dir)
+            ref_obj.open()
             ref_obj.read_displacement(start_date, end_date, print_msg=print_msg)
             inc_angle, az_angle = ref_obj.get_los_geometry(geom_obj)
-            ref_obj.displacement_enu2los(inc_angle, az_angle, gps_comp=gps_comp, horz_az_angle=horz_az_angle)
+            ref_obj.displacement_enu2los(inc_angle, az_angle, gps_comp=gps_comp,
+                                         horz_az_angle=horz_az_angle)
             ref_site_lalo = ref_obj.get_stat_lat_lon(print_msg=print_msg)
 
             # get relative LOS displacement on common dates
@@ -881,6 +699,265 @@ class GPS:
                 print(f'Velocity calculation failed for site {self.site}')
 
         return self.velocity, dis
+
+
+
+class UNR_GPS(GPS):
+    """GPS class for daily solutions processed by UNR NGL.
+
+    This object will assign the attributes:
+            site          - str, four-digit site code
+            site_lat/lon  - float
+            dates         - 1D np.ndarray
+            date_list     - list
+            dis_e/n/u     - 1D np.ndarray
+            std_e,n,u     - 1D np.ndarray
+
+    based on the specific formats of the data source, using the functions:
+            dload_site
+            get_stat_lat_lon
+            read_displacement
+    """
+    source = 'UNR'
+
+    def dload_site(self, print_msg=True) -> str:
+        """Download the station displacement data from the
+        specified source.
+
+        Modifies:   self.file     - str, local file path/name
+                    self.file_url - str, file URL
+        Returns:    self.file     - str, local file path/name
+        """
+        if print_msg == True:
+            print(f"Downloading data for site {self.site:s} from UNR NGL source")
+
+        # URL and file name specs
+        url_prefix = 'http://geodesy.unr.edu/gps_timeseries/tenv3'
+        if self.version == 'IGS08':
+            self.file = os.path.join(self.data_dir,
+                                     '{site:s}.{version:s}.tenv3'.\
+                                     format(site=self.site))
+        elif self.version == 'IGS14':
+            self.file = os.path.join(self.data_dir,
+                                    '{site:s}.tenv3'.\
+                                    format(site=self.site))
+        self.file_url = os.path.join(url_prefix, self.version,
+                                     os.path.basename(self.file))
+
+        # Download file if not present
+        if os.path.exists(self.file):
+            print(f'File {self.file} exists--reading')
+        else:
+            if print_msg == True:
+                print(f'... downloading {self.file_url:s} to {self.file:s}')
+            urlretrieve(self.file_url, self.file)
+
+        return self.file
+
+    def get_stat_lat_lon(self, print_msg=True) -> (str, str):
+        """Get station lat/lon based on processing source.
+        Retrieve data from the displacement file.
+
+        Modifies:   self.lat/lon - str
+        Returns:    self.lat/lon - str
+        """
+        if print_msg == True:
+            print('calculating station lat/lon')
+
+        data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
+        ref_lon, ref_lat = float(data[0, 6]), 0.
+        e0, e_off, n0, n_off = data[0, 7:11].astype(float)
+        e0 += e_off
+        n0 += n_off
+
+        az = np.arctan2(e0, n0) / np.pi * 180.
+        dist = np.sqrt(e0**2 + n0**2)
+        g = Geod(ellps='WGS84')
+        self.site_lon, self.site_lat = g.fwd(ref_lon, ref_lat, az, dist)[0:2]
+
+        if print_msg == True:
+            print(f'\t{self.site_lat:f}, {self.site_lon:f}')
+
+        return self.site_lat, self.site_lon
+
+    def read_displacement(self, start_date=None, end_date=None, print_msg=True,
+                          display=False):
+        """Read GPS displacement time-series (defined by start/end_date)
+        Parameters: start/end_date - str, date in YYYYMMDD format
+        Returns:    dates          - 1D np.ndarray of datetime.datetime object
+                    dis_e/n/u      - 1D np.ndarray of displacement in meters in float32
+                    std_e/n/u      - 1D np.ndarray of displacement STD in meters in float32
+        """
+        # Download file if it does not exist
+        if not os.path.isfile(self.file):
+            self.dload_site(print_msg=print_msg)
+
+        # Read dates, dis_e, dis_n, dis_u
+        if print_msg == True:
+            print('reading time and displacement in east/north/vertical direction')
+
+        # Read data from file
+        data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
+
+        # Parse dates
+        self.dates = np.array([dt.datetime.strptime(i, "%y%b%d") \
+                               for i in data[:,1]])
+        self.date_list = [date.strftime('%Y%m%d') for date in self.dates]
+
+        # Parse displacement data
+        (self.dis_e,
+         self.dis_n,
+         self.dis_u,
+         self.std_e,
+         self.std_n,
+         self.std_u) = data[:, (8,10,12,14,15,16)].astype(np.float32).T
+
+        # Cut out the specified time range
+        self.__crop_to_date_range__(start_date, end_date)
+
+        # Display if requested
+        if display == True:
+            self.display_data()
+
+        return (self.dates,
+                self.dis_e, self.dis_n, self.dis_u,
+                self.std_e, self.std_n, self.std_u)
+
+
+
+class ESESES_GPS(GPS):
+    """GPS class for daily solutions processed by ESESES.
+
+    This object will assign the attributes:
+            site          - str, four-digit site code
+            site_lat/lon  - float
+            dates         - 1D np.ndarray
+            date_list     - list
+            dis_e/n/u     - 1D np.ndarray
+            std_e,n,u     - 1D np.ndarray
+
+    based on the specific formats of the data source, using the functions:
+            dload_site
+            get_stat_lat_lon
+            read_displacement
+    """
+    source = 'ESESES'
+
+    def dload_site(self, print_msg=True) -> str:
+        """Download the station displacement data from the
+        specified source.
+
+        Modifies:   self.file     - str, local file path/name
+                    self.file_url - str, file URL
+        Returns:    self.file     - str, local file path/name
+        """
+        if print_msg == True:
+            print(f'downloading data for site {self.site:s} from the ESESES source')
+
+        # URL and file name specs
+        url_prefix = 'http://garner.ucsd.edu/pub/measuresESESES_products/Timeseries/CurrentUntarred/Clean_TrendNeuTimeSeries_comb_20240320'
+        self.file = os.path.join(self.data_dir,
+                                 '{site:s}CleanTrend.neu.Z'.\
+                                 format(site=self.site.lower()))
+        self.file_url = os.path.join(url_prefix, os.path.basename(self.file))
+
+        # Download file if not present
+        if os.path.exists(self.file):
+            print(f'File {self.file} exists--reading')
+        else:
+            if print_msg == True:
+                print(f'... downloading {self.file_url:s} to {self.file:s}')
+            urlretrieve(self.file_url, self.file)
+
+        # Unzip file
+        with zipfile.ZipFile(self.file, 'r') as Zfile:
+            Zfile.extractall(self.data_dir)
+
+        # Update file name
+        self.file = self.file.strip('.Z')
+        if print_msg == True:
+            print(f'... extracted to {self.file:s}')
+
+        return self.file
+
+
+    def get_stat_lat_lon(self, print_msg=True) -> (str, str):
+        """Get station lat/lon based on processing source.
+        Retrieve data from the displacement file.
+
+        Modifies:   self.lat/lon - str
+        Returns:    self.lat/lon - str
+        """
+        if print_msg == True:
+            print('calculating station lat/lon')
+
+        with open(self.file, 'r') as data_file:
+            # Read raw file contents
+            lines = data_file.readlines()
+
+            # Determine reference latitude
+            lat_line = [line for line in lines \
+                        if line.find('# Latitude') != -1]
+            lat_line = lat_line[0].strip('\n')
+            self.site_lat = float(lat_line.split()[-1])
+
+            # Determine reference longitude
+            lon_line = [line for line in lines \
+                        if line.find('# East Longitude') != -1]
+            lon_line = lon_line[0].strip('\n')
+            site_lon = float(lon_line.split()[-1])
+            self.site_lon = self.lon_360to180(site_lon)
+
+        if print_msg == True:
+            print(f'\t{self.site_lat:f}, {self.site_lon:f}')
+
+        return self.site_lat, self.site_lon
+
+    def read_displacement(self, start_date=None, end_date=None, print_msg=True,
+                          display=False):
+        """Read GPS displacement time-series (defined by start/end_date)
+        Parameters: start/end_date - str, date in YYYYMMDD format
+        Returns:    dates          - 1D np.ndarray of datetime.datetime object
+                    dis_e/n/u      - 1D np.ndarray of displacement in meters in float32
+                    std_e/n/u      - 1D np.ndarray of displacement STD in meters in float32
+        """
+        # Download file if it does not exist
+        if not os.path.isfile(self.file):
+            self.dload_site(print_msg=print_msg)
+
+        # Read dates, dis_e, dis_n, dis_u
+        if print_msg == True:
+            print('reading time and displacement in east/north/vertical direction')
+
+        # read data from file
+        data = np.loadtxt(self.file, usecols=tuple(range(0,12)))
+        n_data = data.shape[0]
+
+        # Parse dates
+        dates = [dt.datetime(int(data[i,1]), 1, 1) \
+                 + dt.timedelta(days=int(data[i,2])) \
+                 for i in range(n_data)]
+        self.dates = np.array(dates)
+        self.date_list = [date.strftime('%Y%m%d') for date in self.dates]
+
+        # Parse displacement data
+        (self.dis_n,
+         self.dis_e,
+         self.dis_u,
+         self.std_n,
+         self.std_e,
+         self.std_u) = data[:, 3:9].astype(np.float32).T / 1000
+
+        # Cut out the specified time range
+        self.__crop_to_date_range__(start_date, end_date)
+
+        # Display if requested
+        if display == True:
+            self.display_data()
+
+        return (self.dates,
+                self.dis_e, self.dis_n, self.dis_u,
+                self.std_e, self.std_n, self.std_u)
 
 
 #################################### End of GPS class ####################################
