@@ -34,27 +34,26 @@ ESESES_site_list_file_url = 'http://garner.ucsd.edu/pub/measuresESESES_products/
 def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
     """Download single file with list of GPS site locations.
     """
-    # Check source is supported
+    # check source is supported
     assert source in supported_sources, \
         f'Source {source:s} not supported. Use one of {supported_sources}'
 
-    # Determine URL
+    # determine URL
     if source == 'UNR':
         site_list_file_url = UNR_site_list_file_url
     elif source == 'ESESES':
         site_list_file_url = ESESES_site_list_file_url
 
-    # Handle output file
+    # handle output file
     if out_file is None:
         out_file = os.path.basename(site_list_file_url)
 
-    # Report if requested
+    # report if requested
     if print_msg:
         print(f'Downloading site list from {source}: {site_list_file_url} to {out_file}')
 
-    # Download file
-    #nosec
-    urlretrieve(site_list_file_url, out_file)
+    # download file
+    urlretrieve(site_list_file_url, out_file)  #nosec
 
     return out_file
 
@@ -206,8 +205,8 @@ def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
     dates = np.array(sorted(list(set(dates1) & set(dates2))))
     bases = np.zeros(dates.shape, dtype=float)
     for i, date in enumerate(dates):
-        idx1 = np.where(dates1 == dates[i])[0][0]
-        idx2 = np.where(dates2 == dates[i])[0][0]
+        idx1 = np.where(dates1 == date)[0][0]
+        idx2 = np.where(dates2 == date)[0][0]
         basei = ((pos_x1[idx1] - pos_x2[idx2]) ** 2
                + (pos_y1[idx1] - pos_y2[idx2]) ** 2
                + (pos_z1[idx1] - pos_z2[idx2]) ** 2) ** 0.5
@@ -750,7 +749,7 @@ class UNR_GPS(GPS):
         if self.version == 'IGS08':
             self.file = os.path.join(self.data_dir,
                                      '{site:s}.{version:s}.tenv3'.\
-                                     format(site=self.site, version=version))
+                                     format(site=self.site, version=self.version))
         elif self.version == 'IGS14':
             self.file = os.path.join(self.data_dir,
                                     '{site:s}.tenv3'.\
@@ -764,8 +763,7 @@ class UNR_GPS(GPS):
         else:
             if print_msg == True:
                 print(f'... downloading {self.file_url:s} to {self.file:s}')
-            #nosec
-            urlretrieve(self.file_url, self.file)
+            urlretrieve(self.file_url, self.file)  #nosec
 
         return self.file
 
@@ -903,8 +901,7 @@ class ESESES_GPS(GPS):
         else:
             if print_msg == True:
                 print(f'... downloading {self.file_url:s} to {self.file:s}')
-            #nosec
-            urlretrieve(self.file_url, self.file)
+            urlretrieve(self.file_url, self.file)  #nosec
 
         # unzip file
         with zipfile.ZipFile(self.file, 'r') as Zfile:
