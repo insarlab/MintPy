@@ -146,7 +146,7 @@ def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
 
     # Final reporting
     if print_msg == True:
-        print('{:d} stations available'.format(site_data.shape[0]))
+        print(f'{site_data.shape[0]:d} stations available')
 
     return (site_data.site.to_numpy(),
             site_data.lat.to_numpy(),
@@ -183,7 +183,7 @@ def read_ESESES_station_list(site_list_file:str, print_msg=True) -> pd.DataFrame
         print('Parsing ESESES site list file')
 
     # Read file contents
-    site_data = pd.read_csv(site_list_file, header = 14, sep='\s+')
+    site_data = pd.read_csv(site_list_file, header = 14, sep=r'\s+')
 
     # Rename columns for uniformity
     site_data.rename(columns={'Site': 'site',
@@ -273,7 +273,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
 
     if not redo and os.path.isfile(csv_file) and num_row >= num_site:
         # read from existing CSV file
-        vprint('read GPS observations from file: {}'.format(csv_file))
+        vprint(f'read GPS observations from file: {csv_file}')
         fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
         site_obs = fc[col_names[obs_ind]]
 
@@ -306,7 +306,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
         for i, site_name in enumerate(site_names):
-            prog_bar.update(i+1, suffix='{}/{} {}'.format(i+1, num_site, site_name))
+            prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {site_name}')
 
             # calculate gps data value
             GPSclass = GPS.get_gps_obj_by_source(source)
@@ -328,7 +328,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
         prog_bar.close()
 
         # write to CSV file
-        vprint('write GPS observations to file: {}'.format(csv_file))
+        vprint(f'write GPS observations to file: {csv_file}')
         with open(csv_file, 'w') as fc:
             fcw = csv.writer(fc)
             fcw.writerow(col_names)
@@ -360,7 +360,7 @@ def read_pos_file(fname):
 
 
 def get_pos_years(gps_dir, site):
-    fnames = glob.glob(os.path.join(gps_dir, '{}.*.pos'.format(site)))
+    fnames = glob.glob(os.path.join(gps_dir, f'{site}.*.pos'))
     years = [os.path.basename(i).split('.')[1] for i in fnames]
     years = ptime.yy2yyyy(years)
     return years
@@ -374,7 +374,7 @@ def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
     dates, X, Y, Z = [], [], [], []
     for i in range(num_year):
         yeari = str(year0 + i)
-        fname = os.path.join(gps_dir, '{}.{}.pos'.format(site, yeari[2:]))
+        fname = os.path.join(gps_dir, f'{site}.{yeari[2:]}.pos')
         datesi, Xi, Yi, Zi = read_pos_file(fname)
         dates += datesi
         X += Xi
@@ -928,7 +928,7 @@ class ESESES_GPS(GPS):
         if print_msg == True:
             print('calculating station lat/lon')
 
-        with open(self.file, 'r') as data_file:
+        with open(self.file) as data_file:
             # Read raw file contents
             lines = data_file.readlines()
 
