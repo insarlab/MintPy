@@ -1247,7 +1247,7 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
 
 def plot_insar_vs_gnss_scatter(vel_file, csv_file='gnss_enu2los.csv', msk_file=None, ref_gnss_site=None, cutoff=5,
-                              fig_size=[4, 4], xname='InSAR', vlim=None, ex_gnss_sites=None, display=True):
+                              fig_size=(4, 4), xname='InSAR', vlim=None, ex_gnss_sites=None, display=True):
     """Scatter plot to compare the velocities between SAR/InSAR and GNSS.
 
     Parameters: vel_file      - str, path of InSAR LOS velocity HDF5 file.
