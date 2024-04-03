@@ -200,7 +200,7 @@ def read_JPL_SIDESHOW_station_list(site_list_file:str, print_msg=True) -> pd.Dat
         print('Parsing JPL-SIDESHOW site list file')
 
     # read file contents
-    with open(site_list_file, 'r') as site_list:
+    with open(site_list_file) as site_list:
         lines = site_list.readlines()
 
     # find lines containing position and velocity data
@@ -1148,7 +1148,7 @@ class JPL_SIDESHOW_GNSS(GNSS):
         site_list_file = dload_site_list(source='JPL-SIDESHOW')
 
         # find site in site list file
-        with open(site_list_file, 'r') as site_list:
+        with open(site_list_file) as site_list:
             for line in site_list:
                 if (line[:4] == self.site) and (line[5:8] == 'POS'):
                     site_lat, site_lon = line.split()[2:4]
@@ -1272,7 +1272,7 @@ class Generic_GNSS(GNSS):
         site_list_file = 'GenericList.txt'
 
         # find site in site list file
-        with open(site_list_file, 'r') as site_list:
+        with open(site_list_file) as site_list:
             for line in site_list:
                 if line[:4] == self.site:
                     site_lat, site_lon = line.split()[1:3]
@@ -1303,7 +1303,7 @@ class Generic_GNSS(GNSS):
             print('reading time and displacement in east/north/vertical direction')
 
         # parse dates
-        with open(self.file, 'r') as data_file:
+        with open(self.file) as data_file:
             lines = data_file.readlines()
         self.dates = []
         for line in lines:
