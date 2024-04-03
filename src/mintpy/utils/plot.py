@@ -1247,7 +1247,7 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
 
 def plot_insar_vs_gnss_scatter(vel_file, csv_file='gnss_enu2los.csv', msk_file=None, ref_gnss_site=None, cutoff=5,
-                              fig_size=[4, 4], xname='InSAR', vlim=None, ex_gnss_sites=[], display=True):
+                              fig_size=[4, 4], xname='InSAR', vlim=None, ex_gnss_sites=None, display=True):
     """Scatter plot to compare the velocities between SAR/InSAR and GNSS.
 
     Parameters: vel_file      - str, path of InSAR LOS velocity HDF5 file.
@@ -1292,8 +1292,8 @@ def plot_insar_vs_gnss_scatter(vel_file, csv_file='gnss_enu2los.csv', msk_file=N
     lons = fc['Lon']
     gnss_obs = fc[col_names[-1]] * unit_fac
 
-    if ex_gnss_sites:
-        ex_flag = np.array([x in ex_gnss_sites for x in sites], dtype=np.bool_)
+    if ex_gnss_sites is not None:
+        ex_flag = np.array([site in ex_gnss_sites for site in sites], dtype=np.bool_)
         if np.sum(ex_flag) > 0:
             sites = sites[~ex_flag]
             lats = lats[~ex_flag]
