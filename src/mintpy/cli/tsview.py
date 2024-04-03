@@ -103,7 +103,7 @@ def create_parser(subparsers=None):
     parser = arg_utils.add_data_disp_argument(parser)
     parser = arg_utils.add_dem_argument(parser)
     parser = arg_utils.add_figure_argument(parser, figsize_img=True)
-    parser = arg_utils.add_gps_argument(parser)
+    parser = arg_utils.add_gnss_argument(parser)
     parser = arg_utils.add_mask_argument(parser)
     parser = arg_utils.add_map_argument(parser)
     parser = arg_utils.add_memory_argument(parser)
@@ -124,9 +124,9 @@ def cmd_line_parse(iargs=None):
     # use sys.argv[1:] for command line call
     inps.argv = iargs if iargs else sys.argv[1:]
 
-    # check: --gps-comp option (not implemented for tsview yet)
-    if inps.gps_component:
-        msg = f'--gps-comp is not supported for {os.path.basename(__file__)}'
+    # check: --gnss-comp option (not implemented for tsview yet)
+    if inps.gnss_component:
+        msg = f'--gnss-comp is not supported for {os.path.basename(__file__)}'
         raise NotImplementedError(msg)
 
     # check: --label option (same number as input files)
