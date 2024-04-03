@@ -1285,7 +1285,7 @@ def plot_insar_vs_gnss_scatter(vel_file, csv_file='gnss_enu2los.csv', msk_file=N
     num_col = len(col_names)
     col_types = ['U10'] + ['f8'] * (num_col - 1)
 
-    print(f'read GNSS velocity from file: {csv_file}')
+    print(f'read GNSS velocity from file: {csv_file:s}')
     fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
     sites = fc['Site']
     lats = fc['Lat']
@@ -1301,7 +1301,7 @@ def plot_insar_vs_gnss_scatter(vel_file, csv_file='gnss_enu2los.csv', msk_file=N
             gnss_obs = gnss_obs[~ex_flag]
 
     # read InSAR velocity
-    print(f'read InSAR velocity from file: {vel_file}')
+    print(f'read InSAR velocity from file: {vel_file:s}')
     atr = readfile.read_attribute(vel_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     ys, xs = coordinate(atr).geo2radar(lats, lons)[:2]
