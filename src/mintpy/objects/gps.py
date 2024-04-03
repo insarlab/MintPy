@@ -89,7 +89,7 @@ def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
     # Check whether site list file is in current directory
     if not os.path.isfile(site_list_file):
         # Download file
-        dload_site_list(site_list_file, print_msg=print_msg)
+        dload_site_list(site_list_file, source=source, print_msg=print_msg)
 
     # Parse data from file
     if source == 'UNR':
