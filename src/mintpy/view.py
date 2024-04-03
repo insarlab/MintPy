@@ -24,7 +24,7 @@ from mintpy.multilook import multilook_data
 from mintpy.objects import (
     TIMESERIES_KEY_NAMES,
     giantIfgramStack,
-    gps,
+    gnss,
     ifgramStack,
 )
 from mintpy.utils import plot as pp, ptime, readfile, utils as ut
@@ -544,19 +544,19 @@ def plot_slice(ax, data, metadata, inps):
 
         # Reference (InSAR) data to a GNSS site
         coord = ut.coordinate(metadata)
-        if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
-            # define GPS station object based on processing source
-            GPS = gps.GPS.get_gps_obj_by_source(inps.gps_source)
+        if inps.disp_gnss and inps.gnss_component and inps.ref_gnss_site:
+            # define GNSS station object based on processing source
+            GNSS = gnss.GNSS.get_gnss_obj_by_source(inps.gnss_source)
 
-            # GPS reference site
-            ref_site_gps = GPS(site=inps.ref_gps_site)
-            ref_site_gps.open()
-            ref_site_lalo = ref_site_gps.get_stat_lat_lon(print_msg=False)
+            # GNSS reference site
+            ref_site_gnss = GNSS(site=inps.ref_gnss_site)
+            ref_site_gnss.open()
+            ref_site_lalo = ref_site_gnss.get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
             ref_data = data[y - inps.pix_box[1], x - inps.pix_box[0]]
             data -= ref_data
             vprint('referencing InSAR data to the pixel nearest to GNSS station: '
-                   f'{inps.ref_gps_site} at [{ref_site_lalo[0]:.6f}, {ref_site_lalo[1]:.6f}] '
+                   f'{inps.ref_gnss_site} at [{ref_site_lalo[0]:.6f}, {ref_site_lalo[1]:.6f}] '
                    f'by substrating {ref_data:.3f} {inps.disp_unit}')
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False
@@ -636,9 +636,9 @@ def plot_slice(ax, data, metadata, inps):
                     mec='k', mew=1.)
             vprint('plot points of interest')
 
-        # Show UNR GPS stations
-        if inps.disp_gps:
-            ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
+        # Show UNR GNSS stations
+        if inps.disp_gnss:
+            ax = pp.plot_gnss(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
 
         # Status bar
         if inps.dem_file:
@@ -1694,7 +1694,7 @@ class viewer():
         # Multiple Subplots
         else:
             # warn single-subplot options
-            opt_names = ['--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar',
+            opt_names = ['--show-gnss', '--coastline', '--lalo-label', '--lalo-step', '--scalebar',
                          '--pts-yx', '--pts-lalo', '--pts-file']
             opt_names = list(set(opt_names) & set(self.argv))
             for opt_name in opt_names:

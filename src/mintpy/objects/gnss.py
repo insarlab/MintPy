@@ -3,9 +3,9 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Jul 2018                           #
 ############################################################
-# Utility scripts for GPS handling
+# Utility scripts for GNSS handling
 # Recommend import:
-#     from mintpy.objects.gps import GPS
+#     from mintpy.objects import gnss
 
 
 import csv
@@ -23,16 +23,12 @@ from pyproj import Geod
 from mintpy.objects.coord import coordinate
 from mintpy.utils import ptime, readfile, time_func, utils1 as ut
 
+
 supported_sources = ['UNR', 'ESESES']
-
-UNR_site_list_file_url = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
-
-ESESES_site_list_file_url = 'http://garner.ucsd.edu/pub/measuresESESES_products/Velocities/ESESES_Velocities.txt'
-
 
 
 def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
-    """Download single file with list of GPS site locations.
+    """Download single file with list of GNSS site locations.
     """
     # check source is supported
     assert source in supported_sources, \
@@ -40,8 +36,10 @@ def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
 
     # determine URL
     if source == 'UNR':
+        UNR_site_list_file_url = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
         site_list_file_url = UNR_site_list_file_url
     elif source == 'ESESES':
+        ESESES_site_list_file_url = 'http://garner.ucsd.edu/pub/measuresESESES_products/Velocities/ESESES_Velocities.txt'
         site_list_file_url = ESESES_site_list_file_url
 
     # handle output file
@@ -53,25 +51,28 @@ def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
         print(f'Downloading site list from {source}: {site_list_file_url} to {out_file}')
 
     # download file
-    urlretrieve(site_list_file_url, out_file)  #nosec
+    if not os.path.exists(out_file):
+        if print_msg:
+            print(f'Downloading site list from {source:s}: {site_list_file_url:s} to {out_file:s}')
+        urlretrieve(site_list_file_url, out_file)  #nosec
 
     return out_file
 
 
-def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
+def search_gnss(SNWE, source='UNR', start_date=None, end_date=None,
                site_list_file=None, min_num_solution=None, print_msg=True):
-    """Search available GPS sites within the geo bounding box from UNR website
+    """Search available GNSS sites within the geo bounding box from UNR website
     Parameters: SNWE             - tuple of 4 float, indicating (South, North, West, East) in degrees
-                source           - str, program or institution that processed the GPS data
+                source           - str, program or institution that processed the GNSS data
                 start_date       - str, date in YYYYMMDD format
                 end_date         - str, date in YYYYMMDD format
                 site_list_file   - str
                 min_num_solution - int, minimum number of solutions available
-    Returns:    site_names       - 1D np.array of string, GPS station names
+    Returns:    site_names       - 1D np.array of string, GNSS station names
                 site_lats        - 1D np.array, lat
                 site_lons        - 1D np.array, lon
     """
-    # Check start and end dates if provided
+    # check start and end dates if provided
     if start_date is not None:
         start_date = dt.datetime.strptime(start_date, '%Y%m%d')
     if end_date is not None:
@@ -79,19 +80,19 @@ def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
     if start_date is not None and end_date is not None:
         assert(start_date < end_date), 'Start date must be before end date'
 
-    # Check file name
+    # check file name
     if site_list_file is None:
-        if source == 'UNR':
-            site_list_file = os.path.basename(UNR_site_list_file_url)
-        elif source == 'ESESES':
-            site_list_file = os.path.basename(ESESES_site_list_file_url)
+        if source == 'Generic':
+            raise ValueError('Site list file must be specified for generic inputs')
+        else:
+            site_list_file = dload_site_list(source=source, print_msg=print_msg)
 
-    # Check whether site list file is in current directory
+    # check whether site list file is in current directory
     if not os.path.isfile(site_list_file):
         # Download file
         dload_site_list(site_list_file, source=source, print_msg=print_msg)
 
-    # Parse data from file
+    # parse data from file
     if source == 'UNR':
         site_data = read_UNR_station_list(site_list_file)
     elif source == 'ESESES':
@@ -101,13 +102,12 @@ def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
         print('Loaded data for fields: {:s}'.\
             format(' '.join(list(site_data.columns))))
 
-    # Ensure that station name is consistent
+    # ensure that station name is consistent
     site_data['site'] = [site_data.iloc[i,:].site.upper() for i in range(site_data.shape[0])]
 
-    # Parse bounding box
+    # parse bounding box
     lat_min, lat_max, lon_min, lon_max = SNWE
-    assert (lon_min < lon_max) and (lat_min < lat_max), \
-        'Check bounding box'
+    assert (lon_min < lon_max) and (lat_min < lat_max), 'Check bounding box'
 
     if print_msg == True:
         print('Cropping to')
@@ -117,34 +117,34 @@ def search_gps(SNWE, source='UNR', start_date=None, end_date=None,
     # Ensure lon values in (-180, 180]
     site_data['lon'] = [lon - 360 if lon > 180 else lon for lon in site_data['lon']]
 
-    # Limit in space
+    # limit in space
     drop_ndx = (site_data.lat < lat_min) \
                 | (site_data.lat > lat_max) \
                 | (site_data.lon < lon_min) \
                 | (site_data.lon > lon_max)
     site_data.drop(site_data[drop_ndx].index, inplace=True)
 
-    # Limit in time
+    # limit in time
     if start_date is not None:
         if hasattr(site_data, 'start_date'):
             drop_ndx = site_data.start_date > start_date
             site_data.drop(site_data[drop_ndx].index, inplace=True)
         else:
-            print('No date information available--date range not applied to GPS site selection')
+            print('No date information available--date range not applied to GNSS site selection')
 
     if end_date is not None:
         if hasattr(site_data, 'end_date'):
             drop_ndx = site_data.end_date < end_date
             site_data.drop(site_data[drop_ndx].index, inplace=True)
         else:
-            print('No date information available--date range not applied to GPS site selection')
+            print('No date information available--date range not applied to GNSS site selection')
 
-    # Limit based on number of solutions
+    # limit based on number of solutions
     if hasattr(site_data, 'num_solution'):
         drop_ndx = site_data.num_solution < min_num_solution
         site_data.drop(site_data[drop_ndx].index, inplace=True)
 
-    # Final reporting
+    # final reporting
     if print_msg == True:
         print(f'{site_data.shape[0]:d} stations available')
 
@@ -194,7 +194,7 @@ def read_ESESES_station_list(site_list_file:str, print_msg=True) -> pd.DataFrame
 
 def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
                         dates2, pos_x2, pos_y2, pos_z2):
-    """Calculate the baseline change between two GPS displacement time-series
+    """Calculate the baseline change between two GNSS displacement time-series
     Parameters: dates1/2     - 1D np.array, datetime.datetime object
                 pos_x/y/z1/2 - 1D np.ndarray, displacement in meters in float32
     Returns:    dates        - 1D np.array, datetime.datetime object for the
@@ -217,32 +217,32 @@ def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
     return dates, bases
 
 
-def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UNR',
-                    gps_comp='enu2los', horz_az_angle=-90., model=None,
+def get_gnss_los_obs(meta, obs_type, site_names, start_date, end_date, source='UNR',
+                    gnss_comp='enu2los', horz_az_angle=-90., model=None,
                     print_msg=True, redo=False):
-    """Get the GPS LOS observations given the query info.
+    """Get the GNSS LOS observations given the query info.
 
     Parameters: meta       - dict, dictionary of metadata of the InSAR file
-                obs_type   - str, GPS observation data type, displacement or velocity.
-                site_names - list of str, GPS sites, output of search_gps()
+                obs_type   - str, GNSS observation data type, displacement or velocity.
+                site_names - list of str, GNSS sites, output of search_gnss()
                 start_date - str, date in YYYYMMDD format
                 end_date   - str, date in YYYYMMDD format
-                source     - str, program or institution that processed the GPS data
-                gps_comp   - str, flag of projecting 2/3D GPS into LOS
+                source     - str, program or institution that processed the GNSS data
+                gnss_comp  - str, flag of projecting 2/3D GNSS into LOS
                              e.g. enu2los, hz2los, up2los
                 horz_az_angle - float, azimuth angle of the horizontal motion in degree
                              measured from the north with anti-clockwise as positive
                 model         - dict, time function model, e.g. {'polynomial': 1, 'periodic': [1.0, 0.5]}
                 print_msg  - bool, print verbose info
                 redo       - bool, ignore existing CSV file and re-calculate
-    Returns:    site_obs   - 1D np.ndarray(), GPS LOS velocity or displacement in m or m/yr
-    Examples:   from mintpy.objects import gps
+    Returns:    site_obs   - 1D np.ndarray(), GNSS LOS velocity or displacement in m or m/yr
+    Examples:   from mintpy.objects import gnss
                 from mintpy.utils import readfile, utils as ut
                 meta = readfile.read_attribute('geo/geo_velocity.h5')
                 SNWE = ut.four_corners(meta)
-                site_names = gps.search_gps(SNWE, start_date='20150101', end_date='20190619')
-                vel = gps.get_gps_los_obs(meta, 'velocity',     site_names, start_date='20150101', end_date='20190619')
-                dis = gps.get_gps_los_obs(meta, 'displacement', site_names, start_date='20150101', end_date='20190619')
+                site_names = gnss.search_gnss(SNWE, start_date='20150101', end_date='20190619')
+                vel = gnss.get_gnss_los_obs(meta, 'velocity',     site_names, start_date='20150101', end_date='20190619')
+                dis = gnss.get_gnss_los_obs(meta, 'displacement', site_names, start_date='20150101', end_date='20190619')
     """
     vprint = print if print_msg else lambda *args, **kwargs: None
     num_site = len(site_names)
@@ -253,16 +253,16 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
         raise ValueError(f'un-supported obs_type: {obs_type}')
     obs_ind = 3 if obs_type.lower() == 'displacement' else 4
 
-    # GPS CSV file info
+    # GNSS CSV file info
     file_dir = os.path.dirname(meta['FILE_PATH'])
-    csv_file = os.path.join(file_dir, f'gps_{gps_comp}')
-    csv_file += f'{horz_az_angle:.0f}' if gps_comp == 'horz' else ''
+    csv_file = os.path.join(file_dir, f'gnss_{gnss_comp}')
+    csv_file += f'{horz_az_angle:.0f}' if gnss_comp == 'horz' else ''
     csv_file += '.csv'
     col_names = ['Site', 'Lon', 'Lat', 'Displacement', 'Velocity']
     col_types = ['U10'] + ['f8'] * (len(col_names) - 1)
-    vprint(f'default GPS observation file name: {csv_file}')
+    vprint(f'default GNSS observation file name: {csv_file}')
 
-    # skip re-calculate GPS if:
+    # skip re-calculate GNSS if:
     # 1. redo is False AND
     # 2. csv_file exists (equivalent to num_row > 0) AND
     # 3. num_row >= num_site
@@ -273,7 +273,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
 
     if not redo and os.path.isfile(csv_file) and num_row >= num_site:
         # read from existing CSV file
-        vprint(f'read GPS observations from file: {csv_file}')
+        vprint(f'read GNSS observations from file: {csv_file}')
         fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
         site_obs = fc[col_names[obs_ind]]
 
@@ -290,7 +290,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
     else:
         # calculate and save to CSV file
         data_list = []
-        vprint('calculating GPS observation ...')
+        vprint('calculating GNSS observation ...')
 
         # get geom_obj (meta / geom_file)
         geom_file = ut.get_geometry_file(['incidenceAngle','azimuthAngle'],
@@ -308,15 +308,15 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
         for i, site_name in enumerate(site_names):
             prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {site_name}')
 
-            # calculate gps data value
-            GPSclass = GPS.get_gps_obj_by_source(source)
-            obj = GPSclass(site_name)
+            # calculate GNSS data value
+            GNSSclass = GNSS.get_gnss_obj_by_source(source)
+            obj = GNSSclass(site_name)
             obj.open(print_msg=print_msg)
-            vel, dis_ts = obj.get_gps_los_velocity(
+            vel, dis_ts = obj.get_gnss_los_velocity(
                 geom_obj,
                 start_date=start_date,
                 end_date=end_date,
-                gps_comp=gps_comp,
+                gnss_comp=gnss_comp,
                 horz_az_angle=horz_az_angle,
                 model=model)
 
@@ -328,7 +328,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
         prog_bar.close()
 
         # write to CSV file
-        vprint(f'write GPS observations to file: {csv_file}')
+        vprint(f'write GNSS observations to file: {csv_file}')
         with open(csv_file, 'w') as fc:
             fcw = csv.writer(fc)
             fcw.writerow(col_names)
@@ -341,7 +341,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, source='UN
 
 
 
-#################################### Beginning of GPS-GSI utility functions ########################
+#################################### Beginning of GNSS-GSI utility functions ########################
 def read_pos_file(fname):
     import codecs
     fcp = codecs.open(fname, encoding = 'cp1252')
@@ -359,14 +359,14 @@ def read_pos_file(fname):
     return dates, X, Y, Z
 
 
-def get_pos_years(gps_dir, site):
-    fnames = glob.glob(os.path.join(gps_dir, f'{site}.*.pos'))
+def get_pos_years(gnss_dir, site):
+    fnames = glob.glob(os.path.join(gnss_dir, f'{site}.*.pos'))
     years = [os.path.basename(i).split('.')[1] for i in fnames]
     years = ptime.yy2yyyy(years)
     return years
 
 
-def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
+def read_GSI_F3(gnss_dir, site, start_date=None, end_date=None):
     year0 = int(start_date[0:4])
     year1 = int(end_date[0:4])
     num_year = year1 - year0 + 1
@@ -374,7 +374,7 @@ def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
     dates, X, Y, Z = [], [], [], []
     for i in range(num_year):
         yeari = str(year0 + i)
-        fname = os.path.join(gps_dir, f'{site}.{yeari[2:]}.pos')
+        fname = os.path.join(gnss_dir, f'{site}.{yeari[2:]}.pos')
         datesi, Xi, Yi, Zi = read_pos_file(fname)
         dates += datesi
         X += Xi
@@ -393,22 +393,21 @@ def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
     return dates[flag], X[flag], Y[flag], Z[flag]
 
 
-#################################### End of GPS-GSI utility functions ##############################
+#################################### End of GNSS-GSI utility functions ##############################
 
 
 
-#################################### Beginning of GPS class ########################################
-class GPS:
-    """GPS class for GPS time-series of daily solution.
+#################################### Beginning of GNSS class ########################################
+class GNSS:
+    """GNSS class for time-series of daily solution.
 
-    The GPS class is solely meant to be a parent class. Child classes, defined
-    below, support functions for downloading and parsing GPS position based on
-    the processing source (e.g., UNR, etc.). Use the `get_gps_obj_by_source`
+    The GNSS class is solely meant to be a parent class. Child classes, defined
+    below, support functions for downloading and parsing GNSS position based on
+    the processing source (e.g., UNR, etc.). Use the `get_gnss_obj_by_source`
     method to determine appropriate child class.
     """
 
-    def __init__(self, site: str, data_dir='./GPS',
-                 version='IGS14'):
+    def __init__(self, site: str, data_dir='./GNSS', version='IGS14'):
         # Record properties
         self.site = site
         self.version = version
@@ -445,13 +444,13 @@ class GPS:
         return None
 
     @staticmethod
-    def get_gps_obj_by_source(source:str):
-        """Return the appropriate GPS child class based on processing source.
+    def get_gnss_obj_by_source(source:str):
+        """Return the appropriate GNSS child class based on processing source.
         """
         if source == 'UNR':
-            return UNR_GPS
+            return UNR_GNSS
         elif source == 'ESESES':
-            return ESESES_GPS
+            return ESESES_GNSS
         else:
             raise ValueError(f'{source:s} source not supported.')
 
@@ -527,14 +526,14 @@ class GPS:
 
 
     #####################################  Utility Functions ###################################
-    def displacement_enu2los(self, inc_angle:float, az_angle:float, gps_comp='enu2los',
+    def displacement_enu2los(self, inc_angle:float, az_angle:float, gnss_comp='enu2los',
                              horz_az_angle=-90., display=False, model=None):
         """Convert displacement in ENU to LOS direction.
 
         Parameters: inc_angle     - float, LOS incidence angle in degree
                     az_angle      - float, LOS aziuth angle in degree
                                     from the north, defined as positive in clock-wise direction
-                    gps_comp      - str, GPS components used to convert to LOS direction
+                    gnss_comp     - str, GNSS components used to convert to LOS direction
                     horz_az_angle - float, fault azimuth angle used to convert horizontal to fault-parallel
                                     measured from the north with anti-clockwise as positive
         Returns:    dis_los       - 1D np.array for displacement in LOS direction
@@ -544,7 +543,7 @@ class GPS:
         unit_vec = ut.get_unit_vector4component_of_interest(
             los_inc_angle=inc_angle,
             los_az_angle=az_angle,
-            comp=gps_comp.lower(),
+            comp=gnss_comp.lower(),
             horz_az_angle=horz_az_angle,
         )
 
@@ -591,8 +590,10 @@ class GPS:
             y = max(0, y);  y = min(int(atr['LENGTH'])-1, y)
             x = max(0, x);  x = min(int(atr['WIDTH'])-1, x)
             box = (x, y, x+1, y+1)
-            inc_angle = readfile.read(geom_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
-            az_angle  = readfile.read(geom_obj, datasetName='azimuthAngle',   box=box, print_msg=print_msg)[0][0,0]
+            inc_angle = readfile.read(geom_obj, datasetName='incidenceAngle', box=box,
+                                      print_msg=print_msg)[0][0,0]
+            az_angle  = readfile.read(geom_obj, datasetName='azimuthAngle', box=box,
+                                      print_msg=print_msg)[0][0,0]
 
         elif isinstance(geom_obj, dict):
             # use mean inc/az_angle from metadata
@@ -605,39 +606,39 @@ class GPS:
         return inc_angle, az_angle
 
 
-    def read_gps_los_displacement(self, geom_obj, start_date=None, end_date=None, ref_site=None,
-                                  gps_comp='enu2los', horz_az_angle=-90., print_msg=False):
-        """Read GPS displacement in LOS direction.
+    def read_gnss_los_displacement(self, geom_obj, start_date=None, end_date=None, ref_site=None,
+                                  gnss_comp='enu2los', horz_az_angle=-90., print_msg=False):
+        """Read GNSS displacement in LOS direction.
 
         Parameters: geom_obj      - dict / str, metadata of InSAR file, or geometry file path
                     start_date    - str, dates in YYYYMMDD format
                     end_date      - str, dates in YYYYMMDD format
-                    ref_site      - str, reference GPS site
-                    gps_comp      - str, GPS components used to convert to LOS direction
+                    ref_site      - str, reference GNSS site
+                    gnss_comp     - str, GNSS components used to convert to LOS direction
                     horz_az_angle - float, fault azimuth angle used to convert horizontal
                                     to fault-parallel
         Returns:    dates         - 1D np.array of datetime.datetime object
                     dis/std       - 1D np.array of displacement / uncertainty in meters
-                    site_lalo     - tuple of 2 float, lat/lon of GPS site
-                    ref_site_lalo - tuple of 2 float, lat/lon of reference GPS site
+                    site_lalo     - tuple of 2 float, lat/lon of GNSS site
+                    ref_site_lalo - tuple of 2 float, lat/lon of reference GNSS site
         """
-        # read GPS object
+        # read GNSS object
         inc_angle, az_angle = self.get_los_geometry(geom_obj)
         dates = self.read_displacement(start_date, end_date, print_msg=print_msg)[0]
-        dis, std = self.displacement_enu2los(inc_angle, az_angle, gps_comp=gps_comp,
+        dis, std = self.displacement_enu2los(inc_angle, az_angle, gnss_comp=gnss_comp,
                                              horz_az_angle=horz_az_angle)
         site_lalo = self.get_stat_lat_lon(print_msg=print_msg)
 
-        # define GPS station object based on processing source
-        GPS = self.get_gps_obj_by_source(self.source)
+        # define GNSS station object based on processing source
+        GNSS = self.get_gnss_obj_by_source(self.source)
 
-        # get LOS displacement relative to another GPS site
+        # get LOS displacement relative to another GNSS site
         if ref_site:
-            ref_obj = GPS(site=ref_site, data_dir=self.data_dir)
+            ref_obj = GNSS(site=ref_site, data_dir=self.data_dir)
             ref_obj.open()
             ref_obj.read_displacement(start_date, end_date, print_msg=print_msg)
             inc_angle, az_angle = ref_obj.get_los_geometry(geom_obj)
-            ref_obj.displacement_enu2los(inc_angle, az_angle, gps_comp=gps_comp,
+            ref_obj.displacement_enu2los(inc_angle, az_angle, gnss_comp=gnss_comp,
                                          horz_az_angle=horz_az_angle)
             ref_site_lalo = ref_obj.get_stat_lat_lon(print_msg=print_msg)
 
@@ -656,36 +657,36 @@ class GPS:
         return dates, dis, std, site_lalo, ref_site_lalo
 
 
-    def get_gps_los_velocity(self, geom_obj, start_date=None, end_date=None,
-                             ref_site=None, gps_comp='enu2los',
+    def get_gnss_los_velocity(self, geom_obj, start_date=None, end_date=None,
+                             ref_site=None, gnss_comp='enu2los',
                              horz_az_angle=-90., model=None,
                              print_msg=True):
         """Convert the three-component displacement data into LOS
         velocity.
 
-        Parameters: geom_obj        : dict / str, metadata of InSAR file, or
+        Parameters: geom_obj        - dict / str, metadata of InSAR file, or
                                       geometry file path
-                    start_date      : string in YYYYMMDD format
-                    end_date        : string in YYYYMMDD format
-                    ref_site        : string, reference GPS site
-                    gps_comp        : string, GPS components used to convert to
+                    start_date      - str, YYYYMMDD format
+                    end_date        - str, YYYYMMDD format
+                    ref_site        - str, reference GNSS site
+                    gnss_comp       - str, GNSS components used to convert to
                                       LOS direction
-                    horz_az_angle   : float, fault azimuth angle used to convert
+                    horz_az_angle   - float, fault azimuth angle used to convert
                                  horizontal to fault-parallel
-                    model           : dict, time function model, e.g.
+                    model           - dict, time function model, e.g.
                                       {'polynomial': 1, 'periodic': [1.0, 0.5]}
-        Returns:    dates : 1D np.array of datetime.datetime object
-                    dis   : 1D np.array of displacement in meters
-                    std   : 1D np.array of displacement uncertainty in meters
-                    site_lalo : tuple of 2 float, lat/lon of GPS site
-                    ref_site_lalo : tuple of 2 float, lat/lon of reference GPS site
+        Returns:    dates         - 1D np.array, datetime.datetime object
+                    dis           - 1D np.array, displacement in meters
+                    std           - 1D np.array, displacement uncertainty in meters
+                    site_lalo     - tuple of 2 float, lat/lon of GNSS site
+                    ref_site_lalo - tuple of 2 float, lat/lon of reference GNSS site
         """
-        # Retrieve displacement data
-        dates, dis = self.read_gps_los_displacement(geom_obj,
+        # retrieve displacement data
+        dates, dis = self.read_gnss_los_displacement(geom_obj,
                                                     start_date=start_date,
                                                     end_date=end_date,
                                                     ref_site=ref_site,
-                                                    gps_comp=gps_comp,
+                                                    gnss_comp=gnss_comp,
                                                     horz_az_angle=horz_az_angle)[:2]
 
         # displacement -> velocity
@@ -715,8 +716,8 @@ class GPS:
 
 
 
-class UNR_GPS(GPS):
-    """GPS class for daily solutions processed by UNR NGL.
+class UNR_GNSS(GNSS):
+    """GNSS class for daily solutions processed by UNR NGL.
 
     This object will assign the attributes:
             site          - str, four-digit site code
@@ -734,8 +735,7 @@ class UNR_GPS(GPS):
     source = 'UNR'
 
     def dload_site(self, print_msg=True) -> str:
-        """Download the station displacement data from the
-        specified source.
+        """Download the station displacement data from the specified source.
 
         Modifies:   self.file     - str, local file path/name
                     self.file_url - str, file URL
@@ -745,7 +745,7 @@ class UNR_GPS(GPS):
             print(f"Downloading data for site {self.site:s} from UNR NGL source")
 
         # URL and file name specs
-        url_prefix = 'http://geodesy.unr.edu/gps_timeseries/tenv3'
+        url_prefix = 'http://geodesy.unr.edu/gnss_timeseries/tenv3'
         if self.version == 'IGS08':
             self.file = os.path.join(self.data_dir,
                                      '{site:s}.{version:s}.tenv3'.\
@@ -760,7 +760,7 @@ class UNR_GPS(GPS):
         # download file if not present
         if os.path.exists(self.file):
             if print_msg == True:
-                print(f'File {self.file} exists--reading')
+                print(f'file {self.file} exists--reading')
         else:
             if print_msg == True:
                 print(f'... downloading {self.file_url:s} to {self.file:s}')
@@ -796,7 +796,7 @@ class UNR_GPS(GPS):
 
     def read_displacement(self, start_date=None, end_date=None, print_msg=True,
                           display=False):
-        """Read GPS displacement time-series (defined by start/end_date)
+        """Read GNSS displacement time-series (defined by start/end_date)
         Parameters: start/end_date - str, date in YYYYMMDD format
         Returns:    dates          - 1D np.ndarray of datetime.datetime object
                     dis_e/n/u      - 1D np.ndarray of displacement in meters in float32
@@ -841,8 +841,8 @@ class UNR_GPS(GPS):
 
 
 
-class ESESES_GPS(GPS):
-    """GPS class for daily solutions processed by ESESES.
+class ESESES_GNSS(GNSS):
+    """GNSS class for daily solutions processed by ESESES.
 
     This object will assign the attributes:
             site          - str, four-digit site code
@@ -902,7 +902,7 @@ class ESESES_GPS(GPS):
         # download file if not present
         if os.path.exists(self.file):
             if print_msg == True:
-                print(f'File {self.file} exists--reading')
+                print(f'file {self.file} exists--reading')
         else:
             if print_msg == True:
                 print(f'... downloading {self.file_url:s} to {self.file:s}')
@@ -954,7 +954,7 @@ class ESESES_GPS(GPS):
 
     def read_displacement(self, start_date=None, end_date=None, print_msg=True,
                           display=False):
-        """Read GPS displacement time-series (defined by start/end_date)
+        """Read GNSS displacement time-series (defined by start/end_date)
         Parameters: start/end_date - str, date in YYYYMMDD format
         Returns:    dates          - 1D np.ndarray of datetime.datetime object
                     dis_e/n/u      - 1D np.ndarray of displacement in meters in float32
@@ -1001,4 +1001,4 @@ class ESESES_GPS(GPS):
                 self.std_e, self.std_n, self.std_u)
 
 
-#################################### End of GPS class ####################################
+#################################### End of GNSS class ####################################
