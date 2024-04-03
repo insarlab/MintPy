@@ -208,7 +208,6 @@ def read_JPL_SIDESHOW_station_list(site_list_file:str, print_msg=True) -> pd.Dat
     name_len = 4  # number of letters in a station name
     data_lines = [line.strip('\n') for line in lines if (len(line.split()) == line_len) \
                     and (len(line.split()[0]) == name_len)]
-    n_data_lines = len(data_lines)
 
     # transform format from (POS \n VEL) to (POS VEL)
     pos_lines = data_lines[0::2]
