@@ -1144,7 +1144,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
     # post-query: convert lat/lon to UTM for plotting
     if 'UTM_ZONE' in metadata.keys():
-        site_lats, site_lons = ut0.latlon2utm(site_lats, site_lons)
+        site_lats, site_lons = ut0.latlon2utm(metadata, site_lats, site_lons)
 
     # mask out stations not coincident with InSAR data
     if inps.mask_gps and inps.msk is not None:
