@@ -1136,8 +1136,12 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
         SNWE = (south, north, west, east)
 
     # query for GNSS stations
-    site_names, site_lats, site_lons = gnss.search_gnss(SNWE, source=inps.gnss_source,
-                                                      start_date=start_date, end_date=end_date)
+    site_names, site_lats, site_lons = gnss.search_gnss(
+        SNWE,
+        start_date=start_date,
+        end_date=end_date,
+        source=inps.gnss_source,
+    )
     if site_names.size == 0:
         warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
         print('  continue without GNSS plots.')
@@ -1257,8 +1261,8 @@ def plot_insar_vs_gnss_scatter(vel_file, csv_file='gnss_enu2los.csv', msk_file=N
                 cutoff        - float, threshold in terms of med abs dev (MAD) for outlier detection
                 xname         - str, xaxis label
                 vlim          - list of 2 float, display value range in the unit of cm/yr
-                               Default is None to grab from data
-                               If set, the range will be used to prune the SAR and GNSS observations
+                                Default is None to grab from data
+                                If set, the range will be used to prune the SAR and GNSS observations
                 ex_gnss_sites - list of str, exclude GNSS sites for analysis and plotting.
     Returns:    sites         - list of str, GNSS site names used for comparison
                 insar_obs     - 1D np.ndarray in float32, InSAR velocity in cm/yr

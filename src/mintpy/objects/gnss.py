@@ -57,7 +57,7 @@ def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
     return out_file
 
 
-def search_gnss(SNWE, source='UNR', start_date=None, end_date=None,
+def search_gnss(SNWE, start_date=None, end_date=None, source='UNR',
                site_list_file=None, min_num_solution=None, print_msg=True):
     """Search available GNSS sites within the geo bounding box from UNR website
     Parameters: SNWE             - tuple of 4 float, indicating (South, North, West, East) in degrees
