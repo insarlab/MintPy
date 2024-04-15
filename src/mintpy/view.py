@@ -545,7 +545,7 @@ def plot_slice(ax, data, metadata, inps):
         # Reference (InSAR) data to a GNSS site
         coord = ut.coordinate(metadata)
         if inps.disp_gnss and inps.gnss_component and inps.ref_gnss_site:
-            GNSS = gnss.GNSS.get_gnss_obj_by_source(inps.gnss_source)
+            GNSS = gnss.get_gnss_class(inps.gnss_source)
             ref_site_lalo = GNSS(site=inps.ref_gnss_site).get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
             ref_data = data[y - inps.pix_box[1], x - inps.pix_box[0]]

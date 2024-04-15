@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, Jul 2018                           #
+# Author: Zhang Yunjun, Robert Zinke, Jul 2018             #
 ############################################################
 # Utility scripts for GNSS handling
 # Recommend import:
@@ -23,42 +23,40 @@ from pyproj import Geod
 from mintpy.objects.coord import coordinate
 from mintpy.utils import ptime, readfile, time_func, utils1 as ut
 
-supported_sources = ['UNR', 'ESESES', 'JPL-SIDESHOW', 'Generic']
+GNSS_SITE_LIST_URLS = {
+    'UNR'          : 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt',
+    'ESESES'       : 'http://garner.ucsd.edu/pub/measuresESESES_products/Velocities/ESESES_Velocities.txt',
+    'JPL-SIDESHOW' : 'https://sideshow.jpl.nasa.gov/post/tables/table2.html',
+    'Generic'      : None,
+}
+GNSS_SOURCES = list(GNSS_SITE_LIST_URLS.keys())
 
 
 def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
     """Download single file with list of GNSS site locations.
     """
     # check source is supported
-    assert source in supported_sources, \
-        f'Source {source:s} not supported. Use one of {supported_sources}'
+    assert source in GNSS_SOURCES, \
+        f'{source:s} GNSS is NOT supported! Use one of {GNSS_SOURCES}.'
 
     # determine URL
-    if source == 'UNR':
-        UNR_site_list_file_url = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
-        site_list_file_url = UNR_site_list_file_url
-    elif source == 'ESESES':
-        ESESES_site_list_file_url = 'http://garner.ucsd.edu/pub/measuresESESES_products/Velocities/ESESES_Velocities.txt'
-        site_list_file_url = ESESES_site_list_file_url
-    elif source == 'JPL-SIDESHOW':
-        JPL_SIDESHOW_site_list_file_url = 'https://sideshow.jpl.nasa.gov/post/tables/table2.html'
-        site_list_file_url = JPL_SIDESHOW_site_list_file_url
+    site_list_url = GNSS_SITE_LIST_URLS[source]
 
     # handle output file
     if out_file is None:
-        out_file = os.path.basename(site_list_file_url)
+        out_file = os.path.basename(site_list_url)
 
     # download file
     if not os.path.exists(out_file):
         if print_msg:
-            print(f'Downloading site list from {source:s}: {site_list_file_url:s} to {out_file:s}')
-        urlretrieve(site_list_file_url, out_file)  #nosec
+            print(f'Downloading site list from {source:s}: {site_list_url:s} to {out_file:s}')
+        urlretrieve(site_list_url, out_file)  #nosec
 
     return out_file
 
 
 def search_gnss(SNWE, start_date=None, end_date=None, source='UNR',
-               site_list_file=None, min_num_solution=None, print_msg=True):
+                site_list_file=None, min_num_solution=None, print_msg=True):
     """Search available GNSS sites within the geo bounding box from UNR website
     Parameters: SNWE             - tuple of 4 float, indicating (South, North, West, East) in degrees
                 source           - str, program or institution that processed the GNSS data
@@ -395,8 +393,7 @@ def get_gnss_los_obs(meta, obs_type, site_names, start_date, end_date, source='U
             prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {site_name:s}')
 
             # calculate GNSS data value
-            GNSSclass = GNSS.get_gnss_obj_by_source(source)
-            obj = GNSSclass(site_name)
+            obj = get_gnss_class(source)(site_name)
             obj.open(print_msg=print_msg)
             vel, dis_ts = obj.get_gnss_los_velocity(
                 geom_obj,
@@ -482,6 +479,20 @@ def read_GSI_F3(gnss_dir, site, start_date=None, end_date=None):
 #################################### End of GNSS-GSI utility functions ##############################
 
 
+def get_gnss_class(source:str):
+    """Return the appropriate GNSS child class based on processing source.
+    """
+    if source == 'UNR':
+        return UNR_GNSS
+    elif source == 'ESESES':
+        return ESESES_GNSS
+    elif source == 'JPL-SIDESHOW':
+        return JPL_SIDESHOW_GNSS
+    elif source == 'Generic':
+        return Generic_GNSS
+    else:
+        raise ValueError(f'{source:s} source not supported.')
+
 
 #################################### Beginning of GNSS class ########################################
 class GNSS:
@@ -489,7 +500,7 @@ class GNSS:
 
     The GNSS class is solely meant to be a parent class. Child classes, defined
     below, support functions for downloading and parsing GNSS position based on
-    the processing source (e.g., UNR, etc.). Use the `get_gnss_obj_by_source`
+    the processing source (e.g., UNR, etc.). Use the `get_gnss_class`
     method to determine appropriate child class.
     """
 
@@ -528,21 +539,6 @@ class GNSS:
         self.read_displacement(print_msg=print_msg)
 
         return None
-
-    @staticmethod
-    def get_gnss_obj_by_source(source:str):
-        """Return the appropriate GNSS child class based on processing source.
-        """
-        if source == 'UNR':
-            return UNR_GNSS
-        elif source == 'ESESES':
-            return ESESES_GNSS
-        elif source == 'JPL-SIDESHOW':
-            return JPL_SIDESHOW_GNSS
-        elif source == 'Generic':
-            return Generic_GNSS
-        else:
-            raise ValueError(f'{source:s} source not supported.')
 
     def dload_site(self, print_msg=True):
         raise NotImplementedError('Func. dload_site not implemented. Override with child class.')
@@ -720,7 +716,7 @@ class GNSS:
         site_lalo = self.get_stat_lat_lon(print_msg=print_msg)
 
         # define GNSS station object based on processing source
-        GNSS = self.get_gnss_obj_by_source(self.source)
+        GNSS = get_gnss_class(self.source)
 
         # get LOS displacement relative to another GNSS site
         if ref_site:
