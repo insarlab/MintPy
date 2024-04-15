@@ -302,8 +302,8 @@ def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
 
 
 def get_gnss_los_obs(meta, obs_type, site_names, start_date, end_date, source='UNR',
-                    gnss_comp='enu2los', horz_az_angle=-90., model=None,
-                    print_msg=True, redo=False):
+                     gnss_comp='enu2los', horz_az_angle=-90., model=None,
+                     print_msg=True, redo=False):
     """Get the GNSS LOS observations given the query info.
 
     Parameters: meta       - dict, dictionary of metadata of the InSAR file
@@ -393,21 +393,22 @@ def get_gnss_los_obs(meta, obs_type, site_names, start_date, end_date, source='U
             prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {site_name:s}')
 
             # calculate GNSS data value
-            obj = get_gnss_class(source)(site_name)
-            obj.open(print_msg=print_msg)
-            vel, dis_ts = obj.get_gnss_los_velocity(
+            gnss_obj = get_gnss_class(source)(site_name)
+            gnss_obj.open(print_msg=False)
+            vel, dis_ts = gnss_obj.get_gnss_los_velocity(
                 geom_obj,
                 start_date=start_date,
                 end_date=end_date,
                 gnss_comp=gnss_comp,
                 horz_az_angle=horz_az_angle,
-                model=model)
+                model=model,
+            )
 
             # ignore time-series if the estimated velocity is nan
             dis = np.nan if np.isnan(vel) else dis_ts[-1] - dis_ts[0]
 
             # save data to list
-            data_list.append([obj.site, obj.site_lon, obj.site_lat, dis, vel])
+            data_list.append([gnss_obj.site, gnss_obj.site_lon, gnss_obj.site_lat, dis, vel])
         prog_bar.close()
 
         # write to CSV file
@@ -744,9 +745,9 @@ class GNSS:
 
 
     def get_gnss_los_velocity(self, geom_obj, start_date=None, end_date=None,
-                             ref_site=None, gnss_comp='enu2los',
-                             horz_az_angle=-90., model=None,
-                             print_msg=True):
+                              ref_site=None, gnss_comp='enu2los',
+                              horz_az_angle=-90., model=None,
+                              print_msg=True):
         """Convert the three-component displacement data into LOS
         velocity.
 
@@ -769,11 +770,11 @@ class GNSS:
         """
         # retrieve displacement data
         dates, dis = self.read_gnss_los_displacement(geom_obj,
-                                                    start_date=start_date,
-                                                    end_date=end_date,
-                                                    ref_site=ref_site,
-                                                    gnss_comp=gnss_comp,
-                                                    horz_az_angle=horz_az_angle)[:2]
+                                                     start_date=start_date,
+                                                     end_date=end_date,
+                                                     ref_site=ref_site,
+                                                     gnss_comp=gnss_comp,
+                                                     horz_az_angle=horz_az_angle)[:2]
 
         # displacement -> velocity
         # if:
