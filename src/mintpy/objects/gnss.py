@@ -17,7 +17,6 @@ from urllib.request import urlopen, urlretrieve
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from pyproj import Geod
 
 from mintpy.objects.coord import coordinate
@@ -27,7 +26,7 @@ GNSS_SITE_LIST_URLS = {
     'UNR'          : 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt',
     'ESESES'       : 'http://garner.ucsd.edu/pub/measuresESESES_products/Velocities/ESESES_Velocities.txt',
     'JPL-SIDESHOW' : 'https://sideshow.jpl.nasa.gov/post/tables/table2.html',
-    'Generic'      : None,
+    'GENERIC'      : None,
 }
 GNSS_SOURCES = list(GNSS_SITE_LIST_URLS.keys())
 
@@ -55,6 +54,108 @@ def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
     return out_file
 
 
+def crop_site_data_by_index(site_data: dict, idx: np.ndarray) -> dict:
+    """Remove GNSS sites by index from a site_data dictionary.
+
+    Parameters: site_data - dict of ndarray, table-like object with GNSS sites
+                            loaded from the search_gnss function
+                idx       - ndarray of bool, indices to keep/exclude
+    Returns:    site_data - dict of ndarray, site_data cropped by index
+    """
+    for key in site_data:
+        site_data[key] = site_data[key][idx]
+
+    return site_data
+
+def crop_site_data_in_space(site_data: dict, SNWE: tuple, print_msg=False) -> dict:
+    """Remove GNSS sites by geographic location.
+
+    Parameters: site_data - dict of ndarray, table-like object with GNSS sites
+                            loaded from the search_gnss function
+                SNWE      - tuple of 4 float, indicating (South, North, West, East) in degrees
+    Returns:    site_data - dict of ndarray, cropped site_data
+    """
+    # parse bounding box
+    lat_min, lat_max, lon_min, lon_max = SNWE
+    assert (lon_min < lon_max) and (lat_min < lat_max), 'Check bounding box'
+
+    if print_msg == True:
+        print('cropping to')
+        print(f'lon range: {lon_min:.5f} to {lon_max:.5f}')
+        print(f'lat range: {lat_min:.5f} to {lat_max:.5f}')
+
+    # limit in space
+    idx = (site_data['lat'] >= lat_min) \
+           & (site_data['lat'] <= lat_max) \
+           & (site_data['lon'] >= lon_min) \
+           & (site_data['lon'] <= lon_max)
+    site_data = crop_site_data_by_index(site_data, idx)
+
+    if print_msg == True:
+        print('... {:d} sites remaining'.format(len(site_data['site'])))
+
+    return site_data
+
+def crop_site_data_in_time(site_data: dict, start_date: None | str, end_date: None | str,
+                           print_msg=True) -> dict:
+    """Remove GNSS sites by start/end date.
+
+    Parameters: site_data  - dict of ndarray, table-like object with GNSS sites
+                             loaded from the search_gnss function
+                start_date - str, date in YYYYMMDD format
+                end_date   - str, date in YYYYMMDD format
+    Returns:    site_data  - dict of ndarray, cropped site_data
+    """
+    # check start and end dates if provided
+    if start_date is not None:
+        start_date = dt.datetime.strptime(start_date, '%Y%m%d')
+    if end_date is not None:
+        end_date = dt.datetime.strptime(end_date, '%Y%m%d')
+    if start_date is not None and end_date is not None:
+        assert(start_date < end_date), 'start date must be before end date'
+
+    if print_msg == True:
+        print(f'cropping by date range {start_date} to {end_date}')
+
+    # crop by start date
+    if start_date is not None:
+        if 'start_date' in site_data.keys():
+            idx = site_data['start_date'] <= start_date
+            site_data = crop_site_data_by_index(site_data, idx)
+
+    if end_date is not None:
+        if 'start_date' in site_data.keys():
+            idx = site_data['end_date'] >= end_date
+            site_data = crop_site_data_by_index(site_data, idx)
+
+    if print_msg == True:
+        print('... {:d} sites remaining'.format(len(site_data['site'])))
+
+    return site_data
+
+def crop_site_data_by_num_solutions(site_data: dict, min_num_solution: None | int,
+                                    print_msg=True) -> dict:
+    """Remove GNSS sites based on a minimum number of solutions.
+
+    Parameters: site_data  - dict of ndarray, table-like object with GNSS sites
+                             loaded from the search_gnss function
+                min_num_solution - int, minimum number of positions
+    Returns:    site_data  - dict of ndarray, cropped site_data
+    """
+    if print_msg == True:
+        print(f'cropping data by min num solutions: {min_num_solution}')
+
+    if min_num_solution is not None:
+        if 'num_solution' in site_data.keys():
+            idx = site_data.num_solution >= min_num_solution
+            site_data = crop_site_data_by_index(site_data, idx)
+
+    if print_msg == True:
+        print('... {:d} sites remaining'.format(len(site_data['site'])))
+
+    return site_data
+
+
 def search_gnss(SNWE, start_date=None, end_date=None, source='UNR',
                 site_list_file=None, min_num_solution=None, print_msg=True):
     """Search available GNSS sites within the geo bounding box from UNR website
@@ -68,18 +169,10 @@ def search_gnss(SNWE, start_date=None, end_date=None, source='UNR',
                 site_lats        - 1D np.array, lat
                 site_lons        - 1D np.array, lon
     """
-    # check start and end dates if provided
-    if start_date is not None:
-        start_date = dt.datetime.strptime(start_date, '%Y%m%d')
-    if end_date is not None:
-        end_date = dt.datetime.strptime(end_date, '%Y%m%d')
-    if start_date is not None and end_date is not None:
-        assert(start_date < end_date), 'Start date must be before end date'
-
     # check file name
     if site_list_file is None:
-        if source == 'Generic':
-            raise ValueError('Site list file must be specified for generic inputs')
+        if source == 'GENERIC':
+            raise ValueError('site list file must be specified for generic inputs')
         else:
             site_list_file = dload_site_list(source=source, print_msg=print_msg)
 
@@ -95,107 +188,85 @@ def search_gnss(SNWE, start_date=None, end_date=None, source='UNR',
         site_data = read_ESESES_station_list(site_list_file)
     elif source == 'JPL-SIDESHOW':
         site_data = read_JPL_SIDESHOW_station_list(site_list_file)
-    elif source == 'Generic':
-        site_data = read_Generic_station_list(site_list_file)
+    elif source == 'GENERIC':
+        site_data = read_GENERIC_station_list(site_list_file)
 
     if print_msg == True:
-        print('Loaded data for fields: {:s}'.\
-            format(' '.join(list(site_data.columns))))
+        print('loaded {:d} sites with fields: {:s}'.\
+              format(len(site_data['site']), ' '.join(site_data.keys())))
 
-    # ensure that station name is consistent
-    site_data['site'] = [site_data.iloc[i,:].site.upper() for i in range(site_data.shape[0])]
-
-    # parse bounding box
-    lat_min, lat_max, lon_min, lon_max = SNWE
-    assert (lon_min < lon_max) and (lat_min < lat_max), 'Check bounding box'
-
-    if print_msg == True:
-        print('Cropping to')
-        print(f'lon range: {lon_min:.5f} to {lon_max:.5f}')
-        print(f'lat range: {lat_min:.5f} to {lat_max:.5f}')
-
-    # Ensure lon values in (-180, 180]
-    site_data['lon'] = [lon - 360 if lon > 180 else lon for lon in site_data['lon']]
+    # ensure that site data formatting is consistent
+    site_data['site'] = np.array([site.upper() for site in site_data['site']])
+    site_data['lat'] = site_data['lat'].astype(float)
+    site_data['lon'] = site_data['lon'].astype(float)
+    site_data['lon'][site_data['lon'] > 180] -= 360  # ensure lon values in (-180, 180]
 
     # limit in space
-    drop_ndx = (site_data.lat < lat_min) \
-                | (site_data.lat > lat_max) \
-                | (site_data.lon < lon_min) \
-                | (site_data.lon > lon_max)
-    site_data.drop(site_data[drop_ndx].index, inplace=True)
+    site_data = crop_site_data_in_space(site_data, SNWE, print_msg=print_msg)
 
     # limit in time
-    if start_date is not None:
-        if hasattr(site_data, 'start_date'):
-            drop_ndx = site_data.start_date > start_date
-            site_data.drop(site_data[drop_ndx].index, inplace=True)
-        else:
-            print('No date information available--date range not applied to GNSS site selection')
-
-    if end_date is not None:
-        if hasattr(site_data, 'end_date'):
-            drop_ndx = site_data.end_date < end_date
-            site_data.drop(site_data[drop_ndx].index, inplace=True)
-        else:
-            print('No date information available--date range not applied to GNSS site selection')
+    site_data = crop_site_data_in_time(site_data, start_date, end_date, print_msg=print_msg)
 
     # limit based on number of solutions
-    if hasattr(site_data, 'num_solution'):
-        drop_ndx = site_data.num_solution < min_num_solution
-        site_data.drop(site_data[drop_ndx].index, inplace=True)
+    site_data = crop_site_data_by_num_solutions(site_data, min_num_solution, print_msg=print_msg)
 
-    # final reporting
-    if print_msg == True:
-        print(f'{site_data.shape[0]:d} stations available')
+    return (site_data['site'],
+            site_data['lat'],
+            site_data['lon'])
 
-    return (site_data.site.to_numpy(),
-            site_data.lat.to_numpy(),
-            site_data.lon.to_numpy())
-
-def read_UNR_station_list(site_list_file:str, print_msg=True) -> pd.DataFrame:
+def read_UNR_station_list(site_list_file:str, print_msg=True) -> np.ndarray:
     """Return names and lon/lat values for UNR GNSS stations.
     """
     if print_msg == True:
-        print('Parsing UNR site list file')
+        print('parsing UNR site list file')
 
-    # Read file contents
-    site_data = pd.read_fwf(site_list_file,
-                            widths=(4, 9, 12, 9, 14, 14, 14, 11, 11, 11, 7))
+    # read file contents
+    txt_data = np.loadtxt(site_list_file,
+                          dtype=bytes,
+                          skiprows=1,
+                          usecols=(0,1,2,3,4,5,6,7,8,9,10)).astype(str)
 
-    # Rename columns for uniformity
-    site_data.rename(columns={'Sta': 'site',
-        'Lat(deg)': 'lat', 'Long(deg)': 'lon',
-        'Dtbeg': 'start_date', 'Dtend': 'end_date',
-        'NumSol': 'num_solution'}, inplace=True)
+    # write data to dictionary
+    site_data = {
+                 'site': txt_data[:,0],
+                 'lat': txt_data[:,1],
+                 'lon': txt_data[:,2],
+                 'start_date': txt_data[:,7],
+                 'end_date': txt_data[:,8],
+                 'num_solution': txt_data[:,10],
+                }
 
-    # Format dates
-    site_data['start_date'] = [dt.datetime.strptime(date, '%Y-%m-%d') \
-                                for date in site_data.start_date]
-    site_data['end_date'] = [dt.datetime.strptime(date, '%Y-%m-%d') \
-                                for date in site_data.end_date]
+    # format dates
+    site_data['start_date'] = np.array([dt.datetime.strptime(date, '%Y-%m-%d') \
+                                for date in site_data['start_date']])
+    site_data['end_date'] = np.array([dt.datetime.strptime(date, '%Y-%m-%d') \
+                                for date in site_data['end_date']])
 
     return site_data
 
-def read_ESESES_station_list(site_list_file:str, print_msg=True) -> pd.DataFrame:
+def read_ESESES_station_list(site_list_file:str, print_msg=True) -> np.ndarray:
     """Return names and lon/lat values for JPL GNSS stations.
     """
     if print_msg == True:
-        print('Parsing ESESES site list file')
+        print('parsing ESESES site list file')
 
-    # Read file contents
-    site_data = pd.read_csv(site_list_file, header = 14, sep=r'\s+')
+    # read file contents
+    txt_data = np.loadtxt(site_list_file, skiprows=17, dtype=str)
 
-    # Rename columns for uniformity
-    site_data.rename(columns={'Site': 'site',
-        'Latitude': 'lat', 'Longitude': 'lon'}, inplace=True)
+    # write data to dictionary
+    site_data = {
+                 'site': txt_data[:,0],
+                 'lon': txt_data[:,1],
+                 'lat': txt_data[:,2],
+                }
 
     return site_data
 
-def read_JPL_SIDESHOW_station_list(site_list_file:str, print_msg=True) -> pd.DataFrame:
+def read_JPL_SIDESHOW_station_list(site_list_file:str, print_msg=True) -> np.ndarray:
     """Return names and lon/lat values for JPL-SIDESHOW GNSS stations.
     """
     if print_msg == True:
-        print('Parsing JPL-SIDESHOW site list file')
+        print('parsing JPL-SIDESHOW site list file')
 
     # read file contents
     with open(site_list_file) as site_list:
@@ -244,16 +315,15 @@ def read_JPL_SIDESHOW_station_list(site_list_file:str, print_msg=True) -> pd.Dat
         Eerrs.append(float(Eerr))
         Uerrs.append(float(Uerr))
 
-    # format data frame
-    data = {'site': sites,
-            'lat': lats,  'lon': lons, 'elev': elevs,
-            'vel_n': Nvels, 'vel_e': Evels, 'vel_u': Uvels,
-            'err_n': Nerrs, 'err_e': Eerrs, 'err_u': Uerrs}
-    site_data = pd.DataFrame(data)
+    # write data to dictionary
+    site_data = {'site': np.array(sites),
+                 'lat': np.array(lats),
+                 'lon': np.array(lons),
+                }
 
     return site_data
 
-def read_Generic_station_list(site_list_file:str, print_msg=True) -> pd.DataFrame:
+def read_GENERIC_station_list(site_list_file:str, print_msg=True) -> np.ndarray:
     """Return names and lon/lat values for GNSS stations processed by an
     otherwise-unsupported source.
 
@@ -261,17 +331,24 @@ def read_Generic_station_list(site_list_file:str, print_msg=True) -> pd.DataFram
     GenericList.txt The file should have three, nine, or eleven space-
     separated columns:
 
-     site lat lon [vel_e vel_n vel_u err_e err_n err_u] [start_date end_date]
+     SITE lat lon [vel_e vel_n vel_u err_e err_n err_u] [start_date end_date]
 
     where site is the four-digit, alphanumeric (uppercase) site code; and
     lat/lon are in decimal degrees. If included, vel should be in units of
     m/yr; and dates should be in format YYYYMMDD.
     """
     if print_msg == True:
-        print('Parsing JPL-SIDESHOW site list file')
+        print('Parsing GENERIC site list file')
 
     # read file contents
-    site_data = pd.read_csv(site_list_file, delimiter=' ', names=('site', 'lat', 'lon'))
+    txt_data = np.loadtxt(site_list_file, dtype=str)
+
+    # write data to dictionary
+    site_data = {
+                 'site': txt_data[:,0],
+                 'lon': txt_data[:,1],
+                 'lat': txt_data[:,2],
+                }
 
     return site_data
 
@@ -489,8 +566,8 @@ def get_gnss_class(source:str):
         return ESESES_GNSS
     elif source == 'JPL-SIDESHOW':
         return JPL_SIDESHOW_GNSS
-    elif source == 'Generic':
-        return Generic_GNSS
+    elif source == 'GENERIC':
+        return GENERIC_GNSS
     else:
         raise ValueError(f'{source:s} source not supported.')
 
@@ -504,16 +581,13 @@ class GNSS:
     the processing source (e.g., UNR, etc.). Use the `get_gnss_class`
     method to determine appropriate child class.
     """
+    source = 'none'
 
-    def __init__(self, site: str, data_dir='./GNSS', version='IGS14'):
+    def __init__(self, site: str, data_dir=None, version='IGS14'):
         # Record properties
         self.site = site
         self.version = version
-
-        # create data directory if not exist
-        self.data_dir = os.path.abspath(data_dir)
-        if not os.path.exists(self.data_dir):
-            os.mkdir(self.data_dir)
+        self.data_dir = self.__format_data_dir__(data_dir)
 
         # variables to be filled by child classes
         self.dates = None
@@ -526,6 +600,24 @@ class GNSS:
         self.std_u = None
 
         return None
+
+    def __format_data_dir__(self, data_dir) -> str:
+        """Check formatting of GNSS data directory and ensure that directory
+        exists.
+
+        Parameters: data_dir - None or str, data directory with GNSS position files
+        Returns:    data_dir - str, full path to data directory
+        """
+        # format data directory name based on processing source
+        if data_dir is None:
+            data_dir = f'GNSS-{self.source:s}'
+            data_dir = os.path.abspath(data_dir)
+
+        # ensure directory exists
+        if not os.path.exists(data_dir):
+            os.mkdir(data_dir)
+
+        return data_dir
 
     def open(self, file=None, print_msg=True):
         """Read the lat/lon and displacement data of the station.
@@ -581,6 +673,7 @@ class GNSS:
         return None
 
 
+    #####################################  Utility Functions ###################################
     def display_data(self, marker_size=2, marker_color='k', plot_errors=True):
         """Display displacement data.
         """
@@ -612,7 +705,6 @@ class GNSS:
         return fig, ax
 
 
-    #####################################  Utility Functions ###################################
     def displacement_enu2los(self, inc_angle:float, az_angle:float, gnss_comp='enu2los',
                              horz_az_angle=-90., display=False, model=None):
         """Convert displacement in ENU to LOS direction.
@@ -865,16 +957,8 @@ class UNR_GNSS(GNSS):
         if print_msg == True:
             print('calculating station lat/lon')
 
-        data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
-        ref_lon, ref_lat = float(data[0, 6]), 0.
-        e0, e_off, n0, n_off = data[0, 7:11].astype(float)
-        e0 += e_off
-        n0 += n_off
-
-        az = np.arctan2(e0, n0) / np.pi * 180.
-        dist = np.sqrt(e0**2 + n0**2)
-        g = Geod(ellps='WGS84')
-        self.site_lon, self.site_lat = g.fwd(ref_lon, ref_lat, az, dist)[0:2]
+        data = np.loadtxt(self.file, dtype=bytes, skiprows=1)
+        self.site_lat, self.site_lon = data[0,20:22].astype(float)
 
         if print_msg == True:
             print(f'\t{self.site_lat:f}, {self.site_lon:f}')
@@ -1205,7 +1289,7 @@ class JPL_SIDESHOW_GNSS(GNSS):
                 self.std_e, self.std_n, self.std_u)
 
 
-class Generic_GNSS(GNSS):
+class GENERIC_GNSS(GNSS):
     """GNSS class for daily solutions of an otherwise-unsupported source.
     The user should format the station position data in a file called
     <sitename>.dat The file should have seven space-separated columns:
@@ -1232,11 +1316,17 @@ class Generic_GNSS(GNSS):
             get_stat_lat_lon
             read_displacement
     """
-    source = 'Generic'
+    source = 'GENERIC'
 
     def dload_site(self, print_msg=True) -> str:
-        """Download the station displacement data from the
-        specified source.
+        """Read displacement data from a GENERIC the station file.
+        In this case, the site data must already be downloaded and located in
+        the directory specified on instantiation (e.g., GNSS-GENERIC).
+        The file name convention should be:
+
+            <SITE>.txt
+
+        where the site name is in all caps.
 
         Modifies:   self.file     - str, local file path/name
                     self.file_url - str, file URL
@@ -1257,7 +1347,15 @@ class Generic_GNSS(GNSS):
 
     def get_stat_lat_lon(self, print_msg=True) -> (str, str):
         """Get station lat/lon based on processing source.
-        Retrieve data from the displacement file.
+        Retrieve data from the site list file, which should be located in the
+        current directory.
+        The file should be called "GenericList.txt" and should consist of
+        three columns:
+
+            <SITE> <site lat> <site lon>
+
+        where site is a four-digit site code in all caps. Lat/lon should be in
+        decimal degrees.
 
         Modifies:   self.lat/lon - str
         Returns:    self.lat/lon - str
@@ -1286,6 +1384,14 @@ class Generic_GNSS(GNSS):
     def read_displacement(self, start_date=None, end_date=None, print_msg=True,
                           display=False):
         """Read GNSS displacement time-series (defined by start/end_date)
+        The position file for a GENERIC site must consist of seven columns:
+
+        <date> <east disp> <north disp> <vertical disp> <east stdev> <north std> <vert stdev>
+
+        date is in format YYYYMMDD or YYYYMMDD:HHMMSS
+        displacements are in meters
+        if standard deviations or uncertainties are not availabe, fill columns with zeros
+
         Parameters: start/end_date - str, date in YYYYMMDD format
         Returns:    dates          - 1D np.ndarray of datetime.datetime object
                     dis_e/n/u      - 1D np.ndarray of displacement in meters in float32
@@ -1311,7 +1417,7 @@ class Generic_GNSS(GNSS):
             if date_len == 8:
                 datetime = dt.datetime.strptime(date, '%Y%m%d')
             elif date_len == 15:
-                datetime = dt.datetime.strptime(date, '%Y%m%dT%H%M%S')
+                datetime = dt.datetime.strptime(date, '%Y%m%d:%H%M%S')
             else:
                 raise ValueError('Date/time format not recognized')
 

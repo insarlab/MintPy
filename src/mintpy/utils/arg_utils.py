@@ -250,7 +250,7 @@ def add_gnss_argument(parser):
     gnss.add_argument('--show-gnss','--show-gps', dest='disp_gnss', action='store_true',
                       help='Show UNR GNSS location within the coverage.')
     gnss.add_argument('--gnss-source','--gps-source', dest='gnss_source', default='UNR',
-                      choices={'UNR', 'ESESES'},
+                      choices={'UNR', 'ESESES', 'JPL-SIDESHOW', 'GENERIC'},
                       help='Source of the GNSS displacement solution (default: %(default)s).')
 
     # compare GNSS with InSAR
