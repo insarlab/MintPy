@@ -132,7 +132,7 @@ class coordinate:
                 and 'UTM_ZONE' in self.src_metadata
                 and np.max(np.abs(lat_in)) <= 90
                 and np.max(np.abs(lon_in)) <= 360):
-            lat_in, lon_in = ut0.latlon2utm(np.array(lat_in), np.array(lon_in))
+            lat_in, lon_in = ut0.latlon2utm(self.src_metadata, np.array(lat_in), np.array(lon_in))
 
         # convert coordinates
         y_out = []
@@ -292,7 +292,7 @@ class coordinate:
         if ('UTM_ZONE' in self.src_metadata
                 and np.max(np.abs(lat)) <= 90
                 and np.max(np.abs(lon)) <= 360):
-            lat, lon = ut0.latlon2utm(np.array(lat), np.array(lon))
+            lat, lon = ut0.latlon2utm(self.src_metadata, np.array(lat), np.array(lon))
 
         self.open()
         if self.geocoded:

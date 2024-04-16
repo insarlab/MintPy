@@ -368,16 +368,22 @@ def utm2latlon(meta, easting, northing):
     return lat, lon
 
 
-def latlon2utm(lat, lon):
+def latlon2utm(meta, lat, lon):
     """Convert latitude/longitude in degrees to UTM easting/northing in meters.
 
-    Parameters: lat      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in y direction
+    Parameters: meta     - dict, mintpy attributes that includes:
+                           UTM_ZONE
+                lat      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in y direction
                 lon      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in x direction
     Returns:    easting  - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in x direction
                 northing - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in y direction
     """
     import utm
-    easting, northing = utm.from_latlon(np.array(lat), np.array(lon))[:2]
+
+    # invoke zone_num to ensure all coordinates are converted into the same single UTM zone,
+    # even if they cross a UTM boundary.
+    zone_num = int(meta['UTM_ZONE'][:-1])
+    easting, northing = utm.from_latlon(np.array(lat), np.array(lon), force_zone_number=zone_num)[:2]
 
     # output format
     if any(isinstance(x, (list, tuple)) for x in [lat, lon]):
