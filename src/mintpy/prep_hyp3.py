@@ -109,9 +109,13 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
     # HDF-EOS5 metadata
     if hyp3_meta['ReferenceGranule'].startswith('S1'):
         meta['beam_mode'] = 'IW'
+
+    meta['startUTC'] = date1.strftime('%Y-%m-%d %H:%M:%S.%f') + '+00:00'
+    meta['stopUTC'] = date2.strftime('%Y-%m-%d %H:%M:%S.%f') + '+00:00'
+    meta['relativeOrbit'] = ((int(hyp3_meta['ReferenceOrbitNumber']) - 73) % 175) + 1
     meta['unwrap_method'] = hyp3_meta['Unwrappingtype']
 
-    return(meta)
+    return meta
 
 
 #########################################################################
