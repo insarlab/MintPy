@@ -17,7 +17,7 @@ TEMPLATE1 = get_template_content('quick_overview')
 TEMPLATE2 = get_template_content('correct_unwrap_error')
 
 REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
+  Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis:
     Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
     doi:10.1016/j.cageo.2019.104331.
 """

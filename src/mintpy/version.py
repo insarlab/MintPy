@@ -94,7 +94,3 @@ ___________________________________________________________
           MintPy {v}, {d}
 ___________________________________________________________
 """.format(v=version, d=version_date)
-
-website = 'https://github.com/insarlab/MintPy'
-
-description = 'Miami INsar Time-series software in PYthon'
