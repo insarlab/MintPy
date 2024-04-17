@@ -38,15 +38,43 @@ def create_argument_parser(name=None, synopsis=None, description=None, epilog=No
     if subparsers:
         # for mintpy sub-command [used in linux with apt install]
         parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsis)
+            name,
+            description=description,
+            formatter_class=formatter_class,
+            epilog=epilog,
+            help=synopsis,
+        )
 
     else:
         # for regular command usage
         parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+            description=description,
+            formatter_class=formatter_class,
+            epilog=epilog,
+        )
 
     return parser
 
+
+##################################  argument utils  ####################################
+def get_dest_option_str_dict(parser):
+    """Get the dict where key is the option dest and value is the option string.
+
+    Parameters: parser       - argparse.ArgumentParser object
+    Returns:    dest2opt_str - dict, dictionary for all options in the parser object, where
+                               key   is the option dest   in str,
+                               value is the option string in list of str.
+    Examples:   from mintpy.cli.ifgram_inversion import create_parser
+                parser = create_parser()
+                dest_opt_str = get_dest_option_str_dict(parser)
+    """
+    action_list = parser.__dict__['_actions']
+    dest_opt_str = {}
+    for action in action_list:
+        key = action.dest
+        val = action.option_strings
+        dest_opt_str[key] = val
+    return dest_opt_str
 
 
 ##################################  argument group  ####################################

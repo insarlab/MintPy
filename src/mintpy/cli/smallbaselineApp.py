@@ -20,11 +20,12 @@ STEP_HELP = """Command line options for steps processing with names are chosen f
 {}
 {}
 {}
+{}
 
 In order to use either --start or --dostep, it is necessary that a
 previous run was done using one of the steps options to process at least
 through the step immediately preceding the starting step of the current run.
-""".format(STEP_LIST[0:5], STEP_LIST[5:11], STEP_LIST[11:])
+""".format(STEP_LIST[0:5], STEP_LIST[5:10], STEP_LIST[10:16], STEP_LIST[16:])
 
 REFERENCE = """reference:
   Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:

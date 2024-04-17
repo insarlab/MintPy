@@ -460,11 +460,14 @@ class TimeSeriesAnalysis:
         fname1 = os.path.join(work_dir, 'timeseries.h5')
         atr = readfile.read_attribute(fname0)
 
-        phase_correction_steps = ['correct_LOD',
-                                  'correct_SET',
-                                  'correct_troposphere',
-                                  'deramp',
-                                  'correct_topography']
+        phase_correction_steps = [
+            'correct_LOD',
+            'correct_SET',
+            'correct_ionosphere',
+            'correct_troposphere',
+            'deramp',
+            'correct_topography',
+        ]
 
         # loop for all steps
         steps = dict()
@@ -479,6 +482,15 @@ class TimeSeriesAnalysis:
                 method = template['mintpy.solidEarthTides']
                 if method:
                     fname1 = f'{os.path.splitext(fname0)[0]}_SET.h5'
+
+            elif sname == 'correct_ionosphere':
+                method = template['mintpy.ionosphericDelay.method']
+                if method:
+                    if method == 'split_spectrum':
+                        fname1 = f'{os.path.splitext(fname0)[0]}_ion.h5'
+                    else:
+                        msg = f'un-recognized ionospheric correction method: {method}'
+                        raise ValueError(msg)
 
             elif sname == 'correct_troposphere':
                 method = template['mintpy.troposphericDelay.method']
@@ -577,6 +589,28 @@ class TimeSeriesAnalysis:
                 mintpy.cli.solid_earth_tides.main(iargs)
         else:
             print('No solid Earth tides correction.')
+
+
+    def run_ionospheric_delay_correction(self, step_name):
+        """Correct ionospheric delays."""
+        iono_stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[3]
+
+        fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        if in_file != out_file:
+            method = self.template['mintpy.ionosphericDelay.method']
+
+            # range split spectrum (Fattahi et al., 2017; Liang et al. 2018; 2019)
+            if method == 'split_spectrum':
+                print(f'ionospheric delay correction with {method} approach')
+                iargs = ['-t', self.templateFile, '-f', in_file, '-o', out_file,
+                         '--iono-stack-file', iono_stack_file]
+                print('\niono_split_spectrum.py', ' '.join(iargs))
+                import mintpy.cli.iono_split_spectrum
+                mintpy.cli.iono_split_spectrum.main(iargs)
+        else:
+            print('No ionospheric delay correction.')
 
 
     def run_tropospheric_delay_correction(self, step_name):
@@ -894,6 +928,9 @@ class TimeSeriesAnalysis:
             elif sname == 'correct_SET':
                 self.run_solid_earth_tides_correction(sname)
 
+            elif sname == 'correct_ionosphere':
+                self.run_ionospheric_delay_correction(sname)
+
             elif sname == 'correct_troposphere':
                 self.run_tropospheric_delay_correction(sname)
 
@@ -996,6 +1033,7 @@ class TimeSeriesAnalysis:
 
         if ion_file:
             iargs_list0 += [
+                [ion_file, 'unwrapPhase-', '--zero-mask', '--wrap', '-c', 'cmy'],
                 [ion_file, 'unwrapPhase-', '--zero-mask'],
                 [ion_file, 'coherence-',   '--mask', 'no', '-v', '0', '1'],
             ]
