@@ -30,6 +30,74 @@ GNSS_SITE_LIST_URLS = {
 GNSS_SOURCES = list(GNSS_SITE_LIST_URLS.keys())
 
 
+
+######################################### Search GNSS ###############################################
+
+def search_gnss(SNWE, start_date=None, end_date=None, source='UNR', site_list_file=None,
+                min_num_solution=None, print_msg=True):
+    """Search available GNSS sites within the geo bounding box for a given GNSS source.
+
+    Parameters: SNWE             - tuple of 4 float, indicating (South, North, West, East) in degrees
+                source           - str, program or institution that processed the GNSS data
+                start_date       - str, date in YYYYMMDD format
+                end_date         - str, date in YYYYMMDD format
+                site_list_file   - str, site list file name
+                min_num_solution - int, minimum number of solutions available
+    Returns:    site_names       - 1D np.ndarray in string, GNSS station names
+                site_lats        - 1D np.ndarray in float32, latitude
+                site_lons        - 1D np.ndarray in float32, longitude
+    """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
+    # check: site_list_file name
+    if site_list_file is None:
+        if source == 'GENERIC':
+            raise ValueError('Site list file must be specified for GENERIC GNSS source!')
+        else:
+            site_list_file = os.path.basename(GNSS_SITE_LIST_URLS[source])
+
+    # download site_list_file (if it does not exist in current directory)
+    if not os.path.isfile(site_list_file):
+        dload_site_list(site_list_file, source=source, print_msg=print_msg)
+
+    # read site_list_file
+    if source == 'UNR':
+        sites = read_UNR_station_list(site_list_file)
+    elif source == 'ESESES':
+        sites = read_ESESES_station_list(site_list_file)
+    elif source == 'JPL-SIDESHOW':
+        sites = read_JPL_SIDESHOW_station_list(site_list_file)
+    elif source == 'GENERIC':
+        sites = read_GENERIC_station_list(site_list_file)
+
+    # ensure that site data formatting is consistent
+    sites['site'] = np.array([site.upper() for site in sites['site']])
+    sites['lon'][sites['lon'] > 180] -= 360         # ensure lon values in (-180, 180]
+    vprint(f'load {len(sites["site"]):d} sites with fields: {" ".join(sites.keys())}')
+
+    # limit in space
+    idx = ((sites['lat'] >= SNWE[0]) * (sites['lat'] <= SNWE[1]) *
+           (sites['lon'] >= SNWE[2]) * (sites['lon'] <= SNWE[3]))
+    vprint(f'keep sites within SNWE of {SNWE}: [{np.sum(idx)}]')
+
+    # limit in time
+    if start_date and 'end_date' in sites.keys():
+        start_dt = ptime.date_list2vector([start_date])[0][0]
+        idx *= sites['end_date'] >= start_dt
+        vprint(f'keep sites with end_date >= {start_date}: [{np.sum(idx)}]')
+    if end_date and 'start_date' in sites.keys():
+        end_dt = ptime.date_list2vector([end_date])[0][0]
+        idx *= sites['start_date'] <= end_dt
+        vprint(f'keep sites with start_date <= {end_date}: [{np.sum(idx)}]')
+
+    # limit based on number of solutions
+    if min_num_solution is not None and 'num_solution' in site_data.keys():
+        idx *= sites['num_solution'] >= min_num_solution
+        vprint(f'keep sites with # of solutions >= {min_num_solution}: [{np.sum(idx)}]')
+
+    return sites['site'][idx], sites['lat'][idx], sites['lon'][idx]
+
+
 def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
     """Download single file with list of GNSS site locations.
     """
@@ -53,276 +121,51 @@ def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
     return out_file
 
 
-def crop_site_data_by_index(site_data: dict, idx: np.ndarray) -> dict:
-    """Remove GNSS sites by index from a site_data dictionary.
-
-    Parameters: site_data - dict of ndarray, table-like object with GNSS sites
-                            loaded from the search_gnss function
-                idx       - ndarray of bool, indices to keep/exclude
-    Returns:    site_data - dict of ndarray, site_data cropped by index
-    """
-    for key in site_data:
-        site_data[key] = site_data[key][idx]
-
-    return site_data
-
-def crop_site_data_in_space(site_data: dict, SNWE: tuple, print_msg=False) -> dict:
-    """Remove GNSS sites by geographic location.
-
-    Parameters: site_data - dict of ndarray, table-like object with GNSS sites
-                            loaded from the search_gnss function
-                SNWE      - tuple of 4 float, indicating (South, North, West, East) in degrees
-    Returns:    site_data - dict of ndarray, cropped site_data
-    """
-    # parse bounding box
-    lat_min, lat_max, lon_min, lon_max = SNWE
-    assert (lon_min < lon_max) and (lat_min < lat_max), 'Check bounding box'
-
-    if print_msg == True:
-        print('cropping to')
-        print(f'lon range: {lon_min:.5f} to {lon_max:.5f}')
-        print(f'lat range: {lat_min:.5f} to {lat_max:.5f}')
-
-    # limit in space
-    idx = (site_data['lat'] >= lat_min) \
-           & (site_data['lat'] <= lat_max) \
-           & (site_data['lon'] >= lon_min) \
-           & (site_data['lon'] <= lon_max)
-    site_data = crop_site_data_by_index(site_data, idx)
-
-    if print_msg == True:
-        print('... {:d} sites remaining'.format(len(site_data['site'])))
-
-    return site_data
-
-def crop_site_data_in_time(site_data: dict, start_date: None | str, end_date: None | str,
-                           print_msg=True) -> dict:
-    """Remove GNSS sites by start/end date.
-
-    Parameters: site_data  - dict of ndarray, table-like object with GNSS sites
-                             loaded from the search_gnss function
-                start_date - str, date in YYYYMMDD format
-                end_date   - str, date in YYYYMMDD format
-    Returns:    site_data  - dict of ndarray, cropped site_data
-    """
-    # check start and end dates if provided
-    if start_date is not None:
-        start_date = dt.datetime.strptime(start_date, '%Y%m%d')
-    if end_date is not None:
-        end_date = dt.datetime.strptime(end_date, '%Y%m%d')
-    if start_date is not None and end_date is not None:
-        assert(start_date < end_date), 'start date must be before end date'
-
-    if print_msg == True:
-        print(f'cropping by date range {start_date} to {end_date}')
-
-    # crop by start date
-    if start_date is not None:
-        if 'start_date' in site_data.keys():
-            idx = site_data['start_date'] <= start_date
-            site_data = crop_site_data_by_index(site_data, idx)
-
-    if end_date is not None:
-        if 'start_date' in site_data.keys():
-            idx = site_data['end_date'] >= end_date
-            site_data = crop_site_data_by_index(site_data, idx)
-
-    if print_msg == True:
-        print('... {:d} sites remaining'.format(len(site_data['site'])))
-
-    return site_data
-
-def crop_site_data_by_num_solutions(site_data: dict, min_num_solution: None | int,
-                                    print_msg=True) -> dict:
-    """Remove GNSS sites based on a minimum number of solutions.
-
-    Parameters: site_data  - dict of ndarray, table-like object with GNSS sites
-                             loaded from the search_gnss function
-                min_num_solution - int, minimum number of positions
-    Returns:    site_data  - dict of ndarray, cropped site_data
-    """
-    if print_msg == True:
-        print(f'cropping data by min num solutions: {min_num_solution}')
-
-    if min_num_solution is not None:
-        if 'num_solution' in site_data.keys():
-            idx = site_data.num_solution >= min_num_solution
-            site_data = crop_site_data_by_index(site_data, idx)
-
-    if print_msg == True:
-        print('... {:d} sites remaining'.format(len(site_data['site'])))
-
-    return site_data
-
-
-def search_gnss(SNWE, start_date=None, end_date=None, source='UNR',
-                site_list_file=None, min_num_solution=None, print_msg=True):
-    """Search available GNSS sites within the geo bounding box from UNR website
-    Parameters: SNWE             - tuple of 4 float, indicating (South, North, West, East) in degrees
-                source           - str, program or institution that processed the GNSS data
-                start_date       - str, date in YYYYMMDD format
-                end_date         - str, date in YYYYMMDD format
-                site_list_file   - str
-                min_num_solution - int, minimum number of solutions available
-    Returns:    site_names       - 1D np.array of string, GNSS station names
-                site_lats        - 1D np.array, lat
-                site_lons        - 1D np.array, lon
-    """
-    # check file name
-    if site_list_file is None:
-        if source == 'GENERIC':
-            raise ValueError('site list file must be specified for generic inputs')
-        else:
-            site_list_file = dload_site_list(source=source, print_msg=print_msg)
-
-    # check whether site list file is in current directory
-    if not os.path.isfile(site_list_file):
-        # Download file
-        dload_site_list(site_list_file, source=source, print_msg=print_msg)
-
-    # parse data from file
-    if source == 'UNR':
-        site_data = read_UNR_station_list(site_list_file)
-    elif source == 'ESESES':
-        site_data = read_ESESES_station_list(site_list_file)
-    elif source == 'JPL-SIDESHOW':
-        site_data = read_JPL_SIDESHOW_station_list(site_list_file)
-    elif source == 'GENERIC':
-        site_data = read_GENERIC_station_list(site_list_file)
-
-    if print_msg == True:
-        print('loaded {:d} sites with fields: {:s}'.\
-              format(len(site_data['site']), ' '.join(site_data.keys())))
-
-    # ensure that site data formatting is consistent
-    site_data['site'] = np.array([site.upper() for site in site_data['site']])
-    site_data['lat'] = site_data['lat'].astype(float)
-    site_data['lon'] = site_data['lon'].astype(float)
-    site_data['lon'][site_data['lon'] > 180] -= 360  # ensure lon values in (-180, 180]
-
-    # limit in space
-    site_data = crop_site_data_in_space(site_data, SNWE, print_msg=print_msg)
-
-    # limit in time
-    site_data = crop_site_data_in_time(site_data, start_date, end_date, print_msg=print_msg)
-
-    # limit based on number of solutions
-    site_data = crop_site_data_by_num_solutions(site_data, min_num_solution, print_msg=print_msg)
-
-    return (site_data['site'],
-            site_data['lat'],
-            site_data['lon'])
-
-def read_UNR_station_list(site_list_file:str, print_msg=True) -> np.ndarray:
+def read_UNR_station_list(site_list_file:str):
     """Return names and lon/lat values for UNR GNSS stations.
     """
-    if print_msg == True:
-        print('parsing UNR site list file')
+    fc = np.loadtxt(site_list_file, dtype=str, skiprows=1, usecols=(0,1,2,3,4,5,6,7,8,9,10))
+    sites = {
+        'site'         : fc[:,0],
+        'lat'          : fc[:,1].astype(np.float32),
+        'lon'          : fc[:,2].astype(np.float32),
+        'start_date'   : fc[:,7],
+        'end_date'     : fc[:,8],
+        'num_solution' : fc[:,10].astype(np.int16),
+    }
 
-    # read file contents
-    txt_data = np.loadtxt(site_list_file,
-                          dtype=bytes,
-                          skiprows=1,
-                          usecols=(0,1,2,3,4,5,6,7,8,9,10)).astype(str)
+    # re-format dates
+    sites['start_date'] = np.array([dt.datetime.strptime(x, '%Y-%m-%d') for x in sites['start_date']])
+    sites['end_date']   = np.array([dt.datetime.strptime(x, '%Y-%m-%d') for x in sites['end_date']])
 
-    # write data to dictionary
-    site_data = {
-                 'site': txt_data[:,0],
-                 'lat': txt_data[:,1],
-                 'lon': txt_data[:,2],
-                 'start_date': txt_data[:,7],
-                 'end_date': txt_data[:,8],
-                 'num_solution': txt_data[:,10],
-                }
+    return sites
 
-    # format dates
-    site_data['start_date'] = np.array([dt.datetime.strptime(date, '%Y-%m-%d') \
-                                for date in site_data['start_date']])
-    site_data['end_date'] = np.array([dt.datetime.strptime(date, '%Y-%m-%d') \
-                                for date in site_data['end_date']])
 
-    return site_data
-
-def read_ESESES_station_list(site_list_file:str, print_msg=True) -> np.ndarray:
+def read_ESESES_station_list(site_list_file:str):
     """Return names and lon/lat values for JPL GNSS stations.
     """
-    if print_msg == True:
-        print('parsing ESESES site list file')
+    fc = np.loadtxt(site_list_file, skiprows=17, dtype=str)
+    sites = {
+        'site' : fc[:,0],
+        'lon'  : fc[:,1].astype(np.float32),
+        'lat'  : fc[:,2].astype(np.float32),
+    }
+    return sites
 
-    # read file contents
-    txt_data = np.loadtxt(site_list_file, skiprows=17, dtype=str)
 
-    # write data to dictionary
-    site_data = {
-                 'site': txt_data[:,0],
-                 'lon': txt_data[:,1],
-                 'lat': txt_data[:,2],
-                }
-
-    return site_data
-
-def read_JPL_SIDESHOW_station_list(site_list_file:str, print_msg=True) -> np.ndarray:
+def read_JPL_SIDESHOW_station_list(site_list_file:str):
     """Return names and lon/lat values for JPL-SIDESHOW GNSS stations.
     """
-    if print_msg == True:
-        print('parsing JPL-SIDESHOW site list file')
+    fc = np.loadtxt(fname, comments='<', skiprows=9, dtype=str)
+    sites = {
+        'site' : fc[::2, 0],
+        'lat'  : fc[::2, 2].astype(np.float32),
+        'lon'  : fc[::2, 3].astype(np.float32),
+    }
+    return sites
 
-    # read file contents
-    with open(site_list_file) as site_list:
-        lines = site_list.readlines()
 
-    # find lines containing position and velocity data
-    line_len = 8  # number of entries in a data line
-    name_len = 4  # number of letters in a station name
-    data_lines = [line.strip('\n') for line in lines if (len(line.split()) == line_len) \
-                    and (len(line.split()[0]) == name_len)]
-
-    # transform format from (POS \n VEL) to (POS VEL)
-    pos_lines = data_lines[0::2]
-    vel_lines = data_lines[1::2]
-    combo_lines = list(zip(pos_lines, vel_lines))
-
-    # empty lists
-    sites = []
-    lats = []
-    lons = []
-    elevs = []
-    Nvels = []
-    Evels = []
-    Uvels = []
-    Nerrs = []
-    Eerrs = []
-    Uerrs = []
-
-    # parse data
-    for line in combo_lines:
-        pos_info, vel_info = line
-
-        # parse line values
-        site,    _,  lat,  lon, elev,    _,    _,    _ = pos_info.split()
-        _   ,    _, Nvel, Evel, Uvel, Nerr, Eerr, Uerr = vel_info.split()
-
-        # format data
-        sites.append(site)
-        lats.append(float(lat))
-        lons.append(float(lon))
-        elevs.append(float(elev))
-        Nvels.append(float(Nvel))
-        Evels.append(float(Evel))
-        Uvels.append(float(Uvel))
-        Nerrs.append(float(Nerr))
-        Eerrs.append(float(Eerr))
-        Uerrs.append(float(Uerr))
-
-    # write data to dictionary
-    site_data = {'site': np.array(sites),
-                 'lat': np.array(lats),
-                 'lon': np.array(lons),
-                }
-
-    return site_data
-
-def read_GENERIC_station_list(site_list_file:str, print_msg=True) -> np.ndarray:
+def read_GENERIC_station_list(site_list_file:str):
     """Return names and lon/lat values for GNSS stations processed by an
     otherwise-unsupported source.
 
@@ -330,27 +173,24 @@ def read_GENERIC_station_list(site_list_file:str, print_msg=True) -> np.ndarray:
     GenericList.txt The file should have three, nine, or eleven space-
     separated columns:
 
-     SITE lat lon [vel_e vel_n vel_u err_e err_n err_u] [start_date end_date]
+    SITE lat lon [vel_e vel_n vel_u err_e err_n err_u] [start_date end_date]
 
     where site is the four-digit, alphanumeric (uppercase) site code; and
     lat/lon are in decimal degrees. If included, vel should be in units of
     m/yr; and dates should be in format YYYYMMDD.
     """
-    if print_msg == True:
-        print('Parsing GENERIC site list file')
+    fc = np.loadtxt(site_list_file, dtype=str)
+    sites = {
+        'site' : fc[:,0],
+        'lon'  : fc[:,1].astype(np.float32),
+        'lat'  : fc[:,2].astype(np.float32),
+    }
 
-    # read file contents
-    txt_data = np.loadtxt(site_list_file, dtype=str)
+    return sites
 
-    # write data to dictionary
-    site_data = {
-                 'site': txt_data[:,0],
-                 'lon': txt_data[:,1],
-                 'lat': txt_data[:,2],
-                }
 
-    return site_data
 
+######################################### Utils Functions ###########################################
 
 def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
                         dates2, pos_x2, pos_y2, pos_z2):
@@ -400,7 +240,7 @@ def get_gnss_los_obs(meta, obs_type, site_names, start_date, end_date, source='U
                 from mintpy.utils import readfile, utils as ut
                 meta = readfile.read_attribute('geo/geo_velocity.h5')
                 SNWE = ut.four_corners(meta)
-                site_names = gnss.search_gnss(SNWE, start_date='20150101', end_date='20190619')
+                site_names = gnss.search_gnss(SNWE, start_date='20150101', end_date='20190619')[0]
                 vel = gnss.get_gnss_los_obs(meta, 'velocity',     site_names, start_date='20150101', end_date='20190619')
                 dis = gnss.get_gnss_los_obs(meta, 'displacement', site_names, start_date='20150101', end_date='20190619')
     """
@@ -1225,7 +1065,7 @@ class JPL_SIDESHOW_GNSS(GNSS):
             print('calculating station lat/lon')
 
         # need to refer to the site list
-        site_list_file = dload_site_list(source='JPL-SIDESHOW')
+        site_list_file = os.path.basename(GNSS_SITE_LIST_URLS['JPL-SIDESHOW'])
 
         # find site in site list file
         with open(site_list_file) as site_list:

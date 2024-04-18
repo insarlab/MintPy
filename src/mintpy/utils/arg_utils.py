@@ -249,7 +249,7 @@ def add_gnss_argument(parser):
     gnss = parser.add_argument_group('GNSS', 'GNSS data to display')
     gnss.add_argument('--show-gnss','--show-gps', dest='disp_gnss', action='store_true',
                       help='Show UNR GNSS location within the coverage.')
-    gnss.add_argument('--gnss-source','--gps-source', dest='gnss_source', default='UNR',
+    gnss.add_argument('--gnss-source','--gnss-src','--gps-source', dest='gnss_source', default='UNR',
                       choices={'UNR', 'ESESES', 'JPL-SIDESHOW', 'GENERIC'},
                       help='Source of the GNSS displacement solution (default: %(default)s).')
 
