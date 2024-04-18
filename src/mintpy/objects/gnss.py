@@ -91,7 +91,7 @@ def search_gnss(SNWE, start_date=None, end_date=None, source='UNR', site_list_fi
         vprint(f'keep sites with start_date <= {end_date}: [{np.sum(idx)}]')
 
     # limit based on number of solutions
-    if min_num_solution is not None and 'num_solution' in site_data.keys():
+    if min_num_solution is not None and 'num_solution' in sites.keys():
         idx *= sites['num_solution'] >= min_num_solution
         vprint(f'keep sites with # of solutions >= {min_num_solution}: [{np.sum(idx)}]')
 
@@ -156,7 +156,7 @@ def read_ESESES_station_list(site_list_file:str):
 def read_JPL_SIDESHOW_station_list(site_list_file:str):
     """Return names and lon/lat values for JPL-SIDESHOW GNSS stations.
     """
-    fc = np.loadtxt(fname, comments='<', skiprows=9, dtype=str)
+    fc = np.loadtxt(site_list_file, comments='<', skiprows=9, dtype=str)
     sites = {
         'site' : fc[::2, 0],
         'lat'  : fc[::2, 2].astype(np.float32),
