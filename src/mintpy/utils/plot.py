@@ -415,8 +415,12 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
                 print(msg)
 
         else:
-            from mintpy.multilook import multilook_data
-            data_mli = multilook_data(data, num_multilook, num_multilook)
+            if min(data.shape[1:]) >= 100 and num_multilook > 1:
+                # multilook data (by 10X for 3D matrix by default) to ignore extreme values
+                from mintpy.multilook import multilook_data
+                data_mli = multilook_data(data, num_multilook, num_multilook)
+            else:
+                data_mli = np.array(data)
 
             cmap_lut = 256
             vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
@@ -1149,7 +1153,7 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
     # post-query: convert lat/lon to UTM for plotting
     if 'UTM_ZONE' in metadata.keys():
-        site_lats, site_lons = ut0.latlon2utm(site_lats, site_lons)
+        site_lats, site_lons = ut0.latlon2utm(metadata, site_lats, site_lons)
 
     # mask out stations not coincident with InSAR data
     if inps.mask_gnss and inps.msk is not None:

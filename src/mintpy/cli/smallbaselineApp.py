@@ -15,8 +15,9 @@ from mintpy.defaults.template import STEP_LIST
 from mintpy.utils.arg_utils import create_argument_parser
 
 ##########################################################################
-STEP_HELP = """Command line options for steps processing with names are chosen from the following list:
+STEP_HELP = """Command line options for steps processing with names chosen from the following list:
 
+{}
 {}
 {}
 {}
@@ -24,10 +25,10 @@ STEP_HELP = """Command line options for steps processing with names are chosen f
 In order to use either --start or --dostep, it is necessary that a
 previous run was done using one of the steps options to process at least
 through the step immediately preceding the starting step of the current run.
-""".format(STEP_LIST[0:5], STEP_LIST[5:11], STEP_LIST[11:])
+""".format(STEP_LIST[0:5], STEP_LIST[5:10], STEP_LIST[10:16], STEP_LIST[16:])
 
 REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
+  Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis:
     Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
     doi:10.1016/j.cageo.2019.104331.
 """

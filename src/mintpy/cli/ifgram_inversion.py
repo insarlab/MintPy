@@ -16,11 +16,12 @@ from mintpy.utils import arg_utils
 TEMPLATE = get_template_content('invert_network')
 
 REFERENCE = """references:
+  # SBAS
   Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface
     deformation monitoring based on small baseline differential SAR interferograms. IEEE TGRS,
     40(11), 2375-2383. doi:10.1109/TGRS.2002.803792
-  Pepe, A., and Lanari, R. (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
-    of multitemporal differential SAR interferograms, IEEE-TGRS, 44(9), 2374-2383.
+
+  # weighted SBAS: coh, fim, var
   Perissin, D., and Wang, T. (2012), Repeat-pass SAR interferometry with partially coherent targets, IEEE TGRS,
     50(1), 271-280, doi:10.1109/tgrs.2011.2160644.
   Samiei-Esfahany, S., Martins, J. E., Van Leijen, F., and Hanssen, R. F. (2016), Phase Estimation for Distributed
@@ -29,6 +30,12 @@ REFERENCE = """references:
     IGARSS '94., 8-12 Aug 1994.
   Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis: Unwrapping error
     correction and noise reduction, Computers & Geosciences, 133, 104331, doi:10.1016/j.cageo.2019.104331.
+
+  # temporal coherence
+  Pepe, A., and Lanari, R. (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
+    of multitemporal differential SAR interferograms, IEEE-TGRS, 44(9), 2374-2383.
+
+  # time-series uncertainty
   Yunjun, Z., Fattahi, H., Brancato, V., Rosen, P., Simons, M. (2021), Oral: Tectonic displacement mapping from SAR
     offset time series: noise reduction and uncertainty quantification, ID 590, FRINGE 2021, 31 May – 4 Jun, 2021, Virtual.
 """
@@ -122,6 +129,11 @@ def cmd_line_parse(iargs=None):
     from mintpy.objects import cluster, ifgramStack
     from mintpy.utils import readfile
 
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
+
     # check
     atr = readfile.read_attribute(inps.ifgramStackFile)
 
@@ -209,7 +221,12 @@ def read_template2inps(template_file, inps):
     template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
 
-    key_list = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
+    key_list = [x for x in list(iDict.keys()) if key_prefix+x in template.keys()]
+    # ensure manually specified options in command line overwrite template options
+    # by ignoring the keys appeared in command line
+    dest_opt_str = arg_utils.get_dest_option_str_dict(create_parser())
+    key_list = [x for x in key_list if all(y not in inps.argv for y in dest_opt_str[x])]
+
     for key in key_list:
         value = template[key_prefix+key]
         if key in ['weightFunc', 'maskDataset', 'minNormVelocity']:
@@ -222,7 +239,7 @@ def read_template2inps(template_file, inps):
 
     # computing configurations
     dask_key_prefix = 'mintpy.compute.'
-    key_list = [i for i in list(iDict.keys()) if dask_key_prefix+i in template.keys()]
+    key_list = [x for x in list(iDict.keys()) if dask_key_prefix+x in template.keys()]
     for key in key_list:
         value = template[dask_key_prefix+key]
         if key in ['cluster', 'config']:
