@@ -62,13 +62,13 @@ def search_gnss(SNWE, start_date=None, end_date=None, source='UNR', site_list_fi
 
     # read site_list_file
     if source == 'UNR':
-        sites = read_UNR_station_list(site_list_file)
+        sites = read_UNR_site_list(site_list_file)
     elif source == 'ESESES':
-        sites = read_ESESES_station_list(site_list_file)
+        sites = read_ESESES_site_list(site_list_file)
     elif source == 'JPL-SIDESHOW':
-        sites = read_JPL_SIDESHOW_station_list(site_list_file)
+        sites = read_JPL_SIDESHOW_site_list(site_list_file)
     elif source == 'GENERIC':
-        sites = read_GENERIC_station_list(site_list_file)
+        sites = read_GENERIC_site_list(site_list_file)
 
     # ensure that site data formatting is consistent
     sites['site'] = np.array([site.upper() for site in sites['site']])
@@ -123,7 +123,7 @@ def dload_site_list(out_file=None, source='UNR', print_msg=True) -> str:
     return out_file
 
 
-def read_UNR_station_list(site_list_file:str):
+def read_UNR_site_list(site_list_file:str):
     """Return names and lon/lat values for UNR GNSS stations.
     """
     fc = np.loadtxt(site_list_file, dtype=str, skiprows=1, usecols=(0,1,2,3,4,5,6,7,8,9,10))
@@ -143,7 +143,7 @@ def read_UNR_station_list(site_list_file:str):
     return sites
 
 
-def read_ESESES_station_list(site_list_file:str):
+def read_ESESES_site_list(site_list_file:str):
     """Return names and lon/lat values for JPL GNSS stations.
     """
     fc = np.loadtxt(site_list_file, skiprows=17, dtype=str)
@@ -155,7 +155,7 @@ def read_ESESES_station_list(site_list_file:str):
     return sites
 
 
-def read_JPL_SIDESHOW_station_list(site_list_file:str):
+def read_JPL_SIDESHOW_site_list(site_list_file:str):
     """Return names and lon/lat values for JPL-SIDESHOW GNSS stations.
     """
     fc = np.loadtxt(site_list_file, comments='<', skiprows=9, dtype=str)
@@ -167,7 +167,7 @@ def read_JPL_SIDESHOW_station_list(site_list_file:str):
     return sites
 
 
-def read_GENERIC_station_list(site_list_file:str):
+def read_GENERIC_site_list(site_list_file:str):
     """Return names and lon/lat values for GNSS stations processed by an
     otherwise-unsupported source.
 
@@ -452,7 +452,7 @@ class GNSS:
             self.dload_site(print_msg=print_msg)
 
         # retrieve data from file
-        self.get_stat_lat_lon()
+        self.get_site_lat_lon()
         self.read_displacement(print_msg=print_msg)
 
 
@@ -460,11 +460,11 @@ class GNSS:
         """Download GNSS site data file."""
         raise NotImplementedError('dload_site() is NOT implemented. Override with child class.')
 
-    def get_stat_lat_lon(self, print_msg=True):
+    def get_site_lat_lon(self, print_msg=False):
         """Get the GNSS site latitude & longitude into:
         Returns: site_lat/lon - float, site latitude/longitude in degree
         """
-        raise NotImplementedError('get_stat_lat_lon() is NOT implemented. Override with child class.')
+        raise NotImplementedError('get_site_lat_lon() is NOT implemented. Override with child class.')
 
     def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):
         """Get the GNSS time/displacement(Std) into:
@@ -604,7 +604,7 @@ class GNSS:
 
     def get_los_geometry(self, geom_obj, print_msg=False):
         """Get the Line-of-Sight geometry info in incidence and azimuth angle in degrees."""
-        lat, lon = self.get_stat_lat_lon()
+        lat, lon = self.get_site_lat_lon()
 
         # get LOS geometry
         if isinstance(geom_obj, str):
@@ -647,7 +647,7 @@ class GNSS:
                     ref_site_lalo - tuple of 2 float, lat/lon of reference GNSS site
         """
         # read GNSS object
-        site_lalo = self.get_stat_lat_lon()
+        site_lalo = self.get_site_lat_lon()
         dates = self.read_displacement(start_date, end_date, print_msg=print_msg)[0]
         inc_angle, az_angle = self.get_los_geometry(geom_obj)
         dis, std = self.displacement_enu2los(
@@ -659,7 +659,7 @@ class GNSS:
         # get LOS displacement relative to another GNSS site
         if ref_site:
             ref_obj = get_gnss_class(self.source)(site=ref_site, data_dir=self.data_dir)
-            ref_site_lalo = ref_obj.get_stat_lat_lon()
+            ref_site_lalo = ref_obj.get_site_lat_lon()
             ref_obj.read_displacement(start_date, end_date, print_msg=print_msg)
             inc_angle, az_angle = ref_obj.get_los_geometry(geom_obj)
             ref_obj.displacement_enu2los(
@@ -749,7 +749,7 @@ class GNSS_UNR(GNSS):
 
     Based on the specific formats of the data source, using the functions:
         dload_site()
-        get_stat_lat_lon()
+        get_site_lat_lon()
         read_displacement()
     """
     def __init__(self, site: str, data_dir=None, version='IGS14'):
@@ -801,7 +801,7 @@ class GNSS_UNR(GNSS):
         return self.file
 
 
-    def get_stat_lat_lon(self) -> (float, float):
+    def get_site_lat_lon(self, print_msg=False) -> (float, float):
         """Get station lat/lon from the displacement file.
 
         Modifies:   self.lat/lon - float
@@ -879,7 +879,7 @@ class GNSS_ESESES(GNSS):
 
     Based on the specific formats of the data source, using the functions:
         dload_site()
-        get_stat_lat_lon()
+        get_site_lat_lon()
         read_displacement()
     """
     source = 'ESESES'
@@ -945,7 +945,7 @@ class GNSS_ESESES(GNSS):
 
         return self.file
 
-    def get_stat_lat_lon(self) -> (float, float):
+    def get_site_lat_lon(self, print_msg=False) -> (float, float):
         """Get station lat/lon based on processing source.
         Retrieve data from the displacement file.
 
@@ -1031,17 +1031,17 @@ class GNSS_JPL_SIDESHOW(GNSS):
     """GNSS class for daily solutions processed by JPL-SIDESHOW.
 
     This object will assign the attributes:
-            site          - str, four-digit site code
-            site_lat/lon  - float
-            dates         - 1D np.ndarray
-            date_list     - list
-            dis_e/n/u     - 1D np.ndarray
-            std_e,n,u     - 1D np.ndarray
+        site          - str, four-digit site code
+        site_lat/lon  - float
+        dates         - 1D np.ndarray
+        date_list     - list
+        dis_e/n/u     - 1D np.ndarray
+        std_e,n,u     - 1D np.ndarray
 
-    based on the specific formats of the data source, using the functions:
-            dload_site
-            get_stat_lat_lon
-            read_displacement
+    Based on the specific formats of the data source, using the functions:
+        dload_site()
+        get_site_lat_lon()
+        read_displacement()
     """
     source = 'JPL-SIDESHOW'
 
@@ -1072,14 +1072,14 @@ class GNSS_JPL_SIDESHOW(GNSS):
 
         return self.file
 
-    def get_stat_lat_lon(self) -> (float, float):
+    def get_site_lat_lon(self, print_msg=False) -> (float, float):
         """Get station lat/lon based on processing source.
         Retrieve data from the displacement file.
 
         Modifies:   self.lat/lon - float
         Returns:    self.lat/lon - float
         """
-        if print_msg == True:
+        if print_msg:
             print('calculating station lat/lon')
 
         # need to refer to the site list
@@ -1161,17 +1161,17 @@ class GNSS_GENERIC(GNSS):
     for the GenericList.txt file are given above.
 
     This object will assign the attributes:
-            site          - str, four-digit site code
-            site_lat/lon  - float
-            dates         - 1D np.ndarray
-            date_list     - list
-            dis_e/n/u     - 1D np.ndarray
-            std_e,n,u     - 1D np.ndarray
+        site          - str, four-digit site code
+        site_lat/lon  - float
+        dates         - 1D np.ndarray
+        date_list     - list
+        dis_e/n/u     - 1D np.ndarray
+        std_e,n,u     - 1D np.ndarray
 
-    based on the specific formats of the data source, using the functions:
-            dload_site
-            get_stat_lat_lon
-            read_displacement
+    Based on the specific formats of the data source, using the functions:
+        dload_site()
+        get_site_lat_lon()
+        read_displacement()
     """
     source = 'GENERIC'
 
@@ -1202,7 +1202,7 @@ class GNSS_GENERIC(GNSS):
 
         return self.file
 
-    def get_stat_lat_lon(self) -> (str, str):
+    def get_site_lat_lon(self) -> (str, str):
         """Get station lat/lon based on processing source.
         Retrieve data from the site list file, which should be located in the
         current directory.
