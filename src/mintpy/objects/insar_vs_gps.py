@@ -107,10 +107,7 @@ class insar_vs_gnss:
 
     def read_gnss(self):
         # define GNSS station object based on processing source
-        if self.gnss_source == 'UNR':
-            GNSS = gnss.UNR_GNSS
-        elif self.gnss_source == 'ESESES':
-            GNSS = gnss.ESESES_GNSS
+        GNSS = gnss.get_gnss_class(self.gnss_source)
 
         # read data for each GNSS site
         for sname in self.site_names:
@@ -121,7 +118,7 @@ class insar_vs_gnss:
             site['lat'] = gnss_obj.site_lat
             site['lon'] = gnss_obj.site_lon
 
-            dates, dis, dis_std = gnss_obj.read_gnss_los_displacement(
+            dates, dis, dis_std = gnss_obj.get_los_displacement(
                 self.geom_file,
                 start_date=self.start_date,
                 end_date=self.end_date,
