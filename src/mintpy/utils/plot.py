@@ -1216,6 +1216,7 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
             site_names=site_names,
             start_date=start_date,
             end_date=end_date,
+            source=inps.gnss_source,
             gnss_comp=inps.gnss_component,
             horz_az_angle=inps.horz_az_angle,
             print_msg=print_msg,

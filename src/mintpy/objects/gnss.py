@@ -73,7 +73,7 @@ def search_gnss(SNWE, start_date=None, end_date=None, source='UNR', site_list_fi
     # ensure that site data formatting is consistent
     sites['site'] = np.array([site.upper() for site in sites['site']])
     sites['lon'][sites['lon'] > 180] -= 360         # ensure lon values in (-180, 180]
-    vprint(f'load {len(sites["site"]):d} sites with fields: {" ".join(sites.keys())}')
+    vprint(f'load {len(sites["site"]):d} GNSS sites with fields: {" ".join(sites.keys())}')
 
     # limit in space
     idx = ((sites['lat'] >= SNWE[0]) * (sites['lat'] <= SNWE[1]) *
@@ -231,7 +231,7 @@ def get_los_obs(meta, obs_type, site_names, start_date, end_date, source='UNR', 
     file_dir = os.path.dirname(meta['FILE_PATH'])
     csv_file = os.path.join(file_dir, f'gnss_{gnss_comp:s}')
     csv_file += f'{horz_az_angle:.0f}' if gnss_comp == 'horz' else ''
-    csv_file += '.csv'
+    csv_file += f'_{source.upper()}.csv'
     col_names = ['Site', 'Lon', 'Lat', 'Displacement', 'Velocity']
     col_types = ['U10'] + ['f8'] * (len(col_names) - 1)
     vprint(f'default GNSS observation file name: {csv_file:s}')
@@ -271,11 +271,13 @@ def get_los_obs(meta, obs_type, site_names, start_date, end_date, source='UNR', 
                                          work_dir=file_dir, coord='geo')
         if geom_file:
             geom_obj = geom_file
-            vprint('use incidence / azimuth angle from file: {}'.\
-                   format(os.path.basename(geom_file)))
+            vprint(f'use incidence / azimuth angle from file: {os.path.basename(geom_file)}')
         else:
             geom_obj = meta
             vprint('use incidence / azimuth angle from metadata')
+
+        # get url_prefix [to speed up downloading for ESESES]
+        url_prefix = get_ESESES_url_prefix() if source == 'ESESES' else None
 
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
@@ -283,8 +285,7 @@ def get_los_obs(meta, obs_type, site_names, start_date, end_date, source='UNR', 
             prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {site_name:s}')
 
             # calculate GNSS data value
-            gnss_obj = get_gnss_class(source)(site_name)
-            gnss_obj.open(print_msg=False)
+            gnss_obj = get_gnss_class(source)(site_name, url_prefix=url_prefix)
             vel, dis_ts = gnss_obj.get_los_velocity(
                 geom_obj,
                 start_date=start_date,
@@ -356,6 +357,41 @@ def get_gnss_class(source:str):
         raise ValueError(f'GNSS source {source:s} is NOT supported!')
 
 
+def get_ESESES_url_prefix():
+    """Get the url prefix for the ESESES source, which updates regularly.
+    [Poor design of ESESES website].
+    """
+    print('searching for ESESES url_prefix ...')
+    # url prefix format
+    url_fmt = 'http://garner.ucsd.edu/pub/measuresESESES_products/Timeseries'
+    url_fmt += '/CurrentUntarred/Clean_TrendNeuTimeSeries_comb_{:s}'
+
+    # start with today and check back in time
+    today = dt.date.today()
+    max_day = 21
+    num_day = 0
+    while num_day < max_day:
+        # formulate URL based on date
+        day_str = (today - dt.timedelta(days=num_day)).strftime('%Y%m%d')
+        url_prefix = url_fmt.format(day_str)
+
+        # check if page exists
+        try:
+            urlopen(url_prefix)
+            print(f'{url_prefix} [YES!]')
+        except:
+            if num_day == max_day - 1:
+                raise FileNotFoundError(f'The ESESES repository {url_fmt} CANNOT be found!')
+            else:
+                num_day += 1
+                print(f'{url_prefix} [no]')
+                continue
+        else:
+            break
+
+    return url_prefix
+
+
 
 #################################### GNSS-GSI utility functions #####################################
 
@@ -420,19 +456,36 @@ class GNSS:
     below, support functions for downloading and parsing GNSS position based on
     the processing source (e.g., UNR, etc.). Use the `get_gnss_class`
     method to determine appropriate child class.
+
+    The parent class/object will assign the following attributes:
+        source        - str, GNSS solution source
+        version       - str, GNSS solution version
+        url_prefix    - str, GNSS data file url prefix
+
+    The chile class/object will assign the following attributes:
+        file          - str, path of the local data file
+        url           - str, path of the remote data file
+        site          - str, four-digit site code
+        site_lat/lon  - float, site latitude/longitude in degree
+        dates         - 1D np.ndarray, dt.datetime object
+        date_list     - list(str), dates in YYYYMMDD format
+        dis_e/n/u     - 1D np.ndarray, displacement in meters
+        std_e,n,u     - 1D np.ndarray, displacement STD in meters
     """
 
-    def __init__(self, site: str, data_dir=None, version='IGS14', source='UNR'):
+    def __init__(self, site: str, data_dir=None, version='IGS14', source='UNR', url_prefix=None):
         # site info
         self.site = site
         self.source = source
         self.version = version
+        self.url_prefix = url_prefix
+        self.url = None
 
-        # site info [local]
+        # local file info
         self.data_dir = self.__format_data_dir__(data_dir)
         self.file = None
 
-        # variables to be filled by child classes
+        # displacement data
         self.dates = None
         self.date_list = None
         self.dis_e = None
@@ -456,9 +509,44 @@ class GNSS:
         self.read_displacement(print_msg=print_msg)
 
 
-    def dload_site(self, print_msg=True):
-        """Download GNSS site data file."""
-        raise NotImplementedError('dload_site() is NOT implemented. Override with child class.')
+    def dload_site(self, overwrite=False, total_tries=5, print_msg=True):
+        """Download GNSS site data file.
+
+        Parameters: overwrite   - bool, overwrite existing data file
+                    total_tries - int, number of tries to download if failed
+                    print_msg   - bool, verbose print out msg
+        Returns:    self.file   - str, path to the local data file
+        """
+        vprint = print if print_msg else lambda *args, **kwargs: None
+
+        # download
+        if self.url and overwrite or not os.path.isfile(self.file):
+            vprint(f"downloading site {self.site:s} from {self.source} to {self.file:s}")
+            # retry on download fail
+            # https://stackoverflow.com/questions/31529151
+            remain_tries = total_tries
+            while remain_tries > 0 :
+                try:
+                    urlretrieve(self.url, self.file)
+                    vprint(f'successfully downloaded: {self.url}')
+                except:
+                    vprint(f'error downloading {self.url} on trial no. {total_tries-remain_tries}')
+                    remain_tries -= 1
+                    continue
+                else:
+                    break
+
+        # uncompress the downloaded *.z file [for ESESES only]
+        if self.source == 'ESESES' and self.file.endswith('.Z'):
+            with zipfile.ZipFile(self.file, 'r') as fz:
+                fz.extractall(self.data_dir)
+
+            # update file name
+            self.file = self.file.strip('.Z')
+            vprint(f'... extracted to {self.file:s}')
+
+        return self.file
+
 
     def get_site_lat_lon(self, print_msg=False):
         """Get the GNSS site latitude & longitude into:
@@ -484,7 +572,7 @@ class GNSS:
         """
         # format data directory name based on processing source
         if data_dir is None:
-            data_dir = f'GNSS-{self.source:s}'
+            data_dir = f'GNSS-{self.source.upper():s}'
             data_dir = os.path.abspath(data_dir)
 
         # ensure directory exists
@@ -739,22 +827,18 @@ class GNSS_UNR(GNSS):
     """GNSS child class for daily solutions processed by Nevada Geodetic Lab
     at University of Nevada, Reno (UNR).
 
-    This object will assign the attributes:
-        site          - str, four-digit site code
-        site_lat/lon  - float
-        dates         - 1D np.ndarray
-        date_list     - list
-        dis_e/n/u     - 1D np.ndarray
-        std_e,n,u     - 1D np.ndarray
-
-    Based on the specific formats of the data source, using the functions:
-        dload_site()
-        get_site_lat_lon()
-        read_displacement()
+    Website: http://geodesy.unr.edu/NGLStationPages/GlobalStationList
     """
-    def __init__(self, site: str, data_dir=None, version='IGS14'):
-        super().__init__(site=site, data_dir=data_dir, version=version, source='UNR')
-        # get local file name
+    def __init__(self, site: str, data_dir=None, version='IGS14', url_prefix=None):
+        super().__init__(
+            site=site,
+            data_dir=data_dir,
+            version=version,
+            source='UNR',
+            url_prefix=url_prefix,
+        )
+
+        # get file
         if version == 'IGS08':
             self.file = os.path.join(self.data_dir, f'{self.site:s}.{version:s}.tenv3')
         elif version == 'IGS14':
@@ -762,43 +846,12 @@ class GNSS_UNR(GNSS):
         else:
             raise ValueError(f'Un-supported GNSS versoin: {version}!')
 
-
-    def dload_site(self, overwrite=False, print_msg=True) -> str:
-        """Download the station displacement data from the specified source.
-
-        Modifies:   self.file     - str, local file path/name
-                    self.file_url - str, file URL
-        Returns:    self.file     - str, local file path/name
-        """
-        vprint = print if print_msg else lambda *args, **kwargs: None
-
-        # URL and file name specs
-        # example link: http://geodesy.unr.edu/gps_timeseries/tenv3/IGS08/1LSU.IGS08.tenv3
-        #               http://geodesy.unr.edu/gps_timeseries/tenv3/IGS14/CASU.tenv3
-        url_prefix = 'http://geodesy.unr.edu/gps_timeseries/tenv3'
-        self.file_url = os.path.join(url_prefix, self.version, os.path.basename(self.file))
-
-        # download file if not present
-        if overwrite or not os.path.isfile(self.file):
-            vprint(f"downloading site {self.site:s} from UNR NGL to {self.file:s}")
-            # urlretrieve(self.file_url, self.file)
-            # retry on download fail
-            # https://stackoverflow.com/questions/31529151
-            total_tries = 3
-            remain_tries = total_tries
-            while remain_tries > 0 :
-                try:
-                    urlretrieve(self.file_url, self.file)
-                    vprint(f'successfully downloaded: {self.file_url}')
-                    time.sleep(0.1)
-                except:
-                    vprint(f'error downloading {self.file_url} on trial no. {total_tries-remain_tries}')
-                    remain_tries -= 1
-                    continue
-                else:
-                    break
-
-        return self.file
+        # get url
+        # examples: http://geodesy.unr.edu/gps_timeseries/tenv3/IGS08/1LSU.IGS08.tenv3
+        #           http://geodesy.unr.edu/gps_timeseries/tenv3/IGS14/CASU.tenv3
+        if not self.url_prefix:
+            self.url_prefix = f'http://geodesy.unr.edu/gps_timeseries/tenv3/{self.version}'
+        self.url = os.path.join(self.url_prefix, os.path.basename(self.file))
 
 
     def get_site_lat_lon(self, print_msg=False) -> (float, float):
@@ -816,8 +869,7 @@ class GNSS_UNR(GNSS):
         return self.site_lat, self.site_lon
 
 
-    def read_displacement(self, start_date=None, end_date=None, print_msg=True,
-                          display=False):
+    def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):
         """Read GNSS displacement time-series (defined by start/end_date)
         Parameters: start_date - str, start date in YYYYMMDD format
                     end_date   - str, end_date   in YYYYMMDD format
@@ -869,81 +921,26 @@ class GNSS_ESESES(GNSS):
     """GNSS child class for daily solutions processed for the Enhanced Solid
     Earth Science ESDR System (ESESES) project by JPL and SOPAC.
 
-    This object will assign the attributes:
-        site          - str, four-digit site code
-        site_lat/lon  - float
-        dates         - 1D np.ndarray
-        date_list     - list
-        dis_e/n/u     - 1D np.ndarray
-        std_e,n,u     - 1D np.ndarray
-
-    Based on the specific formats of the data source, using the functions:
-        dload_site()
-        get_site_lat_lon()
-        read_displacement()
+    Website: https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/ESESES_products.html
+             http://garner.ucsd.edu/pub/measuresESESES_products/
     """
-    source = 'ESESES'
+    def __init__(self, site: str, data_dir=None, version='IGS14', url_prefix=None):
+        super().__init__(
+            site=site,
+            data_dir=data_dir,
+            version=version,
+            source='ESESES',
+            url_prefix=url_prefix,
+        )
 
-    def dload_site(self, print_msg=True) -> str:
-        """Download the station displacement data from the specified source.
+        # get file
+        self.file = os.path.join(self.data_dir, f'{self.site.lower():s}CleanTrend.neu.Z')
 
-        Modifies:   self.file     - str, local file path/name
-                    self.file_url - str, file URL
-        Returns:    self.file     - str, local file path/name
-        """
-        if print_msg:
-            print(f"downloading site {self.site:s} from UNR NGL to {self.file:s}")
-            print(f'downloading data for site {self.site:s} from the ESESES source')
+        # get url
+        if not self.url_prefix:
+            self.url_prefix = get_ESESES_url_prefix()
+        self.url = os.path.join(self.url_prefix, os.path.basename(self.file))
 
-        # determine proper URL
-        url_fmt = 'http://garner.ucsd.edu/pub/measuresESESES_products/Timeseries'
-        url_fmt += '/CurrentUntarred/Clean_TrendNeuTimeSeries_comb_{:s}'
-
-        # start with today and check back in time
-        today = dt.date.today()
-        day_lim = 21
-        for days in range(day_lim):
-            # formulate "days ago"
-            days_ago = dt.timedelta(days=days)
-
-            # formulate URL based on date
-            url_prefix = url_fmt.format((today - days_ago).strftime('%Y%m%d'))
-
-            # check if page exists
-            try:
-                urlopen(url_prefix)  #nosec
-                break
-            except Exception:
-                if days_ago.days == (day_lim - 1):
-                    raise FileNotFoundError('The ESESES source repository cannot be found.')
-                else:
-                    pass
-
-        # file name and full url
-        self.file = os.path.join(self.data_dir,
-                                 '{site:s}CleanTrend.neu.Z'.\
-                                 format(site=self.site.lower()))
-        self.file_url = os.path.join(url_prefix, os.path.basename(self.file))
-
-        # download file if not present
-        if os.path.isfile(self.file):
-            if print_msg == True:
-                print(f'file {self.file:s} exists--reading')
-        else:
-            if print_msg == True:
-                print(f'... downloading {self.file_url:s} to {self.file:s}')
-            urlretrieve(self.file_url, self.file)  #nosec
-
-        # unzip file
-        with zipfile.ZipFile(self.file, 'r') as Zfile:
-            Zfile.extractall(self.data_dir)
-
-        # update file name
-        self.file = self.file.strip('.Z')
-        if print_msg == True:
-            print(f'... extracted to {self.file:s}')
-
-        return self.file
 
     def get_site_lat_lon(self, print_msg=False) -> (float, float):
         """Get station lat/lon based on processing source.
@@ -952,56 +949,56 @@ class GNSS_ESESES(GNSS):
         Modifies:   self.lat/lon - float
         Returns:    self.lat/lon - float
         """
-        if print_msg == True:
-            print('calculating station lat/lon')
+        # download file if it does not exist
+        if not os.path.isfile(self.file):
+            self.dload_site(print_msg=print_msg)
 
-        with open(self.file) as data_file:
-            # Read raw file contents
-            lines = data_file.readlines()
+        # use the uncompressed data file
+        if self.file.endswith('.Z'):
+            self.file = self.file[:-2]
 
-            # Determine reference latitude
-            lat_line = [line for line in lines \
-                        if line.find('# Latitude') != -1]
-            lat_line = lat_line[0].strip('\n')
+        with open(self.file) as f:
+            lines = f.readlines()
+
+            # latitude
+            lat_line = [x for x in lines if x.startswith('# Latitude')][0].strip('\n')
             self.site_lat = float(lat_line.split()[-1])
 
-            # Determine reference longitude
-            lon_line = [line for line in lines \
-                        if line.find('# East Longitude') != -1]
-            lon_line = lon_line[0].strip('\n')
+            # longitude
+            lon_line = [x for x in lines if x.startswith('# East Longitude')][0].strip('\n')
             self.site_lon = float(lon_line.split()[-1])
             # ensure longitude in the range of (-180, 180]
             self.site_lon -= 0 if self.site_lon <= 180 else 360
 
-        if print_msg == True:
-            print(f'\t{self.site_lat:f}, {self.site_lon:f}')
-
         return self.site_lat, self.site_lon
 
-    def read_displacement(self, start_date=None, end_date=None, print_msg=True,
-                          display=False):
-        """Read GNSS displacement time-series (defined by start/end_date)
+
+    def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):
+        """Read GNSS displacement time-series (defined by start/end_date).
+
         Parameters: start/end_date - str, date in YYYYMMDD format
         Returns:    dates          - 1D np.ndarray of datetime.datetime object
                     dis_e/n/u      - 1D np.ndarray of displacement in meters in float32
                     std_e/n/u      - 1D np.ndarray of displacement STD in meters in float32
         """
+        vprint = print if print_msg else lambda *args, **kwargs: None
+
         # download file if it does not exist
         if not os.path.isfile(self.file):
             self.dload_site(print_msg=print_msg)
 
-        # read dates, dis_e, dis_n, dis_u
-        if print_msg == True:
-            print('reading time and displacement in east/north/vertical direction')
+        # use the uncompressed data file
+        if self.file.endswith('.Z'):
+            self.file = self.file[:-2]
 
-        # read data from file
-        data = np.loadtxt(self.file, usecols=tuple(range(0,12)))
-        n_data = data.shape[0]
+        # read data file
+        vprint('reading time and displacement in east/north/vertical direction')
+        fc = np.loadtxt(self.file, usecols=tuple(range(0,12)))
+        num_solution = fc.shape[0]
 
         # parse dates
-        dates = [dt.datetime(int(data[i,1]), 1, 1) \
-                 + dt.timedelta(days=int(data[i,2])) \
-                 for i in range(n_data)]
+        dates = [dt.datetime(int(fc[i, 1]), 1, 1) + dt.timedelta(days=int(fc[i, 2]))
+                 for i in range(num_solution)]
         self.dates = np.array(dates)
 
         # parse displacement data
@@ -1010,7 +1007,7 @@ class GNSS_ESESES(GNSS):
          self.dis_u,
          self.std_n,
          self.std_e,
-         self.std_u) = data[:, 3:9].astype(np.float32).T / 1000
+         self.std_u) = fc[:, 3:9].astype(np.float32).T / 1000
 
         # cut out the specified time range
         self.__crop_to_date_range__(start_date, end_date)
@@ -1019,7 +1016,7 @@ class GNSS_ESESES(GNSS):
         self.date_list = [date.strftime('%Y%m%d') for date in self.dates]
 
         # display if requested
-        if display == True:
+        if display:
             self.plot()
 
         return (self.dates,
@@ -1030,47 +1027,25 @@ class GNSS_ESESES(GNSS):
 class GNSS_JPL_SIDESHOW(GNSS):
     """GNSS class for daily solutions processed by JPL-SIDESHOW.
 
-    This object will assign the attributes:
-        site          - str, four-digit site code
-        site_lat/lon  - float
-        dates         - 1D np.ndarray
-        date_list     - list
-        dis_e/n/u     - 1D np.ndarray
-        std_e,n,u     - 1D np.ndarray
-
-    Based on the specific formats of the data source, using the functions:
-        dload_site()
-        get_site_lat_lon()
-        read_displacement()
+    Website:
     """
-    source = 'JPL-SIDESHOW'
+    def __init__(self, site: str, data_dir=None, version='IGS14', url_prefix=None):
+        super().__init__(
+            site=site,
+            data_dir=data_dir,
+            version=version,
+            source='JPL-SIDESHOW',
+            url_prefix=url_prefix,
+        )
 
-    def dload_site(self, print_msg=True) -> str:
-        """Download the station displacement data from the
-        specified source.
-
-        Modifies:   self.file     - str, local file path/name
-                    self.file_url - str, file URL
-        Returns:    self.file     - str, local file path/name
-        """
-        if print_msg == True:
-            print(f'downloading data for site {self.site:s} from the JPL-SIDESHOW source')
-
-        # URL and file name specs
-        url_prefix = 'https://sideshow.jpl.nasa.gov/pub/JPL_GPS_Timeseries/repro2018a/post/point/'
+        # get file
         self.file = os.path.join(self.data_dir, f'{self.site:s}.series')
-        self.file_url = os.path.join(url_prefix, os.path.basename(self.file))
 
-        # download file if not present
-        if os.path.isfile(self.file):
-            if print_msg == True:
-                print(f'file {self.file:s} exists--reading')
-        else:
-            if print_msg == True:
-                print(f'... downloading {self.file_url:s} to {self.file:s}')
-            urlretrieve(self.file_url, self.file)  #nosec
+        # get url
+        if not self.url_prefix:
+            self.url_prefix = 'https://sideshow.jpl.nasa.gov/pub/JPL_GPS_Timeseries/repro2018a/post/point'
+        self.url = os.path.join(self.url_prefix, os.path.basename(self.file))
 
-        return self.file
 
     def get_site_lat_lon(self, print_msg=False) -> (float, float):
         """Get station lat/lon based on processing source.
@@ -1079,9 +1054,6 @@ class GNSS_JPL_SIDESHOW(GNSS):
         Modifies:   self.lat/lon - float
         Returns:    self.lat/lon - float
         """
-        if print_msg:
-            print('calculating station lat/lon')
-
         # need to refer to the site list
         site_list_file = os.path.basename(GNSS_SITE_LIST_URLS['JPL-SIDESHOW'])
 
@@ -1100,8 +1072,8 @@ class GNSS_JPL_SIDESHOW(GNSS):
 
         return self.site_lat, self.site_lon
 
-    def read_displacement(self, start_date=None, end_date=None, print_msg=True,
-                          display=False):
+
+    def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):
         """Read GNSS displacement time-series (defined by start/end_date)
         Parameters: start/end_date - str, date in YYYYMMDD format
         Returns:    dates          - 1D np.ndarray of datetime.datetime object
@@ -1129,7 +1101,7 @@ class GNSS_JPL_SIDESHOW(GNSS):
          self.dis_u,
          self.std_e,
          self.std_n,
-         self.std_u) = data[:, 1:7].astype(float).T
+         self.std_u) = data[:, 1:7].astype(np.float32).T
 
         # cut out the specified time range
         self.__crop_to_date_range__(start_date, end_date)
@@ -1148,106 +1120,51 @@ class GNSS_JPL_SIDESHOW(GNSS):
 
 class GNSS_GENERIC(GNSS):
     """GNSS class for daily solutions of an otherwise-unsupported source.
-    The user should format the station position data in a file called
-    <sitename>.dat The file should have seven space-separated columns:
 
-        date dis_e dis_n dis_u std_e std_n std_u
+    Required local files:
+    1. GenericList.txt: site list file, with the following 3, 9 or 11
+        space-separated columns:
 
-    where date is in the format <YYYYMMDD> or <YYYYMMDD>T<HHMMSS>; and
+    SITE lat lon [vel_e vel_n vel_u err_e err_n err_u] [start_date end_date]
+
+    where site is the four-digit, alphanumeric (uppercase) site code; and
+    lat/lon are in decimal degrees. If included, vel should be in units of
+    m/yr; and dates should be in format YYYYMMDD.
+
+    2. <sitename>.txt: data file for each site, with 7 space-separated columns:
+
+    date dis_e dis_n dis_u std_e std_n std_u
+
+    where date is in the format <YYYYMMDD> or <YYYYMMDD>T<HH:MM:SS> or <YYYYMMDD>:<HHMMSS>,
     displacement values are in meters.
-
-    For the generic type, it is necessary to have an accompanying file with
-    the site reference coordinates in the current folder. The specifications
-    for the GenericList.txt file are given above.
-
-    This object will assign the attributes:
-        site          - str, four-digit site code
-        site_lat/lon  - float
-        dates         - 1D np.ndarray
-        date_list     - list
-        dis_e/n/u     - 1D np.ndarray
-        std_e,n,u     - 1D np.ndarray
-
-    Based on the specific formats of the data source, using the functions:
-        dload_site()
-        get_site_lat_lon()
-        read_displacement()
     """
-    source = 'GENERIC'
+    def __init__(self, site: str, data_dir=None, version='IGS14', url_prefix=None):
+        super().__init__(
+            site=site,
+            data_dir=data_dir,
+            version=version,
+            source='GENERIC',
+            url_prefix=url_prefix,
+        )
 
-    def dload_site(self, print_msg=True) -> str:
-        """Read displacement data from a GENERIC the station file.
-        In this case, the site data must already be downloaded and located in
-        the directory specified on instantiation (e.g., GNSS-GENERIC).
-        The file name convention should be:
-
-            <SITE>.txt
-
-        where the site name is in all caps.
-
-        Modifies:   self.file     - str, local file path/name
-                    self.file_url - str, file URL
-        Returns:    self.file     - str, local file path/name
-        """
-        if print_msg == True:
-            print(f'reading data for site {self.site:s}')
-
-        # URL and file name specs
+        # get file
         self.file = os.path.join(self.data_dir, f'{self.site:s}.txt')
-        self.file_url = ''
 
-        # download file if not present
-        if print_msg == True:
-            print(f'reading file {self.file:s}')
+        # get url
+        self.url_prefix = ''
+        self.url = ''
 
-        return self.file
 
-    def get_site_lat_lon(self) -> (str, str):
+    def get_site_lat_lon(self, print_msg=False) -> (str, str):
         """Get station lat/lon based on processing source.
-        Retrieve data from the site list file, which should be located in the
-        current directory.
-        The file should be called "GenericList.txt" and should consist of
-        three columns:
-
-            <SITE> <site lat> <site lon>
-
-        where site is a four-digit site code in all caps. Lat/lon should be in
-        decimal degrees.
-
-        Modifies:   self.lat/lon - str
-        Returns:    self.lat/lon - str
         """
-        if print_msg == True:
-            print('calculating station lat/lon')
+        sites = read_GENERIC_site_list('GenericList.txt')
+        ind = sites['site'].tolist().index(self.site)
+        return sites['lat'][ind], sites['lon'][ind]
 
-        # need to refer to the site list
-        site_list_file = 'GenericList.txt'
 
-        # find site in site list file
-        with open(site_list_file) as site_list:
-            for line in site_list:
-                if line[:4] == self.site:
-                    site_lat, site_lon = line.split()[1:3]
-
-        # format
-        self.site_lat = float(site_lat)
-        self.site_lon = float(site_lon)
-
-        if print_msg == True:
-            print(f'\t{self.site_lat:f}, {self.site_lon:f}')
-
-        return self.site_lat, self.site_lon
-
-    def read_displacement(self, start_date=None, end_date=None, print_msg=True,
-                          display=False):
-        """Read GNSS displacement time-series (defined by start/end_date)
-        The position file for a GENERIC site must consist of seven columns:
-
-        <date> <east disp> <north disp> <vertical disp> <east stdev> <north std> <vert stdev>
-
-        date is in format YYYYMMDD or YYYYMMDD:HHMMSS
-        displacements are in meters
-        if standard deviations or uncertainties are not availabe, fill columns with zeros
+    def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):
+        """Read GNSS displacement time-series (defined by start/end_date).
 
         Parameters: start/end_date - str, date in YYYYMMDD format
         Returns:    dates          - 1D np.ndarray of datetime.datetime object
@@ -1261,25 +1178,10 @@ class GNSS_GENERIC(GNSS):
         # read dates, dis_e, dis_n, dis_u
         if print_msg == True:
             print('reading time and displacement in east/north/vertical direction')
+        fc = np.loadtxt(self.file)
 
         # parse dates
-        with open(self.file) as data_file:
-            lines = data_file.readlines()
-        self.dates = []
-        for line in lines:
-            date = line.split()[0]
-            date_len = len(date)
-
-            # format
-            if date_len == 8:
-                datetime = dt.datetime.strptime(date, '%Y%m%d')
-            elif date_len == 15:
-                datetime = dt.datetime.strptime(date, '%Y%m%d:%H%M%S')
-            else:
-                raise ValueError('Date/time format not recognized')
-
-            self.dates.append(datetime)
-        self.dates = np.array(self.dates)
+        self.dates = np.array(ptime.date_list2vector(fc[:, 0]))
 
         # parse displacement data
         (self.dis_e,
@@ -1287,7 +1189,7 @@ class GNSS_GENERIC(GNSS):
          self.dis_u,
          self.std_e,
          self.std_n,
-         self.std_u) = np.loadtxt(self.file, usecols=tuple(range(1,7))).T
+         self.std_u) = fc[:, tuple(range(1,7))].astype(np.float32).T
 
         # cut out the specified time range
         self.__crop_to_date_range__(start_date, end_date)
@@ -1296,7 +1198,7 @@ class GNSS_GENERIC(GNSS):
         self.date_list = [date.strftime('%Y%m%d') for date in self.dates]
 
         # display if requested
-        if display == True:
+        if display:
             self.plot()
 
         return (self.dates,
