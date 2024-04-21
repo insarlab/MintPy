@@ -992,8 +992,9 @@ class GNSS_ESESES(GNSS):
             self.file = self.file[:-2]
 
         # read data file
+        # use the first 9 cols only, as some epoches miss 10-13 cols: CorrNE/NU/EU, Chi-Squared
         vprint('reading time and displacement in east/north/vertical direction')
-        fc = np.loadtxt(self.file, usecols=tuple(range(0,12)))
+        fc = np.loadtxt(self.file, usecols=tuple(range(0,9)))
         num_solution = fc.shape[0]
 
         # parse dates
