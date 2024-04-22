@@ -480,9 +480,14 @@ class GNSS:
         self.url_prefix = url_prefix
         self.url = None
 
-        # local file info
-        self.data_dir = self._format_data_dir_(data_dir)
+        # local file/dir info
         self.file = None
+        self.data_dir = data_dir if data_dir else os.path.abspath(f'GNSS-{source.upper()}')
+
+        # ensure local dir exists
+        if not os.path.exists(self.data_dir):
+            print('create directory:', self.data_dir)
+            os.mkdir(self.data_dir)
 
         # displacement data
         self.dates = None
@@ -551,26 +556,7 @@ class GNSS:
         raise NotImplementedError('read_displacement() is NOT implemented. Override with child class.')
 
 
-    def _format_data_dir_(self, data_dir) -> str:
-        """Check formatting of GNSS data directory and ensure that directory exists.
-
-        Parameters: data_dir - None or str, data directory with GNSS position files
-        Returns:    data_dir - str, full path to data directory
-        """
-        # format data directory name based on processing source
-        if data_dir is None:
-            data_dir = f'GNSS-{self.source.upper():s}'
-            data_dir = os.path.abspath(data_dir)
-
-        # ensure directory exists
-        if not os.path.exists(data_dir):
-            print('create directory:', data_dir)
-            os.mkdir(data_dir)
-
-        return data_dir
-
-
-    def _crop_to_date_range_(self, start_date: str, end_date: str):
+    def _crop_to_date_range(self, start_date: str, end_date: str):
         """Crop the time-series given the start/end_date in format YYYYMMDD,
         and create date_list from dates.
         """
@@ -894,7 +880,7 @@ class GNSS_UNR(GNSS):
          self.std_u) = fc[:, (8,10,12,14,15,16)].astype(np.float32).T
 
         # cut out the specified time range
-        self._crop_to_date_range_(start_date, end_date)
+        self._crop_to_date_range(start_date, end_date)
 
         # display if requested
         if display:
@@ -1021,7 +1007,7 @@ class GNSS_ESESES(GNSS):
          self.std_u) = fc[:, 3:9].astype(np.float32).T / 1000
 
         # cut out the specified time range
-        self._crop_to_date_range_(start_date, end_date)
+        self._crop_to_date_range(start_date, end_date)
 
         # display if requested
         if display:
@@ -1112,7 +1098,7 @@ class GNSS_JPL_SIDESHOW(GNSS):
          self.std_u) = data[:, 1:7].astype(np.float32).T
 
         # cut out the specified time range
-        self._crop_to_date_range_(start_date, end_date)
+        self._crop_to_date_range(start_date, end_date)
 
         # display if requested
         if display == True:
@@ -1197,7 +1183,7 @@ class GNSS_GENERIC(GNSS):
          self.std_u) = fc[:, tuple(range(1,7))].astype(np.float32).T
 
         # cut out the specified time range
-        self._crop_to_date_range_(start_date, end_date)
+        self._crop_to_date_range(start_date, end_date)
 
         # display if requested
         if display:
