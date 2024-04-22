@@ -34,9 +34,10 @@ EXAMPLE = """example:
   view.py ifgramStack.h5 20171010_20171115      #all data      related with 20171010_20171115
   view.py ifgramStack.h5 'coherence*20171010*'  #all coherence related with 20171010
 
-  # GPS (for one subplot in geo-coordinates only)
+  # GNSS (for one subplot in geo-coordinates only)
   view.py geo_velocity_msk.h5 velocity --show-gnss --gnss-label   #show locations of available GPS
   view.py geo_velocity_msk.h5 velocity --show-gnss --gnss-comp enu2los --ref-gnss GV01
+  view.py geo_velocity_msk.h5 velocity --show-gnss --gnss-comp enu2los --ref-gnss GV01 --gnss-source ESESES
   view.py geo_timeseries_ERA5_ramp_demErr.h5 20180619 --ref-date 20141213 --show-gnss --gnss-comp enu2los --ref-gnss GV01
 
   # Faults
