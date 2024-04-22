@@ -1022,7 +1022,7 @@ class GNSS_ESESES(GNSS):
 class GNSS_JPL_SIDESHOW(GNSS):
     """GNSS class for daily solutions processed by JPL-SIDESHOW.
 
-    Website:
+    Website: https://sideshow.jpl.nasa.gov/pub/
     """
     def __init__(self, site: str, data_dir=None, version='IGS14', url_prefix=None):
         super().__init__(
