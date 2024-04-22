@@ -832,6 +832,31 @@ class GNSS_UNR(GNSS):
         self.url = os.path.join(self.url_prefix, os.path.basename(self.file))
 
 
+    def dload_site(self, overwrite=False, total_tries=5, print_msg=True):
+        """Download GNSS site data file.
+
+        Parameters: overwrite   - bool, overwrite existing data file
+                    total_tries - int, number of tries to download if failed
+                    print_msg   - bool, verbose print out msg
+        Returns:    self.file   - str, path to the local data file
+        """
+        # download data file via the parent class member function
+        super().dload_site(overwrite=overwrite, print_msg=print_msg)
+
+        # download time-series plot file
+        # example link: http://geodesy.unr.edu/tsplots/IGS08/TimeSeries/CAMO.png
+        #               http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries/CASU.png
+        plot_file = os.path.join(self.data_dir, f'pic/{self.site}.png')
+        if self.version == 'IGS14':
+            url_prefix = 'http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries'
+        elif self.version == 'IGS08':
+            url_prefix = 'http://geodesy.unr.edu/tsplots/IGS08/TimeSeries'
+        plot_file_url = os.path.join(url_prefix, f'{self.site}.png')
+        urlretrieve(plot_file_url, plot_file)
+
+        return self.file
+
+
     def get_site_lat_lon(self, print_msg=False) -> (float, float):
         """Get station lat/lon from the displacement file.
 
