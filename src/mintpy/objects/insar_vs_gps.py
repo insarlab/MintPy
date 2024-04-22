@@ -23,45 +23,47 @@ from mintpy.utils import readfile, utils as ut
 ############################## beginning of insar_vs_gnss class ##############################
 class insar_vs_gnss:
     """ Comparing InSAR time-series with GNSS time-series in LOS direction
-    Parameters: ts_file        : str, time-series HDF5 file
-                geom_file      : str, geometry HDF5 file
-                temp_coh_file  : str, temporal coherence HDF5 file
-                site_names     : list of str, GNSS site names
-                gnss_source    : str, program or institution that processed the GNSS data
-                gnss_dir       : str, directory of the local GNSS data files
-                ref_site       : str, common reference site in space for InSAR and GNSS
-                start/end_date : str, date in YYYYMMDD format for the start/end date
-                min_ref_date   : str, date in YYYYMMDD format for the earliest common
-                    reference date between InSAR and GNSS
-    Returns:    ds : dict, each element has the following components:
+    Parameters: ts_file        - str, time-series HDF5 file
+                geom_file      - str, geometry HDF5 file
+                temp_coh_file  - str, temporal coherence HDF5 file
+                site_names     - list of str, GNSS site names
+                gnss_source    - str, program or institution that processed the GNSS data
+                gnss_dir       - str, directory of the local GNSS data files
+                ref_site       - str, common reference site in space for InSAR and GNSS
+                start/end_date - str, date in YYYYMMDD format for the start/end date
+                min_ref_date   - str, date in YYYYMMDD format for the earliest common
+                                 reference date between InSAR and GNSS
+    Returns:    ds - dict, each element has the following components:
                     'GV03': {
-                      'name': 'GV03',
-                      'lat': -0.7977926892712729,
-                      'lon': -91.13294444114553,
-                      'gnss_datetime': array([datetime.datetime(2014, 11, 1, 0, 0),
-                             datetime.datetime(2014, 11, 2, 0, 0),
-                             ...,
-                             datetime.datetime(2018, 6, 25, 0, 0)], dtype=object),
-                      'gnss_dis': array([-2.63673663e-02, ..., 6.43612206e-01], dtype=float32),
-                      'gnss_std': array([0.00496152, ..., 0.00477411], dtype=float32),
+                      'name'          : 'GV03',
+                      'lat'           : -0.7977926892712729,
+                      'lon'           : -91.13294444114553,
+                      'gnss_datetime' : array([datetime.datetime(2014, 11, 1, 0, 0),
+                                              datetime.datetime(2014, 11, 2, 0, 0),
+                                              ...,
+                                              datetime.datetime(2018, 6, 25, 0, 0),
+                                              ], dtype=object),
+                      'gnss_dis'      : array([-2.63673663e-02, ..., 6.43612206e-01], dtype=float32),
+                      'gnss_std'      : array([0.00496152, ..., 0.00477411], dtype=float32),
                       'reference_site': 'GV01',
                       'insar_datetime': array([datetime.datetime(2014, 12, 13, 0, 0),
-                             datetime.datetime(2014, 12, 25, 0, 0),
-                             ...,
-                             datetime.datetime(2018, 6, 19, 0, 0)], dtype=object),
+                                               datetime.datetime(2014, 12, 25, 0, 0),
+                                               ...,
+                                               datetime.datetime(2018, 6, 19, 0, 0),
+                                               ], dtype=object),
                       'insar_dis_linear': array([-0.01476493, ...,  0.62273948]),
-                      'temp_coh': 0.9961861392598478,
-                      'gnss_std_mean': 0.004515478,
-                      'comm_dis_gnss': array([-0.02635017, ..., 0.61315614], dtype=float32),
-                      'comm_dis_insar': array([-0.01476493, ..., 0.60640174], dtype=float32),
-                      'r_square': 0.9993494518609801,
-                      'dis_rmse': 0.008023425326946351
+                      'temp_coh'        : 0.9961861392598478,
+                      'gnss_std_mean'   : 0.004515478,
+                      'comm_dis_gnss'   : array([-0.02635017, ..., 0.61315614], dtype=float32),
+                      'comm_dis_insar'  : array([-0.01476493, ..., 0.60640174], dtype=float32),
+                      'r_square'        : 0.9993494518609801,
+                      'dis_rmse'        : 0.008023425326946351,
                     }
     """
 
-    def __init__(self, ts_file, geom_file, temp_coh_file,
-                 site_names, gnss_source='UNR', gnss_dir='./GNSS', ref_site='GV01',
-                 start_date=None, end_date=None, min_ref_date=None):
+    def __init__(self, ts_file, geom_file, temp_coh_file, site_names, gnss_source='UNR',
+                 gnss_dir='./GNSS', ref_site='GV01', start_date=None, end_date=None,
+                 min_ref_date=None):
         self.insar_file = ts_file
         self.geom_file = geom_file
         self.temp_coh_file = temp_coh_file
