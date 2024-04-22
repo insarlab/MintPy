@@ -847,11 +847,19 @@ class GNSS_UNR(GNSS):
         # example link: http://geodesy.unr.edu/tsplots/IGS08/TimeSeries/CAMO.png
         #               http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries/CASU.png
         plot_file = os.path.join(self.data_dir, f'pic/{self.site}.png')
-        if self.version == 'IGS14':
-            url_prefix = 'http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries'
-        elif self.version == 'IGS08':
-            url_prefix = 'http://geodesy.unr.edu/tsplots/IGS08/TimeSeries'
+
+        # ensure local plot directory exists
+        if not os.path.exists(os.path.dirname(plot_file)):
+            os.makedirs(os.path.dirname(plot_file), exist_ok=True)
+
+        # get plot file url
+        url_prefix = {
+            'IGS08' : 'http://geodesy.unr.edu/tsplots/IGS08/TimeSeries',
+            'IGS14' : 'http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries',
+        }[self.version]
         plot_file_url = os.path.join(url_prefix, f'{self.site}.png')
+
+        # download
         urlretrieve(plot_file_url, plot_file)
 
         return self.file
