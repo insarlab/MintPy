@@ -518,8 +518,6 @@ class GNSS:
         Returns:    self.file   - str, path to the local data file
         """
         vprint = print if print_msg else lambda *args, **kwargs: None
-
-        # download
         if self.url and overwrite or not os.path.isfile(self.file):
             vprint(f"downloading site {self.site:s} from {self.source} to {self.file:s}")
             # retry on download fail
@@ -535,16 +533,6 @@ class GNSS:
                     continue
                 else:
                     break
-
-        # uncompress the downloaded *.z file [for ESESES only]
-        if self.source == 'ESESES' and self.file.endswith('.Z'):
-            with zipfile.ZipFile(self.file, 'r') as fz:
-                fz.extractall(self.data_dir)
-
-            # update file name
-            self.file = self.file.strip('.Z')
-            vprint(f'... extracted to {self.file:s}')
-
         return self.file
 
 
@@ -937,9 +925,29 @@ class GNSS_ESESES(GNSS):
         self.file = os.path.join(self.data_dir, f'{self.site.lower():s}CleanTrend.neu.Z')
 
         # get url
+        # moved to GNSS_ESESES.dload_site() to avoid searching url_prefix
+        # when downloading is not needed.
+
+
+    def dload_site(self, overwrite=False, total_tries=5, print_msg=True):
+        """Download GNSS data file.
+        """
+        # get url
         if not self.url_prefix:
             self.url_prefix = get_ESESES_url_prefix()
         self.url = os.path.join(self.url_prefix, os.path.basename(self.file))
+
+        # call parent class to download
+        super().dload_site(overwrite=overwrite, print_msg=print_msg)
+
+        # uncompress the downloaded *.z file [for ESESES only]
+        with zipfile.ZipFile(self.file, 'r') as fz:
+            fz.extractall(self.data_dir)
+        self.file = self.file.strip('.Z')    # update file name
+        if print_msg:
+            print(f'... extracted to {self.file:s}')
+
+        return self.file
 
 
     def get_site_lat_lon(self, print_msg=False) -> (float, float):
