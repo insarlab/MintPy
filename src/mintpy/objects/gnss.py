@@ -12,7 +12,6 @@ import csv
 import datetime as dt
 import glob
 import os
-import zipfile
 from urllib.request import urlopen, urlretrieve
 
 import matplotlib.pyplot as plt
@@ -933,6 +932,8 @@ class GNSS_ESESES(GNSS):
     def dload_site(self, overwrite=False, total_tries=5, print_msg=True):
         """Download GNSS data file.
         """
+        from zipfile import ZipFile
+
         # get url
         if not self.url_prefix:
             self.url_prefix = get_ESESES_url_prefix()
@@ -942,7 +943,7 @@ class GNSS_ESESES(GNSS):
         super().dload_site(overwrite=overwrite, print_msg=print_msg)
 
         # uncompress the downloaded *.z file [for ESESES only]
-        with zipfile.ZipFile(self.file, 'r') as fz:
+        with ZipFile(self.file, 'r') as fz:
             fz.extractall(self.data_dir)
         self.file = self.file.strip('.Z')    # update file name
         if print_msg:
