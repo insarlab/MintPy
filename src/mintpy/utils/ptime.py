@@ -61,6 +61,9 @@ def get_date_str_format(date_str):
     elif len(re.findall(r'\d{4}-\d{2}-\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%d'
 
+    elif len(re.findall(r'\d{8}:\d{6}', date_str)) > 0:
+        date_str_format = '%Y%m%d:%H%M%S'
+
     elif len(re.findall(r'\d{8}T\d{6}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M%S'
 
