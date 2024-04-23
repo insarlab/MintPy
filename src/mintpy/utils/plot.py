@@ -415,8 +415,12 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
                 print(msg)
 
         else:
-            from mintpy.multilook import multilook_data
-            data_mli = multilook_data(data, num_multilook, num_multilook)
+            if min(data.shape[1:]) >= 100 and num_multilook > 1:
+                # multilook data (by 10X for 3D matrix by default) to ignore extreme values
+                from mintpy.multilook import multilook_data
+                data_mli = multilook_data(data, num_multilook, num_multilook)
+            else:
+                data_mli = np.array(data)
 
             cmap_lut = 256
             vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
@@ -1106,7 +1110,7 @@ def plot_timeseries_rms(rms_file, cutoff=3, out_fig=None, disp_fig=True,
 
 ###############################################  GNSS  ###############################################
 
-def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
+def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
     """Plot GNSS as scatters on top of the input matplotlib.axes.
 
     Parameters: ax       - matplotlib.axes object
@@ -1115,8 +1119,9 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                 metadata - dict, mintpy metadata
     Returns:    ax       - matplotlib.axes object
     """
+    from pyproj import Geod
 
-    from mintpy.objects import gps
+    from mintpy.objects import gnss
     vprint = print if print_msg else lambda *args, **kwargs: None
 
     vmin, vmax = inps.vlim
@@ -1126,8 +1131,8 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     atr['UNIT'] = 'm'
     unit_fac = scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[2]
 
-    start_date = inps.gps_start_date if inps.gps_start_date else metadata.get('START_DATE', None)
-    end_date = inps.gps_end_date if inps.gps_end_date else metadata.get('END_DATE', None)
+    start_date = inps.gnss_start_date if inps.gnss_start_date else metadata.get('START_DATE', None)
+    end_date = inps.gnss_end_date if inps.gnss_end_date else metadata.get('END_DATE', None)
 
     # pre-query: convert UTM to lat/lon for query
     if 'UTM_ZONE' in metadata.keys():
@@ -1136,18 +1141,37 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         SNWE = (south, north, west, east)
 
     # query for GNSS stations
-    site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
+    site_names, site_lats, site_lons = gnss.search_gnss(
+        SNWE,
+        start_date=start_date,
+        end_date=end_date,
+        source=inps.gnss_source,
+    )
     if site_names.size == 0:
         warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
         print('  continue without GNSS plots.')
         return ax
 
+    # print the nearest GNSS to the current reference point
+    # to facilitate the --ref-gnss option setup
+    if inps.ref_lalo:
+        site_dist = Geod(ellps='WGS84').inv(
+            np.tile(inps.ref_lalo[1], site_names.size),
+            np.tile(inps.ref_lalo[0], site_names.size),
+            site_lons,
+            site_lats,
+        )[2]
+        n_ind = np.argmin(site_dist)
+        msg = 'nearest GNSS site (potential --ref-gnss choice): '
+        msg += f'{site_names[n_ind]} at [{site_lats[n_ind]}, {site_lons[n_ind]}]'
+        print(msg)
+
     # post-query: convert lat/lon to UTM for plotting
     if 'UTM_ZONE' in metadata.keys():
-        site_lats, site_lons = ut0.latlon2utm(site_lats, site_lons)
+        site_lats, site_lons = ut0.latlon2utm(metadata, site_lats, site_lons)
 
     # mask out stations not coincident with InSAR data
-    if inps.mask_gps and inps.msk is not None:
+    if inps.mask_gnss and inps.msk is not None:
         msk = inps.msk if inps.msk.ndim == 2 else np.prod(inps.msk, axis=-1)
         coord = coordinate(metadata)
         site_ys, site_xs = coord.geo2radar(site_lats, site_lons)[0:2]
@@ -1158,49 +1182,50 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         site_lons = site_lons[flag]
         # check
         if site_names.size == 0:
-            raise ValueError('No GNSS left after --mask-gps!')
+            raise ValueError('No GNSS left after --mask-gnss!')
 
-    if inps.ref_gps_site and inps.ref_gps_site not in site_names:
-        raise ValueError(f'input reference GPS site "{inps.ref_gps_site}" not available!')
+    if inps.ref_gnss_site and inps.ref_gnss_site not in site_names:
+        raise ValueError(f'input reference GNSS site "{inps.ref_gnss_site}" not available!')
 
     k = metadata['FILE_TYPE']
-    if inps.gps_component and k not in ['velocity', 'timeseries', 'displacement']:
-        inps.gps_component = None
-        vprint(f'WARNING: --gps-comp is not implemented for {k} file yet, set --gps-comp = None and continue')
+    if inps.gnss_component and k not in ['velocity', 'timeseries', 'displacement']:
+        inps.gnss_component = None
+        vprint(f'WARNING: --gnss-comp is not implemented for {k} file yet, set --gnss-comp = None and continue')
 
-    plot_kwargs = dict(s=inps.gps_marker_size**2, edgecolors='k', lw=0.5, zorder=10)
-    if inps.gps_component:
-        # plot GPS velocity/displacement along LOS direction
+    plot_kwargs = dict(s=inps.gnss_marker_size**2, edgecolors='k', lw=0.5, zorder=10)
+    if inps.gnss_component:
+        # plot GNSS velocity/displacement along LOS direction
         vprint('-'*30)
-        msg = 'plotting GPS '
+        msg = 'plotting GNSS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += f' in IGS14 reference frame in {inps.gps_component} direction'
-        msg += f' with respect to {inps.ref_gps_site} ...' if inps.ref_gps_site else ' ...'
+        msg += f' in IGS14 reference frame in {inps.gnss_component} direction'
+        msg += f' with respect to {inps.ref_gnss_site} ...' if inps.ref_gnss_site else ' ...'
         vprint(msg)
-        vprint(f'number of available GPS stations: {len(site_names)}')
+        vprint(f'number of available GNSS stations: {len(site_names)}')
         vprint(f'start date: {start_date}')
         vprint(f'end   date: {end_date}')
-        vprint(f'components projection: {inps.gps_component}')
+        vprint(f'components projection: {inps.gnss_component}')
 
-        # get GPS LOS observations
+        # get GNSS LOS observations
         # save absolute value to support both spatially relative and absolute comparison
         # without compromising the re-usability of the CSV file
         obs_type = 'velocity' if k == 'velocity' else 'displacement'
-        site_obs = gps.get_gps_los_obs(
+        site_obs = gnss.get_los_obs(
             meta=metadata,
             obs_type=obs_type,
             site_names=site_names,
             start_date=start_date,
             end_date=end_date,
-            gps_comp=inps.gps_component,
+            source=inps.gnss_source,
+            gnss_comp=inps.gnss_component,
             horz_az_angle=inps.horz_az_angle,
             print_msg=print_msg,
-            redo=inps.gps_redo,
+            redo=inps.gnss_redo,
         )
 
-        # reference GPS
-        if inps.ref_gps_site:
-            ref_ind = site_names.tolist().index(inps.ref_gps_site)
+        # reference GNSS
+        if inps.ref_gnss_site:
+            ref_ind = site_names.tolist().index(inps.ref_gnss_site)
             # plot label of the reference site
             #ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]), fontsize=inps.font_size)
             # update value
@@ -1212,8 +1237,8 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         site_obs *= unit_fac
 
         # exclude sites
-        if inps.ex_gps_sites:
-            ex_flag = np.array([x in inps.ex_gps_sites for x in site_names], dtype=np.bool_)
+        if inps.ex_gnss_sites:
+            ex_flag = np.array([x in inps.ex_gnss_sites for x in site_names], dtype=np.bool_)
             if np.sum(ex_flag) > 0:
                 vprint(f'ignore the following specified stations:\n  {site_names[ex_flag]}')
                 site_names = site_names[~ex_flag]
@@ -1233,43 +1258,44 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                 ax.scatter(lon, lat, color=color, **plot_kwargs)
 
     else:
-        # plot GPS locations only
-        vprint('showing GPS locations')
+        # plot GNSS locations only
+        vprint('showing GNSS locations')
         ax.scatter(site_lons, site_lats, color='w', **plot_kwargs)
 
-    # plot GPS label
-    if inps.disp_gps_label:
+    # plot GNSS label
+    if inps.disp_gnss_label:
         for site_name, lat, lon in zip(site_names, site_lats, site_lons):
             ax.annotate(site_name, xy=(lon, lat), fontsize=inps.font_size)
 
     return ax
 
 
-def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=None, ref_gps_site=None, cutoff=5,
-                              fig_size=[4, 4], xname='InSAR', vlim=None, ex_gps_sites=[], display=True):
-    """Scatter plot to compare the velocities between SAR/InSAR and GPS.
+def plot_insar_vs_gnss_scatter(vel_file, csv_file='gnss_enu2los_UNR.csv', msk_file=None, ref_gnss_site=None,
+                               cutoff=5, fig_size=(4, 4), xname='InSAR', vlim=None, ex_gnss_sites=None,
+                               display=True):
+    """Scatter plot to compare the velocities between SAR/InSAR and GNSS.
 
-    Parameters: vel_file     - str, path of InSAR LOS velocity HDF5 file.
-                csv_file     - str, path of GNSS CSV file, generated after running view.py --gps-comp
-                msk_file     - str, path of InSAR mask file.
-                ref_gps_site - str, reference GNSS site name
-                cutoff       - float, threshold in terms of med abs dev (MAD) for outlier detection
-                xname        - str, xaxis label
-                vlim         - list of 2 float, display value range in the unit of cm/yr
-                               Default is None to grab from data
-                               If set, the range will be used to prune the SAR and GPS observations
-                ex_gps_sites - list of str, exclude GNSS sites for analysis and plotting.
-    Returns:    sites        - list of str, GNSS site names used for comparison
-                insar_obs    - 1D np.ndarray in float32, InSAR velocity in cm/yr
-                gps_obs      - 1D np.ndarray in float32, GNSS  velocity in cm/yr
+    Parameters: vel_file      - str, path of InSAR LOS velocity HDF5 file.
+                csv_file      - str, path of GNSS CSV file, generated after running view.py --gnss-comp
+                msk_file      - str, path of InSAR mask file.
+                ref_gnss_site - str, reference GNSS site name
+                cutoff        - float, threshold in terms of med abs dev (MAD) for outlier detection
+                xname         - str, xaxis label
+                vlim          - list of 2 float, display value range in the unit of cm/yr
+                                Default is None to grab from data
+                                If set, the range will be used to prune the SAR and GNSS observations
+                ex_gnss_sites - list of str, exclude GNSS sites for analysis and plotting.
+    Returns:    sites         - list of str, GNSS site names used for comparison
+                insar_obs     - 1D np.ndarray in float32, InSAR velocity in cm/yr
+                gnss_obs      - 1D np.ndarray in float32, GNSS  velocity in cm/yr
     Example:
         from mintpy.utils import plot as pp
-        csv_file = os.path.join(work_dir, 'geo/gps_enu2los.csv')
+        csv_file = os.path.join(work_dir, 'geo/gnss_enu2los_UNR.csv')
         vel_file = os.path.join(work_dir, 'geo/geo_velocity.h5')
         msk_file = os.path.join(work_dir, 'geo/geo_maskTempCoh.h5')
-        pp.plot_insar_vs_gps_scatter(
+        pp.plot_insar_vs_gnss_scatter(
             vel_file,
-            ref_gps_site='CACT',
+            ref_gnss_site='CACT',
             csv_file=csv_file,
             msk_file=msk_file,
             vlim=[-2.5, 2],
@@ -1279,28 +1305,28 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
     disp_unit = 'cm/yr'
     unit_fac = 100.
 
-    # read GPS velocity from CSV file (generated by gps.get_gps_los_obs())
+    # read GNSS velocity from CSV file (generated by gnss.get_los_obs())
     col_names = ['Site', 'Lon', 'Lat', 'Displacement', 'Velocity']
     num_col = len(col_names)
     col_types = ['U10'] + ['f8'] * (num_col - 1)
 
-    print(f'read GPS velocity from file: {csv_file}')
+    print(f'read GNSS velocity from file: {csv_file:s}')
     fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
     sites = fc['Site']
     lats = fc['Lat']
     lons = fc['Lon']
-    gps_obs = fc[col_names[-1]] * unit_fac
+    gnss_obs = fc[col_names[-1]] * unit_fac
 
-    if ex_gps_sites:
-        ex_flag = np.array([x in ex_gps_sites for x in sites], dtype=np.bool_)
+    if ex_gnss_sites is not None:
+        ex_flag = np.array([site in ex_gnss_sites for site in sites], dtype=np.bool_)
         if np.sum(ex_flag) > 0:
             sites = sites[~ex_flag]
             lats = lats[~ex_flag]
             lons = lons[~ex_flag]
-            gps_obs = gps_obs[~ex_flag]
+            gnss_obs = gnss_obs[~ex_flag]
 
     # read InSAR velocity
-    print(f'read InSAR velocity from file: {vel_file}')
+    print(f'read InSAR velocity from file: {vel_file:s}')
     atr = readfile.read_attribute(vel_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     ys, xs = coordinate(atr).geo2radar(lats, lons)[:2]
@@ -1318,46 +1344,46 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
         prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {sites[i]}')
     prog_bar.close()
 
-    off_med = np.nanmedian(insar_obs - gps_obs)
-    print(f'median offset between InSAR and GPS [before common referencing]: {off_med:.2f} cm/year')
+    off_med = np.nanmedian(insar_obs - gnss_obs)
+    print(f'median offset between InSAR and GNSS [before common referencing]: {off_med:.2f} cm/year')
 
     # reference site
-    if ref_gps_site:
-        print(f'referencing both InSAR and GPS data to site: {ref_gps_site}')
-        ref_ind = sites.tolist().index(ref_gps_site)
-        gps_obs -= gps_obs[ref_ind]
+    if ref_gnss_site:
+        print(f'referencing both InSAR and GNSS data to site: {ref_gnss_site}')
+        ref_ind = sites.tolist().index(ref_gnss_site)
+        gnss_obs -= gnss_obs[ref_ind]
         insar_obs -= insar_obs[ref_ind]
 
     # remove NaN value
-    print(f'removing sites with NaN values in GPS or {xname}')
-    flag = np.multiply(~np.isnan(insar_obs), ~np.isnan(gps_obs))
+    print(f'removing sites with NaN values in GNSS or {xname}')
+    flag = np.multiply(~np.isnan(insar_obs), ~np.isnan(gnss_obs))
     if vlim is not None:
         print(f'pruning sites with value range: {vlim} {disp_unit}')
-        flag *= gps_obs >= vlim[0]
-        flag *= gps_obs <= vlim[1]
+        flag *= gnss_obs >= vlim[0]
+        flag *= gnss_obs <= vlim[1]
         flag *= insar_obs >= vlim[0]
         flag *= insar_obs <= vlim[1]
 
-    gps_obs = gps_obs[flag]
+    gnss_obs = gnss_obs[flag]
     insar_obs = insar_obs[flag]
     sites = sites[flag]
 
     # stats
-    print(f'GPS   min/max: {np.nanmin(gps_obs):.2f} / {np.nanmax(gps_obs):.2f}')
+    print(f'GNSS   min/max: {np.nanmin(gnss_obs):.2f} / {np.nanmax(gnss_obs):.2f}')
     print(f'InSAR min/max: {np.nanmin(insar_obs):.2f} / {np.nanmax(insar_obs):.2f}')
 
-    rmse = np.sqrt(np.sum((insar_obs - gps_obs)**2) / (gps_obs.size - 1))
-    r2 = stats.linregress(insar_obs, gps_obs)[2]
+    rmse = np.sqrt(np.sum((insar_obs - gnss_obs)**2) / (gnss_obs.size - 1))
+    r2 = stats.linregress(insar_obs, gnss_obs)[2]
     print(f'RMSE = {rmse:.2f} {disp_unit}')
     print(f'R^2 = {r2:.2f}')
 
     # preliminary outlier detection
-    diff_mad = ut0.median_abs_deviation(abs(insar_obs - gps_obs), center=0)
+    diff_mad = ut0.median_abs_deviation(abs(insar_obs - gnss_obs), center=0)
     print(f'Preliminary outliers detection: abs(InSAR - GNSS) > med abs dev ({diff_mad:.2f}) * {cutoff}')
     print('Site:  InSAR  GNSS')
-    for site_name, insar_val, gps_val in zip(sites, insar_obs, gps_obs):
-        if abs(insar_val - gps_val) > diff_mad * cutoff:
-            print(f'{site_name:s}: {insar_val:5.1f}, {gps_val:5.1f}  {disp_unit}')
+    for site_name, insar_val, gnss_val in zip(sites, insar_obs, gnss_obs):
+        if abs(insar_val - gnss_val) > diff_mad * cutoff:
+            print(f'{site_name:s}: {insar_val:5.1f}, {gnss_val:5.1f}  {disp_unit}')
 
     # plot
     if display:
@@ -1369,7 +1395,7 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
 
         fig, ax = plt.subplots(figsize=fig_size)
         ax.plot((vlim[0], vlim[1]), (vlim[0], vlim[1]), 'k--')
-        ax.plot(insar_obs, gps_obs, '.', ms=15)
+        ax.plot(insar_obs, gnss_obs, '.', ms=15)
 
         # axis format
         ax.set_xlim(vlim)
@@ -1380,12 +1406,12 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
         fig.tight_layout()
 
         # output
-        out_fig = f'{xname.lower()}_vs_gps_scatter.pdf'
+        out_fig = f'{xname.lower()}_vs_gnss_scatter.pdf'
         plt.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
         print('save figure to file', out_fig)
         plt.show()
 
-    return sites, insar_obs, gps_obs
+    return sites, insar_obs, gnss_obs
 
 
 def plot_colorbar(inps, im, cax):

@@ -152,6 +152,13 @@ def get_info_parser(subparsers=None):
     return parser
 
 
+def get_iono_split_spectrum_parser(subparsers=None):
+    from mintpy.cli import iono_split_spectrum
+    parser = iono_split_spectrum.create_parser(subparsers)
+    parser.set_defaults(func=iono_split_spectrum.main)
+    return parser
+
+
 def get_iono_tec_parser(subparsers=None):
     from mintpy.cli import iono_tec
     parser = iono_tec.create_parser(subparsers)
@@ -607,6 +614,7 @@ def get_parser():
     # noise reduction / error correction
     get_closure_phase_bias_parser(sp)
     get_dem_error_parser(sp)
+    get_iono_split_spectrum_parser(sp)
     get_iono_tec_parser(sp)
     get_local_oscilator_drift_parser(sp)
     get_plate_motion_parser(sp)

@@ -749,7 +749,7 @@ def run_tropo_pyaps3(inps):
         if ut.run_or_skip(inps.cor_dis_file, [inps.dis_file, inps.tropo_file]) == 'run':
             # diff.py can handle different reference in space and time
             # e.g. the absolute delay and the double referenced time-series
-            print('correcting delay for using diff.py')
+            print('correcting delay via diff.py')
             iargs = [inps.dis_file, inps.tropo_file, '-o', inps.cor_dis_file, '--force']
             print('diff.py', ' '.join(iargs))
             mintpy.cli.diff.main(iargs)

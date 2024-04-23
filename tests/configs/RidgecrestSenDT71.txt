@@ -2,26 +2,27 @@
 mintpy.compute.cluster      = local
 mintpy.load.processor       = hyp3
 ##---------interferogram datasets:
-mintpy.load.unwFile         = ../hyp3/*/*unw_phase_clip.tif
-mintpy.load.corFile         = ../hyp3/*/*corr_clip.tif
+mintpy.load.unwFile         = ../hyp3/*/*unw_phase_clip*.tif
+mintpy.load.corFile         = ../hyp3/*/*corr_clip*.tif
 ##---------geometry datasets:
-mintpy.load.demFile         = ../hyp3/*/*dem_clip.tif
-mintpy.load.incAngleFile    = ../hyp3/*/*lv_theta_clip.tif
-mintpy.load.waterMaskFile   = ../hyp3/*/*water_mask_clip.tif
+mintpy.load.demFile         = ../hyp3/*/*dem_clip*.tif
+mintpy.load.incAngleFile    = ../hyp3/*/*lv_theta_clip*.tif
+mintpy.load.waterMaskFile   = ../hyp3/*/*water_mask_clip*.tif
 ##---------subset (optional):
 ## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
 mintpy.subset.yx            = auto    #[y0:y1,x0:x1 / no], auto for no
 mintpy.subset.lalo          = 391e4:400e4,39e4:51e4    #[S:N,W:E / no], auto for no
 
-mintpy.reference.lalo       = 391.5e4,45e4
-mintpy.networkInversion.weightFunc  = no
-mintpy.troposphericDelay.method     = pyaps
-mintpy.topographicResidual          = yes
+mintpy.reference.lalo                           = 391.5e4,45e4
+mintpy.networkInversion.weightFunc              = no
+mintpy.troposphericDelay.method                 = pyaps
+mintpy.topographicResidual                      = yes
 mintpy.topographicResidual.stepFuncDate         = 20190706T0320
 mintpy.topographicResidual.pixelwiseGeometry    = no
-mintpy.save.hdfEos5         = yes
-mintpy.save.hdfEos5.subset  = yes
-mintpy.plot.maxMemory       = 2
+mintpy.save.hdfEos5                             = yes
+mintpy.save.hdfEos5.subset                      = yes
+mintpy.plot                                     = no
+mintpy.plot.maxMemory                           = 2
 
 ##————————————————————————————— HDF-EOS5 Attributes -—————————————————————————##
 relative_orbit      = 71

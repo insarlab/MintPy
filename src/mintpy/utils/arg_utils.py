@@ -38,15 +38,43 @@ def create_argument_parser(name=None, synopsis=None, description=None, epilog=No
     if subparsers:
         # for mintpy sub-command [used in linux with apt install]
         parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsis)
+            name,
+            description=description,
+            formatter_class=formatter_class,
+            epilog=epilog,
+            help=synopsis,
+        )
 
     else:
         # for regular command usage
         parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+            description=description,
+            formatter_class=formatter_class,
+            epilog=epilog,
+        )
 
     return parser
 
+
+##################################  argument utils  ####################################
+def get_dest_option_str_dict(parser):
+    """Get the dict where key is the option dest and value is the option string.
+
+    Parameters: parser       - argparse.ArgumentParser object
+    Returns:    dest2opt_str - dict, dictionary for all options in the parser object, where
+                               key   is the option dest   in str,
+                               value is the option string in list of str.
+    Examples:   from mintpy.cli.ifgram_inversion import create_parser
+                parser = create_parser()
+                dest_opt_str = get_dest_option_str_dict(parser)
+    """
+    action_list = parser.__dict__['_actions']
+    dest_opt_str = {}
+    for action in action_list:
+        key = action.dest
+        val = action.option_strings
+        dest_opt_str[key] = val
+    return dest_opt_str
 
 
 ##################################  argument group  ####################################
@@ -244,37 +272,46 @@ def add_figure_argument(parser, figsize_img=False):
     return parser
 
 
-def add_gps_argument(parser):
-    """Argument group parser for GPS options"""
-    gps = parser.add_argument_group('GPS', 'GPS data to display')
-    gps.add_argument('--show-gps', dest='disp_gps', action='store_true',
-                     help='Show UNR GPS location within the coverage.')
-    gps.add_argument('--mask-gps', dest='mask_gps', action='store_true',
-                     help='Mask out GPS stations not coincident with valid data pixels')
-    gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
-                     help='Show GPS site name')
-    gps.add_argument('--gps-ms', dest='gps_marker_size', type=float, default=6,
-                     help='Plot GPS value as scatter in size of ms**2 (default: %(default)s).')
-    gps.add_argument('--gps-comp', dest='gps_component',
-                     choices={'enu2los', 'hz2los', 'up2los', 'horz', 'vert'},
-                     help='Plot GPS in color indicating deformation velocity direction')
-    gps.add_argument('--gps-redo', dest='gps_redo', action='store_true',
-                     help='Re-calculate GPS observations in LOS direction, '
-                          'instead of read from existing CSV file.')
-    gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
-    gps.add_argument('--ex-gps', dest='ex_gps_sites', type=str, nargs='*',
-                     help='Exclude GPS sites, require --gps-comp.')
+def add_gnss_argument(parser):
+    """Argument group parser for GNSS options"""
+    gnss = parser.add_argument_group('GNSS', 'GNSS data to display')
+    gnss.add_argument('--show-gnss','--show-gps', dest='disp_gnss', action='store_true',
+                      help='Show UNR GNSS location within the coverage.')
+    gnss.add_argument('--gnss-source','--gnss-src','--gps-source', dest='gnss_source', default='UNR',
+                      choices={'UNR', 'ESESES', 'JPL-SIDESHOW', 'GENERIC'},
+                      help='Source of the GNSS displacement solution (default: %(default)s).')
 
-    gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the 1st SAR acquisition')
-    gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the last SAR acquisition')
-    gps.add_argument('--horz-az','--hz-az', dest='horz_az_angle', type=float, default=-90.,
-                     help='Azimuth angle (anti-clockwise from the north) of the horizontal movement in degrees\n'
-                          'E.g.: -90. for east  direction [default]\n'
-                          '       0.  for north direction\n'
-                          'Set to the azimuth angle of the strike-slip fault to '
-                          'show the fault-parallel displacement.')
+    # compare GNSS with InSAR
+    gnss.add_argument('--gnss-comp','--gps-comp', dest='gnss_component',
+                      choices={'enu2los', 'hz2los', 'up2los', 'horz', 'vert'},
+                      help='Plot GNSS in color indicating deformation velocity in (default: %(default)s).')
+    gnss.add_argument('--ref-gnss','--ref-gps', dest='ref_gnss_site', type=str, metavar='SITE_NAME',
+                      help='Reference GNSS site')
+    gnss.add_argument('--ex-gnss','--ex-gps', dest='ex_gnss_sites', type=str, nargs='*', metavar='SITE_NAME',
+                      help='Exclude GNSS sites, require --gnss-comp.')
+
+    gnss.add_argument('--gnss-start-date','--gps-start-date', dest='gnss_start_date', type=str, metavar='YYYYMMDD',
+                      help='start date of GNSS data, default: the 1st SAR acquisition')
+    gnss.add_argument('--gnss-end-date','--gps-end-date', dest='gnss_end_date', type=str, metavar='YYYYMMDD',
+                      help='end   date of GNSS data, default: the last SAR acquisition')
+    gnss.add_argument('--horz-az','--hz-az', dest='horz_az_angle', type=float, default=-90., metavar='NUM',
+                      help='Azimuth angle (anti-clockwise from the north) of the horizontal movement in degrees\n'
+                           'E.g.: -90. for east  direction [default]\n'
+                           '       0.  for north direction\n'
+                           'Set to the azimuth angle of the strike-slip fault to '
+                           'show the fault-parallel displacement.')
+    gnss.add_argument('--gnss-redo','--gps-redo', dest='gnss_redo', action='store_true',
+                      help='Re-calculate GNSS observations in LOS direction, '
+                           'instead of read from existing CSV file.')
+
+    # plot style
+    gnss.add_argument('--gnss-label','--gps-label', dest='disp_gnss_label', action='store_true',
+                      help='Show GNSS site name')
+    gnss.add_argument('--mask-gnss','--mask-gps', dest='mask_gnss', action='store_true',
+                      help='Mask out GNSS stations not coincident with valid data pixels')
+    gnss.add_argument('--gnss-ms','--gps-ms', dest='gnss_marker_size', type=float, default=6, metavar='NUM',
+                      help='Plot GNSS value as scatter in size of ms**2 (default: %(default)s).')
+
     return parser
 
 
