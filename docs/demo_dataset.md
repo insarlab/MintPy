@@ -66,11 +66,11 @@ Relevant literature:
 ### Sentinel-1 of the 2019 Ridgecrest, California earthquake sequence with HyP3 ###
 
 Area: Owens Valley, California, USA ([USGS event page](https://earthquake.usgs.gov/earthquakes/eventpage/ci38457511/executive))
-Data: Sentinel-1 descending track 71 during June - August 2019 (7 acquisitions; [Zenodo](https://zenodo.org/record/5502403))
-Size: ~480 MB
+Data: Sentinel-1 descending track 71 during June - August 2019 (7 acquisitions; [Zenodo](https://zenodo.org/record/11049257))
+Size: ~240 MB
 
 ```bash
-wget https://zenodo.org/record/5502403/files/RidgecrestSenDT71.tar.xz
+wget https://zenodo.org/record/11049257/files/RidgecrestSenDT71.tar.xz
 tar -xvJf RidgecrestSenDT71.tar.xz
 cd RidgecrestSenDT71
 smallbaselineApp.py ${MINTPY_HOME}/docs/templates/RidgecrestSenDT71.txt
