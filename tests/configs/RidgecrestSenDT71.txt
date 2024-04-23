@@ -13,7 +13,7 @@ mintpy.load.waterMaskFile   = ../hyp3/*/*water_mask_clip*.tif
 mintpy.subset.yx            = auto    #[y0:y1,x0:x1 / no], auto for no
 mintpy.subset.lalo          = 391e4:400e4,39e4:51e4    #[S:N,W:E / no], auto for no
 
-mintpy.reference.lalo                           = 399.5e4,47e4
+mintpy.reference.lalo                           = 391.5e4,45e4
 mintpy.networkInversion.weightFunc              = no
 mintpy.troposphericDelay.method                 = pyaps
 mintpy.topographicResidual                      = yes
@@ -21,6 +21,7 @@ mintpy.topographicResidual.stepFuncDate         = 20190706T0320
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.save.hdfEos5                             = yes
 mintpy.save.hdfEos5.subset                      = yes
+mintpy.plot                                     = no
 mintpy.plot.maxMemory                           = 2
 
 ##————————————————————————————— HDF-EOS5 Attributes -—————————————————————————##
