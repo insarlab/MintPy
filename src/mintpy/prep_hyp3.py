@@ -107,12 +107,24 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
 
     # HDF-EOS5 metadata
-    if hyp3_meta['ReferenceGranule'].startswith('S1'):
+    ref_granule = hyp3_meta['ReferenceGranule']
+    if ref_granule.startswith('S1'):
+        # beam_mode / relative_orbit
         meta['beam_mode'] = 'IW'
 
-    meta['startUTC'] = date1.strftime('%Y-%m-%d %H:%M:%S.%f')
-    meta['stopUTC'] = date2.strftime('%Y-%m-%d %H:%M:%S.%f')
-    meta['relativeOrbit'] = ((int(hyp3_meta['ReferenceOrbitNumber']) - 73) % 175) + 1
+        if ref_granule.startswith('S1A'):
+            meta['relative_orbit'] = ((int(hyp3_meta['ReferenceOrbitNumber']) - 73) % 175) + 1
+        elif ref_granule.startswith('S1B'):
+            meta['relative_orbit'] = ((int(hyp3_meta['ReferenceOrbitNumber']) - 202) % 175) + 1
+        else:
+            raise ValueError('Un-recognized Sentinel-1 satellite from {ref_granule}!')
+
+    # first/last_frame [from start/stopUTC]
+    t0, t1 = ref_granule.split('_')[-5:-3]
+    meta['startUTC'] = dt.datetime.strptime(t0, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
+    meta['stopUTC']  = dt.datetime.strptime(t1, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
+
+    # unwrap_method
     meta['unwrap_method'] = hyp3_meta['Unwrappingtype']
 
     return meta
