@@ -15,7 +15,6 @@ import glob
 import os
 from urllib.request import urlopen, urlretrieve
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 from mintpy.objects.coord import coordinate
@@ -585,6 +584,8 @@ class GNSS:
     def plot(self, marker_size=2, marker_color='k', plot_error_bar=True):
         """Plot the displacement time-series.
         """
+        import matplotlib.pyplot as plt
+
         if self.dis_e is None:
             self.open()
 
@@ -616,12 +617,12 @@ class GNSS:
 
 
     def displacement_enu2los(self, inc_angle:float, az_angle:float, gnss_comp='enu2los',
-                             horz_az_angle=-90., display=False, model=None):
+                             horz_az_angle=-90.):
         """Convert displacement in ENU to LOS direction.
 
         Parameters: inc_angle     - float, LOS incidence angle in degree
-                    az_angle      - float, LOS aziuth angle in degree
-                                    from the north, defined as positive in clock-wise direction
+                    az_angle      - float, LOS aziuth    angle in degree from the north,
+                                    defined as positive in clock-wise direction
                     gnss_comp     - str, GNSS components used to convert to LOS direction
                     horz_az_angle - float, fault azimuth angle used to convert horizontal to fault-parallel
                                     measured from the north with anti-clockwise as positive
@@ -648,22 +649,6 @@ class GNSS:
         self.std_los = (   (self.std_e * unit_vec[0])**2
                          + (self.std_n * unit_vec[1])**2
                          + (self.std_u * unit_vec[2])**2 ) ** 0.5
-
-        # display if requested
-        if display:
-            # instantiate figure and axes
-            _, ax = plt.subplots(sharex=True)
-
-            # plot LOS displacement
-            ax.scatter(self.dates, self.dis_los, s=2**2, c='k', label='LOS')
-
-            # plot fit if model specified
-            if model is not None:
-                # specific time_func model
-                A = time_func.get_design_matrix4time_func(self.date_list, model=model)
-                estm_dis = np.dot(np.linalg.pinv(A), self.dis_los)
-                ax.plot(self.dates, estm_dis, 'b', label='model')
-            ax.legend()
 
         return self.dis_los, self.std_los
 
