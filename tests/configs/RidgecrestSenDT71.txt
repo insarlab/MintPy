@@ -21,5 +21,4 @@ mintpy.topographicResidual.stepDate             = 20190706T0320
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.save.hdfEos5                             = yes
 mintpy.save.hdfEos5.subset                      = yes
-mintpy.plot                                     = no
 mintpy.plot.maxMemory                           = 2
