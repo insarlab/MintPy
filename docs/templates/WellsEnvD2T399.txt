@@ -14,12 +14,12 @@ mintpy.load.azAngleFile    = None
 mintpy.load.shadowMaskFile = None
 mintpy.load.waterMaskFile  = None
 
-mintpy.subset.lalo         = 41.02:41.32, -115.10:-114.65
-mintpy.reference.lalo      = 41.03, -114.70
-mintpy.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
-mintpy.network.keepMinSpanTree    = no
-mintpy.network.excludeDate        = 20071231, 20080204, 20080310
-mintpy.topographicResidual.stepFuncDate = 20080221
+mintpy.subset.lalo                  = 41.02:41.32, -115.10:-114.65
+mintpy.reference.lalo               = 41.03, -114.70
+mintpy.network.coherenceBased       = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
+mintpy.network.keepMinSpanTree      = no
+mintpy.network.excludeDate          = 20071231, 20080204, 20080310
+mintpy.topographicResidual.stepDate = 20080221
 
 ##------------------------  HDF-EOS5 --------------------------------##
 mission             = Env                 # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2

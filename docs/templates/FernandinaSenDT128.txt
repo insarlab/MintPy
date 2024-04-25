@@ -32,6 +32,6 @@ mintpy.load.azAngleFile      = ../merged/geom_reference/los.rdr
 mintpy.load.shadowMaskFile   = ../merged/geom_reference/shadowMask.rdr
 mintpy.load.waterMaskFile    = None
 
-mintpy.reference.lalo        = -0.30,-91.43
-mintpy.topographicResidual.stepFuncDate  = 20170910,20180613  #eruption dates
-mintpy.deramp                = linear
+mintpy.reference.lalo               = -0.30,-91.43
+mintpy.topographicResidual.stepDate = 20170910,20180613  #eruption dates
+mintpy.deramp                       = linear
