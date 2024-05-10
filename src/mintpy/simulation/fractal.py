@@ -19,17 +19,27 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+NUM_THREADS = min(os.cpu_count(), 4)
+
 try:
     import pyfftw
-    from pyfftw.interfaces.numpy_fft import fft2,ifft2, fftshift
+    from pyfftw.interfaces.numpy_fft import fft2, fftshift, ifft2
 
     # speedup pyfftw
-    NUM_THREADS = min(os.cpu_count(), 4)
     print(f'using {NUM_THREADS} threads for pyfftw computation.')
     pyfftw.config.NUM_THREADS = NUM_THREADS
 except ImportError:
-    raise ImportError('Cannot import pyfftw!')
-    from scipy.fft import fft2, ifft2, fftshift
+    import functools
+    import warnings
+
+    import scipy
+    from scipy.fft import fftshift
+
+    warnings.warn('Cannot import pyfftw, fallback to scipy.fft.')
+
+    fft2 = functools.partial(scipy.fft.fft2, workers=NUM_THREADS)
+    ifft2 = functools.partial(scipy.ifft2, workers=NUM_THREADS)
+    print(f'using {NUM_THREADS} threads for fft computation with scipy.')
 
 
 def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
