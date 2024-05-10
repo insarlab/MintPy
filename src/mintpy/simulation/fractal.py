@@ -21,14 +21,15 @@ import numpy as np
 
 try:
     import pyfftw
+    from pyfftw.interfaces.numpy_fft import fft2,ifft2, fftshift
+
+    # speedup pyfftw
+    NUM_THREADS = min(os.cpu_count(), 4)
+    print(f'using {NUM_THREADS} threads for pyfftw computation.')
+    pyfftw.config.NUM_THREADS = NUM_THREADS
 except ImportError:
     raise ImportError('Cannot import pyfftw!')
-
-
-# speedup pyfftw
-NUM_THREADS = min(os.cpu_count(), 4)
-print(f'using {NUM_THREADS} threads for pyfftw computation.')
-pyfftw.config.NUM_THREADS = NUM_THREADS
+    from scipy.fft import fft2, ifft2, fftshift
 
 
 def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
