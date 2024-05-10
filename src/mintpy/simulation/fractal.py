@@ -78,8 +78,8 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
 
     # simulate a uniform random signal
     h = np.random.rand(length, width)
-    H = pyfftw.interfaces.numpy_fft.fft2(h)
-    H = pyfftw.interfaces.numpy_fft.fftshift(H)
+    H = fft2(h)
+    H = fftshift(H)
 
     # scale the spectrum with the power law
     yy, xx = np.mgrid[0:length-1:length*1j,
@@ -131,7 +131,7 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
 
     # get the fractal spectrum and transform to spatial domain
     Hfrac = np.divide(H, fraction)
-    fsurf = pyfftw.interfaces.numpy_fft.ifft2(Hfrac)
+    fsurf = ifft2(Hfrac)
     fsurf = np.abs(fsurf).astype(np.float32)
     fsurf -= np.mean(fsurf)
 
@@ -140,7 +140,7 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
 
     # scale the spectrum to match the input power spectral density.
     Hfrac *= np.sqrt(p0/p1)
-    fsurf = pyfftw.interfaces.numpy_fft.ifft2(Hfrac)
+    fsurf = ifft2(Hfrac)
     fsurf = np.abs(fsurf).astype(np.float32)
     fsurf -= np.mean(fsurf)
     return fsurf
@@ -173,8 +173,8 @@ def get_power_spectral_density(data, resolution=60., freq0=1e-3, display=False, 
     N = data.shape[0]
 
     # calculate the normalized power spectrum (spectral density)
-    fdata2d = pyfftw.interfaces.numpy_fft.fft2(data)
-    fdata2d = pyfftw.interfaces.numpy_fft.fftshift(fdata2d)
+    fdata2d = fft2(data)
+    fdata2d = fftshift(fdata2d)
     psd2d = np.abs(np.multiply(fdata2d, np.conj(fdata2d))) / (N**2)
 
     # The frequency coordinate in cycle / m
