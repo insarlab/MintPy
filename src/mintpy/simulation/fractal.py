@@ -26,7 +26,7 @@ try:
     from pyfftw.interfaces.numpy_fft import fft2, fftshift, ifft2
 
     # speedup pyfftw
-    print(f'using {NUM_THREADS} threads for pyfftw computation.')
+    print(f'using {NUM_THREADS} threads for fft computation with pyfftw.')
     pyfftw.config.NUM_THREADS = NUM_THREADS
 except ImportError:
     import functools
