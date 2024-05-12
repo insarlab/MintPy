@@ -8,6 +8,7 @@ import subprocess
 ###########################################################################
 Tag = collections.namedtuple('Tag', 'version date')
 release_history = (
+    Tag('1.6.0', '2024-05-09'),
     Tag('1.5.3', '2023-11-23'),
     Tag('1.5.2', '2023-08-09'),
     Tag('1.5.1', '2023-01-03'),
@@ -94,7 +95,3 @@ ___________________________________________________________
           MintPy {v}, {d}
 ___________________________________________________________
 """.format(v=version, d=version_date)
-
-website = 'https://github.com/insarlab/MintPy'
-
-description = 'Miami INsar Time-series software in PYthon'

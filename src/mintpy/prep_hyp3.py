@@ -37,14 +37,20 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
             key, value = line.strip().replace(' ','').split(':')[:2]
             hyp3_meta[key] = value
 
-    # get date1/2 objects
+    # get product type and the correponding insar processor
     if job_id.split('_')[2].startswith('IW'):
         # burst-wide product using ISCE2
+        prod_type = 'isce2_burst'
+    else:
+        # scene-wide product using Gamma
+        prod_type = 'gamma_scene'
+
+    # get date1/2 objects
+    if prod_type == 'isce2_burst':
         date1_str, date2_str = job_id.split('_')[3:5]
         date1 = dt.datetime.strptime(f'{date1_str}','%Y%m%d')
         date2 = dt.datetime.strptime(f'{date2_str}','%Y%m%d')
     else:
-        # scene-wide product using Gamma
         date1_str, date2_str = job_id.split('_')[1:3]
         date1 = dt.datetime.strptime(date1_str,'%Y%m%dT%H%M%S')
         date2 = dt.datetime.strptime(date2_str,'%Y%m%dT%H%M%S')
@@ -66,10 +72,6 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
     W = float(meta['X_FIRST'])
     S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])
     E = W + float(meta['X_STEP']) * int(meta['WIDTH'])
-
-    # convert UTM to lat/lon
-    N, W = ut.utm2latlon(meta, W, N)
-    S, E = ut.utm2latlon(meta, E, S)
 
     if meta['ORBIT_DIRECTION'] == 'ASCENDING':
         meta['LAT_REF1'] = str(S)
@@ -110,7 +112,37 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         meta['P_BASELINE_TOP_HDR'] = hyp3_meta['Baseline']
         meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
 
-    return(meta)
+    # HDF-EOS5 metadata
+    ref_granule = hyp3_meta['ReferenceGranule']
+    if ref_granule.startswith('S1'):
+        # beam_mode
+        meta['beam_mode'] = 'IW'
+
+        # beam_swath
+        if prod_type == 'isce2_burst':
+            meta['beam_swath'] = job_id.split('_')[2][2:]
+        else:
+            meta['beam_swath'] = '123'
+
+        # relative_orbit
+        if ref_granule.startswith('S1A'):
+            meta['relative_orbit'] = ((int(hyp3_meta['ReferenceOrbitNumber']) - 73) % 175) + 1
+        elif ref_granule.startswith('S1B'):
+            meta['relative_orbit'] = ((int(hyp3_meta['ReferenceOrbitNumber']) - 202) % 175) + 1
+        else:
+            raise ValueError('Un-recognized Sentinel-1 satellite from {ref_granule}!')
+
+    # first/last_frame [from start/stopUTC]
+    # NOTE by Yunjun, Apr 2024: ascending node time is needed to calculate the first/last frame
+    # based on the start/end UTC time.
+    t0, t1 = ref_granule.split('_')[-5:-3]
+    meta['startUTC'] = dt.datetime.strptime(t0, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
+    meta['stopUTC']  = dt.datetime.strptime(t1, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
+
+    # unwrap_method
+    meta['unwrap_method'] = hyp3_meta['Unwrappingtype']
+
+    return meta
 
 
 #########################################################################

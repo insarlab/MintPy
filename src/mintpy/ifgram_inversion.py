@@ -1060,6 +1060,11 @@ def run_ifgram_inversion(inps):
     # 2.4 instantiate number of inverted observations
     meta['FILE_TYPE'] = 'mask'
     meta['UNIT'] = '1'
+    # ignore NO_DATA_VALUE from ifgram stack file here as 1) it makes sense
+    # and 2) to avoid the weird error at https://github.com/insarlab/MintPy/issues/1185
+    if 'NO_DATA_VALUE' in meta.keys():
+        meta.pop('NO_DATA_VALUE')
+
     ds_name_dict = {"mask" : [np.float32, (length, width)]}
     writefile.layout_hdf5(inps.numInvFile, ds_name_dict, metadata=meta)
 

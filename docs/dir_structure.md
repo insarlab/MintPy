@@ -384,9 +384,9 @@ mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
     + For at least one interferogram, download the accompanying DEM.
     + Unzip the downloaded files. E.g., `for f in *.zip; do unzip $f; done` in bash.
 
-2. Clip DEM and all interferograms to the same area using hyp3lib/[cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
+2. Clip all image files (interferograms, coherence, DEM, etc.) to the same area.
 
-Here is an example workflow: [smallbaselineApp_hyp3](https://nbviewer.org/github/insarlab/MintPy-tutorial/blob/main/workflows/smallbaselineApp_hyp3.ipynb).
+An in-depth guide to performing these steps is available in this [Jupyter Notebook](https://github.com/ASFHyP3/hyp3-docs/blob/develop/docs/tutorials/hyp3_insar_stack_for_ts_analysis.ipynb).
 
 HyP3 produces two types of InSAR products: 1) scene-wide products using Gamma and 2) burst-wide products using ISCE2.
 
@@ -395,19 +395,19 @@ HyP3 produces two types of InSAR products: 1) scene-wide products using Gamma an
 ```
 $DATA_DIR/RidgecrestSenDT71
 ├── hyp3
-│   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_corr_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_dem_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_lv_theta_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_lv_phi_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_unw_phase_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_water_mask_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43.txt
+│   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_corr_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_dem_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_lv_theta_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_lv_phi_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_unw_phase_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_water_mask_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE.txt
 │   │   └── ...
-│   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28
-│   │   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28_corr_clip.tif
-│   │   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28_unw_phase_clip.tif
-│   │   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28.txt
+│   ├── S1AA_20190622T015048_20190704T015049_VVP012_INT80_G_ueF_44D1
+│   │   ├── S1AA_20190622T015048_20190704T015049_VVP012_INT80_G_ueF_44D1_corr_clip.tif
+│   │   ├── S1AA_20190622T015048_20190704T015049_VVP012_INT80_G_ueF_44D1_unw_phase_clip.tif
+│   │   ├── S1AA_20190622T015048_20190704T015049_VVP012_INT80_G_ueF_44D1.txt
 │   │   └── ...
 │   └── ...
 └── mintpy

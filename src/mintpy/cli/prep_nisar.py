@@ -41,11 +41,20 @@ def create_parser(subparsers=None):
     )
 
     parser.add_argument(
+        "-m",
+        "--mask",
+        dest="mask_file",
+        type=str,
+        default=None,
+        help="path to the mask (default: %(default)s).",
+    )
+
+    parser.add_argument(
         "-o",
         "--out-dir",
         dest="out_dir",
         type=str,
-        default="./mintpy",
+        default=".",
         help="output directory (default: %(default)s).",
     )
 

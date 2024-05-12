@@ -270,6 +270,10 @@ def touch(fname_list, times=None):
 def utm_zone2epsg_code(utm_zone):
     """Convert UTM Zone string to EPSG code.
 
+    Reference:
+        https://docs.up42.com/data/reference/utm#utm-wgs84
+        https://pyproj4.github.io/pyproj/stable/examples.html#initializing-crs
+
     Parameters: utm_zone  - str, atr['UTM_ZONE'], comprises a zone number
                             and a hemisphere, e.g. 11N, 36S, etc.
     Returns:    epsg_code - str, EPSG code
@@ -283,6 +287,27 @@ def utm_zone2epsg_code(utm_zone):
     })
     epsg_code = crs.to_authority()[1]
     return epsg_code
+
+
+def epsg_code2utm_zone(epsg_code):
+    """Convert EPSG code to UTM Zone string.
+
+    Reference:
+        https://docs.up42.com/data/reference/utm#utm-wgs84
+        https://pyproj4.github.io/pyproj/stable/examples.html#initializing-crs
+
+    Parameters: epsg_code - str / int, EPSG code
+    Returns:    utm_zone  - str, atr['UTM_ZONE'], comprises a zone number
+                            and a hemisphere, e.g. 11N, 36S, etc. None for
+                            a EPSG code not in a UTM coordnate system
+    Examples:   utm_zone = epsg_code2utm_zone('32736')
+    """
+    from pyproj import CRS
+    crs = CRS.from_epsg(epsg_code)
+    utm_zone = crs.utm_zone
+    if not utm_zone:
+        print(f'WARNING: input EPSG code ({epsg_code}) is NOT a UTM zone, return None and continue.')
+    return utm_zone
 
 
 def to_latlon(infile, x, y):
@@ -320,10 +345,10 @@ def utm2latlon(meta, easting, northing):
 
     Parameters: meta     - dict, mintpy attributes that includes:
                            UTM_ZONE
-                easting  - scalar or 1/2D np.ndarray, UTM    coordinates in x direction
-                northing - scalar or 1/2D np.ndarray, UTM    coordinates in y direction
-    Returns:    lat      - scalar or 1/2D np.ndarray, WGS 84 coordinates in y direction
-                lon      - scalar or 1/2D np.ndarray, WGS 84 coordinates in x direction
+                easting  - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in y direction
+    Returns:    lat      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in x direction
     """
     import utm
     zone_num = int(meta['UTM_ZONE'][:-1])
@@ -332,20 +357,40 @@ def utm2latlon(meta, easting, northing):
     # which can be common for large area analysis, e.g. the Norwegian mapping authority
     # publishes a height data in UTM zone 33 coordinates for the whole country, even though
     # most of it is technically outside zone 33.
-    lat, lon = utm.to_latlon(easting, northing, zone_num, northern=northern, strict=False)
+    lat, lon = utm.to_latlon(np.array(easting), np.array(northing), zone_num,
+                             northern=northern, strict=False)
+
+    # output format
+    if any(isinstance(x, (list, tuple)) for x in [easting, northing]):
+        lat = lat.tolist()
+        lon = lon.tolist()
+
     return lat, lon
 
 
-def latlon2utm(lat, lon):
+def latlon2utm(meta, lat, lon):
     """Convert latitude/longitude in degrees to UTM easting/northing in meters.
 
-    Parameters: lat      - scalar or 1/2D np.ndarray, WGS 84 coordinates in y direction
-                lon      - scalar or 1/2D np.ndarray, WGS 84 coordinates in x direction
-    Returns:    easting  - scalar or 1/2D np.ndarray, UTM    coordinates in x direction
-                northing - scalar or 1/2D np.ndarray, UTM    coordinates in y direction
+    Parameters: meta     - dict, mintpy attributes that includes:
+                           UTM_ZONE
+                lat      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in x direction
+    Returns:    easting  - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in y direction
     """
     import utm
-    return utm.from_latlon(lat, lon)[:2]
+
+    # invoke zone_num to ensure all coordinates are converted into the same single UTM zone,
+    # even if they cross a UTM boundary.
+    zone_num = int(meta['UTM_ZONE'][:-1])
+    easting, northing = utm.from_latlon(np.array(lat), np.array(lon), force_zone_number=zone_num)[:2]
+
+    # output format
+    if any(isinstance(x, (list, tuple)) for x in [lat, lon]):
+        easting = easting.tolist()
+        northing = northing.tolist()
+
+    return northing, easting
 
 
 def snwe_to_wkt_polygon(snwe):

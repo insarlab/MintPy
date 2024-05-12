@@ -186,8 +186,7 @@ def run_asc_desc2horz_vert(inps):
     for i, (atr, fname) in enumerate(zip(atr_list, inps.file)):
         # overlap SNWE --> box to read for each specific file
         coord = ut.coordinate(atr)
-        x0 = coord.lalo2yx(W, coord_type='lon')
-        y0 = coord.lalo2yx(N, coord_type='lat')
+        y0, x0 = coord.lalo2yx(N, W)
         box = (x0, y0, x0 + width, y0 + length)
 
         # read data
