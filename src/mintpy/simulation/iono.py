@@ -445,7 +445,7 @@ def read_sub_tec(tec_file, version=2.1, print_msg=True):
         LEO: low earth orbit, where the SAR satellite is (~700 km).
         LOS: line-of-sight
 
-    Version 2. Format of the data file provided by Xiaoqing Xi in August 6, 2020.
+    Version 2. Format of the data file provided by Xiaoqing Pi in August 6, 2020.
     COL01:  GPSSEC      (GPS seconds)
     COL02:  UThrs       (UTC in hours)
     COL03:  LThrs       (local solar time in hours)
@@ -466,7 +466,7 @@ def read_sub_tec(tec_file, version=2.1, print_msg=True):
     COL18:  GIMTEC_TGT  (GIM TEC at TGT at 450 km) [*]
     COL19:  GIMTEC_LEO  (GIM TEC at the projected LEO coordinates)
 
-    Version 1. Format of the data file provided by Xiaoqing Xi in July 9, 2020.
+    Version 1. Format of the data file provided by Xiaoqing Pi in July 9, 2020.
     COL01: GPSSEC,  GPS seconds past J2000
     COL02: UTC      [sec] within the day
     COL03: LThrs    [hours], local solar time
