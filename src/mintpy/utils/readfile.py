@@ -1897,13 +1897,16 @@ def read_snap_dim(fname):
     bases = ds.find("MDElem[@name='Baselines']").findall("MDElem")[0].findall("MDElem")
 
     # date12
-    dates = [x.get('name').split(':')[1].strip() for x in bases]
-    [date1, date2] = sorted(dt.datetime.strptime(x, '%d%b%Y').strftime('%Y%m%d') for x in dates)
+    ## The split character is changed from ':' to '_'
+    dates = [x.get('name').split('_')[1].strip() for x in bases]
+    ## The 'date0' is added so the reference scene is also captured
+    [date0, date1, date2] = sorted(dt.datetime.strptime(x, '%d%b%Y').strftime('%Y%m%d') for x in dates)
     dim_dict['DATE12'] = f'{date1[2:]}-{date2[2:]}'
 
     # p_baseline
     pbases = [x.find("MDATTR[@name='Perp Baseline']").text for x in bases]
-    pbase = [x for x in pbases if float(x) != 0][0]
+    ## The condition of non-zero baseline value is removed and the last one is picked. Please note that the first, second and third dates always belong to the reference, master and slave scenes respectively.
+    pbase = [x for x in pbases][2]
     dim_dict['P_BASELINE_TOP_HDR'] = pbase
     dim_dict['P_BASELINE_BOTTOM_HDR'] = pbase
 
