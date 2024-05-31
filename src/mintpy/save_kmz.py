@@ -503,4 +503,3 @@ def save_kmz(inps):
             inps=inps)
 
     return
-    
