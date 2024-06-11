@@ -53,30 +53,35 @@ jobs:
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
+            rm -r ${HOME}/data
 
       - run:
           name: Integration Test 2/4 - SanFranSenDT42 (ARIA)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
+            rm -r ${HOME}/data
 
       - run:
           name: Integration Test 3/5 - RidgecrestSenDT71 (HyP3)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset RidgecrestSenDT71
+            rm -r ${HOME}/data
 
       - run:
           name: Integration Test 4/5 - WellsEnvD2T399 (Gamma)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
+            rm -r ${HOME}/data
 
       - run:
           name: Integration Test 5/5 - WCapeSenAT29 (SNAP)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
+            rm -r ${HOME}/data
 
 workflows:
   version: 2
