@@ -1652,10 +1652,10 @@ class viewer():
             no_data_val = readfile.get_no_data_value(self.file)
             if self.no_data_value is not None:
                 vprint(f'masking pixels with NO_DATA_VALUE of {self.no_data_value}')
-                data = np.ma.masked_where(data == self.no_data_value, data)
+                data[data == self.no_data_value] = np.nan
             elif no_data_val is not None and not np.isnan(no_data_val):
                 vprint(f'masking pixels with NO_DATA_VALUE of {no_data_val}')
-                data = np.ma.masked_where(data == no_data_val, data)
+                data[data == no_data_val] = np.nan
 
             # update/save mask info
             if np.ma.is_masked(data):

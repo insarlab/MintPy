@@ -50,7 +50,7 @@ def create_parser(subparsers=None):
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     # observations
-    parser.add_argument('-f', dest='obs_files', type=str, nargs='+', default='./merged/interferograms/*/filt_*.unw',
+    parser.add_argument('-f', dest='obs_files', type=str, nargs='+', default=['./merged/interferograms/*/filt_*.unw'],
                         help='Wildcard path pattern for the primary observation files.\n'
                              'E.g.: topsStack          : {dset_dir}/merged/interferograms/*/filt_*.unw\n'
                              '      topsStack / iono   : {dset_dir}/ion/*/ion_cal/filt.ion\n'

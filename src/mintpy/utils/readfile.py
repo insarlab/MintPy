@@ -178,7 +178,8 @@ DATA_TYPE_NUMPY2ISCE = {
 
 # 4 - GAMMA
 DATA_TYPE_GAMMA2NUMPY = {
-    'fcomplex' : 'float64',
+    'fcomplex' : 'complex64',
+    'scomplex' : 'complex32',
 }
 
 # single file (data + attributes) supported by GDAL
@@ -678,11 +679,11 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             if datasetName and datasetName.startswith(('az', 'azimuth')):
                 band = 2
 
-        elif fext == '.slc':
+        elif fext in ['.slc', '.rslc']:
             data_type = data_type if 'DATA_TYPE' in atr.keys() else 'complex32'
             cpx_band = 'magnitude'
 
-        elif fext in ['.mli']:
+        elif fext in ['.mli', '.rmli']:
             byte_order = 'little-endian'
 
     # SNAP
@@ -1370,15 +1371,16 @@ def auto_no_data_value(meta):
         num_band = int(meta.get('BANDS', 0))
 
         # known file types
-        # isce2: dense offsets from topsApp.py
-        if processor == 'isce' and num_band == 2:
-            # isce2 dense offset
-            if fname.endswith('dense_offsets.bil'):
-                # from topsApp.py
+        if processor == 'isce':
+            if num_band == 2 and fname.endswith('dense_offsets.bil'):
+                # topsApp: dense offset
                 no_data_value = -10000.
-            elif fname.endswith('_denseoffset.off'):
-                # from alos2App.py
+            elif num_band == 2 and fname.endswith('_denseoffset.off'):
+                # alos2App: dense offset
                 no_data_value = 0.
+            elif num_band == 1 and fname.endswith(('alks_rg.off', 'alks_az.off')):
+                # alos2App: geometrical offset
+                no_data_value = -999999.0
             else:
                 no_data_value = None
 
@@ -1959,38 +1961,44 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
     if not box:
         box = (0, 0, width, length)
 
-    if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
-        letter, digit = re.findall(r'(\d+|\D+)', data_type)
-        # convert into short style: float32 --> c4
-        if len(letter) > 1:
-            letter = letter[0]
-            digit = int(int(digit) / 8)
-        data_type = f'>{letter}{digit}'
-
     # read data
-    interleave = interleave.upper()
-    if interleave == 'BIL':
-        count = box[3] * width * num_band
-        data = np.fromfile(fname, dtype=data_type, count=count).reshape(-1, width*num_band)
-        c0 = width * (band - 1) + box[0]
-        c1 = width * (band - 1) + box[2]
-        data = data[box[1]:box[3], c0:c1]
-
-    elif interleave == 'BIP':
-        count = box[3] * width * num_band
-        data = np.fromfile(fname, dtype=data_type, count=count).reshape(-1, width*num_band)
-        inds = np.arange(box[0], box[2]) * num_band + band - 1
-        data = data[box[1]:box[3], inds]
-
-    elif interleave == 'BSQ':
-        count = (box[3] + length * (band - 1)) * width
-        data = np.fromfile(fname, dtype=data_type, count=count).reshape(-1, width)
-        r0 = length * (band - 1) + box[1]
-        r1 = length * (band - 1) + box[3]
-        data = data[r0:r1, box[0]:box[2]]
+    if data_type == 'complex32':
+        # for numpy un-supported data type: complex32
+        data = read_complex_int16(fname, box=box, byte_order=byte_order, cpx_band='complex')[0]
 
     else:
-        raise ValueError('unrecognized band interleaving:', interleave)
+        # for numpy supported data type
+        if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
+            letter, digit = re.findall(r'(\d+|\D+)', data_type)
+            # convert into short style: float32 --> c4
+            if len(letter) > 1:
+                letter = letter[0]
+                digit = int(int(digit) / 8)
+            data_type = f'>{letter}{digit}'
+
+        interleave = interleave.upper()
+        if interleave == 'BIL':
+            count = box[3] * width * num_band
+            data = np.fromfile(fname, dtype=data_type, count=count).reshape(-1, width*num_band)
+            c0 = width * (band - 1) + box[0]
+            c1 = width * (band - 1) + box[2]
+            data = data[box[1]:box[3], c0:c1]
+
+        elif interleave == 'BIP':
+            count = box[3] * width * num_band
+            data = np.fromfile(fname, dtype=data_type, count=count).reshape(-1, width*num_band)
+            inds = np.arange(box[0], box[2]) * num_band + band - 1
+            data = data[box[1]:box[3], inds]
+
+        elif interleave == 'BSQ':
+            count = (box[3] + length * (band - 1)) * width
+            data = np.fromfile(fname, dtype=data_type, count=count).reshape(-1, width)
+            r0 = length * (band - 1) + box[1]
+            r1 = length * (band - 1) + box[3]
+            data = data[r0:r1, box[0]:box[2]]
+
+        else:
+            raise ValueError('unrecognized band interleaving:', interleave)
 
     # adjust output band for complex data
     if data_type.replace('>', '').startswith('c'):
@@ -2331,49 +2339,60 @@ def read_real_float32(fname, box=None, byte_order='l'):
     return data, atr
 
 
-def read_complex_int16(fname, box=None, byte_order='l', cpx=False):
+def read_complex_int16(fname, box=None, byte_order='l', cpx_band='complex'):
     """Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
 
     Gamma file: .slc
 
-    Inputs:
-       file: complex data matrix (cpx_int16)
-       box: 4-tuple defining the left, upper, right, and lower pixel coordinate.
-    Example:
-       data,rsc = read_complex_int16('100102.slc')
-       data,rsc = read_complex_int16('100102.slc',(100,1200,500,1500))
+    Parameters: fname      - str, path to the binary file
+                box        - tuple(int), bounding box in (x0, y0, x1, y1)
+                byte_order - str, byte order in big/little-endian
+                cpx_band   - str, cpx / real / imag / mag / pha
+    Returns:    data       - np.ndarray, 2D matrix
+                atr        - dict, metadata
+    Example: data, atr = read_complex_int16('100102.slc')
+             data, atr = read_complex_int16('100102.slc', box=(100,1200,500,1500))
     """
 
+    # read attributes
     atr = read_attribute(fname)
     if 'DATA_TYPE' not in atr.keys():
         atr['DATA_TYPE'] = 'complex32'
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
+
+    # box
     if not box:
         box = [0, 0, width, length]
 
+    # data_type
     data_type = 'i2'
     if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
         data_type = '>i2'
 
-    data = np.fromfile(fname,
-                       dtype=data_type,
-                       count=box[3]*2*width).reshape(box[3], 2*width)
-    data = data[box[1]:box[3],
-                2*box[0]:2*box[2]].flatten()
+    # read from file
+    data = np.fromfile(fname, dtype=data_type, count=box[3]*2*width).reshape(box[3], 2*width)
+    data = data[box[1]:box[3], 2*box[0]:2*box[2]].flatten()
 
     odd_idx = np.arange(1, len(data), 2)
-    real = data[odd_idx-1].reshape(box[3]-box[1],
-                                   box[2]-box[0])
-    imag = data[odd_idx].reshape(box[3]-box[1],
-                                 box[2]-box[0])
+    real = data[odd_idx-1].reshape(box[3]-box[1], box[2]-box[0])
+    imag = data[odd_idx].reshape(box[3]-box[1], box[2]-box[0])
 
-    if cpx:
-        return real, imag, atr
+    # adjust output band for complex data
+    if cpx_band.startswith('real'):
+        data = real
+    elif cpx_band.startswith('imag'):
+        data = imag
+    elif cpx_band.startswith(('mag', 'amp')):
+        data = np.hypot(imag, real)
+    elif cpx_band.startswith('pha'):
+        data = np.arctan2(imag, real)
+    elif cpx_band.startswith(('cpx', 'complex')):
+        data = real + 1j * imag
     else:
-        amplitude = np.hypot(imag, real)
-        phase = np.arctan2(imag, real)
-        return amplitude, phase, atr
+        raise ValueError('unrecognized complex band:', cpx_band)
+
+    return data, atr
 
 
 def read_real_int16(fname, box=None, byte_order='l'):
