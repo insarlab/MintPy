@@ -39,7 +39,7 @@ jobs:
           echo "MINTPY_VERSION=$(git describe --tags)" >> $GITHUB_ENV
 
       - name: Build, tag, and push image to Github Container Registry
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
