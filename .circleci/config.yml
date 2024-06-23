@@ -2,7 +2,7 @@ version: 2.1
 jobs:
   unit-n-workflow-tests:
     docker:
-      - image: ubuntu:bionic
+      - image: cimg/base:current
         environment:
           CONDA_PREFIX: /root/tools/miniforge
           MINTPY_HOME: /root/tools/MintPy
