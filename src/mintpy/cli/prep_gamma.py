@@ -119,6 +119,8 @@ def create_parser(subparsers=None):
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
     parser.add_argument('--sensor', dest='sensor', type=str, choices=SENSOR_NAMES,
                         help='SAR sensor')
+    parser.add_argument('--dem', dest='dem_file', type=str,
+                        help='DEM data file')
     return parser
 
 
@@ -141,6 +143,10 @@ def cmd_line_parse(iargs=None):
         msg = f'unsupported input file extension: {inps.file_ext}'
         msg += f'\nsupported file extensions: {ext_list + ["*"+x for x in ext_ends]}'
         raise ValueError(msg)
+
+    # check: --dem
+    if inps.dem_file:
+        inps.dem_file = ut.get_file_list(inps.dem_file, abspath=True)[0]
 
     return inps
 
