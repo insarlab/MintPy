@@ -623,8 +623,12 @@ def prepare_metadata(iDict):
             if len(glob.glob(str(iDict[key]))) > 0:
                 # print command line
                 iargs = [iDict[key]]
-                if processor == 'gamma' and iDict['PLATFORM']:
-                    iargs += ['--sensor', iDict['PLATFORM'].lower()]
+                if processor == 'gamma':
+                    if iDict['PLATFORM']:
+                        iargs += ['--sensor', iDict['PLATFORM'].lower()]
+                    # add DEM file to faciliate the checking and metadata extraction for geocoded datasets
+                    iargs += ['--dem', iDict['mintpy.load.demFile']]
+
                 elif processor == 'cosicorr':
                     iargs += ['--metadata', iDict['mintpy.load.metaFile']]
                 ut.print_command_line(script_name, iargs)

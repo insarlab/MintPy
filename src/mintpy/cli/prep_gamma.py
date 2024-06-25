@@ -100,9 +100,10 @@ NOTE = """
 
 EXAMPLE = """example:
   prep_gamma.py  diff_filt_HDR_20130118_20130129_4rlks.unw
-  prep_gamma.py  interferograms/*/diff_*rlks.unw --sensor sen
-  prep_gamma.py  interferograms/*/filt_*rlks.cor
-  prep_gamma.py  interferograms/*/diff_*rlks.int
+  prep_gamma.py  "interferograms/*/diff_*rlks.unw" --sensor sen --dem "../geometry/sim*rlks.utm.dem"
+  prep_gamma.py  "interferograms/*/diff_*rlks.unw" --sensor sen
+  prep_gamma.py  "interferograms/*/filt_*rlks.cor"
+  prep_gamma.py  "interferograms/*/diff_*rlks.int"
   prep_gamma.py  sim_20150911_20150922.hgt_sim
   prep_gamma.py  sim_20150911_20150922.utm.dem
   prep_gamma.py  sim_20150911_20150922.UTM_TO_RDC
@@ -119,6 +120,8 @@ def create_parser(subparsers=None):
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
     parser.add_argument('--sensor', dest='sensor', type=str, choices=SENSOR_NAMES,
                         help='SAR sensor')
+    parser.add_argument('--dem', dest='dem_file', type=str,
+                        help='DEM data file')
     return parser
 
 
@@ -141,6 +144,10 @@ def cmd_line_parse(iargs=None):
         msg = f'unsupported input file extension: {inps.file_ext}'
         msg += f'\nsupported file extensions: {ext_list + ["*"+x for x in ext_ends]}'
         raise ValueError(msg)
+
+    # check: --dem
+    if inps.dem_file:
+        inps.dem_file = ut.get_file_list(inps.dem_file, abspath=True)[0]
 
     return inps
 
