@@ -20,7 +20,7 @@ key_prefix = 'mintpy.topographicResidual.'
 config_keys = [
     'polyOrder',
     'phaseVelocity',
-    'stepFuncDate',
+    'stepDate',
     'excludeDate',
 ]
 
@@ -96,7 +96,7 @@ def read_template2inps(template_file, inps):
         elif value:
             if key in ['polyOrder']:
                 iDict[key] = int(value)
-            elif key in ['excludeDate','stepFuncDate']:
+            elif key in ['excludeDate','stepDate']:
                 iDict[key] = ptime.yyyymmdd(value.split(','))
 
     # computing configurations
@@ -147,8 +147,8 @@ def get_design_matrix4defo(inps):
     if inps.phaseVelocity:
         msg += ' velocity'
     msg += f"\ntemporal deformation model: polynomial order = {inps.polyOrder}"
-    if inps.stepFuncDate:
-        msg += f"\ntemporal deformation model: step functions at {inps.stepFuncDate}"
+    if inps.stepDate:
+        msg += f"\ntemporal deformation model: step functions at {inps.stepDate}"
     if inps.periodic:
         msg += f"\ntemporal deformation model: periodic functions of {inps.periodic} yr"
     msg += '\n'+'-'*80
@@ -157,7 +157,7 @@ def get_design_matrix4defo(inps):
     # prepare temporal deformation model
     model = dict()
     model['polynomial'] = inps.polyOrder
-    model['step'] = inps.stepFuncDate
+    model['stepDate'] = inps.stepDate
     model['periodic'] = inps.periodic
 
     # prepare SAR info
@@ -444,7 +444,7 @@ def correct_dem_error(inps):
     num_date = ts_obj.numDate
     length, width = ts_obj.length, ts_obj.width
 
-    num_step = len(inps.stepFuncDate)
+    num_step = len(inps.stepDate)
 
     # exclude dates
     date_flag = read_exclude_date(inps.excludeDate, ts_obj.dateList)[0]

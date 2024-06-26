@@ -47,6 +47,7 @@ def prep_test_data(prep_mode=True):
 def test_read_ionex():
     """Test mintpy.objects.ionex.read_ionex()"""
 
+    print('Test 1: read GIM files via ionex.read_ionex()')
     time_ind = 1
     x0, x1, y0, y1 = 3, 9, 28, 33
     tec_aoi = np.array(
@@ -69,11 +70,13 @@ def test_read_ionex():
 
     # compare
     assert np.allclose(tec_maps[time_ind, y0:y1, x0:x1], tec_aoi)
+    print('Pass.')
 
 
 def test_get_ionex_value():
     """Test mintpy.objects.ionex.get_ionex_value()"""
 
+    print('Test 2: Get the ionex for a given location/time via ionex.get_ionex_value()')
     lat, lon = -21.3, -67.4         # northern Chile
     utc_sec = 23 * 3600 + 7 * 60    # 23:07 UTC
 
@@ -96,6 +99,7 @@ def test_get_ionex_value():
             rotate_tec_map=rotate,
         )
         assert np.allclose(tec_val, value, atol=1e-05, rtol=1e-05)
+        print(f'Interpolation method ({method:8s}) with rotation ({str(rotate):5s}): Pass.')
 
 
 if __name__ == '__main__':

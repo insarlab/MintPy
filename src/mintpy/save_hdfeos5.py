@@ -115,20 +115,24 @@ def metadata_mintpy2unavco(meta_in, dateList, geom_file):
     unavco_meta['last_date'] = dt.datetime.strptime(dateList[-1], '%Y%m%d').isoformat()[0:10]
 
     # footprint
-    lons = [meta['LON_REF1'],
-            meta['LON_REF3'],
-            meta['LON_REF4'],
-            meta['LON_REF2'],
-            meta['LON_REF1']]
+    lons = [float(meta['LON_REF1']),
+            float(meta['LON_REF3']),
+            float(meta['LON_REF4']),
+            float(meta['LON_REF2']),
+            float(meta['LON_REF1'])]
 
-    lats = [meta['LAT_REF1'],
-            meta['LAT_REF3'],
-            meta['LAT_REF4'],
-            meta['LAT_REF2'],
-            meta['LAT_REF1']]
+    lats = [float(meta['LAT_REF1']),
+            float(meta['LAT_REF3']),
+            float(meta['LAT_REF4']),
+            float(meta['LAT_REF2']),
+            float(meta['LAT_REF1'])]
+
+    # convert UTM to lat/lon
+    if not meta_in.get('Y_UNIT', 'degrees').lower().startswith('deg'):
+        lats, lons = ut.utm2latlon(meta_in, easting=lons, northing=lats)
 
     unavco_meta['scene_footprint'] = "POLYGON((" + ",".join(
-        [lon+' '+lat for lon, lat in zip(lons, lats)]) + "))"
+        [f'{lon} {lat}' for lon, lat in zip(lons, lats)]) + "))"
 
     unavco_meta['history'] = dt.datetime.utcnow().isoformat()[0:10]
 
@@ -238,6 +242,10 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
         lon0 = float(metadata['X_FIRST'])
         lat0 = lat1 + float(metadata['Y_STEP']) * int(metadata['LENGTH'])
         lon1 = lon0 + float(metadata['X_STEP']) * int(metadata['WIDTH'])
+
+        # convert UTM to lat/lon
+        if not metadata.get('Y_UNIT', 'degrees').lower().startswith('deg'):
+            [lat0, lat1], [lon0, lon1] = ut.utm2latlon(metadata, easting=[lon0, lon1], northing=[lat0, lat1])
 
         lat0Str = f'N{round(lat0*1e3):05d}'
         lat1Str = f'N{round(lat1*1e3):05d}'

@@ -13,7 +13,7 @@ import numpy as np
 from skimage.transform import rescale
 
 from mintpy.multilook import multilook_data
-from mintpy.utils import plot as pp, readfile, writefile
+from mintpy.utils import plot as pp, readfile, utils as ut, writefile
 
 
 #############################################################################################
@@ -178,6 +178,20 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     atr['LENGTH'] = length
     atr['X_FIRST'] = W
     atr['Y_FIRST'] = N
+    print(f'update LENGTH/WIDTH: {length}/{width}')
+    print(f'update Y/X_FIRST: {N}/{W}')
+
+    # update REF_Y/X
+    coord = ut.coordinate(atr)
+    ref_y, ref_x = coord.geo2radar(float(atr['REF_LAT']), float(atr['REF_LON']))[:2]
+    atr['REF_Y'], atr['REF_X'] = ref_y, ref_x
+    print(f'update REF_Y/X: {ref_y}/{ref_x}')
+
+    # delete SUBSET_Y/XMIN/MAX
+    for key in ['SUBSET_XMIN', 'SUBSET_XMAX', 'SUBSET_YMIN', 'SUBSET_YMAX']:
+        if key in atr.keys():
+            atr.pop(key)
+            print(f'remove {key}')
 
     return mat, atr, mat11, mat22, mat_diff
 

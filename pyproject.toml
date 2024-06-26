@@ -9,7 +9,6 @@ authors = [
     { name = "Zhang Yunjun", email = "yunjunz@outlook.com" },
     { name = "Heresh Fattahi", email = "hersh.fattahi@gmail.com" },
 ]
-readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.8"
 
 keywords = ["InSAR", "deformation", "time-series", "volcano", "tectonics", "geodesy", "geophysics", "remote-sensing"]
@@ -26,7 +25,7 @@ classifiers=[
 # see section: setuptools_scm
 # https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html#dynamic-metadata
 # dependencies will be read from text files
-dynamic = ["version", "dependencies", "optional-dependencies"]
+dynamic = ["version", "readme", "dependencies", "optional-dependencies"]
 
 [project.urls]
 Homepage = "https://github.com/insarlab/MintPy"
@@ -35,7 +34,7 @@ Issues = "https://github.com/insarlab/MintPy/issues"
 
 # Entry points for the command line interface
 [project.scripts]
-mintpy = "mintpy.__main__:main"
+"mintpy" = "mintpy.__main__:main"
 "add.py" = "mintpy.cli.add:main"
 "asc_desc2horz_vert.py" = "mintpy.cli.asc_desc2horz_vert:main"
 "closure_phase_bias.py" = "mintpy.cli.closure_phase_bias:main"
@@ -48,6 +47,7 @@ mintpy = "mintpy.__main__:main"
 "image_math.py" = "mintpy.cli.image_math:main"
 "image_stitch.py" = "mintpy.cli.image_stitch:main"
 "info.py" = "mintpy.cli.info:main"
+"iono_split_spectrum.py" = "mintpy.cli.iono_split_spectrum:main"
 "iono_tec.py" = "mintpy.cli.iono_tec:main"
 "load_data.py" = "mintpy.cli.load_data:main"
 "load_gbis.py" = "mintpy.cli.load_gbis:main"
@@ -108,6 +108,7 @@ include-package-data = true
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
+readme = { file = ["docs/README.md"], content-type = "text/markdown" }
 
 # extra requirements: `pip install pysolid[test]` or `pip install .[test]`
 [tool.setuptools.dynamic.optional-dependencies.test]

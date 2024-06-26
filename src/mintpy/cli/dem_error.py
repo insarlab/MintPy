@@ -60,7 +60,7 @@ def create_parser(subparsers=None):
                                  'All dates will be corrected for DEM residual phase still.')
     defo_model.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
                             help='polynomial order number of temporal deformation model (default: %(default)s).')
-    defo_model.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
+    defo_model.add_argument('-s', '--step-date', dest='stepDate', nargs='*', default=[],
                             help='Date of step jump for temporal deformation model (default: %(default)s).'+
                                  ' i.e. date of earthquake/volcanic eruption')
     defo_model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
@@ -143,7 +143,7 @@ def read_template2inps(template_file, inps):
         elif value:
             if key in ['polyOrder']:
                 iDict[key] = int(value)
-            elif key in ['excludeDate','stepFuncDate']:
+            elif key in ['excludeDate','stepDate']:
                 iDict[key] = ptime.yyyymmdd(value.split(','))
 
     # computing configurations

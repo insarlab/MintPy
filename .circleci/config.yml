@@ -2,7 +2,7 @@ version: 2.1
 jobs:
   unit-n-workflow-tests:
     docker:
-      - image: ubuntu:bionic
+      - image: cimg/base:current
         environment:
           CONDA_PREFIX: /root/tools/miniforge
           MINTPY_HOME: /root/tools/MintPy
@@ -61,13 +61,19 @@ jobs:
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
 
       - run:
-          name: Integration Test 3/4 - WellsEnvD2T399 (Gamma)
+          name: Integration Test 3/5 - RidgecrestSenDT71 (HyP3)
+          command: |
+            mkdir -p ${HOME}/data
+            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset RidgecrestSenDT71
+
+      - run:
+          name: Integration Test 4/5 - WellsEnvD2T399 (Gamma)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
       - run:
-          name: Integration Test 4/4 - WCapeSenAT29 (SNAP)
+          name: Integration Test 5/5 - WCapeSenAT29 (SNAP)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29

@@ -661,7 +661,7 @@ def write_isce_xml(meta, fname, print_msg=True):
     return
 
 
-def write_isce_file(data, out_file, file_type='isce_unw'):
+def write_isce_file(data, out_file, file_type='isce_unw', print_msg=True):
     """write data to file in ISCE format
 
     Parameters: data      - 2D np.ndarray, binary data matrix
@@ -674,6 +674,8 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
 
     # write data to binary file
     data.tofile(out_file)
+    if print_msg:
+        print(f'write file: {out_file}')
 
     # write isce xml metadata file
     length, width = data.shape
@@ -710,7 +712,7 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
     else:
         raise ValueError(f'un-recognized ISCE file type: {file_type}')
 
-    write_isce_xml(meta, out_file)
+    write_isce_xml(meta, out_file, print_msg=print_msg)
 
     return out_file
 

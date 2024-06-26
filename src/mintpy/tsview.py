@@ -609,6 +609,7 @@ def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
     header += f'{get_point_coord_str(y, x, inps.coord, inps.lalo_digit)}\n'
     header += f'reference pixel: y={inps.ref_yx[0]}, x={inps.ref_yx[1]}\n' if inps.ref_yx else ''
     header += f'reference date: {inps.date_list[inps.ref_idx]}\n' if inps.ref_idx else ''
+    header += f'exclude date: {inps.ex_date_list}\n' if inps.ex_date_list else ''
     header += 'estimated time function parameters:\n'
     for m_str in m_strs:
         header += f'    {m_str}\n'

@@ -31,16 +31,16 @@ SENSOR_NAMES = [i.capitalize() for i in sensor.SENSOR_NAMES]
 
 #########################################################################
 REFERENCE = """references:
-  Berardino, P., G. Fornaro, R. Lanari, and E. Sansosti (2002), A new algorithm for surface deformation monitoring
+  Berardino, P., Fornaro, G., Lanari, R., and Sansosti E. (2002), A new algorithm for surface deformation monitoring
     based on small baseline differential SAR interferograms, IEEE TGRS, 40(11), 2375-2383.
-  Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series, IEEE TGRS, 51(7), 4249-4259.
-  Ferretti, A., C. Prati, and F. Rocca (2001), Permanent scatterers in SAR interferometry, IEEE TGRS, 39(1), 8-20.
-  Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
+  Fattahi, H., and Amelung, F. (2013), DEM Error Correction in InSAR Time Series, IEEE TGRS, 51(7), 4249-4259.
+  Ferretti, A., Prati, C., and Rocca F. (2001), Permanent scatterers in SAR interferometry, IEEE TGRS, 39(1), 8-20.
+  Pepe, A., and Lanari, R. (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
     of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
   Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error
+  Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis: Unwrapping error
     correction and noise reduction, Computers & Geosciences, 133, 104331, doi:10.1016/j.cageo.2019.104331.
-  Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
+  Zebker, H. A., and Villasenor, J. (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
   Zhao, W., (2017), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
     dissertation, Univ. of Miami, Section 6.3.
 """

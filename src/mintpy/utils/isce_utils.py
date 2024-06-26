@@ -968,6 +968,111 @@ def convolve(data, kernel):
     return real + 1J * imag
 
 
+def crop_slc(slc_file, sub_slc_file, x0=None, y0=None, x1=None, y1=None):
+    """Crop / subset the complex ISCE-2 SLC file in complex64.
+
+    Parameters: slc_file     - str, path to the SLC data file
+                sub_slc_file - str, path to the cropped SLC data file
+                x0/y0/x1/y1  - int, starting column / row, and ending column/row
+    Returns:    sub_slc_file - str, path to the cropped SLC data file
+    """
+    # default arg values
+    atr = readfile.read_attribute(slc_file)
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    x0 = 0 if x0 is None else x0
+    y0 = 0 if y0 is None else y0
+    x1 = width if x1 is None else x1
+    y1 = length if y1 is None else y1
+
+    # read
+    slc_data = readfile.read_binary(
+        slc_file,
+        shape=(length, width),
+        box=(x0, y0, x1, y1),
+        data_type='complex64',
+        cpx_band='complex',
+    )
+
+    # create output directory if not exist
+    if not os.path.isdir(os.path.dirname(sub_slc_file)):
+        os.makedirs(os.path.dirname(sub_slc_file), exist_ok=True)
+        print('create diretory:', os.path.dirname(sub_slc_file))
+
+    # write
+    writefile.write_isce_file(
+        data=slc_data,
+        out_file=sub_slc_file,
+        file_type='isce_slc',
+        print_msg=True,
+    )
+
+    return sub_slc_file
+
+
+def form_ifgram(slc_file1, slc_file2, int_file, rg_look=1, az_look=1):
+    """Form interferogram from two SLC files via isce2.
+
+    Modified from ISCE-2/stripmapStack/crossmul.py.
+
+    Parameters: slc_file1 - str, path to the reference SLC data file
+                slc_file2 - str, path to the secondary SLC data file
+                int_file  - str, path to the output interferogram file
+                rg_look   - int, number of looks in the range direction
+                az_look   - int, number of looks in the azimuth direction
+    Returns:    int_file  - str, path to the output interferogram file
+    """
+    import isce
+    import isceobj
+    from components.stdproc.stdproc import crossmul
+
+    # create output directory if not exist
+    if not os.path.isdir(os.path.dirname(int_file)):
+        os.makedirs(os.path.dirname(int_file), exist_ok=True)
+        print('create diretory:', os.path.dirname(int_file))
+
+    # open slc files
+    slc_img1 = isceobj.createSlcImage()
+    slc_img1.load(slc_file1 + '.xml')
+    slc_img1.setAccessMode('read')
+    slc_img1.createImage()
+
+    slc_img2 = isceobj.createSlcImage()
+    slc_img2.load(slc_file2 + '.xml')
+    slc_img2.setAccessMode('read')
+    slc_img2.createImage()
+
+    # prepare int files
+    slc_length = min(slc_img1.getLength(), slc_img2.getLength())
+    slc_width = slc_img1.getWidth()
+    int_width = int(slc_width / rg_look)
+
+    int_img = isceobj.createIntImage()
+    int_img.setFilename(int_file)
+    int_img.setWidth(int_width)
+    int_img.setAccessMode('write')
+    int_img.createImage()
+
+    amp_file = int_file[:-4] + '.amp'
+    amp_img = isceobj.createAmpImage()
+    amp_img.setFilename(amp_file)
+    amp_img.setWidth(int_width)
+    amp_img.setAccessMode('write')
+    amp_img.createImage()
+
+    # generate int files
+    crossmul_obj = crossmul.createcrossmul()
+    crossmul_obj.width = slc_width
+    crossmul_obj.length = slc_length
+    crossmul_obj.LooksDown = az_look
+    crossmul_obj.LooksAcross = rg_look
+    crossmul_obj.crossmul(slc_img1, slc_img2, int_img, amp_img)
+
+    for img in [int_img, amp_img, slc_img1, slc_img2]:
+        img.finalizeImage()
+
+    return int_file
+
+
 def filter_goldstein(int_file, filt_file, filt_strength=0.2):
     """Filter wrapped interferogram with the power-spectral filter via isce2.
 
@@ -1024,34 +1129,34 @@ def estimate_coherence(intfile, corfile):
     from mroipac.icu.Icu import Icu
 
     # create filt interferogram file object
-    filtImage = isceobj.createIntImage()
-    filtImage.load(intfile + '.xml')
-    filtImage.setAccessMode('read')
-    filtImage.createImage()
+    filt_img = isceobj.createIntImage()
+    filt_img.load(intfile + '.xml')
+    filt_img.setAccessMode('read')
+    filt_img.createImage()
 
     # create phase sigma correlation file object
-    phsigImage = isceobj.createImage()
-    phsigImage.dataType='FLOAT'
-    phsigImage.bands = 1
-    phsigImage.setWidth(filtImage.getWidth())
-    phsigImage.setFilename(corfile)
-    phsigImage.setAccessMode('write')
-    phsigImage.createImage()
+    phsig_img = isceobj.createImage()
+    phsig_img.dataType='FLOAT'
+    phsig_img.bands = 1
+    phsig_img.setWidth(filt_img.getWidth())
+    phsig_img.setFilename(corfile)
+    phsig_img.setAccessMode('write')
+    phsig_img.createImage()
 
     # setup Icu() object
-    icuObj = Icu(name='sentinel_filter_icu')
-    icuObj.configure()
-    icuObj.unwrappingFlag = False
-    icuObj.useAmplitudeFlag = False
-    #icuObj.correlationType = 'NOSLOPE'
+    icu_obj = Icu(name='sentinel_filter_icu')
+    icu_obj.configure()
+    icu_obj.unwrappingFlag = False
+    icu_obj.useAmplitudeFlag = False
+    #icu_obj.correlationType = 'NOSLOPE'
 
     # run
-    icuObj.icu(intImage=filtImage, phsigImage=phsigImage)
-    phsigImage.renderHdr()
+    icu_obj.icu(intImage=filt_img, phsigImage=phsig_img)
+    phsig_img.renderHdr()
 
     # close
-    filtImage.finalizeImage()
-    phsigImage.finalizeImage()
+    filt_img.finalizeImage()
+    phsig_img.finalizeImage()
 
     return
 

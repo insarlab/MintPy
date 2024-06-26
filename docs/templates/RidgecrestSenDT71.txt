@@ -9,9 +9,9 @@ mintpy.load.demFile         = ../hyp3/*/*dem_clip.tif
 mintpy.load.incAngleFile    = ../hyp3/*/*lv_theta_clip.tif
 mintpy.load.waterMaskFile   = ../hyp3/*/*water_mask_clip.tif
 
-mintpy.reference.lalo       = 391.5e4,45e4
-mintpy.networkInversion.weightFunc  = var
-mintpy.troposphericDelay.method     = pyaps
-mintpy.topographicResidual          = yes
-mintpy.topographicResidual.stepFuncDate         = 20190706T0320
+mintpy.reference.lalo                           = 391.5e4,45e4
+mintpy.networkInversion.weightFunc              = var
+mintpy.troposphericDelay.method                 = pyaps
+mintpy.topographicResidual                      = yes
+mintpy.topographicResidual.stepDate             = 20190706T0320
 mintpy.topographicResidual.pixelwiseGeometry    = yes

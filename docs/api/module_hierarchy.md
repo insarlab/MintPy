@@ -51,7 +51,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
         network       (objects/{stack, sensor}, utils/{readfile})
 ------------------ level 4 --------------------
     /objects
-        gps           (objects/{stack, coord}, utils/{ptime, utils1, readfile})
+        gnss          (objects/{stack, coord}, utils/{ptime, utils1, readfile})
         stackDict     (objects/{stack}, utils/{ptime, utils0, readfile})
     /simulation
         simulation    (objects/{stack}, utils/{ptime, network}, simulation/{fractal, decorrelation, defo_model})
@@ -65,5 +65,5 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
         isce_utils    (constants, utils/{ptime, readfile, writefile, attribute, utils1})
 ------------------ level 6 --------------------
     /objects
-        insar_vs_gps  (objects/{stack, giant}, utils/{readfile, gps, plot, utils})
+        insar_vs_gnss (objects/{stack, giant}, utils/{readfile, gnss, plot, utils})
 ```
