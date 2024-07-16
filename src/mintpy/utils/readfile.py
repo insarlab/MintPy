@@ -207,6 +207,21 @@ SPECIAL_STR2NUM = {
     'nan'   : np.nan,
 }
 
+GMTSAR_SENSOR_ID2NAME = {
+    1 : 'ers',
+    2 : 'ers',
+    3 : 'rs1',
+    4 : 'env',
+    5 : 'alos',
+    6 : 'tsx',
+    7 : 'csk',
+    8 : 'csk',
+    9 : 'rs2',
+    10: 'sen',
+    11: 'gf3',
+    12: 'lt1',
+}
+
 
 #########################################################################
 def numpy_to_gdal_dtype(np_dtype: DTypeLike) -> int:
@@ -1815,6 +1830,9 @@ def _attribute_gmtsar2roipac(prm_dict_in):
     dt_center = (float(prm_dict['SC_clock_start']) + float(prm_dict['SC_clock_stop'])) / 2.0
     t_center = dt_center - int(dt_center)
     prm_dict['CENTER_LINE_UTC'] = str(t_center * 24. * 60. * 60.)
+
+    # SC_identity -> PLATFORM
+    prm_dict['PLATFORM'] = GMTSAR_SENSOR_ID2NAME[int(prm_dict['SC_identity'])]
 
     return prm_dict
 
