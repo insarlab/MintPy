@@ -331,7 +331,7 @@ class timeseries:
                     compression = rf[TIMESERIES_DSET_NAMES[0]].compression
             refobj.close(print_msg=False)
         data = np.array(data, dtype=np.float32)
-        dates = np.array(dates, dtype=np.string_)
+        dates = np.array(dates, dtype=np.bytes_)
         bperp = np.array(bperp, dtype=np.float32)
         metadata = dict(metadata)
         metadata['FILE_TYPE'] = self.name

@@ -194,7 +194,7 @@ def run_timeseries2time_func(inps):
         # prepare ds_name_dict manually, instead of using ref_file, to support --ex option
         date_digit = len(inps.date_list[0])
         ds_name_dict = {
-            "date" : [np.dtype(f'S{date_digit}'), (num_date,), np.array(inps.date_list, np.string_)],
+            "date" : [np.dtype(f'S{date_digit}'), (num_date,), np.array(inps.date_list, np.bytes_)],
             "timeseries" : [np.float32, (num_date, length, width), None]
         }
         writefile.layout_hdf5(inps.res_file, ds_name_dict=ds_name_dict, metadata=atrR)

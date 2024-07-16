@@ -262,7 +262,7 @@ def vtec2iono_ramp_timeseries(date_list, vtec_list, geom_file, iono_file, sub_te
 
     # prepare data matrix
     ds_dict = {}
-    ds_dict['date'] = np.array(date_list, dtype=np.string_)
+    ds_dict['date'] = np.array(date_list, dtype=np.bytes_)
     ds_dict['vtec'] = np.array(vtec_list, dtype=np.float32)
     ds_dict['timeseries'] = ts_ramp
 
