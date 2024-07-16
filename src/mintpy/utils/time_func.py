@@ -8,6 +8,7 @@
 #   from mintpy.utils import time_func
 
 
+import math
 import numpy as np
 from scipy import linalg
 
@@ -305,7 +306,7 @@ def get_design_matrix4polynomial_func(yr_diff, degree):
     """
     A = np.zeros([len(yr_diff), degree + 1], dtype=np.float32)
     for i in range(degree+1):
-        A[:,i] = (yr_diff**i) / np.math.factorial(i)
+        A[:,i] = (yr_diff**i) / math.factorial(i)
 
     return A
 
