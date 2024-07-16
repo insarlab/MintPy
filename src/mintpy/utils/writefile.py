@@ -268,7 +268,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
     }
 
     # structure for timeseries
-    dates = np.array(date_list, np.string_)
+    dates = np.array(date_list, np.bytes_)
     ds_name_dict = {
         "date"       : [np.dtype("S8"), (num_date,), dates],
         "bperp"      : [np.float32,     (num_date,), pbase],

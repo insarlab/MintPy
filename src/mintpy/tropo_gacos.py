@@ -189,7 +189,7 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
     # instantiate time-series
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     num_date = len(date_list)
-    dates = np.array(date_list, dtype=np.string_)
+    dates = np.array(date_list, dtype=np.bytes_)
     ds_name_dict = {
         "date"       : [dates.dtype, (num_date,), dates],
         "timeseries" : [np.float32,  (num_date, length, width), None],
