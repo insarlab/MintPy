@@ -220,7 +220,7 @@ class ifgramStackDict:
             ###############################
             # 2D dataset containing reference and secondary dates of all pairs
             dsName = 'date'
-            dsDataType = np.string_
+            dsDataType = np.bytes_
             dsShape = (numIfgram, 2)
             print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
                                                                               w=maxDigit,
@@ -672,7 +672,7 @@ class geometryDict:
                     # Write 1D dataset date accompnay the 3D bperp
                     dsName = 'date'
                     dsShape = (self.numDate,)
-                    dsDataType = np.string_
+                    dsDataType = np.bytes_
                     print(('create dataset /{d:<{w}} of {t:<25}'
                            ' in size of {s}').format(d=dsName,
                                                      w=maxDigit,
