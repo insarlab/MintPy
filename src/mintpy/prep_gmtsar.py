@@ -293,6 +293,8 @@ def prep_gmtsar(inps):
     inps.unw_files = sorted(glob.glob(template['mintpy.load.unwFile']))
     inps.cor_files = sorted(glob.glob(template['mintpy.load.corFile']))
     inps.dem_file = glob.glob(template['mintpy.load.demFile'])[0]
+    inps.inc_angle_file = glob.glob(template['mintpy.load.incAngleFile'])[0]
+    inps.az_angle_file = glob.glob(template['mintpy.load.azAngleFile'])[0]
 
     # extract common metadata
     rsc_file = os.path.join(os.path.dirname(inps.meta_file), 'data.rsc')
@@ -309,7 +311,7 @@ def prep_gmtsar(inps):
 
     # prepare metadata for geometry files
     prepare_geometry(
-        geom_files=[inps.dem_file],
+        geom_files=[inps.dem_file, inps.inc_angle_file, inps.az_angle_file],
         meta=meta,
         update_mode=inps.update_mode,
     )
