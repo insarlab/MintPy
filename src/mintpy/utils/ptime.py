@@ -236,6 +236,29 @@ def yymmdd2yyyymmdd(date):
     return date
 
 
+def yyyyddd2yyyymmdd(date_in):
+    """Convert GMTSAR folder name in YYYYDDD into YYYYMMDD.
+    Parameters: date_in  - str/list, GMTSAR date format in YYYYDDD, where DDD is the day of year - 1
+    Returns:    date_out - str/list, date in YYYYMMDD format
+    """
+    if isinstance(date_in, str):
+        year, doy = date_in[:4], date_in[-3:]
+        dt_obj = dt.datetime(int(year), 1, 1) + dt.timedelta(days=int(doy))
+        date_out = dt_obj.strftime('%Y%m%d')
+
+    elif isinstance(date_in, list):
+        date_out = []
+        for date_str in date_in:
+            year, doy = date_str[:4], date_str[-3:]
+            dt_obj = dt.datetime(int(year), 1, 1) + dt.timedelta(days=int(doy))
+            date_out.append(dt_obj.strftime('%Y%m%d'))
+
+    else:
+        return None
+
+    return date_out
+
+
 def yy2yyyy(year):
     """Convert year str from YY to YYYY format"""
     if year[0] == '9':
