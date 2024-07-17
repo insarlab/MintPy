@@ -1810,6 +1810,14 @@ def _attribute_gmtsar2roipac(prm_dict_in):
         else:
             prm_dict['ANTENNA_SIDE'] = '1'
 
+    # orbdir -> ORBIT_DIRECTION
+    key = 'obsdir'
+    if key in prm_dict_in.keys():
+        prm_dict['ORBIT_DIRECTION'] = {
+            'A' : 'ASCENDING',
+            'D' : 'DESCENDING',
+        }[prm_dict[key]]
+
     # SC_vel -> AZIMUTH_PIXEL_SIZE (in single look)
     key = 'SC_vel'
     if key in prm_dict_in.keys():
