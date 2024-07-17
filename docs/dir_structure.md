@@ -484,7 +484,6 @@ ALOOKS          = 8          #[int], number of looks in the azimuth direction
 RLOOKS          = 32         #[int], number of looks in the range direction
 HEADING         = -168.0     #[float], satellite heading angle, measured from the north in clockwise as positive
                              # One could open the *.kml file in Google Earth and measure it manually
-ORBIT_DIRECTION = DESCENDING #[ASCENDING, DESCENDING]
 
 mintpy.load.processor    = gmtsar
 mintpy.load.metaFile     = $DATA_DIR/SanFranBaySenD42/supermaster.PRM
