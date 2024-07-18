@@ -74,7 +74,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/SanFranBaySenD42.txt
 
 Relevant literature:
 
-+ Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San
++ Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct connection between the Hayward and Calaveras Faults, _Geophysical Research Letters,_ 42(8), 2734-2741, doi:10.1002/2015GL063575.
 
 ### Envisat of the 2008 Wells, Nevada earthquake with Gamma ###
 
@@ -95,7 +95,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/WellsEnvD2T399.txt
 
 Relevant literature:
 
-+ Nealy, J. L., H. M. Benz, G. P. Hayes, E. A. Bergman, and W. D. Barnhart (2017), The 2008 Wells, Nevada, Earthquake Sequence: Source Constraints Using C
++ Nealy, J. L., H. M. Benz, G. P. Hayes, E. A. Bergman, and W. D. Barnhart (2017), The 2008 Wells, Nevada, Earthquake Sequence: Source Constraints Using Calibrated Multiple‐Event Relocation and InSAR, _Bulletin of the Seismological Society of America_, 107(3), 1107-1117, doi:10.1785/0120160298.
 
 ### Sentinel-1 on Western Cape, South Africa with SNAP ###
 
