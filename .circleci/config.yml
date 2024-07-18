@@ -33,7 +33,8 @@ jobs:
           command: |
             export PYTHONUNBUFFERED=1
             # install dependencies and source code
-            mamba install --verbose --yes gdal">=3" --file ${MINTPY_HOME}/requirements.txt
+            # pin gdal version because gdal-3.9 could not read the GMT-6 *.grd file properly
+            mamba install --verbose --yes --file ${MINTPY_HOME}/requirements.txt gdal"<3.9"
             python -m pip install ${MINTPY_HOME}
             # test installation
             smallbaselineApp.py -h
