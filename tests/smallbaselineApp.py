@@ -26,6 +26,7 @@ URL_LIST = [
     'https://zenodo.org/record/6662079/files/SanFranSenDT42.tar.xz',       # 280 MB
     'https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz',       # 280 MB
     'https://zenodo.org/record/11049257/files/RidgecrestSenDT71.tar.xz',   # 240 MB
+    'https://zenodo.org/record/12772940/files/SanFranBaySenD42.tar.xz',    # 290 MB
     'https://zenodo.org/record/6661536/files/WCapeSenAT29.tar.xz',         # 240 MB
     'https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz',    # 230 MB
 ]
@@ -40,6 +41,7 @@ DSET_INFO = """
   SanFranSenDT42     for ARIA
   WellsEnvD2T399     for GAMMA
   RidgecrestSenDT71  for HyP3
+  SanFranBaySenD42   for GMTSAR
   WCapeSenAT29       for SNAP
   KujuAlosAT422F650  for ROI_PAC
 """

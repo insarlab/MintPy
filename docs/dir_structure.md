@@ -463,9 +463,10 @@ $DATA_DIR/SanFranBaySenD42
 ├── baseline_table.dat
 ├── supermaster.PRM
 ├── geometry
-|   ├── azimuth_angle.grd
 |   ├── dem.grd
-│   └── incidence_angle.grd
+|   ├── azimuth_angle.grd
+│   ├── incidence_angle.grd
+│   └── water_mask.grd
 ├── interferograms
 │   ├── 2004114_2004324
 │   │   ├── corr_ll.grd
@@ -485,16 +486,17 @@ RLOOKS          = 32         #[int], number of looks in the range direction
 HEADING         = -168.0     #[float], satellite heading angle, measured from the north in clockwise as positive
                              # One could open the *.kml file in Google Earth and measure it manually
 
-mintpy.load.processor    = gmtsar
-mintpy.load.metaFile     = $DATA_DIR/SanFranBaySenD42/supermaster.PRM
-mintpy.load.baselineDir  = $DATA_DIR/SanFranBaySenD42/baseline_table.dat
+mintpy.load.processor     = gmtsar
+mintpy.load.metaFile      = $DATA_DIR/SanFranBaySenD42/supermaster.PRM
+mintpy.load.baselineDir   = $DATA_DIR/SanFranBaySenD42/baseline_table.dat
 ##---------interferogram datasets:
-mintpy.load.unwFile      = $DATA_DIR/SanFranBaySenD42/interferograms/*/unwrap_ll*.grd
-mintpy.load.corFile      = $DATA_DIR/SanFranBaySenD42/interferograms/*/corr_ll*.grd
+mintpy.load.unwFile       = $DATA_DIR/SanFranBaySenD42/interferograms/*/unwrap_ll*.grd
+mintpy.load.corFile       = $DATA_DIR/SanFranBaySenD42/interferograms/*/corr_ll*.grd
 ##---------geometry datasets:
-mintpy.load.demFile      = $DATA_DIR/SanFranBaySenD42/geometry/dem*.grd
-mintpy.load.incAngleFile = $DATA_DIR/SanFranBaySenD42/geometry/incidence_angle.grd
-mintpy.load.azAngleFile  = $DATA_DIR/SanFranBaySenD42/geometry/azimuth_angle.grd
+mintpy.load.demFile       = $DATA_DIR/SanFranBaySenD42/geometry/dem.grd
+mintpy.load.incAngleFile  = $DATA_DIR/SanFranBaySenD42/geometry/incidence_angle.grd
+mintpy.load.azAngleFile   = $DATA_DIR/SanFranBaySenD42/geometry/azimuth_angle.grd
+mintpy.load.waterMaskFile = $DATA_DIR/SanFranBaySenD42/geometry/water_mask.grd
 ```
 
 ### Gamma ###

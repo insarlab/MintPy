@@ -1,6 +1,6 @@
 Here are example interferogram stacks pre-processed using different InSAR processors.
 
-### Sentinel-1 on Fernandina with ISCE ###
+### Sentinel-1 on Fernandina with ISCE2/topsStack ###
 
 + Area: Fernandina volcano at Galápagos Islands, Ecuador
 + Data: Sentinel-1 A/B descending track 128 during Dec 2014 - June 2018 (98 acquisitions; [Zenodo](https://zenodo.org/record/3952953))
@@ -14,7 +14,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/FernandinaSenDT128.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://yunjunzhang.files.wordpress.com/2019/06/fernandinasendt128_poi.jpg">
+  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/FernandinaSenDT128-ISCE2.jpg">
 </p>
 
 Relevant literature:
@@ -35,12 +35,46 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/SanFranSenDT42.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://yunjunzhang.files.wordpress.com/2020/11/sanfransendt42_transect.jpg">
+  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/SanFranSenDT42-ARIA.jpg">
 </p>
 
 Relevant literature:
 
 + Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct connection between the Hayward and Calaveras Faults, _Geophysical Research Letters,_ 42(8), 2734-2741, doi:10.1002/2015GL063575.
+
+### Sentinel-1 of the 2019 Ridgecrest, California earthquake sequence with ASF HyP3 ###
+
++ Area: Owens Valley, California, USA ([USGS event page](https://earthquake.usgs.gov/earthquakes/eventpage/ci38457511/executive))
++ Data: Sentinel-1 descending track 71 during June - August 2019 (7 acquisitions; [Zenodo](https://zenodo.org/record/11049257))
++ Size: ~240 MB
+
+```bash
+wget https://zenodo.org/record/11049257/files/RidgecrestSenDT71.tar.xz
+tar -xvJf RidgecrestSenDT71.tar.xz
+cd RidgecrestSenDT71
+smallbaselineApp.py ${MINTPY_HOME}/docs/templates/RidgecrestSenDT71.txt
+```
+
+### Sentinel-1 on San Francisco Bay with GMTSAR ###
+
++ Area: San Francisco Bay, California, USA
++ Data: Sentinel-1 A/B descending track 42 during December 2014 - June 2024 (333 acquisitoins; [Zenodo](https://zenodo.org/records/12773014))
++ Size: ~2.3 GB
+
+```bash
+wget https://zenodo.org/records/12773014/files/SanFranBaySenD42.tar.xz
+tar -xvJf SanFranBaySenD42.tar.xz
+cd SanFranBaySenD42
+smallbaselineApp.py ${MINTPY_HOME}/docs/templates/SanFranBaySenD42.txt
+```
+
+<p align="left">
+  <img width="600" src="https://github.com/insarlab/design-docs/blob/main/docs/SanFranBaySenD42-GMTSAR.jpg">
+</p>
+
+Relevant literature:
+
++ Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San
 
 ### Envisat of the 2008 Wells, Nevada earthquake with Gamma ###
 
@@ -56,25 +90,12 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/WellsEnvD2T399.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://yunjunzhang.files.wordpress.com/2019/06/wellsenvd2t399_co_poi.jpg">
+  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/WellsEnvD2T399-Gamma.jpg">
 </p>
 
 Relevant literature:
 
-+ Nealy, J. L., H. M. Benz, G. P. Hayes, E. A. Bergman, and W. D. Barnhart (2017), The 2008 Wells, Nevada, Earthquake Sequence: Source Constraints Using Calibrated Multiple‐Event Relocation and InSAR, _Bulletin of the Seismological Society of America_, 107(3), 1107-1117, doi:10.1785/0120160298.
-
-### Sentinel-1 of the 2019 Ridgecrest, California earthquake sequence with HyP3 ###
-
-+ Area: Owens Valley, California, USA ([USGS event page](https://earthquake.usgs.gov/earthquakes/eventpage/ci38457511/executive))
-+ Data: Sentinel-1 descending track 71 during June - August 2019 (7 acquisitions; [Zenodo](https://zenodo.org/record/11049257))
-+ Size: ~240 MB
-
-```bash
-wget https://zenodo.org/record/11049257/files/RidgecrestSenDT71.tar.xz
-tar -xvJf RidgecrestSenDT71.tar.xz
-cd RidgecrestSenDT71
-smallbaselineApp.py ${MINTPY_HOME}/docs/templates/RidgecrestSenDT71.txt
-```
++ Nealy, J. L., H. M. Benz, G. P. Hayes, E. A. Bergman, and W. D. Barnhart (2017), The 2008 Wells, Nevada, Earthquake Sequence: Source Constraints Using C
 
 ### Sentinel-1 on Western Cape, South Africa with SNAP ###
 
@@ -103,7 +124,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/KujuAlosAT422F650.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://yunjunzhang.files.wordpress.com/2019/06/kujualosat422f650_vel.jpg">
+  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/KujuAlosAT422F650-ROIPAC.jpg">
 </p>
 
 Relevant literature:

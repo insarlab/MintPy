@@ -1,0 +1,27 @@
+# vim: set filetype=cfg:
+## manually add the following metadata
+HEADING = -168
+ALOOKS  = 8
+RLOOKS  = 32
+
+########## computing resource configuration
+mintpy.compute.cluster      = local
+
+########## 1. Load Data (--load to exit after this step)
+mintpy.load.processor       = gmtsar    #[isce, aria, hyp3, gmtsar, snap, gamma, roipac], auto for isce
+mintpy.load.metaFile        = ../supermaster.PRM
+mintpy.load.baselineDir     = ../baseline_table.dat
+##---------interferogram datasets:
+mintpy.load.unwFile         = ../interferograms/*/unwrap_ll*.grd
+mintpy.load.corFile         = ../interferograms/*/corr_ll*.grd
+##---------geometry datasets:
+mintpy.load.demFile         = ../geometry/dem.grd
+mintpy.load.incAngleFile    = ../geometry/incidence_angle.grd
+mintpy.load.azAngleFile     = ../geometry/azimuth_angle.grd
+mintpy.load.waterMaskFile   = ../geometry/water_mask.grd
+
+mintpy.reference.lalo                           = 37.69, -122.07
+mintpy.networkInversion.weightFunc              = no    # fast but not the best
+mintpy.deramp                                   = no
+mintpy.topographicResidual                      = yes
+mintpy.topographicResidual.pixelwiseGeometry    = no    # fast but not the best
