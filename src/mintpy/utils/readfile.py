@@ -1811,7 +1811,7 @@ def _attribute_gmtsar2roipac(prm_dict_in):
             prm_dict['ANTENNA_SIDE'] = '1'
 
     # orbdir -> ORBIT_DIRECTION
-    key = 'obsdir'
+    key = 'orbdir'
     if key in prm_dict_in.keys():
         prm_dict['ORBIT_DIRECTION'] = {
             'A' : 'ASCENDING',
