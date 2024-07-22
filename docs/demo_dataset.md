@@ -14,7 +14,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/FernandinaSenDT128.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/FernandinaSenDT128-ISCE2.jpg">
+  <img width="650" src="https://github.com/insarlab/figs/blob/main/docs/FernandinaSenDT128-ISCE2.jpg">
 </p>
 
 Relevant literature:
@@ -35,7 +35,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/SanFranSenDT42.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/SanFranSenDT42-ARIA.jpg">
+  <img width="650" src="https://github.com/insarlab/figs/blob/main/docs/SanFranSenDT42-ARIA.jpg">
 </p>
 
 Relevant literature:
@@ -69,7 +69,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/SanFranBaySenD42.txt
 ```
 
 <p align="left">
-  <img width="600" src="https://github.com/insarlab/design-docs/blob/main/docs/SanFranBaySenD42-GMTSAR.jpg">
+  <img width="600" src="https://github.com/insarlab/figs/blob/main/docs/SanFranBaySenD42-GMTSAR.jpg">
 </p>
 
 Relevant literature:
@@ -90,7 +90,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/WellsEnvD2T399.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/WellsEnvD2T399-Gamma.jpg">
+  <img width="650" src="https://github.com/insarlab/figs/blob/main/docs/WellsEnvD2T399-Gamma.jpg">
 </p>
 
 Relevant literature:
@@ -124,7 +124,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/KujuAlosAT422F650.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/KujuAlosAT422F650-ROIPAC.jpg">
+  <img width="650" src="https://github.com/insarlab/figs/blob/main/docs/KujuAlosAT422F650-ROIPAC.jpg">
 </p>
 
 Relevant literature:
