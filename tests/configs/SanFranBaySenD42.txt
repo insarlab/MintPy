@@ -22,6 +22,7 @@ mintpy.load.waterMaskFile   = ../geometry/water_mask.grd
 
 mintpy.reference.lalo                           = 37.69, -122.07
 mintpy.networkInversion.weightFunc              = no    # fast but not the best
+mintpy.troposphericDelay.method                 = no
 mintpy.deramp                                   = no
 mintpy.topographicResidual                      = yes
 mintpy.topographicResidual.pixelwiseGeometry    = no    # fast but not the best

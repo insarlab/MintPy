@@ -42,7 +42,7 @@ Relevant literature:
 
 + Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct connection between the Hayward and Calaveras Faults, _Geophysical Research Letters,_ 42(8), 2734-2741, doi:10.1002/2015GL063575.
 
-### Sentinel-1 of the 2019 Ridgecrest, California earthquake sequence with ASF HyP3 ###
+### Sentinel-1 of the 2019 Ridgecrest, California earthquake sequence with HyP3 ###
 
 + Area: Owens Valley, California, USA ([USGS event page](https://earthquake.usgs.gov/earthquakes/eventpage/ci38457511/executive))
 + Data: Sentinel-1 descending track 71 during June - August 2019 (7 acquisitions; [Zenodo](https://zenodo.org/record/11049257))
