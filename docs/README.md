@@ -51,7 +51,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/FernandinaSenDT128.txt
 ```
 
 <p align="left">
-  <img width="600" src="https://github.com/insarlab/design-docs/blob/main/docs/FernandinaSenDT128-ISCE2.jpg">
+  <img width="600" src="https://github.com/insarlab/figs/blob/main/docs/FernandinaSenDT128-ISCE2.jpg">
 </p>
 
 Results are plotted in **./pic** folder. To explore more data information and visualization, try the following scripts:
