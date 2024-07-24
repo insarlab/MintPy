@@ -91,7 +91,8 @@ or install dependencies into an existing environment:
 # Add "isce2"      below to install extra dependencies if you use ISCE-2
 # Add "gdal"       below to install extra dependencies if you use ARIA, FRInGE or HyP3
 # Add "gdal'<3.9'" below to install extra dependencies if you use GMTSAR
-mamba update --name my-existing-env --file ~/tools/MintPy/requirements.txt
+mamba activate my-existing-env
+mamba install --file ~/tools/MintPy/requirements.txt
 ```
 
 <h4>c. Install MintPy</h4>

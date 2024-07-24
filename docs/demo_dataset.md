@@ -14,7 +14,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/FernandinaSenDT128.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/FernandinaSenDT128-ISCE2.jpg">
+  <img width="650" src="https://insarlab.github.io/figs/docs/FernandinaSenDT128-ISCE2.jpg">
 </p>
 
 Relevant literature:
@@ -35,14 +35,14 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/SanFranSenDT42.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/SanFranSenDT42-ARIA.jpg">
+  <img width="650" src="https://insarlab.github.io/figs/docs/SanFranSenDT42-ARIA.jpg">
 </p>
 
 Relevant literature:
 
 + Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct connection between the Hayward and Calaveras Faults, _Geophysical Research Letters,_ 42(8), 2734-2741, doi:10.1002/2015GL063575.
 
-### Sentinel-1 of the 2019 Ridgecrest, California earthquake sequence with ASF HyP3 ###
+### Sentinel-1 of the 2019 Ridgecrest, California earthquake sequence with HyP3 ###
 
 + Area: Owens Valley, California, USA ([USGS event page](https://earthquake.usgs.gov/earthquakes/eventpage/ci38457511/executive))
 + Data: Sentinel-1 descending track 71 during June - August 2019 (7 acquisitions; [Zenodo](https://zenodo.org/record/11049257))
@@ -69,7 +69,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/SanFranBaySenD42.txt
 ```
 
 <p align="left">
-  <img width="600" src="https://github.com/insarlab/design-docs/blob/main/docs/SanFranBaySenD42-GMTSAR.jpg">
+  <img width="600" src="https://insarlab.github.io/figs/docs/SanFranBaySenD42-GMTSAR.jpg">
 </p>
 
 Relevant literature:
@@ -90,7 +90,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/WellsEnvD2T399.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/WellsEnvD2T399-Gamma.jpg">
+  <img width="650" src="https://insarlab.github.io/figs/docs/WellsEnvD2T399-Gamma.jpg">
 </p>
 
 Relevant literature:
@@ -124,7 +124,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/KujuAlosAT422F650.txt
 ```
 
 <p align="left">
-  <img width="650" src="https://github.com/insarlab/design-docs/blob/main/docs/KujuAlosAT422F650-ROIPAC.jpg">
+  <img width="650" src="https://insarlab.github.io/figs/docs/KujuAlosAT422F650-ROIPAC.jpg">
 </p>
 
 Relevant literature:
