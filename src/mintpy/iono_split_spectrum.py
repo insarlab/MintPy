@@ -37,7 +37,7 @@ def run_iono_split_spectrum(inps):
     # 3. estimate iono time-series
     print('\n'+'-'*80)
     print('Estimate ionospheric delay time-series via ifgram_inversion.py ...')
-    cmd = f'ifgram_inversion.py {inps.iono_stack_file} -t {inps.template_file} -w no --update'
+    cmd = f'ifgram_inversion.py {inps.iono_stack_file} --dset unwrapPhase --weight-func no --update'
     print(cmd)
     ifgram_inversion.main(cmd.split()[1:])
 
