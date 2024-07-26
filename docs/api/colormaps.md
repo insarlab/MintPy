@@ -9,7 +9,7 @@ MintPy support the following colormaps:
 We recommend to use cyclic colormap `cmy` for wrapped phase/displacement measurement.
 
 <p align="left">
-  <img width="280" src="https://yunjunzhang.files.wordpress.com/2020/01/cmap_cmy-1.png">
+  <img width="280" src="https://insarlab.github.io/figs/docs/mintpy/cmap_cmy.png">
 </p>
 
 To use colormap `cmy` in view.py:
@@ -64,7 +64,7 @@ The following colormaps is included by default:
 + More at [Scientific Color-Maps](http://www.fabiocrameri.ch/colourmaps.php) ([Crameri, 2018](https://doi.org/10.5194/gmd-11-2541-2018))
 
 <p align="left">
-  <img src="https://yunjunzhang.files.wordpress.com/2021/01/scientificcolourmaps_fabiocrameri.png">
+  <img src="https://insarlab.github.io/figs/docs/mintpy/cmap_scientific_colour_maps_fabiocrameri.png">
 </p>
 
 ### Interactive [web tool](https://jdherman.github.io/colormap/) to generate custom colormaps by Jon Herman ###
