@@ -278,8 +278,11 @@ def add_gnss_argument(parser):
     gnss.add_argument('--show-gnss','--show-gps', dest='disp_gnss', action='store_true',
                       help='Show UNR GNSS location within the coverage.')
     gnss.add_argument('--gnss-source','--gnss-src','--gps-source', dest='gnss_source', default='UNR',
-                      choices={'UNR', 'ESESES', 'JPL-SIDESHOW', 'GENERIC'},
-                      help='Source of the GNSS displacement solution (default: %(default)s).')
+                      choices={'UNR', 'SIDESHOW', 'ESESES', 'GENERIC'},
+                      help='Source of the GNSS displacement solution (default: %(default)s).\n'
+                           'UNR      : Nevada Geodetic Lab at Univ. of Nevada, Reno (Blewitt et al., 2018, Eos)\n'
+                           'SIDESHOW : Jet Propulsion Lab (JPL) GNSS time series (Heflin et al., 2020, ESS)\n'
+                           'ESESES   : Enhanced Solid Earth Science ESDR System (ESESES) by JPL and SOPAC')
 
     # compare GNSS with InSAR
     gnss.add_argument('--gnss-comp','--gps-comp', dest='gnss_component',
