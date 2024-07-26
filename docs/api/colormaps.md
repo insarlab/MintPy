@@ -64,7 +64,7 @@ The following colormaps is included by default:
 + More at [Scientific Color-Maps](http://www.fabiocrameri.ch/colourmaps.php) ([Crameri, 2018](https://doi.org/10.5194/gmd-11-2541-2018))
 
 <p align="left">
-  <img src="https://insarlab.github.io/figs/docs/mintpy/cmap_scientific_colour_maps_fabiocrameri.png">
+  <img src="https://insarlab.github.io/figs/docs/mintpy/cmap_scientific_colour_maps_fabiocrameri.jpg">
 </p>
 
 ### Interactive [web tool](https://jdherman.github.io/colormap/) to generate custom colormaps by Jon Herman ###
