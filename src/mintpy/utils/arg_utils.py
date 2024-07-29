@@ -275,9 +275,9 @@ def add_figure_argument(parser, figsize_img=False):
 def add_gnss_argument(parser):
     """Argument group parser for GNSS options"""
     gnss = parser.add_argument_group('GNSS', 'GNSS data to display')
-    gnss.add_argument('--show-gnss','--show-gps', dest='disp_gnss', action='store_true',
+    gnss.add_argument('--show-gnss','--show-gnss', dest='disp_gnss', action='store_true',
                       help='Show UNR GNSS location within the coverage.')
-    gnss.add_argument('--gnss-source','--gnss-src','--gps-source', dest='gnss_source', default='UNR',
+    gnss.add_argument('--gnss-source','--gnss-src','--gnss-source', dest='gnss_source', default='UNR',
                       choices={'UNR', 'SIDESHOW', 'ESESES', 'GENERIC'},
                       help='Source of the GNSS displacement solution (default: %(default)s).\n'
                            'UNR      : Nevada Geodetic Lab at Univ. of Nevada, Reno (Blewitt et al., 2018, Eos)\n'
@@ -285,17 +285,17 @@ def add_gnss_argument(parser):
                            'ESESES   : Enhanced Solid Earth Science ESDR System (ESESES) by JPL and SOPAC')
 
     # compare GNSS with InSAR
-    gnss.add_argument('--gnss-comp','--gps-comp', dest='gnss_component',
+    gnss.add_argument('--gnss-comp','--gnss-comp', dest='gnss_component',
                       choices={'enu2los', 'hz2los', 'up2los', 'horz', 'vert'},
                       help='Plot GNSS in color indicating deformation velocity in (default: %(default)s).')
-    gnss.add_argument('--ref-gnss','--ref-gps', dest='ref_gnss_site', type=str, metavar='SITE_NAME',
+    gnss.add_argument('--ref-gnss','--ref-gnss', dest='ref_gnss_site', type=str, metavar='SITE_NAME',
                       help='Reference GNSS site')
-    gnss.add_argument('--ex-gnss','--ex-gps', dest='ex_gnss_sites', type=str, nargs='*', metavar='SITE_NAME',
+    gnss.add_argument('--ex-gnss','--ex-gnss', dest='ex_gnss_sites', type=str, nargs='*', metavar='SITE_NAME',
                       help='Exclude GNSS sites, require --gnss-comp.')
 
-    gnss.add_argument('--gnss-start-date','--gps-start-date', dest='gnss_start_date', type=str, metavar='YYYYMMDD',
+    gnss.add_argument('--gnss-start-date','--gnss-start-date', dest='gnss_start_date', type=str, metavar='YYYYMMDD',
                       help='start date of GNSS data, default: the 1st SAR acquisition')
-    gnss.add_argument('--gnss-end-date','--gps-end-date', dest='gnss_end_date', type=str, metavar='YYYYMMDD',
+    gnss.add_argument('--gnss-end-date','--gnss-end-date', dest='gnss_end_date', type=str, metavar='YYYYMMDD',
                       help='end   date of GNSS data, default: the last SAR acquisition')
     gnss.add_argument('--horz-az','--hz-az', dest='horz_az_angle', type=float, default=-90., metavar='NUM',
                       help='Azimuth angle (anti-clockwise from the north) of the horizontal movement in degrees\n'
@@ -303,16 +303,16 @@ def add_gnss_argument(parser):
                            '       0.  for north direction\n'
                            'Set to the azimuth angle of the strike-slip fault to '
                            'show the fault-parallel displacement.')
-    gnss.add_argument('--gnss-redo','--gps-redo', dest='gnss_redo', action='store_true',
+    gnss.add_argument('--gnss-redo','--gnss-redo', dest='gnss_redo', action='store_true',
                       help='Re-calculate GNSS observations in LOS direction, '
                            'instead of read from existing CSV file.')
 
     # plot style
-    gnss.add_argument('--gnss-label','--gps-label', dest='disp_gnss_label', action='store_true',
+    gnss.add_argument('--gnss-label','--gnss-label', dest='disp_gnss_label', action='store_true',
                       help='Show GNSS site name')
-    gnss.add_argument('--mask-gnss','--mask-gps', dest='mask_gnss', action='store_true',
+    gnss.add_argument('--mask-gnss','--mask-gnss', dest='mask_gnss', action='store_true',
                       help='Mask out GNSS stations not coincident with valid data pixels')
-    gnss.add_argument('--gnss-ms','--gps-ms', dest='gnss_marker_size', type=float, default=6, metavar='NUM',
+    gnss.add_argument('--gnss-ms','--gnss-ms', dest='gnss_marker_size', type=float, default=6, metavar='NUM',
                       help='Plot GNSS value as scatter in size of ms**2 (default: %(default)s).')
 
     return parser
