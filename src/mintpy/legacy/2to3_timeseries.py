@@ -55,7 +55,7 @@ def run_2to3_timeseries(py2_file, py3_file):
         prog_bar.close()
 
     # prepare metadata
-    dates = np.array(date_list, np.string_)
+    dates = np.array(date_list, np.bytes_)
     atr['REF_DATE'] = date_list[0]
     if 'P_BASELINE_TIMESERIES' in atr.keys():
         bperp = np.array([float(i) for i in atr['P_BASELINE_TIMESERIES'].split()], dtype=np.float32)

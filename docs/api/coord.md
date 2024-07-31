@@ -11,4 +11,4 @@ Y_UNIT     degrees
 
 X/Y_FIRST are the longitude/latitude value of the first (upper left corner) pixel’s upper left corner, as shown below:
 
-<img src="https://yunjunzhang.files.wordpress.com/2019/06/coord_index.png" width="400">
+<img src="https://insarlab.github.io/figs/docs/mintpy/coord_index.png" width="400">

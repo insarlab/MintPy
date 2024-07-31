@@ -382,7 +382,7 @@ def read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2template_key):
     pairsDict = {}
     for i, dsPath0 in enumerate(dsPathDict[dsName0]):
         # date string used in the file/dir path
-        # YYYYDDD       for gmtsar [modern Julian date]
+        # YYYYDDD       for gmtsar [day of the year - 1]
         # YYYYMMDDTHHMM for uavsar
         # YYYYMMDD      for all the others
         date6s = readfile.read_attribute(dsPath0)['DATE12'].replace('_','-').split('-')
@@ -623,8 +623,12 @@ def prepare_metadata(iDict):
             if len(glob.glob(str(iDict[key]))) > 0:
                 # print command line
                 iargs = [iDict[key]]
-                if processor == 'gamma' and iDict['PLATFORM']:
-                    iargs += ['--sensor', iDict['PLATFORM'].lower()]
+                if processor == 'gamma':
+                    if iDict['PLATFORM']:
+                        iargs += ['--sensor', iDict['PLATFORM'].lower()]
+                    # add DEM file to faciliate the checking and metadata extraction for geocoded datasets
+                    iargs += ['--dem', iDict['mintpy.load.demFile']]
+
                 elif processor == 'cosicorr':
                     iargs += ['--metadata', iDict['mintpy.load.metaFile']]
                 ut.print_command_line(script_name, iargs)
@@ -756,10 +760,7 @@ def prepare_metadata(iDict):
 
         ## run
         ut.print_command_line(script_name, iargs)
-        try:
-            prep_module.main(iargs)
-        except:
-            warnings.warn('prep_aria.py failed. Assuming its result exists and continue...')
+        prep_module.main(iargs)
 
     elif processor == 'gmtsar':
         # use the custom template file if exists & input

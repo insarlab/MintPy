@@ -216,7 +216,7 @@ def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
     # write bias time series to HDF5 file
     ds_dict = {
         'timeseries' : [np.float32,     (num_date, length, width), bias_ts],
-        'date'       : [np.dtype('S8'), (num_date,), np.array(date_list, np.string_)],
+        'date'       : [np.dtype('S8'), (num_date,), np.array(date_list, np.bytes_)],
     }
     meta['FILE_TYPE'] = 'timeseries'
     writefile.layout_hdf5(cum_cp_file, ds_dict, metadata=meta)
@@ -634,7 +634,7 @@ def estimate_bias_timeseries_approx(stack_file, bias_free_conn, bw, water_mask_f
     meta['UNIT'] = 'm'
     ds_name_dict = {
         'timeseries' : [np.float32,     (num_date, length, width), None],
-        'date'       : [np.dtype('S8'), (num_date,),  np.array(date_list, np.string_)],
+        'date'       : [np.dtype('S8'), (num_date,),  np.array(date_list, np.bytes_)],
     }
     writefile.layout_hdf5(bias_ts_file, ds_name_dict, meta)
 
@@ -949,7 +949,7 @@ def estimate_bias_timeseries(stack_file, bias_free_conn, bw, cluster_kwargs, wat
     bias_ts_file = os.path.join(outdir, 'timeseriesBias.h5')
     ds_name_dict = {
         'timeseries' : [np.float32,     (num_date, length, width), None],
-        'date'       : [np.dtype('S8'), (num_date,),  np.array(date_list, np.string_)],
+        'date'       : [np.dtype('S8'), (num_date,),  np.array(date_list, np.bytes_)],
     }
     meta['FILE_TYPE'] = 'timeseries'
     meta['DATA_TYPE'] = 'float32'

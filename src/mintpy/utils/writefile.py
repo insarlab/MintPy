@@ -268,7 +268,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
     }
 
     # structure for timeseries
-    dates = np.array(date_list, np.string_)
+    dates = np.array(date_list, np.bytes_)
     ds_name_dict = {
         "date"       : [np.dtype("S8"), (num_date,), dates],
         "bperp"      : [np.float32,     (num_date,), pbase],
@@ -661,7 +661,7 @@ def write_isce_xml(meta, fname, print_msg=True):
     return
 
 
-def write_isce_file(data, out_file, file_type='isce_unw'):
+def write_isce_file(data, out_file, file_type='isce_unw', print_msg=True):
     """write data to file in ISCE format
 
     Parameters: data      - 2D np.ndarray, binary data matrix
@@ -674,6 +674,8 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
 
     # write data to binary file
     data.tofile(out_file)
+    if print_msg:
+        print(f'write file: {out_file}')
 
     # write isce xml metadata file
     length, width = data.shape
@@ -710,7 +712,7 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
     else:
         raise ValueError(f'un-recognized ISCE file type: {file_type}')
 
-    write_isce_xml(meta, out_file)
+    write_isce_xml(meta, out_file, print_msg=print_msg)
 
     return out_file
 

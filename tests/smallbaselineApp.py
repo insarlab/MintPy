@@ -16,34 +16,45 @@ import mintpy.cli.view
 from mintpy.objects.progress import FileProgressObject
 
 CMAP_DICT = {
-    'FernandinaSenDT128' : 'jet',
     'WellsEnvD2T399'     : 'jet_r',
     'KujuAlosAT422F650'  : 'jet_r',
 }
 
-URL_LIST = [
-    'https://zenodo.org/record/5498198/files/FernandinaSenDT128.tar.xz',   # 280 MB
-    'https://zenodo.org/record/6662079/files/SanFranSenDT42.tar.xz',       # 280 MB
-    'https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz',       # 280 MB
-    'https://zenodo.org/record/11049257/files/RidgecrestSenDT71.tar.xz',   # 240 MB
-    'https://zenodo.org/record/6661536/files/WCapeSenAT29.tar.xz',         # 240 MB
-    'https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz',    # 230 MB
-]
+DSET_INFO = {
+    'FernandinaSenDT128':{
+        'processor':'ISCE2/topsStack',
+        'url':'https://zenodo.org/record/5498198/files/FernandinaSenDT128.tar.xz',  # 280 MB
+    },
+    'SanFranSenDT42':{
+        'processor':'ARIA',
+        'url':'https://zenodo.org/record/6662079/files/SanFranSenDT42.tar.xz',      # 280 MB
+    },
+    'RidgecrestSenDT71':{
+        'processor':'ASF HyP3',
+        'url':'https://zenodo.org/record/11049257/files/RidgecrestSenDT71.tar.xz',  # 240 MB
+    },
+    'SanFranBaySenD42':{
+        'processor':'GMTSAR',
+        'url':'https://zenodo.org/record/12772940/files/SanFranBaySenD42.tar.xz',   # 290 MB
+    },
+    'WellsEnvD2T399':{
+        'processor':'Gamma',
+        'url':'https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz',      # 280 MB
+    },
+    'WCapeSenAT29':{
+        'processor':'SNAP',
+        'url':'https://zenodo.org/record/6661536/files/WCapeSenAT29.tar.xz',        # 240 MB
+    },
+    'KujuAlosAT422F650':{
+        'processor':'ROI_PAC',
+        'url':'https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz',   # 230 MB
+    },
+}
 
-PROJ_NAMES = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
-TEMPLATE_FILES = [Path(__file__).resolve().parent / 'configs' / f'{proj_name}.txt' for proj_name in PROJ_NAMES]
-
+DSET_NAMES = list(DSET_INFO.keys())
+DSET_DESCRIPTION = '\n'.join([f'    {x:20s} for {DSET_INFO[x]["processor"]}' for x in DSET_NAMES])
 
 #####################################################################################
-DSET_INFO = """
-  FernandinaSenDT128 for ISCE/topsStack
-  SanFranSenDT42     for ARIA
-  WellsEnvD2T399     for GAMMA
-  RidgecrestSenDT71  for HyP3
-  WCapeSenAT29       for SNAP
-  KujuAlosAT422F650  for ROI_PAC
-"""
-
 EXAMPLE = """example:
   # regular tests
   $MINTPY_HOME/tests/smallbaselineApp.py
@@ -60,14 +71,16 @@ EXAMPLE = """example:
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Test smallbaselineApp workflow with example datasets.'+DSET_INFO,
+    parser = argparse.ArgumentParser(description='Test smallbaselineApp workflow with example datasets.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('--dset', dest='dset_name', nargs='+', metavar='DSET', choices=PROJ_NAMES, default=PROJ_NAMES,
-                        help='name(s) of datasets to be tested.\n'+
-                             f'Available datasets: {PROJ_NAMES}\n' +
-                             '(default: all)')
+    parser.add_argument('--dset', dest='dset_name', nargs='+', metavar='DSET', choices=DSET_NAMES+['all'],
+                        default='all',
+                        help='name(s) of datasets to be tested (default: %(default)s).'+
+                             '\nAvailable dataset info:\n'+
+                             '    #    dataset             processor\n'+
+                             DSET_DESCRIPTION)
 
     parser.add_argument('--test-pyaps', dest='test_pyaps', action='store_true',
                         help='Include testing of PyAPS (default: %(default)s).')
@@ -92,6 +105,10 @@ def cmd_line_parse(iargs=None):
     inps.test_dir = os.path.expandvars(inps.test_dir)
     inps.test_dir = os.path.abspath(inps.test_dir)
 
+    # translate "--dset all" option
+    if 'all' in inps.dset_name:
+        inps.dset_name = DSET_NAMES
+
     return inps
 
 
@@ -100,9 +117,9 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
     print('Go to test directory:', test_dir)
     os.chdir(test_dir)
 
-    dset_idx = PROJ_NAMES.index(dset_name)
-    dset_url = URL_LIST[dset_idx]
-    template_file = TEMPLATE_FILES[dset_idx]
+    # grab dataset remote url and local config file
+    dset_url = DSET_INFO[dset_name]['url']
+    config_file = Path(__file__).resolve().parent / 'configs' / f'{dset_name}.txt'
 
     # download tar file
     tar_fbase = os.path.splitext(os.path.basename(dset_url))[0]
@@ -153,7 +170,7 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
     # Note: execute script in command line instead of call main() for a clean run
     # to avoid strange error from prep_aria: not recognized as a supported file format.
     # which only occurs if all datasets are tested in one run
-    cmd = f'smallbaselineApp.py {template_file}'
+    cmd = f'smallbaselineApp.py {config_file}'
     print(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
     if status != 0:
@@ -188,19 +205,24 @@ def main(iargs=None):
     num_dset = len(inps.dset_name)
     for i in range(num_dset):
         dset_name = inps.dset_name[i]
+        msg = f'{i+1}/{num_dset}: {dset_name} - {DSET_INFO[dset_name]["processor"]}'
         print('#'*100)
-        print(f'Start testing smallbaselineApp workflow on example dataset {i+1}/{num_dset}: {dset_name}')
-        test_smallbaselineApp(dset_name,
-                              test_dir=inps.test_dir,
-                              fresh_start=inps.fresh_start,
-                              test_pyaps=inps.test_pyaps,
-                              test_isce=inps.test_isce)
+        print(f'Start testing smallbaselineApp on dataset {msg}')
+
+        test_smallbaselineApp(
+            dset_name,
+            test_dir=inps.test_dir,
+            fresh_start=inps.fresh_start,
+            test_pyaps=inps.test_pyaps,
+            test_isce=inps.test_isce,
+        )
+
         print('#'*100)
-        print(f'   PASS testing of smallbaselineApp workflow on example dataset {i+1}/{num_dset}: {dset_name}')
+        print(f'   PASS testing of smallbaselineApp on dataset {msg}')
         print('#'*100+'\n'*3)
 
     # print message
-    if num_dset == len(PROJ_NAMES):
+    if num_dset == len(DSET_NAMES):
         m, s = divmod(time.time()-start_time, 60)
         msg  = '#'*50
         msg += '\n    PASS ALL testings without running errors.\n'

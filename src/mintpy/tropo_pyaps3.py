@@ -655,7 +655,7 @@ def calc_delay_timeseries(inps):
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     num_date = len(inps.grib_files)
     date_list = [str(re.findall(r'\d{8}', os.path.basename(i))[0]) for i in inps.grib_files]
-    dates = np.array(date_list, dtype=np.string_)
+    dates = np.array(date_list, dtype=np.bytes_)
     ds_name_dict = {
         "date"       : [dates.dtype, (num_date,), dates],
         "timeseries" : [np.float32,  (num_date, length, width), None],

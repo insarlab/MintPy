@@ -339,7 +339,7 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
 
         ## O2 - date
         dsName = 'date'
-        data = np.array(dateList, dtype=np.string_)
+        data = np.array(dateList, dtype=np.bytes_)
         dset = create_hdf5_dataset(group, dsName, data)
 
         ## O3 - perp baseline

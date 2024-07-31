@@ -148,7 +148,7 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     )
 
     # define dataset structure
-    dates = np.array(date_list, dtype=np.string_)
+    dates = np.array(date_list, dtype=np.bytes_)
     ds_name_dict = {
         "date"       : [dates.dtype, (num_date,), dates],
         "bperp"      : [np.float32,  (num_date,), pbase],
@@ -316,7 +316,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
     )
 
     # define (and fill out some) dataset structure
-    date12_arr = np.array([x.split('_') for x in date12_list], dtype=np.string_)
+    date12_arr = np.array([x.split('_') for x in date12_list], dtype=np.bytes_)
     drop_ifgram = np.ones(num_pair, dtype=np.bool_)
     ds_name_dict = {
         "date"             : [date12_arr.dtype, (num_pair, 2), date12_arr],

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64.0", "setuptools_scm[toml]"]
+requires = ["setuptools>=64.0", "setuptools_scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -110,7 +110,7 @@ include-package-data = true
 dependencies = { file = ["requirements.txt"] }
 readme = { file = ["docs/README.md"], content-type = "text/markdown" }
 
-# extra requirements: `pip install pysolid[test]` or `pip install .[test]`
+# extra requirements: `pip install mintpy[test]` or `pip install .[test]`
 [tool.setuptools.dynamic.optional-dependencies.test]
 file = ["tests/requirements.txt"]
 

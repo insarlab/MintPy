@@ -220,7 +220,7 @@ class ifgramStackDict:
             ###############################
             # 2D dataset containing reference and secondary dates of all pairs
             dsName = 'date'
-            dsDataType = np.string_
+            dsDataType = np.bytes_
             dsShape = (numIfgram, 2)
             print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
                                                                               w=maxDigit,
@@ -672,7 +672,7 @@ class geometryDict:
                     # Write 1D dataset date accompnay the 3D bperp
                     dsName = 'date'
                     dsShape = (self.numDate,)
-                    dsDataType = np.string_
+                    dsDataType = np.bytes_
                     print(('create dataset /{d:<{w}} of {t:<25}'
                            ' in size of {s}').format(d=dsName,
                                                      w=maxDigit,
@@ -695,10 +695,7 @@ class geometryDict:
                                                              c=str(compression)))
 
                     # read
-                    data = np.array(self.read(family=dsName,
-                                              box=box,
-                                              xstep=xstep,
-                                              ystep=ystep)[0], dtype=dsDataType)
+                    data = self.read(family=dsName, box=box, xstep=xstep, ystep=ystep)[0]
 
                     # water body: -1/True  for water and 0/False for land
                     # water mask:  0/False for water and 1/True  for land
@@ -707,6 +704,12 @@ class geometryDict:
                         data = ~data
                         print('    input file "{}" is water body (True/False for water/land), '
                               'convert to water mask (False/True for water/land).'.format(fname))
+
+                    elif dsName == 'waterMask':
+                        # GMTSAR water/land mask: 1 for land, and nan for water / no data
+                        if np.sum(np.isnan(data)) > 0:
+                            print('    convert NaN value for waterMask to zero.')
+                            data[np.isnan(data)] = 0
 
                     elif dsName == 'height':
                         noDataValueDEM = -32768
@@ -745,6 +748,7 @@ class geometryDict:
                                 data = ut.wrap(data, wrap_range=[-180, 180])    # rewrap within -180 to 180
 
                     # write
+                    data = np.array(data, dtype=dsDataType)
                     ds = f.create_dataset(dsName,
                                           data=data,
                                           chunks=True,
