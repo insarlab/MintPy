@@ -14,6 +14,7 @@ from importlib.metadata import PackageNotFoundError, metadata
 ###########################################################################
 Tag = collections.namedtuple('Tag', 'version date')
 release_history = (
+    Tag('1.6.1', '2024-07-31'),
     Tag('1.6.0', '2024-05-09'),
     Tag('1.5.3', '2023-11-23'),
     Tag('1.5.2', '2023-08-09'),
