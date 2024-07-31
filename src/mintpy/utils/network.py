@@ -244,7 +244,7 @@ def simulate_coherence_v2(date12_list, decor_time=200.0, coh_resid=0.2, inc_angl
     date_list = sorted(list(set(date1s + date2s)))
     tbase_list = ptime.date_list2tbase(date_list)[0]
 
-    SNR = 22  # NESZ = -22 dB from Table 1 in https://sentinels.copernicus.eu/web/sentinel/
+    SNR = 10 ** (22 / 10)  # NESZ = -22 dB from Table 1 in https://sentinels.copernicus.eu/web/sentinel/
     coh_thermal = 1. / (1. + 1./SNR)
 
     # bperp
@@ -314,7 +314,7 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
     tbase_list = ptime.date_list2tbase(date_list)[0]
 
     # Thermal decorrelation (Zebker and Villasenor, 1992, Eq.4)
-    SNR = 19.5  # hardwired for Envisat (Guarnieri, 2013)
+    SNR = 10 ** (19.5 / 10)  # hardwired for Envisat (Guarnieri, 2013)
     coh_thermal = 1. / (1. + 1./SNR)
 
     pbase_c = critical_perp_baseline(sensor_name, inc_angle)

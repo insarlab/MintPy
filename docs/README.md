@@ -51,7 +51,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/FernandinaSenDT128.txt
 ```
 
 <p align="left">
-  <img width="600" src="https://insarlab.github.io/figs/docs/FernandinaSenDT128-ISCE2.jpg">
+  <img width="600" src="https://insarlab.github.io/figs/docs/mintpy/FernandinaSenDT128-ISCE2.jpg">
 </p>
 
 Results are plotted in **./pic** folder. To explore more data information and visualization, try the following scripts:
@@ -112,4 +112,4 @@ _This disclaimer was adapted from the [MetPy project](https://github.com/Unidata
 
 Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331. [ [doi](https://doi.org/10.1016/j.cageo.2019.104331) \| [arxiv](https://doi.org/10.31223/osf.io/9sz6m) \| [data](https://doi.org/10.5281/zenodo.3464190) \| [notebook](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy) ]
 
-In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../mintpy/defaults/smallbaselineApp.cfg) and listed in the [references.md file](./references.md).
+In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../src/mintpy/defaults/smallbaselineApp.cfg) and listed in the [reference file](./references.md).
