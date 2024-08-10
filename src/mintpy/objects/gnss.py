@@ -1082,6 +1082,8 @@ class GNSS_SIDESHOW(GNSS):
         """
         # need to refer to the site list
         site_list_file = os.path.basename(GNSS_SITE_LIST_URLS['SIDESHOW'])
+        if not os.path.exists(site_list_file):
+            dload_site_list(out_file=site_list_file, source=self.source, print_msg=True)
 
         # find site in site list file
         with open(site_list_file) as site_list:
