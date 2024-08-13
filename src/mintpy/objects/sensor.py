@@ -368,6 +368,7 @@ RCM = {
 # Table 2 & 6 in https://directory.eoportal.org/web/eoportal/satellite-missions/g/gaofen-3
 # https://www.eoportal.org/satellite-missions/gaofen-3
 # Li et al. (2018, RS) at https://doi.org/10.3390/rs10121929
+# Table I in Yang et al. (2023, IEEE-TGRS) at https://doi.org/10.1109/TGRS.2023.3238707
 GF3 = {
     # orbit
     'altitude'                   : 755e3,     # m
@@ -377,7 +378,11 @@ GF3 = {
     'carrier_frequency'          : 5.4e9,     # Hz
     'antenna_length'             : 15,        # m
     'antenna_width'              : 1.5,       # m
+    'pulse_repetition_frequency' : 1412.18,   # Hz
+    'chirp_bandwidth'            : 60.00e6,   # Hz
     'sampling_frequency'         : 533.33e6,  # Hz
+    'azimuth_pixel_size'         : 4.77,      # m, FSII mode
+    'range_pixel_size'           : 2.25,      # m, FSII mode
 }
 
 # Sentinel-1 Interferometric Wide (IW / TOPS) swath mode
