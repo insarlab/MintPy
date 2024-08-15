@@ -64,8 +64,9 @@ def dms2d(Coord):
 
 def gps_to_LOS(Ve, Vn, theta, heading):
 
-    unitVec = [np.cos(heading)*np.sin(theta), -np.sin(theta)
-               * np.sin(heading), np.cos(theta)]
+    unitVec = [ np.cos(heading) * np.sin(theta),
+               -np.sin(theta) * np.sin(heading),
+                np.cos(theta)]
 
     gpsLOS = unitVec[0]*Ve+unitVec[1]*Vn
 
@@ -305,7 +306,7 @@ def get_transect(z, x0, y0, x1, y1):
 
     length = int(np.hypot(x1-x0, y1-y0))
     x, y = np.linspace(x0, x1, length), np.linspace(y0, y1, length)
-    zi = z[y.astype(np.int), x.astype(np.int)]
+    zi = z[y.astype(int), x.astype(int)]
     return zi
 
 
@@ -588,10 +589,10 @@ def main(argv=None):
         print('******************************************************')
         length = int(np.hypot(x1-x0, y1-y0))
         x, y = np.linspace(x0, x1, length), np.linspace(y0, y1, length)
-        zi = z[y.astype(np.int), x.astype(np.int)]
+        zi = z[y.astype(int), x.astype(int)]
         try:
-            lat_transect = lat_all[y.astype(np.int), x.astype(np.int)]
-            lon_transect = lon_all[y.astype(np.int), x.astype(np.int)]
+            lat_transect = lat_all[y.astype(int), x.astype(int)]
+            lon_transect = lon_all[y.astype(int), x.astype(int)]
         except:
             lat_transect = 'Nan'
             lon_transect = 'Nan'
@@ -996,7 +997,7 @@ def main(argv=None):
         ax.set_xlabel('Distance along profile [km]', fontsize=26)
 
         ###################################################################
-        # lower and higher bounds for diplaying the profile
+        # lower and higher bounds for displaying the profile
 
         try:
             lbound

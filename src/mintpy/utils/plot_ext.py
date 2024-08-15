@@ -1,3 +1,4 @@
+"""Class wrapped around matplotlib/mintpy for polygon selection."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -95,7 +96,7 @@ def get_poly_mask(fname, datasetName, print_msg=True, view_cmd=''):
 
     d_v, atr ,inps = view.prep_slice(cmd)
     ax = plt.subplots(figsize=inps.fig_size)[1]
-    inps.fig_coord = 'radar'   #selector works for radar coord plot only
+    inps.fig_coord = 'yx'   # selector works for y/x coord plot only
     ax, inps, im = view.plot_slice(ax, d_v, atr, inps)[0:3]
 
     ## Option 2 - Simple plot with matplotlib

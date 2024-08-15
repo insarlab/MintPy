@@ -24,7 +24,7 @@ from mintpy.objects.stackDict import geometryDict, ifgramDict, ifgramStackDict
 from mintpy.utils import ptime, readfile, utils as ut
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr']
+PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr', 'nisar']
 
 # primary observation dataset names
 OBS_DSET_NAMES = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
@@ -180,7 +180,7 @@ def read_subset_box(iDict):
         geo_box = None
         print('WARNING: mintpy.subset.lalo is not supported'
               ' if 1) no lookup file AND'
-              '    2) radar/unkonwn coded dataset')
+              '    2) radar/unknown coded dataset')
         print('\tignore it and continue.')
 
     if not geo_box and not pix_box:
@@ -382,7 +382,7 @@ def read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2template_key):
     pairsDict = {}
     for i, dsPath0 in enumerate(dsPathDict[dsName0]):
         # date string used in the file/dir path
-        # YYYYDDD       for gmtsar [modern Julian date]
+        # YYYYDDD       for gmtsar [day of the year - 1]
         # YYYYMMDDTHHMM for uavsar
         # YYYYMMDD      for all the others
         date6s = readfile.read_attribute(dsPath0)['DATE12'].replace('_','-').split('-')
@@ -537,7 +537,7 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
 
     Do not write HDF5 file if ALL the following meet:
         1. HDF5 file exists and is readable,
-        2. HDF5 file constains all the datasets and in the same size
+        2. HDF5 file contains all the datasets and in the same size
         3. For ifgramStackDict, HDF5 file contains all date12.
 
     Parameters: outFile    - str, path to the output HDF5 file
@@ -601,7 +601,6 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
 
 def prepare_metadata(iDict):
     """Prepare metadata via prep_{processor}.py scripts."""
-
     processor = iDict['processor']
     script_name = f'prep_{processor}.py'
     print('-'*50)
@@ -624,13 +623,44 @@ def prepare_metadata(iDict):
             if len(glob.glob(str(iDict[key]))) > 0:
                 # print command line
                 iargs = [iDict[key]]
-                if processor == 'gamma' and iDict['PLATFORM']:
-                    iargs += ['--sensor', iDict['PLATFORM'].lower()]
+                if processor == 'gamma':
+                    if iDict['PLATFORM']:
+                        iargs += ['--sensor', iDict['PLATFORM'].lower()]
+                    # add DEM file to faciliate the checking and metadata extraction for geocoded datasets
+                    iargs += ['--dem', iDict['mintpy.load.demFile']]
+
                 elif processor == 'cosicorr':
                     iargs += ['--metadata', iDict['mintpy.load.metaFile']]
                 ut.print_command_line(script_name, iargs)
                 # run
                 prep_module.main(iargs)
+
+    elif processor == 'nisar':
+        dem_file = iDict['mintpy.load.demFile']
+        gunw_files = iDict['mintpy.load.unwFile']
+        water_mask = iDict['mintpy.load.waterMaskFile']
+
+        # run prep_*.py
+        iargs = ['-i', gunw_files, '-d', dem_file]
+
+        if os.path.exists(water_mask):
+            iargs = iargs + ['--mask', water_mask]
+
+        if iDict['mintpy.subset.yx']:
+            warnings.warn('Subset in Y/X is not implemented for NISAR. \n'
+                          'There might be shift in the coordinates of different products. \n'
+                          'Use lat/lon instead.')
+        if iDict['mintpy.subset.lalo']:
+            lalo = iDict['mintpy.subset.lalo'].split(',')
+            lats = lalo[0].split(':')
+            lons = lalo[1].split(':')
+            iargs = iargs + ['--sub-lat', lats[0], lats[1], '--sub-lon', lons[0], lons[1]]
+
+        ut.print_command_line(script_name, iargs)
+        try:
+            prep_module.main(iargs)
+        except:
+            warnings.warn('prep_nisar.py failed. Assuming its result exists and continue...')
 
     elif processor == 'isce':
         from mintpy.utils import isce_utils, s1_utils
@@ -646,6 +676,7 @@ def prepare_metadata(iDict):
         # --baseline-dir / --geometry-dir
         baseline_dir = iDict['mintpy.load.baselineDir']
         geom_dir = os.path.dirname(iDict['mintpy.load.demFile'])
+        geom_dir = os.path.abspath(geom_dir)
 
         # --dset-dir / --file-pattern
         obs_keys = [
@@ -729,10 +760,7 @@ def prepare_metadata(iDict):
 
         ## run
         ut.print_command_line(script_name, iargs)
-        try:
-            prep_module.main(iargs)
-        except:
-            warnings.warn('prep_aria.py failed. Assuming its result exists and continue...')
+        prep_module.main(iargs)
 
     elif processor == 'gmtsar':
         # use the custom template file if exists & input
@@ -784,8 +812,8 @@ def load_data(inps):
     prepare_metadata(iDict)
     extraDict = get_extra_metadata(iDict)
 
-    # skip data writing for aria as it is included in prep_aria
-    if iDict['processor'] == 'aria':
+    # skip data writing as it is included in prep_aria/nisar
+    if iDict['processor'] in ['aria', 'nisar']:
         return
 
     ## 2. search & write data files

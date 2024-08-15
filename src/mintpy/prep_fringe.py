@@ -148,7 +148,7 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     )
 
     # define dataset structure
-    dates = np.array(date_list, dtype=np.string_)
+    dates = np.array(date_list, dtype=np.bytes_)
     ds_name_dict = {
         "date"       : [dates.dtype, (num_date,), dates],
         "bperp"      : [np.float32,  (num_date,), pbase],
@@ -238,7 +238,7 @@ def prepare_ps_mask(outfile, infile, metadata, box=None):
     return outfile
 
 
-def prepare_geometry(outfile, geom_dir, box, metadata):
+def prepare_geometry(outfile, geom_dir, metadata, box, water_mask_file=None):
     print('-'*50)
     print(f'preparing geometry file: {outfile}')
 
@@ -254,6 +254,8 @@ def prepare_geometry(outfile, geom_dir, box, metadata):
         'azimuthAngle'   : os.path.join(geom_dir, 'los.rdr.full'),
         'shadowMask'     : os.path.join(geom_dir, 'shadowMask.rdr.full'),
     }
+    if water_mask_file:
+        fDict['waterMask'] = water_mask_file
 
     # initiate dsDict
     dsDict = {}
@@ -314,7 +316,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
     )
 
     # define (and fill out some) dataset structure
-    date12_arr = np.array([x.split('_') for x in date12_list], dtype=np.string_)
+    date12_arr = np.array([x.split('_') for x in date12_list], dtype=np.bytes_)
     drop_ifgram = np.ones(num_pair, dtype=np.bool_)
     ds_name_dict = {
         "date"             : [date12_arr.dtype, (num_pair, 2), date12_arr],
@@ -400,8 +402,9 @@ def load_fringe(inps):
     prepare_geometry(
         outfile=geom_file,
         geom_dir=geom_src_dir,
-        box=src_box,
         metadata=meta,
+        box=src_box,
+        water_mask_file=inps.water_mask_file,
     )
 
     if inps.geom_only:

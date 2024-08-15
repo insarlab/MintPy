@@ -21,7 +21,7 @@ EXAMPLE = """example:
   generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
 
   # exclude pixel cluster based on minimum number of pixels
-  generate_mask.py  maskTempCoh.h5 -p 10 mask_1.h5
+  generate_mask.py  maskTempCoh.h5 -p 10 -o mask_1.h5
 
   # exclude pixels with large velocity STD: |velocity| > cutoff (2 by default) * velocityStd
   generate_mask.py  velocity.h5 --vstd
@@ -40,7 +40,7 @@ EXAMPLE = """example:
   # common mask file of pixels in all connected components / with non-zero unwrapped phase
   generate_mask.py  ifgramStack.h5  --nonzero  -o maskConnComp.h5  --update
 
-  # interative polygon selection of region of interest
+  # interactive polygon selection of region of interest
   # useful for custom mask generation in unwrap error correction with bridging
   generate_mask.py  waterMask.h5 -m 0.5 --roipoly
   generate_mask.py  azOff.h5 --roipoly --view-cmd "-v -0.1 0.1"

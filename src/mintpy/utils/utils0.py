@@ -1,9 +1,9 @@
+"""Miscellaneous utilities - independent."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
-# Low level utilities script (independent)
 # Contents
 #   InSAR
 #   File Operation
@@ -24,9 +24,9 @@ import h5py
 import numpy as np
 
 # global variables
-SPEED_OF_LIGHT = 299792458 # m/s
-EARTH_RADIUS = 6371e3      # Earth radius in meters
-K = 40.31                  # m^3/s^2, constant
+SPEED_OF_LIGHT = 299792458  # m/s
+EARTH_RADIUS = 6371.0088e3  # Earth radius in meters
+K = 40.31                   # m^3/s^2, constant
 
 
 #################################### InSAR ##########################################
@@ -104,7 +104,8 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
                      EARTH_RADIUS
                      HEIGHT
                      WIDTH
-                     LENGTH     #for dimension=2
+                     LENGTH                  #for dimension=2
+                     CENTER_INCIDENCE_ANGLE  #for dimension=0
                 dem : 2D array for height to calculate local incidence angle
                 dimension : int,
                             2 for 2d matrix
@@ -116,28 +117,37 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
                 atr = readfile.read_attribute('filt_fine.unw')
                 inc_angle = ut.incidence_angle(atr, dem=dem)
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
     # Return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
-        if print_msg:
-            print('input file is geocoded, return center incident angle only')
+        vprint('input file is geocoded, return center incident angle only')
+
+    # Check if the center inc angle already exist in the metadata
+    # Notes on Mar 2024 by Alex Handwerger & Talib Oliver-Cabrera:
+    # Proposing these changes after encountering a range_n value smaller than the platform height
+    # for UAVSAR dataset swatch_00540, thus, the calc equation w/o considering topography won't work.
+    if dimension == 0 and 'CENTER_INCIDENCE_ANGLE' in atr.keys():
+        inc_angle = float(atr['CENTER_INCIDENCE_ANGLE'])
+        vprint(f'center incidence angle : {inc_angle:.4f} degree (grabbed from metadata directly)')
+        return inc_angle
 
     # Read Attributes
     range_n = float(atr['STARTING_RANGE'])
     dR = float(atr['RANGE_PIXEL_SIZE'])
-    r = float(atr['EARTH_RADIUS'])
+    r = float(atr.get('EARTH_RADIUS', EARTH_RADIUS))
     H = float(atr['HEIGHT'])
     width = int(atr['WIDTH'])
 
     # Calculation
-    range_f = range_n+dR*width
+    range_f = range_n + dR * width
     inc_angle_n = (np.pi - np.arccos((r**2 + range_n**2 - (r+H)**2)/(2*r*range_n))) * 180.0/np.pi
     inc_angle_f = (np.pi - np.arccos((r**2 + range_f**2 - (r+H)**2)/(2*r*range_f))) * 180.0/np.pi
     inc_angle_c = (inc_angle_n + inc_angle_f) / 2.0
-    if print_msg:
-        print(f'near   incidence angle : {inc_angle_n:.4f} degree')
-        print(f'center incidence angle : {inc_angle_c:.4f} degree')
-        print(f'far    incidence angle : {inc_angle_f:.4f} degree')
+    vprint(f'near   incidence angle : {inc_angle_n:.4f} degree')
+    vprint(f'center incidence angle : {inc_angle_c:.4f} degree')
+    vprint(f'far    incidence angle : {inc_angle_f:.4f} degree')
 
     if dimension == 0:
         inc_angle = inc_angle_c
@@ -228,51 +238,10 @@ def azimuth_ground_resolution(atr):
     return az_step
 
 
-def auto_lat_lon_step_size(atr, lat_c=None):
-    """Get the default lat/lon step size for geocoding.
-
-    Treat the pixel in radar coordinates as an rotated rectangle. Use the bounding box
-    of the rotated rectangle for the ratio between lat and lon steps. Then scale the
-    lat and lon step size to ensure the same area between the pixels in radar and geo
-    coordinates.
-
-    Link: https://math.stackexchange.com/questions/4001034
-
-    Parameters: atr      - dict, standard mintpy metadata
-                lat_c    - float, central latitude in degree
-    Returns:    lat_step - float, latitude  step size in degree
-                lon_step - float, longitude step size in degree
-    """
-    # azimuth angle (rotation angle) in radian
-    az_angle = np.deg2rad(abs(heading2azimuth_angle(float(atr['HEADING']))))
-
-    # radar pixel size in meter
-    az_step = azimuth_ground_resolution(atr)
-    rg_step = range_ground_resolution(atr)
-
-    # geo pixel size in meter
-    x_step = rg_step * abs(np.cos(az_angle)) + az_step * abs(np.sin(az_angle))
-    y_step = rg_step * abs(np.sin(az_angle)) + az_step * abs(np.cos(az_angle))
-    scale_factor = np.sqrt((rg_step * az_step) / (x_step * y_step))
-    x_step *= scale_factor
-    y_step *= scale_factor
-
-    # geo pixel size in degree
-    if lat_c is None:
-        if 'LAT_REF1' in atr.keys():
-            lat_c = (float(atr['LAT_REF1']) + float(atr['LAT_REF3'])) / 2.
-        else:
-            lat_c = 0
-    lon_step = np.rad2deg(x_step / (EARTH_RADIUS * np.cos(np.deg2rad(lat_c))))
-    lat_step = np.rad2deg(y_step / EARTH_RADIUS) * -1.
-
-    return lat_step, lon_step
-
-
 
 #################################### File Operation ##########################################
 def touch(fname_list, times=None):
-    """python equivalent function to Unix utily - touch
+    """python equivalent function to Unix utility - touch
     It sets the modification and access times of files to the current time of day.
     If the file doesn't exist, it is created with default permissions.
     Inputs/Output:
@@ -300,27 +269,55 @@ def touch(fname_list, times=None):
 ################################## Coordinate ##########################################
 def utm_zone2epsg_code(utm_zone):
     """Convert UTM Zone string to EPSG code.
-    Parameters: utm_zone - str, atr['UTM_ZONE']
-    Returns:    epsg     - str, EPSG code
-    Examples:   epsg = utm_zone2epsg_code('11N')
+
+    Reference:
+        https://docs.up42.com/data/reference/utm#utm-wgs84
+        https://pyproj4.github.io/pyproj/stable/examples.html#initializing-crs
+
+    Parameters: utm_zone  - str, atr['UTM_ZONE'], comprises a zone number
+                            and a hemisphere, e.g. 11N, 36S, etc.
+    Returns:    epsg_code - str, EPSG code
+    Examples:   epsg_code = utm_zone2epsg_code('11N')
     """
     from pyproj import CRS
-    crs = CRS.from_dict({'proj': 'utm',
-                         'zone': int(utm_zone[:-1]),
-                         'south': utm_zone[-1] == 'S',
-                        })
-    epsg = crs.to_authority()[1]
-    return epsg
+    crs = CRS.from_dict({
+        'proj': 'utm',
+        'zone': int(utm_zone[:-1]),
+        'south': utm_zone[-1].upper() == 'S',
+    })
+    epsg_code = crs.to_authority()[1]
+    return epsg_code
+
+
+def epsg_code2utm_zone(epsg_code):
+    """Convert EPSG code to UTM Zone string.
+
+    Reference:
+        https://docs.up42.com/data/reference/utm#utm-wgs84
+        https://pyproj4.github.io/pyproj/stable/examples.html#initializing-crs
+
+    Parameters: epsg_code - str / int, EPSG code
+    Returns:    utm_zone  - str, atr['UTM_ZONE'], comprises a zone number
+                            and a hemisphere, e.g. 11N, 36S, etc. None for
+                            a EPSG code not in a UTM coordnate system
+    Examples:   utm_zone = epsg_code2utm_zone('32736')
+    """
+    from pyproj import CRS
+    crs = CRS.from_epsg(epsg_code)
+    utm_zone = crs.utm_zone
+    if not utm_zone:
+        print(f'WARNING: input EPSG code ({epsg_code}) is NOT a UTM zone, return None and continue.')
+    return utm_zone
 
 
 def to_latlon(infile, x, y):
-    """Convert x, y in the projection coordinates of the file to lon/lat in degree.
+    """Convert x, y in the projection coordinates of the file to lat/lon in degree.
 
     Similar functionality also exists in utm.to_latlon() at:
         https://github.com/Turbo87/utm#utm-to-latitudelongitude
 
     Parameters: infile - str, GDAL supported file path
-                x/y    - scalar or 1/2D np.ndarray, coordiantes in x and y direction
+                x/y    - scalar or 1/2D np.ndarray, coordinates in x and y direction
     Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
     """
     from osgeo import gdal
@@ -334,13 +331,66 @@ def to_latlon(infile, x, y):
     if (not srs.IsProjected()) and (srs.GetAttrValue('unit') == 'degree'):
         return y, x
 
-    # convert coordiantes using pyproj
+    # convert coordinates using pyproj
     # note that Transform.from_proj(x, y, always_xy=True) convert the x, y to lon, lat
     p_in = Proj(ds.GetProjection())
     p_out = Proj('epsg:4326')
     transformer = Transformer.from_proj(p_in, p_out)
     y, x = transformer.transform(x, y)
     return y, x
+
+
+def utm2latlon(meta, easting, northing):
+    """Convert UTM easting/northing in meters to lat/lon in degrees.
+
+    Parameters: meta     - dict, mintpy attributes that includes:
+                           UTM_ZONE
+                easting  - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in y direction
+    Returns:    lat      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in x direction
+    """
+    import utm
+    zone_num = int(meta['UTM_ZONE'][:-1])
+    northern = meta['UTM_ZONE'][-1].upper() == 'N'
+    # set 'strict=False' to allow coordinates outside the range of a typical single UTM zone,
+    # which can be common for large area analysis, e.g. the Norwegian mapping authority
+    # publishes a height data in UTM zone 33 coordinates for the whole country, even though
+    # most of it is technically outside zone 33.
+    lat, lon = utm.to_latlon(np.array(easting), np.array(northing), zone_num,
+                             northern=northern, strict=False)
+
+    # output format
+    if any(isinstance(x, (list, tuple)) for x in [easting, northing]):
+        lat = lat.tolist()
+        lon = lon.tolist()
+
+    return lat, lon
+
+
+def latlon2utm(meta, lat, lon):
+    """Convert latitude/longitude in degrees to UTM easting/northing in meters.
+
+    Parameters: meta     - dict, mintpy attributes that includes:
+                           UTM_ZONE
+                lat      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in y direction
+                lon      - scalar/list/tuple/1-2D np.ndarray, WGS 84 coordinates in x direction
+    Returns:    easting  - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in x direction
+                northing - scalar/list/tuple/1-2D np.ndarray, UTM    coordinates in y direction
+    """
+    import utm
+
+    # invoke zone_num to ensure all coordinates are converted into the same single UTM zone,
+    # even if they cross a UTM boundary.
+    zone_num = int(meta['UTM_ZONE'][:-1])
+    easting, northing = utm.from_latlon(np.array(lat), np.array(lon), force_zone_number=zone_num)[:2]
+
+    # output format
+    if any(isinstance(x, (list, tuple)) for x in [lat, lon]):
+        easting = easting.tolist()
+        northing = northing.tolist()
+
+    return northing, easting
 
 
 def snwe_to_wkt_polygon(snwe):
@@ -409,6 +459,11 @@ def get_lat_lon(meta, geom_file=None, box=None, dimension=2, ystep=1, xstep=1):
 
         else:
             raise ValueError(f'un-supported dimension = {dimension}')
+
+        # UTM to lat/lon
+        if not meta['Y_UNIT'].startswith('deg') and 'UTM_ZONE' in meta.keys():
+            print('UTM coordinates detected, convert UTM into lat/lon')
+            lats, lons = utm2latlon(meta, easting=lons, northing=lats)
 
     else:
         msg = 'Can not get pixel-wise lat/lon!'
@@ -518,7 +573,7 @@ def get_lalo_digit4display(meta, coord_unit='degree'):
 
 ###################################### Orbit ###########################################
 def xyz_to_local_radius(xyz):
-    """Calculate satellite height and ellpsoid local radius from orbital state vector.
+    """Calculate satellite height and ellipsoid local radius from orbital state vector.
 
     This is a simplified version of the following functions from ISCE-2:
     + isce.isceobj.Planet.xyz_to_llh()
@@ -529,7 +584,7 @@ def xyz_to_local_radius(xyz):
                 radius - float, Earth radius in m
     """
 
-    # paramters from isce.isceobj.Planet.AstronomicalHandbook
+    # parameters from isce.isceobj.Planet.AstronomicalHandbook
     a = 6378137.000       # WGS84 semimajor
     e2 = 0.0066943799901  # WGS84 eccentricity squared
 
@@ -571,7 +626,7 @@ def xyz_to_local_radius(xyz):
 # Definition of angles:
 # (los_)inc_angle - the incidence angle of the LOS vector (from the ground to the SAR platform)
 #                   measured from vertical. Used in isce2.
-# (los_)az_angle  - the azimuth   angle of the LOS vecotr (from the ground to the SAR platform)
+# (los_)az_angle  - the azimuth   angle of the LOS vector (from the ground to the SAR platform)
 #                   measured from the north, with anti-clockwise as positive. Used in isce2.
 # orb_az_angle    - the azimuth   angle of the SAR platform's orbit (along-track direction)
 #                   measured from the north, with anti-clockwise as positive
@@ -663,7 +718,7 @@ def en2az(v_e, v_n, orb_az_angle):
                 v_n          - np.ndarray or float, displacement in north-south direction, north as positive
                 orb_az_angle - np.ndarray or float, azimuth angle of the SAR platform along track/orbit direction
                                measured from the north with anti-clockwise direction as positive, in the unit of degrees
-                               orb_az_angle = los_az_angle + 90 for right-looking radar.
+                               orb_az_angle = los_az_angle - 90 for right-looking radar.
     Returns:    v_az         - np.ndarray or float, displacement in azimuth direction,
                                motion along flight direction as positive
     """
@@ -700,7 +755,7 @@ def get_unit_vector4component_of_interest(los_inc_angle, los_az_angle, comp='enu
     comps = [
         'enu2los', 'en2los', 'hz2los', 'horz2los', 'u2los', 'vert2los',   # radar LOS / cross-track
         'en2az', 'hz2az', 'orb_az', 'orbit_az',                           # radar azimuth / along-track
-        'vert', 'vertical', 'horz', 'horizontal',                         # vertical / arbitraty horizontal
+        'vert', 'vertical', 'horz', 'horizontal',                         # vertical / arbitrary horizontal
     ]
 
     if comp not in comps:
@@ -918,7 +973,7 @@ def get_circular_mask(x, y, radius, shape):
 def circle_index(atr, circle_par):
     """Return Index of Elements within a Circle centered at input pixel
     Parameters: atr : dictionary
-                    containging the following attributes:
+                    containing the following attributes:
                     WIDT
                     LENGTH
                 circle_par : string in the format of 'y,x,radius'
@@ -983,16 +1038,13 @@ def yes_or_no(question):
 
 
 def update_attribute_or_not(atr_new, atr_orig):
-    """Compare new attributes with exsiting ones"""
-    update = False
+    """Compare new attributes with existing ones"""
     for key in atr_new.keys():
         value = str(atr_new[key])
-        if ((key in atr_orig.keys() and value == str(atr_orig[key]) and value != 'None')
+        if not ((key in atr_orig.keys() and value == str(atr_orig[key]) and value != 'None')
                 or (key not in atr_orig.keys() and value == 'None')):
-            next
-        else:
-            update = True
-    return update
+            return True
+    return False
 
 
 def which(program):
@@ -1118,7 +1170,7 @@ def median_abs_deviation(data, center=None, scale=0.67449):
 
 
 def median_abs_deviation_threshold(data, center=None, cutoff=3.):
-    """calculate rms_threshold based on the standardised residual
+    """calculate rms_threshold based on the standardized residual
 
     Outlier detection with median absolute deviation.
     """

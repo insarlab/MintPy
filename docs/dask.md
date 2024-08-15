@@ -5,7 +5,7 @@ Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-b
 + **local cluster:** on a single machine (laptop or computing node) with multiple CPU cores, suitable for laptops, local cluster/stations and distributed High Performance Cluster (HPC). No job scheduler is required.
 + **non-local cluster:** on a distributed HPC with job scheduler installed, including PBS, LSF and SLURM.
 
-Below is a brief description of the required options and recommended best practices for each cluster/scheduler.
+[Here](https://github.com/2gotgrossman/dask-rsmas-presentation) is an entry-level presentation on parallel computing using Dask by David Grossman. Below we brief describe for each cluster/scheduler the required options and recommended best practices.
 
 ## 1. local cluster ##
 
@@ -54,7 +54,7 @@ A typical run time without local cluster is 30 secs and with 8 workers 11.4 secs
 
 To show the run time improvement, we test three datasets (South Isabela, Fernandina, and Kilauea) with different number of cores and same amount of allocated memory (4 GB) on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
 
-![Dask LocalCluster Performance](https://yunjunzhang.files.wordpress.com/2020/08/dask_local_cluster_performance.png)
+![Dask LocalCluster Performance](https://insarlab.github.io/figs/docs/mintpy/dask_local_cluster_performance.png)
 
 #### 1.5 Known problems ####
 
@@ -106,7 +106,7 @@ smallbaselineApp.py smallbaselineApp.cfg
 
 #### 2.3 Configuration parameters in `~/.config/dask/mintpy.yaml` ####
 
-We provide a brief description below for the most commonly used configurations of dask-jobqueue for MintPy. Users are recommended to check [Dask-Jobqueue](https://jobqueue.dask.org/en/latest/configuration-setup.html) for more detailed and comprehensive documentaion.
+We provide a brief description below for the most commonly used configurations of dask-jobqueue for MintPy. Users are recommended to check [Dask-Jobqueue](https://jobqueue.dask.org/en/latest/configuration-setup.html) for more detailed and comprehensive documentation.
 
 + **name:** Name of the worker job as it will appear to the job scheduler. Any values are perfectly fine.
 

@@ -1,3 +1,4 @@
+"""Class for (radar/geo) coordinates conversion."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -27,9 +28,11 @@ class coordinate:
             (bounding) box of points indicate the lat/lon of the pixel UL corner.
 
     Example:
+        from mintpy.utils import readfile, utils as ut
         atr = readfile.read('velocity.h5')
-        coord = ut.coordinate(atr, lookup_file='inputs/geometryRadar.h5')  # for radar coord file
-        coord = ut.coordinate(atr)                                         # for geo   coord file
+        coord = ut.coordinate(atr)                                          # geo coord
+        coord = ut.coordinate(atr, lookup_file='inputs/geometryRadar.h5')   # radar coord
+        coord = ut.coordinate(atr, lookup_file=['lat.rdr', 'lon.rdr'])      # radar coord in isce2 format
         y, x = coord.geo2radar(lat, lon)[0:2]
         lat, lon = coord.radar2geo(y, x)[0:2]
     """
@@ -37,12 +40,10 @@ class coordinate:
     def __init__(self, metadata, lookup_file=None):
         """Define a coordinate object
         Parameters: metadata    - dict, source metadata
-                    lookup_file - list of 2 strings, or string, lookup table file(s)
-        Example:    from mintpy.utils import readfile, utils as ut
-                    atr = readfile.read_attribute('./velocity.h5')
-                    coord = ut.coordinate(atr, './inputs/geometryRadar.h5')
-                    coord.geo2radar(33.450, -90.22)
-                    coord.radar2geo(50, 200)
+                    lookup_file - str / list of 2 str, lookup table file(s)
+                                  'geometryRadar.h5'
+                                  ['lat.rdr', 'lon.rdr']
+        Returns:    mintpy.utils.utils.coordinate object
         """
         self.src_metadata = metadata
         if lookup_file is None:
@@ -52,6 +53,7 @@ class coordinate:
         self.lookup_file = lookup_file
         self.lut_y = None
         self.lut_x = None
+
 
     def open(self):
         self.earth_radius = float(self.src_metadata.get('EARTH_RADIUS', EARTH_RADIUS))
@@ -67,82 +69,122 @@ class coordinate:
             if self.lookup_file:
                 self.lut_metadata = readfile.read_attribute(self.lookup_file[0])
 
-    def lalo2yx(self, coord_in, coord_type):
-        """convert geo coordinates into radar coordinates for Geocoded file only
-        Parameters: geoCoord   - list / tuple / 1D np.ndarray / float, coordinate(s) in latitude or longitude
-                    metadata   - dict, dictionary of file attributes
-                    coord_type - str, coordinate type: latitude or longitude
-        Example:    300 = coordinate.lalo2yx(32.104990,    metadata,'lat')
-                    [1000,1500] = coordinate.lalo2yx([130.5,131.4],metadata,'lon')
+        # remove empty attributes [to facilitate checking laterward]
+        key_list = ['UTM_ZONE']
+        for key in key_list:
+            if key in self.src_metadata and not self.src_metadata[key]:
+                self.src_metadata.pop(key)
+
+
+    def _clean_coord(self, coord1, coord2):
+        """Ensure input coordinate as list type and same size."""
+
+        def _to_list(x):
+            # convert numpy array to list or scalar
+            if isinstance(x, np.ndarray):
+                x = x.tolist()
+            # convert scalar / None to list
+            # Note: np.float128 is not supported on Windows OS,
+            #   use np.longdouble as a platform neutral syntax
+            float_types = (float, np.float16, np.float32, np.float64, np.longdouble)
+            int_types = (int, np.int16, np.int32, np.int64)
+            if isinstance(x, int_types + float_types):
+                x = [x]
+            elif x is None:
+                x = [None]
+            x = list(x)
+            return x
+
+        # convert to list type
+        coord1 = _to_list(coord1)
+        coord2 = _to_list(coord2)
+
+        # ensure the same size
+        if len(coord1) != len(coord2):
+            if len(coord1) == 1 and len(coord2) > 1:
+                coord1 *= len(coord2)
+            elif len(coord1) > 1 and len(coord2) == 1:
+                coord2 *= len(coord1)
+            else:
+                raise ValueError('Input two coordinates do NOT have the same size!')
+
+        return coord1, coord2
+
+
+    def lalo2yx(self, lat_in, lon_in):
+        """convert geo coordinates into radar coordinates for Geocoded file only.
+
+        Parameters: lat_in    - list / tuple / 1D np.ndarray / float, coordinate(s) in latitude / northing
+                    lon_in    - list / tuple / 1D np.ndarray / float, coordinate(s) in longitude / easting
+        Returns:    coord_out - tuple(list / float / 1D np.ndarray), coordinates(s) in (row, col) numbers
+        Example:    300, 1000 = coordinate.lalo2yx(32.1, 130.5)
+                    300 = coordinate.lalo2yx(32.1, None)[0]
+                    ([300, 301], [1000, 1001]) = coordinate.lalo2yx((32.1, 32.101), (130.5, 130.501))
         """
         self.open()
         if not self.geocoded:
-            raise ValueError('Input file is not geocoded.')
+            raise ValueError('Input file is NOT geocoded.')
 
-        # input format
-        if isinstance(coord_in, np.ndarray):
-            coord_in = coord_in.tolist()
-        # note: np.float128 is not supported on Windows OS, use np.longdouble as a platform neutral syntax
-        if isinstance(coord_in, (float, np.float16, np.float32, np.float64, np.longdouble)):
-            coord_in = [coord_in]
-        coord_in = list(coord_in)
+        lat_in, lon_in = self._clean_coord(lat_in, lon_in)
+
+        # attempts to convert lat/lon to utm coordinates if needed.
+        if (lat_in is not None and lon_in is not None
+                and 'UTM_ZONE' in self.src_metadata
+                and np.max(np.abs(lat_in)) <= 90
+                and np.max(np.abs(lon_in)) <= 360):
+            lat_in, lon_in = ut0.latlon2utm(self.src_metadata, np.array(lat_in), np.array(lon_in))
 
         # convert coordinates
-        coord_type = coord_type.lower()
-        coord_out = []
-        for coord_i in coord_in:
+        y_out = []
+        x_out = []
+        for lat_i, lon_i in zip(lat_in, lon_in):
             # plus 0.01 to be more robust in practice
-            if coord_type.startswith('lat'):
-                coord_o = int(np.floor((coord_i - self.lat0) / self.lat_step + 0.01))
-            elif coord_type.startswith('lon'):
-                coord_o = int(np.floor((coord_i - self.lon0) / self.lon_step + 0.01))
-            else:
-                raise ValueError('Unrecognized coordinate type: '+coord_type)
-            coord_out.append(coord_o)
+            y_i = None if lat_i is None else int(np.floor((lat_i - self.lat0) / self.lat_step + 0.01))
+            x_i = None if lon_i is None else int(np.floor((lon_i - self.lon0) / self.lon_step + 0.01))
+            y_out.append(y_i)
+            x_out.append(x_i)
 
         # output format
-        if len(coord_out) == 1:
-            coord_out = coord_out[0]
-        elif isinstance(coord_in, tuple):
-            coord_out = tuple(coord_out)
+        if len(y_out) == 1 and len(x_out) == 1:
+            coord_out = tuple([y_out[0], x_out[0]])
+        else:
+            coord_out = tuple([y_out, x_out])
+
         return coord_out
 
 
-    def yx2lalo(self, coord_in, coord_type):
+    def yx2lalo(self, y_in, x_in):
         """convert radar coordinates into geo coordinates (pixel center)
-            for Geocoded file only
-        Parameters: coord_in   _ list / tuple / 1D np.ndarray / int, coordinate(s) in row or col in int
-                    metadata   _ dict, dictionary of file attributes
-                    coord_type _ str, coordinate type: row / col / y / x
-        Example:    32.104990 = coord_yx2lalo(300, metadata, 'y')
-                    [130.5,131.4] = coord_yx2lalo([1000,1500], metadata, 'x')
+            for Geocoded file only.
+
+        Parameters: y_in      - list / tuple / 1D np.ndarray / int, coordinate(s) in row number
+                    x_in      - list / tuple / 1D np.ndarray / int, coordinate(s) in col number
+        Returns:    coord_out - tuple(list / 1D np.ndarray / int), coordinate(s) in (lat/northing, lon/easting)
+        Example:    32.1, 130.5 = coordinate.yx2lalo(300, 1000)
+                    32.1 = coordinate.yx2lalo(300, None)[0]
+                    ([32.1, 32.101], [130.5, 130.501]) = coordinate.lalo2yx([(300, 301), (1000, 1001)])
         """
         self.open()
         if not self.geocoded:
-            raise ValueError('Input file is not geocoded.')
+            raise ValueError('Input file is NOT geocoded.')
 
-        # Convert to List if input is String
-        if isinstance(coord_in, np.ndarray):
-            coord_in = coord_in.tolist()
-        if isinstance(coord_in, (int, np.int16, np.int32, np.int64)):
-            coord_in = [coord_in]
-        coord_in = list(coord_in)
+        y_in, x_in = self._clean_coord(y_in, x_in)
 
-        coord_type = coord_type.lower()
-        coord_out = []
-        for i in range(len(coord_in)):
-            if coord_type.startswith(('row', 'y', 'az', 'azimuth')):
-                coord = (coord_in[i] + 0.5) * self.lat_step + self.lat0
-            elif coord_type.startswith(('col', 'x', 'rg', 'range')):
-                coord = (coord_in[i] + 0.5) * self.lon_step + self.lon0
-            else:
-                raise ValueError('Unrecognized coordinate type: '+coord_type)
-            coord_out.append(coord)
+        # convert coordinates
+        lat_out = []
+        lon_out = []
+        for y_i, x_i in zip(y_in, x_in):
+            lat_i = None if y_i is None else (y_i + 0.5) * self.lat_step + self.lat0
+            lon_i = None if x_i is None else (x_i + 0.5) * self.lon_step + self.lon0
+            lat_out.append(lat_i)
+            lon_out.append(lon_i)
 
-        if len(coord_out) == 1:
-            coord_out = coord_out[0]
-        elif isinstance(coord_in, tuple):
-            coord_out = tuple(coord_out)
+        # output format
+        if len(lat_out) == 1 and len(lon_out) == 1:
+            coord_out = tuple([lat_out[0], lon_out[0]])
+        else:
+            coord_out = tuple([lat_out, lon_out])
+
         return coord_out
 
 
@@ -184,7 +226,7 @@ class coordinate:
 
         row, col = np.nanmean(np.where(mask_yx), axis=1)
         if any(np.isnan(i) for i in [row, col]):
-            raise RuntimeError(f'No coresponding coordinate found for y/x: {y}/{x}')
+            raise RuntimeError(f'No corresponding coordinate found for y/x: {y}/{x}')
 
         return row, col
 
@@ -195,6 +237,7 @@ class coordinate:
         self.lut_y = readfile.read(self.lookup_file[0], datasetName=ds_name_y, print_msg=print_msg)[0]
         self.lut_x = readfile.read(self.lookup_file[1], datasetName=ds_name_x, print_msg=print_msg)[0]
         return self.lut_y, self.lut_x
+
 
     def _read_geo_lut_metadata(self):
         """Read lat/lon0, lat/lon_step_deg, lat/lon_step into a Namespace - lut"""
@@ -211,14 +254,16 @@ class coordinate:
         lut.lon_step = lut.lon_step_deg * np.pi/180.0 * self.earth_radius * np.cos(lat_c * np.pi/180)
         return lut
 
+
     def geo2radar(self, lat, lon, print_msg=True, debug_mode=False):
         """Convert geo coordinates into radar coordinates.
+
         Parameters: lat/lon   - np.array / float, latitude/longitude
         Returns:    az/rg     - np.array / int, range/azimuth pixel number
                     az/rg_res - float, residul/uncertainty of coordinate conversion
         """
-        # ensure longitude convention to be consistent with src_metadata
-        if 'X_FIRST' in self.src_metadata.keys():
+        # check 1: ensure longitude convention to be consistent with src_metadata [for WGS84 coordinates]
+        if 'X_FIRST' in self.src_metadata.keys() and 'UTM_ZONE' not in self.src_metadata.keys():
             width = int(self.src_metadata['WIDTH'])
             lon_step = float(self.src_metadata['X_STEP'])
             min_lon = float(self.src_metadata['X_FIRST'])
@@ -243,10 +288,15 @@ class coordinate:
                 else:
                     lon[lon > 180.] -= 360
 
+        # check 2: attempts to convert lat/lon to utm coordinates if needed
+        if ('UTM_ZONE' in self.src_metadata
+                and np.max(np.abs(lat)) <= 90
+                and np.max(np.abs(lon)) <= 360):
+            lat, lon = ut0.latlon2utm(self.src_metadata, np.array(lat), np.array(lon))
+
         self.open()
         if self.geocoded:
-            az = self.lalo2yx(lat, coord_type='lat')
-            rg = self.lalo2yx(lon, coord_type='lon')
+            az, rg = self.lalo2yx(lat, lon)
             return az, rg, 0, 0
 
         if not isinstance(lat, np.ndarray):
@@ -335,8 +385,7 @@ class coordinate:
         """
         self.open()
         if self.geocoded:
-            lat = self.yx2lalo(az, coord_type='az')
-            lon = self.yx2lalo(rg, coord_type='rg')
+            lat, lon = self.yx2lalo(az, rg)
             return lat, lon, 0, 0
 
         if not isinstance(az, np.ndarray):
@@ -397,14 +446,14 @@ class coordinate:
             lon_resid = 0.
         return lat, lon, lat_resid, lon_resid
 
+
     def box_pixel2geo(self, pixel_box):
         """Convert pixel_box to geo_box in UL corner
         Parameters: pixel_box - list/tuple of 4 int   in (x0, y0, x1, y1)
         Returns:    geo_box   - tuple      of 4 float in (W, N, E, S)
         """
         try:
-            lat = self.yx2lalo([pixel_box[1], pixel_box[3]], coord_type='y')
-            lon = self.yx2lalo([pixel_box[0], pixel_box[2]], coord_type='x')
+            lat, lon = self.yx2lalo([pixel_box[1], pixel_box[3]], [pixel_box[0], pixel_box[2]])
             # shift lat from pixel center to the UL corner
             lat = [i - self.lat_step / 2.0 for i in lat]
             lon = [i - self.lon_step / 2.0 for i in lon]
@@ -413,18 +462,19 @@ class coordinate:
             geo_box = None
         return geo_box
 
+
     def box_geo2pixel(self, geo_box):
         """Convert geo_box to pixel_box
         Parameters: geo_box   - tuple      of 4 float in (W, N, E, S)
         Returns:    pixel_box - list/tuple of 4 int   in (x0, y0, x1, y1)
         """
         try:
-            y = self.lalo2yx([geo_box[1], geo_box[3]], coord_type='latitude')
-            x = self.lalo2yx([geo_box[0], geo_box[2]], coord_type='longitude')
+            y, x = self.lalo2yx([geo_box[1], geo_box[3]], [geo_box[0], geo_box[2]])
             pixel_box = (x[0], y[0], x[1], y[1])
         except:
             pixel_box = None
         return pixel_box
+
 
     def bbox_radar2geo(self, pix_box, print_msg=False):
         """Calculate bounding box in lat/lon for file in geo coord, based on input radar/pixel box
@@ -439,6 +489,7 @@ class coordinate:
                    np.max(lon) + buf, np.min(lat) - buf)
         return geo_box
 
+
     def bbox_geo2radar(self, geo_box, print_msg=False):
         """Calculate bounding box in x/y for file in radar coord, based on input geo box.
         Parameters: geo_box - tuple of 4 float, indicating the UL/LR lon/lat
@@ -452,6 +503,7 @@ class coordinate:
         pix_box = (np.min(x) - buf, np.min(y) - buf,
                    np.max(x) + buf, np.max(y) + buf)
         return pix_box
+
 
     def check_box_within_data_coverage(self, pixel_box, print_msg=True):
         """Check the subset box's conflict with data coverage

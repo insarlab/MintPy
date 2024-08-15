@@ -2,9 +2,9 @@ version: 2.1
 jobs:
   unit-n-workflow-tests:
     docker:
-      - image: ubuntu:bionic
+      - image: cimg/base:current
         environment:
-          CONDA_PREFIX: /root/tools/miniconda3
+          CONDA_PREFIX: /root/tools/miniforge
           MINTPY_HOME: /root/tools/MintPy
         user: root
     working_directory: /root/tools/MintPy
@@ -13,22 +13,17 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Setting Up Environment with Miniconda
+          name: Setting Up Environment with Miniforge
           command: |
             apt update
             apt-get update --yes && apt-get upgrade --yes
             apt-get install --yes git wget
-            # download and install miniconda3
+            # install miniforge
             mkdir -p ${HOME}/tools
             cd ${HOME}/tools
-            wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-            bash Miniconda3-latest-Linux-x86_64.sh -b -p ${HOME}/tools/miniconda3
-            ${HOME}/tools/miniconda3/bin/conda init bash
-            # add conda-forge channel and install mamba
-            ${HOME}/tools/miniconda3/bin/conda config --add channels conda-forge
-            #${HOME}/tools/miniconda3/bin/conda config --set channel_priority strict
-            ${HOME}/tools/miniconda3/bin/conda install --yes mamba
-            cat ${HOME}/.condarc
+            wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+            bash Miniforge3-Linux-x86_64.sh -b -p ${HOME}/tools/miniforge
+            ${HOME}/tools/miniforge/bin/mamba init bash
             # modify/export env var PATH to BASH_ENV to be shared across run steps
             echo 'export PATH=${CONDA_PREFIX}/bin:${PATH}' >> ${BASH_ENV}
 
@@ -38,11 +33,13 @@ jobs:
           command: |
             export PYTHONUNBUFFERED=1
             # install dependencies and source code
-            source activate root
-            mamba install --verbose --yes gdal">=3" --file ${MINTPY_HOME}/requirements.txt
+            # pin gdal version as "<=3.8" because:
+            # 1) gdal-3.9 could not read the GMT-6 *.grd file properly
+            # 2) gdal-3.9 could not be imported in circle CI (https://github.com/insarlab/MintPy/issues/1220)
+            mamba install --verbose --yes --file ${MINTPY_HOME}/requirements.txt gdal"<=3.8"
             python -m pip install ${MINTPY_HOME}
             # test installation
-            smallbaselineApp.py -v
+            smallbaselineApp.py -h
             tropo_pyaps3.py -h
             solid_earth_tides.py -h
 
@@ -55,25 +52,37 @@ jobs:
             ${MINTPY_HOME}/tests/dem_error.py
 
       - run:
-          name: Workflow Test 1/4 - FernandinaSenDT128 (ISCE/topsStack)
+          name: Integration Test 1 - FernandinaSenDT128 (ISCE2/topsStack)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
 
       - run:
-          name: Workflow Test 2/4 - SanFranSenDT42 (ARIA)
+          name: Integration Test 2 - SanFranSenDT42 (ARIA)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
 
       - run:
-          name: Workflow Test 3/4 - WellsEnvD2T399 (Gamma)
+          name: Integration Test 3 - RidgecrestSenDT71 (HyP3)
+          command: |
+            mkdir -p ${HOME}/data
+            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset RidgecrestSenDT71
+
+      - run:
+          name: Integration Test 4 - SanFranBaySenD42 (GMTSAR)
+          command: |
+            mkdir -p ${HOME}/data
+            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranBaySenD42
+
+      - run:
+          name: Integration Test 5 - WellsEnvD2T399 (Gamma)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
       - run:
-          name: Workflow Test 4/4 - WCapeSenAT29 (SNAP)
+          name: Integration Test 6 - WCapeSenAT29 (SNAP)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29

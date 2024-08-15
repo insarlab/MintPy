@@ -3,7 +3,7 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Sep 2020                           #
 ############################################################
-# Recomend import:
+# Recommend import:
 #   from mintpy import solid_earth_tides as SET
 
 
@@ -18,6 +18,7 @@ from matplotlib import pyplot as plt
 
 plt.rcParams.update({'font.size': 12})
 
+import mintpy.cli.diff
 from mintpy.objects import timeseries
 from mintpy.objects.resample import resample
 from mintpy.utils import ptime, readfile, utils as ut, writefile
@@ -27,7 +28,7 @@ from mintpy.utils import ptime, readfile, utils as ut, writefile
 def get_datetime_list(ts_file, date_wise_acq_time=False):
     """Prepare exact datetime for each acquisition in the time-series file.
 
-    Parameters: ts_file            - str, path of the time-series HDF5 file
+    Parameters: ts_file            - str, path of the time-series HDF5 or .unw file
                 date_wise_acq_time - bool, use the exact date-wise acquisition time
     Returns:    sensingMid         - list of datetime.datetime objects
                 date_list          - list(str), dates in YYYYMMDD
@@ -141,9 +142,13 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_comp='enu2los',
         atr = readfile.read_attribute(ts_file)
         dt_objs, date_list = get_datetime_list(ts_file, date_wise_acq_time=date_wise_acq_time)
     else:
-        atr = readfile.read_attribute(geom_file)
-        # text list file
-        date_list = ptime.read_date_txt(ts_file)
+        if ts_file.endswith(('.unw', '.geo', '.rdr', '.bip')):
+            atr = readfile.read_attribute(ts_file)
+            date_list = ptime.yyyymmdd(atr['DATE12'].split('-'))
+        else:
+            # text list file
+            atr = readfile.read_attribute(geom_file)
+            date_list = ptime.read_date_txt(ts_file)
         utc_sec = dt.timedelta(seconds=float(atr['CENTER_LINE_UTC']))
         dt_objs = [dt.datetime.strptime(x, '%Y%m%d') + utc_sec for x in date_list]
 
@@ -205,31 +210,15 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_comp='enu2los',
         # dataset
         ds_dict = {
             'timeseries' : ts_set,
-            'date'       : np.array(date_list, dtype=np.string_),
+            'date'       : np.array(date_list, dtype=np.bytes_),
             'sensingMid' : np.array([i.strftime('%Y%m%dT%H%M%S') for i in dt_objs],
-                                    dtype=np.string_),
+                                    dtype=np.bytes_),
         }
 
         # write
         writefile.write(ds_dict, out_file=set_file, metadata=atr)
 
     return ts_set
-
-
-def correct_timeseries(dis_file, set_file, cor_dis_file):
-    """Correct time-series for the solid Earth tides."""
-    # diff.py can handle different reference in space and time
-    # between the absolute solid Earth tides and the double referenced time-series
-    print('\n------------------------------------------------------------------------------')
-    print('correcting relative delay for input time-series using diff.py')
-
-    iargs = [dis_file, set_file, '-o', cor_dis_file]
-    print('diff.py', ' '.join(iargs))
-
-    import mintpy.cli.diff
-    mintpy.cli.diff.main(iargs)
-
-    return cor_dis_file
 
 
 ###############################################################
@@ -247,13 +236,13 @@ def run_solid_earth_tides(inps):
         verbose=inps.verbose,
     )
 
-    # correct SET
-    if inps.dis_file.endswith('.h5'):
-        correct_timeseries(
-            dis_file=inps.dis_file,
-            set_file=inps.set_file,
-            cor_dis_file=inps.cor_dis_file,
-        )
+    # correct SET (using diff.py)
+    # diff.py can handle different reference in space and time
+    # e.g. the absolute phase and the double referenced time-series
+    print('correcting tide for using diff.py')
+    iargs = [inps.dis_file, inps.set_file, '-o', inps.cor_dis_file, '--force']
+    print('diff.py', ' '.join(iargs))
+    mintpy.cli.diff.main(iargs)
 
     # used time
     m, s = divmod(time.time() - start_time, 60)

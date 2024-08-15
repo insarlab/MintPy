@@ -22,7 +22,7 @@ from mintpy.utils import isce_utils, ptime, readfile, utils as ut, writefile
 #################################  Mask  #######################################
 def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_amp=0.3,
                             outdir='./', max_memory=4.0):
-    """Calculate a mask for areas suseptible to biases, based on the average closure phase tau.
+    """Calculate a mask for areas susceptible to biases, based on the average closure phase tau.
 
     Equation: tau = 1 / K * Sigma_{k=1}^K (np.exp(j * Phi_k^{nl}))
       where K is the number of closure phase for connection nl, Phi_k^{nl} is the k-th sequential
@@ -35,7 +35,7 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
                 threshold_amp     - float, threshold of ampliutde of the cumulative sequential closure phase
                 outdir            - str, directory of output files
                 max_mermory       - float, maximum memory in GB for each patch processed
-    Returns:    mask              - 2D np.ndarray of size (length, width) in boolean, 0 for areas suseptible to biases.
+    Returns:    mask              - 2D np.ndarray of size (length, width) in boolean, 0 for areas susceptible to biases.
                                     Saved to file: maskClosurePhase.h5
                 avg_cp - 2D np.ndarray of size (length, width) in complex64, average cum. seq. closure phase
                                     Saved to file: avgCpxClosurePhase.h5
@@ -61,7 +61,7 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
 
     # key info
     print('\n'+'-'*80)
-    print('calculating the mask to flag areas suseptible to non-closure-phase related biases (as zero) ...')
+    print('calculating the mask to flag areas susceptible to non-closure-phase related biases (as zero) ...')
     print(f'number of valid acquisitions: {len(date_list)} ({date_list[0]} - {date_list[-1]})')
     print(f'average complex closure phase threshold in amplitude/correlation: {threshold_amp}')
     print(f'average complex closure phase threshold in phase: {num_sigma} sigma ({threshold_pha:.1f} rad)')
@@ -98,7 +98,7 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
             avg_cp[no_data_mask] = np.nan
 
     # create mask
-    print('\ncreate mask for areas suseptible to non-closure phase biases')
+    print('\ncreate mask for areas susceptible to non-closure phase biases')
     mask = np.ones([length,width], dtype=bool)
 
     # mask areas with potential bias
@@ -106,7 +106,7 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
     mask[np.abs(np.angle(avg_cp)) > threshold_pha] = 0
 
     # unmask areas with low correlation
-    # where it's hard to know wheter there is bias or not
+    # where it's hard to know whether there is bias or not
     print(f'set pixels with average complex closure phase amplitude (correlation) < {threshold_amp} to 1.')
     mask[np.abs(np.abs(avg_cp) < threshold_amp)] = 1
 
@@ -216,7 +216,7 @@ def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
     # write bias time series to HDF5 file
     ds_dict = {
         'timeseries' : [np.float32,     (num_date, length, width), bias_ts],
-        'date'       : [np.dtype('S8'), (num_date,), np.array(date_list, np.string_)],
+        'date'       : [np.dtype('S8'), (num_date,), np.array(date_list, np.bytes_)],
     }
     meta['FILE_TYPE'] = 'timeseries'
     writefile.layout_hdf5(cum_cp_file, ds_dict, metadata=meta)
@@ -349,7 +349,7 @@ def compute_unwrap_closure_phase(stack_file, conn, num_worker=1, outdir='./', ma
     ## calc the cumulativev unwrapped closure phase time-series
     print('-'*60)
     print('step 3/3: calculate the unwrapped cumulative sequential closure phase time-series ...')
-    print('  Note that a referece point in the ifgramStack.h5 (as attributes "REF_Y/X") is needed to continue. ')
+    print('  Note that a reference point in the ifgramStack.h5 (as attributes "REF_Y/X") is needed to continue. ')
     print('  A good reference point should be a pixel that has good temporal coherence and no bias.')
     cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta)
 
@@ -423,7 +423,7 @@ def estimate_wratio(tbase, conn, bias_free_conn, wvl, box, outdir='./', mask=Fal
     vel_bias_connN = np.multiply(wratio_connN, vel_bias_connF)
     if mask:
         # if average velocity smaller than 1 mm/year (hardcoded here), mask out for better visual
-        # this option is only turned on while outputing wratio.h5 file.
+        # this option is only turned on while outputting wratio.h5 file.
         wratio_connN[abs(vel_bias_connF) < 0.001] = np.nan
 
     # debug mode
@@ -531,7 +531,7 @@ def estimate_bias_timeseries_approx_patch(bias_free_conn, bw, tbase, date_ordina
                 date_ordinal   - list of size (num_date,) in integer, time in days
                 wvl            - float, wavelength of the SAR system
                 box            - list in size of (4,) in integer, coordinates of bounding box
-                outdir         - string, directory for outputing files
+                outdir         - string, directory for outputting files
     Returns:    bias_ts        - 3D array in size of (num_date, box_len, box_wid) in float, bias timeseries
     '''
     print('\n'+'-'*60)
@@ -634,7 +634,7 @@ def estimate_bias_timeseries_approx(stack_file, bias_free_conn, bw, water_mask_f
     meta['UNIT'] = 'm'
     ds_name_dict = {
         'timeseries' : [np.float32,     (num_date, length, width), None],
-        'date'       : [np.dtype('S8'), (num_date,),  np.array(date_list, np.string_)],
+        'date'       : [np.dtype('S8'), (num_date,),  np.array(date_list, np.bytes_)],
     }
     writefile.layout_hdf5(bias_ts_file, ds_name_dict, meta)
 
@@ -719,7 +719,7 @@ def bandwidth2num_ifgram(bw, num_date):
 
     Reference: Equation (15) in Zheng et al. (2022)
 
-    Parameters: bw         - int, bandwith
+    Parameters: bw         - int, bandwidth
                 num_date   - int, number of acquisitions
     Returns:    num_ifgram - int, number of interferograms
     '''
@@ -745,7 +745,7 @@ def get_design_matrix_Wr(date12_list, bw, box, bias_free_conn, outdir='./'):
     # get w(delta_t) * phi^x - section VI-A
     wratio_all = estimate_wratio_all(bw, bias_free_conn, outdir, box)
 
-    # intial output value
+    # initial output value
     num_pix = (box[2] - box[0]) * (box[3] - box[1])
     Wr = np.zeros((num_ifgram, num_pix), dtype=np.float32)
     for i in range(num_ifgram):
@@ -915,7 +915,7 @@ def estimate_bias_timeseries(stack_file, bias_free_conn, bw, cluster_kwargs, wat
     Parameters: stack_file     - string, path for ifgramStack.h5
                 bias_free_conn - integer, connection level at which we assume is bias-free
                 bw                - integer, bandwidth of the given time-series.
-                cluster_kwargs - dictonary containing settings of parallel computing. To turn off, set parallel['clustertype']=''
+                cluster_kwargs - dictionary containing settings of parallel computing. To turn off, set parallel['clustertype']=''
                 outdir            - string, directory for output files
                 max_memory        - float, maximum memory in GB for each patch processed
     Returns:    bias_ts_file   - str, path to the bias time series file: timeseriesBias.h5
@@ -949,7 +949,7 @@ def estimate_bias_timeseries(stack_file, bias_free_conn, bw, cluster_kwargs, wat
     bias_ts_file = os.path.join(outdir, 'timeseriesBias.h5')
     ds_name_dict = {
         'timeseries' : [np.float32,     (num_date, length, width), None],
-        'date'       : [np.dtype('S8'), (num_date,),  np.array(date_list, np.string_)],
+        'date'       : [np.dtype('S8'), (num_date,),  np.array(date_list, np.bytes_)],
     }
     meta['FILE_TYPE'] = 'timeseries'
     meta['DATA_TYPE'] = 'float32'

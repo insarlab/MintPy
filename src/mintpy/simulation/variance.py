@@ -1,10 +1,10 @@
-#! /usr/bin/env python3
+"""Utilities to calculate structural functions."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2017                               #
 ############################################################
-# Recommended usage:
+# Recommend usage:
 #   from mintpy.simulation import variance as var
 
 

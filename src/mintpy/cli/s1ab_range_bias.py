@@ -42,7 +42,7 @@ def create_parser(subparsers=None):
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     # input/output files
-    parser.add_argument('ts_file', help='Range offset timeseries file to be corrrected, e.g. timeseriesRg_SET_ERA5.h5.')
+    parser.add_argument('ts_file', help='Range offset timeseries file to be corrected, e.g. timeseriesRg_SET_ERA5.h5.')
     parser.add_argument('-g', '--geom', '--geometry', dest='geom_file', help='geometry file including datasets:\nheight')
     parser.add_argument('-m', '--mask', dest='mask_file', help='mask file')
 

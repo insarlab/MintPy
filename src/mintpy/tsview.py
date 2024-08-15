@@ -97,9 +97,9 @@ def read_init_info(inps):
 
         # read error file
         error_fc = np.loadtxt(inps.error_file, dtype=bytes).astype(str)
-        inps.error_ts = error_fc[:, 1].astype(np.float)*inps.unit_fac
+        inps.error_ts = error_fc[:, 1].astype(np.float32)*inps.unit_fac
 
-        # update error file with exlcude date
+        # update error file with exclude date
         if inps.ex_date_list:
             e_ts = inps.error_ts[:]
             inps.ex_error_ts = e_ts[inps.ex_flag == 0]
@@ -160,10 +160,13 @@ def read_init_info(inps):
     if not inps.ref_yx and 'REF_Y' in atr.keys():
         inps.ref_yx = (int(atr['REF_Y']), int(atr['REF_X']))
 
-    # ref_yx --> ref_lalo if in geo-coord
-    # for plotting purpose only
-    if inps.ref_yx and 'Y_FIRST' in atr.keys():
-        inps.ref_lalo = inps.coord.radar2geo(inps.ref_yx[0], inps.ref_yx[1], print_msg=False)[0:2]
+    # print/plot ref_yx/lalo info
+    if inps.ref_yx:
+        vprint(f'reference point in y/x: {inps.ref_yx}')
+        # ref_yx --> ref_lalo if in geo-coord [for plotting purpose only]
+        if 'Y_FIRST' in atr.keys():
+            inps.ref_lalo = inps.coord.radar2geo(inps.ref_yx[0], inps.ref_yx[1], print_msg=False)[0:2]
+            vprint(f'reference point in lat/lon: {inps.ref_lalo}')
 
     # do not plot native reference point if it's out of the coverage due to subset
     if (inps.ref_yx and 'Y_FIRST' in atr.keys()
@@ -171,7 +174,7 @@ def read_init_info(inps):
         and not (    inps.pix_box[0] <= inps.ref_yx[1] < inps.pix_box[2]
                  and inps.pix_box[1] <= inps.ref_yx[0] < inps.pix_box[3])):
         inps.disp_ref_pixel = False
-        print('the native REF_Y/X is out of subset box, thus do not display')
+        vprint('the native REF_Y/X is out of subset box, thus do not display')
 
     ## initial pixel coord
     if inps.lalo:
@@ -243,7 +246,7 @@ def subset_and_multilook_yx(yx, pix_box=None, multilook_num=1):
 
 
 def read_exclude_date(input_ex_date, dateListAll):
-    """Read exlcude list of dates
+    """Read exclude list of dates
     Parameters: input_ex_date : list of string in YYYYMMDD or filenames for excluded dates
                 dateListAll   : list of string in YYYYMMDD for all dates
     Returns:    ex_date_list  : list of string in YYYYMMDD for excluded dates
@@ -486,7 +489,7 @@ def get_model_param_str(model, ds_dict, disp_unit='cm'):
             ds_unit_dict[ds_name] = '/'.join(units)
 
     # list of dataset names
-    ds_names = [x for x in ds_dict.keys() if not x.endswith('Std')]
+    ds_names = [x for x in ds_dict.keys() if not x.endswith('Std') and x not in ['intercept']]
     w_key = max(len(x) for x in ds_names)
     w_val = max(len(f'{x[0]:.2f}') for x in ds_dict.values())
 
@@ -507,7 +510,7 @@ def get_model_param_str(model, ds_dict, disp_unit='cm'):
 
 
 def fit_time_func(model, date_list, ts_dis, disp_unit='cm', G_fit=None, conf_level=0.95, seconds=0):
-    """Fit a suite of fime functions to the time series.
+    """Fit a suite of time functions to the time series.
     Equations:  Gm = d
     Parameters: model      - dict of time functions, check utils.time_func.estimate_time_func() for details.
                 date_list  - list of dates in YYYYMMDD format
@@ -606,6 +609,7 @@ def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
     header += f'{get_point_coord_str(y, x, inps.coord, inps.lalo_digit)}\n'
     header += f'reference pixel: y={inps.ref_yx[0]}, x={inps.ref_yx[1]}\n' if inps.ref_yx else ''
     header += f'reference date: {inps.date_list[inps.ref_idx]}\n' if inps.ref_idx else ''
+    header += f'exclude date: {inps.ex_date_list}\n' if inps.ex_date_list else ''
     header += 'estimated time function parameters:\n'
     for m_str in m_strs:
         header += f'    {m_str}\n'
@@ -616,17 +620,17 @@ def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
 
     # write
     np.savetxt(outName, data, fmt='%s', delimiter='\t', header=header)
-    vprint('save displacement time-series to file: '+outName)
+    print('save displacement time-series to file: '+outName)
 
     # Figure - point time-series
     outName = f'{inps.outfile_base}_ts.pdf'
     inps.fig_pts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-    vprint('save time-series plot to file: '+outName)
+    print('save time-series plot to file: '+outName)
 
     # Figure - map
     outName = f'{inps.outfile_base}_{inps.date_list[inps.idx]}.png'
     inps.fig_img.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-    vprint('save map plot to file: '+outName)
+    print('save map plot to file: '+outName)
     return
 
 
@@ -634,20 +638,17 @@ class timeseriesViewer():
     """Class for tsview.py
 
     Example:
-        cmd = 'tsview.py timeseries_ERA5_ramp_demErr.h5'
-        obj = timeseriesViewer(cmd)
-        obj.configure()
+        from mintpy.cli.tsview import cmd_line_parse
+        from mintpy.tsview import timeseriesViewer
+
+        cmd = 'timeseries.h5 --yx 273 271 --figsize 8 4'
+        inps = cmd_line_parse(cmd.split())
+        obj = timeseriesViewer(inps)
+        obj.open()
         obj.plot()
     """
 
-    def __init__(self, cmd=None, iargs=None):
-        if cmd:
-            iargs = cmd.split()[1:]
-        self.cmd = cmd
-        self.iargs = iargs
-        # print command line
-        if iargs is not None:
-            print(f'{os.path.basename(__file__)} ' + ' '.join(iargs))
+    def __init__(self, inps):
 
         # figure variables
         self.figname_img = 'Cumulative Displacement Map'
@@ -665,21 +666,26 @@ class timeseriesViewer():
         self.fig_pts = None
         self.ax_pts = None
 
-    def configure(self, inps):
-        global vprint
-        vprint = print if inps.print_msg else lambda *args, **kwargs: None
-
-        # matplotlib backend setting
-        if not inps.disp_fig:
-            plt.switch_backend('Agg')
-
-        inps, self.atr = read_init_info(inps)
-
         # copy inps to self object
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
 
-        # input figsize for the point time-series plot
+    def open(self):
+        global vprint
+        vprint = print if self.print_msg else lambda *args, **kwargs: None
+
+        # print command line
+        if self.argv is not None:
+            print(f'{os.path.basename(__file__)} ' + ' '.join(self.argv))
+
+        # matplotlib backend setting
+        if not self.disp_fig:
+            plt.switch_backend('Agg')
+
+        self, self.atr = read_init_info(self)
+
+        # input figsize for the image/point time-series plot
+        self.figsize_img = self.fig_size_img
         self.figsize_pts = self.fig_size
         self.pts_marker = 'r^'
         self.pts_marker_size = 6.
@@ -690,8 +696,13 @@ class timeseriesViewer():
 
         # Figure 1 - Cumulative Displacement Map
         if not self.figsize_img:
+            if self.geo_box and self.fig_coord == 'geo':
+                w, n, e, s = self.geo_box
+                ds_shape = (e - w, n - s)
+            else:
+                ds_shape = self.ts_data[0].shape[-2:]
             self.figsize_img = pp.auto_figure_size(
-                ds_shape=self.ts_data[0].shape[-2:],
+                ds_shape=ds_shape,
                 disp_cbar=True,
                 disp_slider=True,
                 print_msg=False)
@@ -835,7 +846,7 @@ class timeseriesViewer():
         # call view.py to plot
         self.img, self.cbar_img = view.plot_slice(self.ax_img, img_data, self.atr, self)[2:4]
         self.fig_img.canvas.manager.set_window_title(self.figname_img)
-        self.fig_img.tight_layout(rect=(0,0,1,0.97))
+        self.fig_img.tight_layout(rect=(0, 0.16, 1, 0.97))
 
         return self.img, self.cbar_img
 
@@ -843,7 +854,7 @@ class timeseriesViewer():
     def plot_init_time_slider(self, init_idx=-1, ref_idx=None):
         """Plot the initial slider."""
         # initiate axes
-        self.fig_img.subplots_adjust(bottom=0.16)
+        #self.fig_img.subplots_adjust(bottom=0.16)
         self.ax_tslider = self.fig_img.add_axes([0.125, 0.05, 0.75, 0.03])
 
         # plot slider

@@ -171,8 +171,7 @@ def reference_point_attribute(atr, y, x):
     atrNew['REF_X'] = str(x)
     coord = ut.coordinate(atr)
     if 'X_FIRST' in atr.keys():
-        atrNew['REF_LAT'] = str(coord.yx2lalo(y, coord_type='y'))
-        atrNew['REF_LON'] = str(coord.yx2lalo(x, coord_type='x'))
+        atrNew['REF_LAT'], atrNew['REF_LON'] = (str(val) for val in coord.yx2lalo(y, x))
     return atrNew
 
 
@@ -213,7 +212,7 @@ def manual_select_reference_yx(data, inps, mask=None):
                 # plt.close(fig)
             else:
                 print('\nWARNING:')
-                print('The selectd pixel has NaN value in data.')
+                print('The selected pixel has NaN value in data.')
                 print('Try a difference location please.')
 
     fig.canvas.mpl_connect('button_press_event', onclick)

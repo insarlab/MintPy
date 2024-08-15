@@ -24,11 +24,11 @@ def read_template2inps(templateFile, inps):
     keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
     for key in keyList:
         value = template[prefix+key]
-        if value:
-            if key in ['maskFile', 'deramp']:
-                inpsDict[key] = value
-            elif key in ['cutoff']:
-                inpsDict[key] = float(value)
+        # false/none values are valid inputs, thus, should be passed here without an if check
+        if key in ['maskFile', 'deramp']:
+            inpsDict[key] = value
+        elif key in ['cutoff']:
+            inpsDict[key] = float(value)
     return inps
 
 
@@ -89,6 +89,10 @@ def run_timeseries_rms(inps):
     analyze_rms(inps.date_list, inps.rms_list, inps)
 
     # plot RMS
+    if '--figsize' not in inps.argv and len(inps.date_list) > 120:
+        fig_wid = min(15, inps.fig_size[0] * len(inps.date_list) / 120)
+        inps.fig_size[0] = float(f'{fig_wid:.1f}')
+
     pp.plot_timeseries_rms(
         rms_file=inps.rms_file,
         cutoff=inps.cutoff,

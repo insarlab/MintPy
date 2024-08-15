@@ -135,10 +135,10 @@ def usage():
 
    -m min value of the x and y axis of the plot
    -M max value of the x and y axis of the plot
-   -r refernce GPS station
+   -r reference GPS station
    -s second velocity map
    -S source of the GPS data: (usgs,cmm4,mintpy)
-      see documentation for more infromation
+      see documentation for more information
    -I incidence angle (if not given average look angle is used instead)
    -H Heading angle (if not given then the program reads it from the attributes of the velocity file)
 
@@ -299,7 +299,7 @@ def main(argv):
         else:
             print("""
 %%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-       WARNING: nan value for InSAR data at the refernce pixel!
+       WARNING: nan value for InSAR data at the reference pixel!
                 reference station should be a pixel with valid value in InSAR data.
 
                 please select another GPS station as the reference station.

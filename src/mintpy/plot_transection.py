@@ -5,6 +5,8 @@
 ############################################################
 
 
+import os
+
 from matplotlib import pyplot as plt, ticker
 
 from mintpy import view
@@ -13,20 +15,22 @@ from mintpy.utils import plot as pp, readfile, utils as ut
 
 #####################################################################
 class transectionViewer():
-    """class for plot_transection
+    """class for plot_transection.
+
     Example:
+        from mintpy.cli.plot_transection import cmd_line_parse, get_view_cmd
         from mintpy.plot_transection import transectionViewer
-        cmd = 'plot_transection.py velocity.h5 --noverbose --start-yx 10 10 --end-yx 200 300'
-        obj = transectionViewer(cmd)
-        obj.configure()
+
+        cmd = 'velocity.h5 --noverbose --start-yx 10 10 --end-yx 200 300'
+        inps = cmd_line_parse(cmd.split())
+        view_cmd = get_view_cmd(cmd.split())
+        obj = transectionViewer(inps, view_cmd)
+        obj.open()
         obj.plot()
+        obj.fig.canvas.mpl_disconnect(obj.cid)
     """
 
-    def __init__(self, cmd=None, iargs=None):
-        if cmd:
-            iargs = cmd.split()[1:]
-        self.cmd = cmd
-        self.iargs = iargs
+    def __init__(self, inps, view_cmd):
 
         # figure variables
         self.figname = 'Transection'
@@ -37,38 +41,41 @@ class transectionViewer():
         self.img = None
         self.line_ann = None
         self.pts_idx = 0
-        return
 
-    def configure(self, inps, view_cmd):
-        global vprint
-        vprint = print if inps.print_msg else lambda *args, **kwargs: None
-
-        # matplotlib backend setting
-        if not inps.disp_fig:
-            plt.switch_backend('Agg')
+        self.view_cmd = view_cmd
 
         # copy inps to self object
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
 
+
+    def open(self):
+        global vprint
+        vprint = print if self.print_msg else lambda *args, **kwargs: None
+
+        # print command line
+        if self.argv is not None:
+            print(f'{os.path.basename(__file__)} ' + ' '.join(self.argv))
+
+        # matplotlib backend setting
+        if not self.disp_fig:
+            plt.switch_backend('Agg')
+
         # copy inps from view.py to self object
-        self.data_img, atr, inps_view = view.prep_slice(view_cmd)
-        for key, value in inps_view.__dict__.items():
-            setattr(self, key, value)
+        self.data_img, self.atr, view_inps = view.prep_slice(self.view_cmd)
+        for key, value in view_inps.__dict__.items():
+            # do not update the following setting from view.py
+            if key not in ['file', 'dset', 'fig_size']:
+                setattr(self, key, value)
 
         self.offset *= self.disp_scale  # due to unit change from view.prep_slice()
-
-        # do not update the following setting from view.py
-        self.file = inps.file
-        self.dset = inps.dset
-        self.fig_size = inps.fig_size
 
         # auto figure size
         if not self.fig_size:
             length, width = int(self.atr['LENGTH']), int(self.atr['WIDTH'])
             fig_size = pp.auto_figure_size((length, width), disp_cbar=True)
             self.fig_size = [fig_size[0] + fig_size[1], fig_size[1]]
-        return
+
 
     def plot(self):
         # Read data for transection
@@ -161,8 +168,7 @@ class transectionViewer():
 
         # convert coordinates accordingly
         if 'Y_FIRST' in self.atr.keys():
-            ys = self.coord.yx2lalo([start_yx[0], end_yx[0]], coord_type='y')
-            xs = self.coord.yx2lalo([start_yx[1], end_yx[1]], coord_type='x')
+            ys, xs = self.coord.yx2lalo([start_yx[0], end_yx[0]], [start_yx[1], end_yx[1]])
         else:
             ys = [start_yx[0], end_yx[0]]
             xs = [start_yx[1], end_yx[1]]
@@ -214,7 +220,7 @@ class transectionViewer():
                 dist_unit = 'km'
 
             # plot
-            # update distance values by excluding the commonly masked out pixels in the begining
+            # update distance values by excluding the commonly masked out pixels in the beginning
             self.ax_txn.scatter(
                 x=(txn['distance'] - min_dist) * dist_scale,
                 y=txn['value'] - self.offset[i],

@@ -31,7 +31,7 @@ def get_overlap_lalo(atr_list):
     return S, N, W, E
 
 
-def get_design_matrix4east_north_up(los_inc_angle, los_az_angle, obs_direction):
+def get_design_matrix4east_north_up(los_inc_angle, los_az_angle, obs_direction=None):
     """Design matrix G to convert multi-track range/azimuth displacement into east/north/up direction.
     Parameters: los_inc_angle - 1D np.ndarray in size of (num_obs,) in float32, LOS incidence angle in degree
                 los_az_angle  - 1D np.ndarray in size of (num_obs,) in float32, LOS azimuth   angle in degree
@@ -40,6 +40,14 @@ def get_design_matrix4east_north_up(los_inc_angle, los_az_angle, obs_direction):
     """
     num_obs = los_inc_angle.shape[0]
     G = np.zeros((num_obs, 3), dtype=np.float32)
+
+    # obs_direction: default value
+    if not obs_direction:
+        obs_direction = ['range'] * num_obs
+
+    # obs_direction: check var type
+    if not isinstance(obs_direction, (list, np.ndarray)):
+        raise ValueError(f'input obs_direction ({obs_direction}) is NOT a list or numpy.ndarray!')
 
     for i, (inc_angle, az_angle, obs_dir) in enumerate(zip(los_inc_angle, los_az_angle, obs_direction)):
         # calculate the unit vector
@@ -78,7 +86,7 @@ def get_design_matrix4horz_vert(los_inc_angle, los_az_angle, horz_az_angle=-90):
                + dV * cos(inc_angle)
         with dH_perp = 0.0
     This could be easily modified to support multiple view geometry
-        (e.g. two adjcent tracks from asc & desc) to resolve 3D
+        (e.g. two adjacent tracks from asc & desc) to resolve 3D
 
     Parameters: los_inc_angle - 1D np.ndarray in size of (num_file), LOS incidence angle in degree.
                 los_az_angle  - 1D np.ndarray in size of (num_file), LOS azimuth   angle in degree.
@@ -155,7 +163,7 @@ def run_asc_desc2horz_vert(inps):
     Returns:    inps.outfile - str(s) output file(s)
     """
 
-    ## 1. calculate the overlaping area in lat/lon
+    ## 1. calculate the overlapping area in lat/lon
     atr_list = [readfile.read_attribute(fname, datasetName=inps.ds_name) for fname in inps.file]
     S, N, W, E = get_overlap_lalo(atr_list)
     lat_step = float(atr_list[0]['Y_STEP'])
@@ -178,8 +186,7 @@ def run_asc_desc2horz_vert(inps):
     for i, (atr, fname) in enumerate(zip(atr_list, inps.file)):
         # overlap SNWE --> box to read for each specific file
         coord = ut.coordinate(atr)
-        x0 = coord.lalo2yx(W, coord_type='lon')
-        y0 = coord.lalo2yx(N, coord_type='lat')
+        y0, x0 = coord.lalo2yx(N, W)
         box = (x0, y0, x0 + width, y0 + length)
 
         # read data

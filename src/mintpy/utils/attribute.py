@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
+"""Update attributes for operations."""
 #############################################################
 # Program is part of MintPy                                 #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi          #
 # Author: Zhang Yunjun, Dec 2020                            #
 #############################################################
 # Recommend import:
-#     from mintpy.utils import attribute as attr
+#   from mintpy.utils import attribute as attr
 
 
 import warnings
@@ -231,7 +231,7 @@ def update_attribute4subset(atr_in, subset_box, print_msg=True):
     atr['XMAX'] = str(sub_x[1]-sub_x[0] - 1)
     vprint('update LENGTH, WIDTH, Y/XMAX')
 
-    # Subset atribute
+    # Subset attribute
     atr['SUBSET_YMAX'] = str(sub_y[1] + int(atr_in.get('SUBSET_YMIN', '0')))
     atr['SUBSET_YMIN'] = str(sub_y[0] + int(atr_in.get('SUBSET_YMIN', '0')))
     atr['SUBSET_XMAX'] = str(sub_x[1] + int(atr_in.get('SUBSET_XMIN', '0')))

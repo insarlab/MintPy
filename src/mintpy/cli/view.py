@@ -19,9 +19,10 @@ EXAMPLE = """example:
   view.py velocity.h5 velocity --wrap --wrap-range -2 2 -c cmy --lalo-label
   view.py velocity.h5 --ref-yx  210 566                              #change reference pixel for display
   view.py velocity.h5 --sub-lat 31.05 31.10 --sub-lon 130.05 130.10  #subset in lalo / yx
+  view.py velocity.h5 velocity --mask waterBody.h5 --mask-vmax 1
+  view.py velocity.h5 velocity --style scatter --scatter-size 12
 
   view.py timeseries.h5
-  view.py timeseries.h5 -m no                   #do not use auto mask
   view.py timeseries.h5 --ref-date 20101120     #change reference date
   view.py timeseries.h5 --ex drop_date.txt      #exclude dates to plot
   view.py timeseries.h5 '*2017*' '*2018*'       #all acquisitions in 2017 and 2018
@@ -32,13 +33,15 @@ EXAMPLE = """example:
   view.py ifgramStack.h5 -n 6                   #the 6th slice
   view.py ifgramStack.h5 20171010_20171115      #all data      related with 20171010_20171115
   view.py ifgramStack.h5 'coherence*20171010*'  #all coherence related with 20171010
-  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap     #wrapped phase
-  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --mask ifgramStack.h5  #mask using connected components
 
-  # GPS (for one subplot in geo-coordinates only)
-  view.py geo_velocity_msk.h5 velocity --show-gps --gps-label   #show locations of available GPS
-  view.py geo_velocity_msk.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
-  view.py geo_timeseries_ERA5_ramp_demErr.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
+  # GNSS (for one subplot in geo-coordinates only)
+  view.py geo_velocity_msk.h5 velocity --show-gnss --gnss-label   #show locations of available GPS
+  view.py geo_velocity_msk.h5 velocity --show-gnss --gnss-comp enu2los --ref-gnss GV01
+  view.py geo_velocity_msk.h5 velocity --show-gnss --gnss-comp enu2los --ref-gnss GV01 --gnss-source ESESES
+  view.py geo_timeseries_ERA5_ramp_demErr.h5 20180619 --ref-date 20141213 --show-gnss --gnss-comp enu2los --ref-gnss GV01
+
+  # Faults
+  view.py filt_dense_offsets.bil range --faultline simple_fault_confident.lonlat
 
   # Save and Output
   view.py velocity.h5 --save
@@ -81,7 +84,7 @@ def create_parser(subparsers=None):
     parser = arg_utils.add_data_disp_argument(parser)
     parser = arg_utils.add_dem_argument(parser)
     parser = arg_utils.add_figure_argument(parser)
-    parser = arg_utils.add_gps_argument(parser)
+    parser = arg_utils.add_gnss_argument(parser)
     parser = arg_utils.add_mask_argument(parser)
     parser = arg_utils.add_map_argument(parser)
     parser = arg_utils.add_memory_argument(parser)
@@ -142,8 +145,17 @@ def cmd_line_parse(iargs=None):
     if inps.flip_lr or inps.flip_ud:
         inps.auto_flip = False
 
+    if inps.disp_dem_blend:
+        inps.disp_dem_shade = False
+        # --dem-blend option requires --dem option
+        if inps.dem_file is None:
+            parser.error("--dem-blend requires -d/-dem.")
+        # --cbar-ext option is ignored
+        if '--cbar-ext' in inps.argv:
+            print('WARNING: --cbar-ext is NOT compatible with --dem-blend, ignore --cbar-ext and continue.')
+
     # check: conflicted options (geo-only options if inpput file is in radar-coordinates)
-    geo_opt_names = ['--coord', '--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar']
+    geo_opt_names = ['--coord', '--show-gnss', '--coastline', '--lalo-label', '--lalo-step', '--scalebar', '--faultline']
     geo_opt_names = list(set(geo_opt_names) & set(inps.argv))
     if geo_opt_names and 'Y_FIRST' not in readfile.read_attribute(inps.file).keys():
         for opt_name in geo_opt_names:

@@ -5,7 +5,7 @@ MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Mar
 `save_kmz_timeseries.py` takes 3D displacement time-series file and outputs a KMZ file with interactive time-seires plot.
 
 <p align="center">
-  <img src="https://yunjunzhang.files.wordpress.com/2019/02/fernandinasendt128_ge-1.png">
+  <img src="https://insarlab.github.io/figs/docs/mintpy/GoogleEarth-FernandinaSenD128-TS.jpg">
 </p>
 
 [Download KMZ file](https://miami.box.com/v/FernandinaSenDT128TS)
@@ -15,7 +15,7 @@ MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Mar
 `save_kmz.py` takes any 2D matrix and outputs a KMZ file with a overlay image.
 
 <p align="center">
-  <img src="https://yunjunzhang.files.wordpress.com/2019/02/vel_fernandinasendt128_ge.png">
+  <img src="https://insarlab.github.io/figs/docs/mintpy/GoogleEarth-FernandinaSenD128-VEL.jpg">
 </p>
 
 [Download KMZ file](https://miami.box.com/v/FernandinaSenDT128VEL)
@@ -26,7 +26,7 @@ save_kmz_timeseries.py embeds a [dygraphs](http://dygraphs.com) javascript for i
 
 The script also use the [regions KML feature](https://developers.google.com/kml/documentation/regions) to support very large datasets without sacrificing resolution. It divides the data matrix into regionalized boxes, nests them using network links so that Google Earth could load them in a "smart" way.
 
-**Alert: for very large datasets, the default settings are not generic due to the various computer memories, data sizes and different prefered details. The user is highly recommended to read the following to understand how the regions feature works and adjust parameters accordingly.**
+**Alert: for very large datasets, the default settings are not generic due to the various computer memories, data sizes and different preferred details. The user is highly recommended to read the following to understand how the regions feature works and adjust parameters accordingly.**
 
 1. Level of Detail (LOD)
 
@@ -35,7 +35,7 @@ The script samples the input 3D dataset at 3 levels of details by default (`--st
 The low- and moderate-resolution LODs cover the entire region, while the high-resolution LOD covers only the actively deforming regions. These regions (red boxes below) are currently identified as boxes having >20% pixels with velocity magnitude > the global velocity median absolute deviation (`mintpy.save_kmz_timeseries.get_boxes4deforming_area`).
 
 <p align="center">
-  <img src="https://yunjunzhang.files.wordpress.com/2020/03/defo_area.png">
+  <img src="https://insarlab.github.io/figs/docs/mintpy/GoogleEarth-FernandinaSenD128-defoArea.png">
 </p>
 
 2. Region-based Network Links

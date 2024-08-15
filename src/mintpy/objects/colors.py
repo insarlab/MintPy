@@ -1,3 +1,4 @@
+"""Class wrapped around matplotlib.colors for colormaps."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -386,7 +387,7 @@ class ColormapExt(ScalarMappable):
         cdict = cmap._segmentdata
         step_dict = {}
 
-        # Firt get the list of points where the segments start or end
+        # First get the list of points where the segments start or end
         for key in ('red', 'green', 'blue'):
             step_dict[key] = list(map(lambda x: x[0], cdict[key]))
         step_list = sum(step_dict.values(), [])

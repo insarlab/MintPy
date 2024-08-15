@@ -16,10 +16,13 @@ from mintpy.utils import arg_utils
 TEMPLATE = get_template_content('velocity')
 
 REFERENCE = """references:
-  Fattahi, H., and F. Amelung (2015), InSAR bias and uncertainty due to the systematic and stochastic
-    tropospheric delay, J. Geophy. Res. Solid Earth, 120(12), 8758-8773, doi:10.1002/2015JB012419.
   Efron, B., and R. Tibshirani (1986), Bootstrap methods for standard errors, confidence intervals,
     and other measures of statistical accuracy, Statistical Science, 54-75, doi:10.1214/ss/1177013815.
+  Fattahi, H., and F. Amelung (2015), InSAR bias and uncertainty due to the systematic and stochastic
+    tropospheric delay, J. Geophy. Res. Solid Earth, 120(12), 8758-8773, doi:10.1002/2015JB012419.
+  Hetland, E., Musé, P., Simons, M., Lin, Y., Agram, P., & DiCaprio, C. (2012). Multiscale InSAR time
+    series (MInTS) analysis of surface deformation. Journal of Geophysical Research: Solid Earth,
+    117(B2), doi:10.1029/2011JB008731
 """
 
 EXAMPLE = """example:
@@ -33,6 +36,7 @@ EXAMPLE = """example:
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --exp 20170910 90
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --log 20170910 60.4
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --log 20170910 60.4 200 --log 20171026 200.7
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --polyline 20190101 20200501
 
   # uncertainty quantification of the estimated time functions
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq residue
@@ -85,7 +89,10 @@ def create_parser(subparsers=None):
     uq = parser.add_argument_group('Uncertainty quantification (UQ)', 'Estimating the time function parameters STD')
     uq.add_argument('--uq', '--uncertainty', dest='uncertaintyQuantification', metavar='VAL',
                     default='residue', choices={'residue', 'covariance', 'bootstrap'},
-                    help='Uncertainty quantification method (default: %(default)s).')
+                    help='Uncertainty quantification method (default: %(default)s).\n'
+                         'residue    - STD from time series fitting residue (Fattahi & Amelung, 2015)\n'
+                         'covariance - STD from time series covariance\n'
+                         'bootstrap  - STD from bootstrap resampling (Efron & Tibshirani, 1986)')
     uq.add_argument('--ts-cov','--ts-cov-file', dest='timeSeriesCovFile',
                     help='4D time-series (co)variance file for time function STD calculation')
     uq.add_argument('--bc', '--bootstrap-count', dest='bootstrapCount', type=int, default=400,
@@ -154,6 +161,16 @@ def cmd_line_parse(iargs=None):
             inps.ref_yx = [ref_y, ref_x]
             print(f'input reference point in (lat, lon): ({inps.ref_lalo[0]}, {inps.ref_lalo[1]})')
             print(f'corresponding   point in (y, x): ({inps.ref_yx[0]}, {inps.ref_yx[1]})')
+
+    # check: --poly-order / --polyline option
+    if inps.polynomial < 0:
+        raise ValueError(f'--polynomial ({inps.polynomial}) can NOT be smaller than zero!')
+    if inps.polyline and inps.polynomial == 0:
+        raise ValueError('--polyline is NOT supported when --polynomial is zero!')
+
+    # default: sort --step / --polyline option
+    inps.stepDate = sorted(inps.stepDate)
+    inps.polyline = sorted(inps.polyline)
 
     # default: --output option
     if not inps.outfile:

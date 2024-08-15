@@ -43,7 +43,7 @@ def create_parser(subparsers=None):
     parser.add_argument('-f', dest='filter_type', default='lowpass_gaussian',
                         choices=['lowpass_gaussian', 'highpass_gaussian',
                                  'lowpass_avg', 'highpass_avg',
-                                 'sobel', 'roberts', 'canny', 'double_difference'],
+                                 'sobel', 'roberts', 'canny', 'double_difference', 'median'],
                         help='Filter type (default: %(default)s).\n' +
                              'Check Bekaert et al. (2020) for double_difference;\n' +
                              'Check scikit-image as below for the other filters:\n' +
@@ -52,7 +52,8 @@ def create_parser(subparsers=None):
                         help='Filter parameters for filters. Default:\n' +
                              '    Sigma         for low/high pass gaussian filter, default: 3.0\n' +
                              '    Kernel Size   for low/high pass average  filter, default: 5\n' +
-                             '    Kernel Radius for double difference local and regional filters, default: 1 10\n')
+                             '    Kernel Radius for double difference local and regional filters, default: 1 10\n'+
+                             '    Kernel Radius for median filters, default: 5\n')
     parser.add_argument('-o', '--outfile',default=None, help='Output file name.')
     return parser
 

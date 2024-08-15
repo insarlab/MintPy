@@ -49,12 +49,13 @@ def gather_files(ts_file, geom_file):
 
     #Can also add DEM Error here: corrected_DEM = DEM + DEM_error
     ts_dir = os.path.dirname(ts_file)
-    fDict = { 'TimeSeries' : ts_file,
-              'Velocity'   : os.path.join(ts_dir, vel_file),
-              'Coherence'  : os.path.join(ts_dir, coh_file),
-              'Mask'       : os.path.join(ts_dir, msk_file),
-              'Geometry'   : geom_file,
-            }
+    fDict = {
+        'TimeSeries' : ts_file,
+        'Velocity'   : os.path.join(ts_dir, vel_file),
+        'Coherence'  : os.path.join(ts_dir, coh_file),
+        'Mask'       : os.path.join(ts_dir, msk_file),
+        'Geometry'   : geom_file,
+    }
 
     #Check if the files exists.
     for fname in fDict.values():
@@ -62,7 +63,7 @@ def gather_files(ts_file, geom_file):
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), fname)
 
     for key, value in fDict.items():
-        print(f'{key:<12}: {value}')
+        print(f'{key:<10}: {value}')
     return fDict
 
 
@@ -86,13 +87,14 @@ def read_bounding_box(pix_box, geo_box, geom_file):
     return pix_box
 
 
-def write_shape_file(fDict, shp_file, box=None):
+def write_shape_file(fDict, shp_file, box=None, zero_first=False):
     '''Write time-series data to a shape file
 
-    Parameters: fDict    - dict, with value for path of data files
-                shp_file - str, output filename
-                box      - tuple of 4 int, in (x0, y0, x1, y1)
-    Returns:    shp_file - str, output filename
+    Parameters: fDict      - dict, with value for path of data files
+                shp_file   - str, output filename
+                box        - tuple of 4 int, in (x0, y0, x1, y1)
+                zero_first - bool, set displacement at 1st acquisition to zero
+    Returns:    shp_file   - str, output filename
     '''
 
     shpDriver = ogr.GetDriverByName("ESRI Shapefile")
@@ -161,6 +163,8 @@ def write_shape_file(fDict, shp_file, box=None):
     mask = readfile.read(fDict['Mask'], box=box)[0]
     nValid = np.sum(mask != 0)
     print('number of points with time-series:', nValid)
+    if zero_first:
+        print('set displacement at the first acquisition to zero.')
 
     lats, lons = ut.get_lat_lon(ts_obj.metadata, geom_file=fDict['Geometry'], box=box)
 
@@ -183,6 +187,9 @@ def write_shape_file(fDict, shp_file, box=None):
 
                         # read data for the line
                         ts = tsid['timeseries'][:, line, box[0]:box[2]].astype(np.float64)
+                        if zero_first:
+                            ts -= np.tile(ts[0, :], (ts.shape[0], 1))
+
                         coh = cohid['temporalCoherence'][line, box[0]:box[2]].astype(np.float64)
                         vel = velid['velocity'][line, box[0]:box[2]].astype(np.float64)
                         vel_std = velid['velocityStd'][line, box[0]:box[2]].astype(np.float64)
@@ -214,7 +221,7 @@ def write_shape_file(fDict, shp_file, box=None):
 
                             # update counter / progress bar
                             counter += 1
-                            prog_bar.update(counter, every=100, suffix=f'{counter}/{nValid}')
+                            prog_bar.update(counter, every=100, suffix=f'line {counter}/{nValid}')
                     prog_bar.close()
 
     print(f'finished writing to file: {shp_file}')
@@ -235,6 +242,6 @@ def save_qgis(inps):
     fDict = gather_files(inps.ts_file, inps.geom_file)
 
     # Write shape file
-    write_shape_file(fDict, inps.shp_file, box=box)
+    write_shape_file(fDict, inps.shp_file, box=box, zero_first=inps.zero_first)
 
     return

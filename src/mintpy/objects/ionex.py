@@ -1,14 +1,14 @@
-#!/usr/bin/env python3
+"""Utilities for IONEX products."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Jun 2022                           #
 ############################################################
+# Recommend import:
+#   from mintpy.objects import ionex
 # Links:
 #   IGS (NASA): https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/atmospheric_products.html
 #   IMPC (DLR): https://impc.dlr.de/products/total-electron-content/near-real-time-tec/near-real-time-tec-maps-global
-# Recommend import:
-#   from mintpy.objects import ionex
 
 
 import datetime as dt
@@ -16,7 +16,7 @@ import os
 import re
 
 import numpy as np
-from scipy import interpolate
+from scipy.interpolate import RegularGridInterpolator, interpn
 
 from mintpy.utils import ptime
 
@@ -139,8 +139,8 @@ def interp_3d_maps(tec_maps, mins, lats, lons, utc_min, lat, lon, interp_method=
         ind1 = ind0 + 1
         lon0 = lon + (utc_min - mins[ind0]) * 360. / (24. * 60.)
         lon1 = lon + (utc_min - mins[ind1]) * 360. / (24. * 60.)
-        tec_val0 = interpfs[ind0](lon0, lat)
-        tec_val1 = interpfs[ind1](lon1, lat)
+        tec_val0 = interpfs[ind0]((lon0, lat))
+        tec_val1 = interpfs[ind1]((lon1, lat))
         tec_val = (  (mins[ind1] - utc_min) / (mins[ind1] - mins[ind0]) * tec_val0
                    + (utc_min - mins[ind0]) / (mins[ind1] - mins[ind0]) * tec_val1 )
         return tec_val
@@ -160,28 +160,26 @@ def interp_3d_maps(tec_maps, mins, lats, lons, utc_min, lat, lon, interp_method=
             tec_val = np.zeros(num_pts, dtype=np.float32)
             prog_bar = ptime.progressBar(maxValue=num_pts, print_msg=print_msg)
             for i in range(num_pts):
-                tec_val[i] = interpolate.interp2d(
-                    x=lons,
-                    y=lats,
-                    z=tec_maps[time_ind[i], :, :],
-                    kind='linear',
-                )(lon[i], lat[i])
+                tec_val[i] = RegularGridInterpolator(
+                    points=(lons, lats),
+                    values=tec_maps[time_ind[i], :, :].T,
+                    method='linear',
+                )((lon[i], lat[i]))
 
                 prog_bar.update(i+1, every=200)
             prog_bar.close()
 
         else:
-            tec_val = interpolate.interp2d(
-                x=lons,
-                y=lats,
-                z=tec_maps[time_ind[0], :, :],
-                kind='linear',
-            )(lon, lat)
+            tec_val = RegularGridInterpolator(
+                points=(lons, lats),
+                values=tec_maps[time_ind[0], :, :].T,
+                method='linear',
+            )((lon, lat))
 
     elif interp_method in ['linear3d', 'trilinear']:
         if not rotate_tec_map:
             # option 1: interpolate between consecutive TEC maps
-            tec_val = interpolate.interpn(
+            tec_val = interpn(
                 points=(mins, np.flip(lats), lons),
                 values=np.flip(tec_maps, axis=1),
                 xi=(utc_min, lat, lon),
@@ -196,14 +194,14 @@ def interp_3d_maps(tec_maps, mins, lats, lons, utc_min, lat, lon, interp_method=
             interpfs = []
             for i in range(len(mins)):
                 interpfs.append(
-                    interpolate.interp2d(
-                        x=lons,
-                        y=lats,
-                        z=tec_maps[i, :, :],
-                        kind='linear',
+                    RegularGridInterpolator(
+                        points=(lons, lats),
+                        values=tec_maps[i, :, :].T,
+                        method='linear',
                     ),
                 )
 
+            # interpolate
             if isinstance(utc_min, np.ndarray):
                 num_pts = len(utc_min)
                 tec_val = np.zeros(num_pts, dtype=np.float32)
@@ -222,7 +220,7 @@ def interp_3d_maps(tec_maps, mins, lats, lons, utc_min, lat, lon, interp_method=
                     interpfs,
                     mins, lats, lons,
                     utc_min, lat, lon,
-                )[0]
+                )
 
     else:
         msg = f'Un-recognized interp_method input: {interp_method}!'

@@ -57,7 +57,7 @@ class TimeSeriesAnalysis:
         self.cwd = os.path.abspath(os.getcwd())
 
     def open(self):
-        """The starting point of the workflow. It runs everytime.
+        """The starting point of the workflow. It runs every time.
         It 1) grab project name if given
            2) go to work directory
            3) get and read template(s) options
@@ -117,7 +117,7 @@ class TimeSeriesAnalysis:
             print('update default template based on input custom template')
             self.templateFile = ut.update_template_file(self.templateFile, self.customTemplate)
 
-        # 2) backup custome/default template file in inputs/pic folder
+        # 2) backup custom/default template file in inputs/pic folder
         flen = len(os.path.basename(self.templateFile))
         if self.customTemplateFile:
             flen = max(flen, len(os.path.basename(self.customTemplateFile)))
@@ -186,7 +186,7 @@ class TimeSeriesAnalysis:
             # use ut.add_attribute() instead of add_attribute.py because of
             # better control of special metadata, such as SUBSET_X/YMIN
             msg = f'updating metadata based on custom template file {os.path.basename(self.customTemplateFile)}'
-            for fname in [stack_file, ion_file, geom_file]:
+            for fname in [stack_file, ion_file]:  #, geom_file]:
                 if fname:
                     print(f'{msg} for file: {os.path.basename(fname)}')
                     ut.add_attribute(fname, self.customTemplate)
@@ -217,8 +217,8 @@ class TimeSeriesAnalysis:
         # 1) output waterMask.h5 to simplify the detection/use of waterMask
         water_mask_file = os.path.join(self.workDir, 'waterMask.h5')
         if 'waterMask' in readfile.get_dataset_list(geom_file):
-            print(f'generate {water_mask_file} from {geom_file} for conveniency')
             if ut.run_or_skip(out_file=water_mask_file, in_file=geom_file) == 'run':
+                print(f'generate {water_mask_file} from {geom_file} for conveniency')
                 water_mask, atr = readfile.read(geom_file, datasetName='waterMask')
 
                 # ignore no-data pixels in geometry files
@@ -460,11 +460,14 @@ class TimeSeriesAnalysis:
         fname1 = os.path.join(work_dir, 'timeseries.h5')
         atr = readfile.read_attribute(fname0)
 
-        phase_correction_steps = ['correct_LOD',
-                                  'correct_SET',
-                                  'correct_troposphere',
-                                  'deramp',
-                                  'correct_topography']
+        phase_correction_steps = [
+            'correct_LOD',
+            'correct_SET',
+            'correct_ionosphere',
+            'correct_troposphere',
+            'deramp',
+            'correct_topography',
+        ]
 
         # loop for all steps
         steps = dict()
@@ -479,6 +482,15 @@ class TimeSeriesAnalysis:
                 method = template['mintpy.solidEarthTides']
                 if method:
                     fname1 = f'{os.path.splitext(fname0)[0]}_SET.h5'
+
+            elif sname == 'correct_ionosphere':
+                method = template['mintpy.ionosphericDelay.method']
+                if method:
+                    if method == 'split_spectrum':
+                        fname1 = f'{os.path.splitext(fname0)[0]}_ion.h5'
+                    else:
+                        msg = f'un-recognized ionospheric correction method: {method}'
+                        raise ValueError(msg)
 
             elif sname == 'correct_troposphere':
                 method = template['mintpy.troposphericDelay.method']
@@ -577,6 +589,28 @@ class TimeSeriesAnalysis:
                 mintpy.cli.solid_earth_tides.main(iargs)
         else:
             print('No solid Earth tides correction.')
+
+
+    def run_ionospheric_delay_correction(self, step_name):
+        """Correct ionospheric delays."""
+        iono_stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[3]
+
+        fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        if in_file != out_file:
+            method = self.template['mintpy.ionosphericDelay.method']
+
+            # range split spectrum (Fattahi et al., 2017; Liang et al. 2018; 2019)
+            if method == 'split_spectrum':
+                print(f'ionospheric delay correction with {method} approach')
+                iargs = ['-t', self.templateFile, '-f', in_file, '-o', out_file,
+                         '--iono-stack-file', iono_stack_file]
+                print('\niono_split_spectrum.py', ' '.join(iargs))
+                import mintpy.cli.iono_split_spectrum
+                mintpy.cli.iono_split_spectrum.main(iargs)
+        else:
+            print('No ionospheric delay correction.')
 
 
     def run_tropospheric_delay_correction(self, step_name):
@@ -894,6 +928,9 @@ class TimeSeriesAnalysis:
             elif sname == 'correct_SET':
                 self.run_solid_earth_tides_correction(sname)
 
+            elif sname == 'correct_ionosphere':
+                self.run_ionospheric_delay_correction(sname)
+
             elif sname == 'correct_troposphere':
                 self.run_tropospheric_delay_correction(sname)
 
@@ -996,6 +1033,7 @@ class TimeSeriesAnalysis:
 
         if ion_file:
             iargs_list0 += [
+                [ion_file, 'unwrapPhase-', '--zero-mask', '--wrap', '-c', 'cmy'],
                 [ion_file, 'unwrapPhase-', '--zero-mask'],
                 [ion_file, 'coherence-',   '--mask', 'no', '-v', '0', '1'],
             ]
@@ -1081,15 +1119,15 @@ class TimeSeriesAnalysis:
 
         # message for more visualization scripts
         msg = """Explore more info & visualization options with the following scripts:
-        info.py                    #check HDF5 file structure and metadata
-        view.py                    #2D map view
-        tsview.py                  #1D point time-series (interactive)
-        transect.py                #1D profile (interactive)
-        plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
-        plot_network.py            #plot network configuration of the dataset
-        plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
-        save_kmz.py                #generate Google Earth KMZ file in raster image
-        save_kmz_timeseries.py     #generate Google Earth KMZ file in points for time-series (interactive)
+        info.py                    # check HDF5 file structure and metadata
+        view.py                    # 2D map view
+        tsview.py                  # 1D point time-series (interactive)
+        transect.py                # 1D profile (interactive)
+        plot_coherence_matrix.py   # plot coherence matrix for one pixel (interactive)
+        plot_network.py            # plot network configuration of the dataset
+        plot_transection.py        # plot 1D profile along a line of a 2D matrix (interactive)
+        save_kmz.py                # generate Google Earth KMZ file in raster image
+        save_kmz_timeseries.py     # generate Google Earth KMZ file in points for time-series (interactive)
         """
         if print_aux:
             print(msg)

@@ -86,8 +86,8 @@ E.g. S1_IW12_128_0593_0597_20141213_20170928.he5
 
 ### 4. Web Viewer ###
 
-HDF-EOS5 file format is used as the input of the University of Miami's web viewer for InSAR time-series products. Below is a screenshot of the web viewer for the dataset on Kuju volcano from ALOS-1 acending track 422.
+HDF-EOS5 file format is used as the input of the University of Miami's web viewer for InSAR time-series products. Below is a screenshot of the web viewer for the dataset on Kuju volcano from ALOS-1 ascending track 422.
 
 <p align="center"><b>http://insarmaps.miami.edu</b><br></p>
 
-[![InSAR Web Viewer](https://yunjunzhang.files.wordpress.com/2019/06/web_viewer_kujualosat422.png)](http://insarmaps.miami.edu/)
+[![InSAR Web Viewer](https://insarlab.github.io/figs/docs/mintpy/insarmaps-KujuAlosA422.png)](http://insarmaps.miami.edu/)

@@ -1,3 +1,4 @@
+"""Utilities for date/time operations."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -59,6 +60,9 @@ def get_date_str_format(date_str):
 
     elif len(re.findall(r'\d{4}-\d{2}-\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%d'
+
+    elif len(re.findall(r'\d{8}:\d{6}', date_str)) > 0:
+        date_str_format = '%Y%m%d:%H%M%S'
 
     elif len(re.findall(r'\d{8}T\d{6}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M%S'
@@ -230,6 +234,29 @@ def yymmdd2yyyymmdd(date):
     else:
         date = '20'+date
     return date
+
+
+def yyyyddd2yyyymmdd(date_in):
+    """Convert GMTSAR folder name in YYYYDDD into YYYYMMDD.
+    Parameters: date_in  - str/list, GMTSAR date format in YYYYDDD, where DDD is the day of year - 1
+    Returns:    date_out - str/list, date in YYYYMMDD format
+    """
+    if isinstance(date_in, str):
+        year, doy = date_in[:4], date_in[-3:]
+        dt_obj = dt.datetime(int(year), 1, 1) + dt.timedelta(days=int(doy))
+        date_out = dt_obj.strftime('%Y%m%d')
+
+    elif isinstance(date_in, list):
+        date_out = []
+        for date_str in date_in:
+            year, doy = date_str[:4], date_str[-3:]
+            dt_obj = dt.datetime(int(year), 1, 1) + dt.timedelta(days=int(doy))
+            date_out.append(dt_obj.strftime('%Y%m%d'))
+
+    else:
+        return None
+
+    return date_out
 
 
 def yy2yyyy(year):
@@ -419,41 +446,53 @@ def get_exclude_date_list(date_list, start_date=None, end_date=None, exclude_dat
 
 
 ################################################################
-def date_list2tbase(date_list):
+def date_list2tbase(date_list, ref_date=None):
     """Get temporal Baseline in days with respect to the 1st date
-    Parameters: date_list - list of string, date in YYYYMMDD or YYMMDD format
-    Returns:    tbase     - list of int, temporal baseline in days
+    Parameters: date_list - list(str), date in YYYYMMDD or YYMMDD format
+                ref_date  - str, reference date in YYYYMMDD format
+    Returns:    tbase     - list(int), temporal baseline in days
                 dateDict  - dict with key   - string, date in YYYYMMDD format
                                       value - int, temporal baseline in days
     """
-    # date str to dt object
     date_list = yyyymmdd(date_list)
-    date_format = get_date_str_format(str(date_list))
-    dates = [dt.datetime.strptime(i, date_format) for i in date_list]
+    ref_date = ref_date if ref_date else date_list[0]
+    ref_date = yyyymmdd(ref_date)
 
-    # dt object to time difference in days
+    # date str to dt object
+    dt_fmt = get_date_str_format(str(date_list))
+    dt_list = [dt.datetime.strptime(i, dt_fmt) for i in date_list]
+    ref_dt = dt.datetime.strptime(ref_date, get_date_str_format(ref_date))
+
+    # list: dt object to time difference in days
     tbase = []
-    for date in dates:
-        date_delta = date - dates[0]
-        tbase_i = date_delta.days + date_delta.seconds / (24 * 60 * 60)
-        tbase.append(tbase_i)
+    for dt_i in dt_list:
+        delta_dt = dt_i - ref_dt
+        tbase.append(delta_dt.days + delta_dt.seconds / (24 * 60 * 60))
 
-    # Dictionary: key - date, value - temporal baseline
+    # dict: key - date, value - temporal baseline
     dateDict = {}
     for i, date_str in enumerate(date_list):
         dateDict[date_str] = tbase[i]
     return tbase, dateDict
 
 
-def date_list2vector(date_list):
+def date_list2vector(date_list, seconds=0):
     """Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
+
     Parameters: date_list  - list of string, date in YYYYMMDD or YYMMDD format
+                seconds    - float, float or str, acquisition time of the day info in seconds.
     Returns:    dates      - list of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
                 datevector - list of float, years, i.e. 2010.8020547945205
     """
     date_list = yyyymmdd(date_list)
     date_format = get_date_str_format(str(date_list))
     dates = [dt.datetime.strptime(i, date_format) for i in date_list]
+
+    # add time of the day info if:
+    # 1) seconds arg is valid AND
+    # 2) no time info from dates arg
+    if seconds and 'T' not in date_format:
+        dates = [x + dt.timedelta(seconds=float(seconds)) for x in dates]
 
     # date in year - float format
     datevector = []

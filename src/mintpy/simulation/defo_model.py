@@ -1,11 +1,12 @@
+"""Forward deformation models."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
-# Recommended usage:
+# Recommend usage:
+#   from mintpy.simulation import defo_model as defo
 #   from mintpy.simulation import simulation as sim
-#   OR from mintpy.simulation import defo_model as defo
 
 
 import numpy as np

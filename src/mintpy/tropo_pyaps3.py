@@ -5,6 +5,7 @@
 ############################################################
 
 
+import glob
 import os
 import re
 from configparser import ConfigParser
@@ -13,6 +14,7 @@ import h5py
 import numpy as np
 import pyaps3 as pa
 
+import mintpy.cli.diff
 from mintpy.objects import geometry, timeseries
 from mintpy.utils import ptime, readfile, utils as ut, writefile
 
@@ -86,6 +88,56 @@ def get_grib_info(inps):
         inps.snwe
         inps.grib_files
     """
+    # utils sub-functions
+    def snwe_str2num(snwe_str):
+        snwe = snwe_str.split('_')
+        snwe = [x.replace('S','-').replace('N','').replace('W','-').replace('E','') for x in snwe]
+        snwe = [int(x) for x in snwe]
+        return snwe
+
+    def snwe1_contains_snwe2(snwe1, snwe2):
+        s1, n1, w1, e1 = snwe1
+        s2, n2, w2, e2 = snwe2
+        if s1 <= s2 and n1 >= n2 and w1 <= w2 and e1 >= e2:
+            return True
+        else:
+            return False
+
+    def get_larger_snwe_in_local_files(gfile):
+        # default output
+        larger_snwe = None
+
+        # 0. input grib file info
+        gdir = os.path.dirname(gfile)
+        gparts = os.path.basename(gfile).split('_')
+        # ignore grib files in global scale
+        if len(gparts) < 7:
+            return larger_snwe
+        snwe_str = '_'.join(gparts[1:5])
+        snwe = snwe_str2num(snwe_str)
+        suffix = os.path.basename(gfile).split(snwe_str)[1]
+
+        # 1. find candidate snwe in local files
+        cand_gfiles = glob.glob(os.path.join(gdir, f'*{suffix}'))
+        # ignore grib files in global scale
+        cand_gfiles = [x for x in cand_gfiles if len(os.path.basename(x).split('_')) >= 7]
+        if len(cand_gfiles) > 0:
+            cand_snwe_str_list = ['_'.join(os.path.basename(x).split('_')[1:5]) for x in cand_gfiles]
+            cand_snwe_list = [snwe_str2num(x) for x in cand_snwe_str_list]
+
+            # 2. find candidate snwe that contains the input snwe, i.e. larger_snwe
+            larger_snwe_list = []
+            for cand_snwe in cand_snwe_list:
+                if snwe1_contains_snwe2(cand_snwe, snwe):
+                    larger_snwe_list.append(cand_snwe)
+
+            # 3. locate the larger_snwe with the most existing files
+            if len(larger_snwe_list) > 0:
+                num_file_list = [len(glob.glob(os.path.join(gdir, f'*{x}*{suffix}'))) for x in larger_snwe_list]
+                larger_snwe = larger_snwe_list[np.argmax(num_file_list)]
+
+        return larger_snwe
+
     # grib data directory, under weather_dir
     inps.grib_dir = os.path.join(inps.weather_dir, inps.tropo_model)
     if not os.path.isdir(inps.grib_dir):
@@ -101,10 +153,7 @@ def get_grib_info(inps):
         inps.atr = dict()
 
     # area extent for ERA5 grib data download
-    if inps.atr:
-        inps.snwe = get_snwe(inps.atr, geom_file=inps.geom_file)
-    else:
-        inps.snwe = None
+    inps.snwe = get_snwe(inps.atr, geom_file=inps.geom_file) if inps.atr else None
 
     # grib file list
     inps.grib_files = get_grib_filenames(
@@ -113,6 +162,25 @@ def get_grib_info(inps):
         model=inps.tropo_model,
         grib_dir=inps.grib_dir,
         snwe=inps.snwe)
+
+    # check existing local files (with the same grib source and time) with larger area extent
+    larger_snwe = get_larger_snwe_in_local_files(inps.grib_files[0])
+    if larger_snwe is not None:
+        larger_grib_files = get_grib_filenames(
+            date_list=inps.date_list,
+            hour=inps.hour,
+            model=inps.tropo_model,
+            grib_dir=inps.grib_dir,
+            snwe=larger_snwe)
+
+        # use the larger grib file if more local files exist than the current snwe
+        #   to avoid re-downloading as much as possible
+        grib_files_exist = check_exist_grib_file(inps.grib_files, print_msg=False)
+        larger_grib_files_exist = check_exist_grib_file(larger_grib_files, print_msg=False)
+        if len(larger_grib_files_exist) > len(grib_files_exist):
+            print('Sweet! Find more local grib files with larger SNWE extent, use the larger SNWE instead.')
+            inps.snwe = larger_snwe
+            inps.grib_files = larger_grib_files
 
     return inps
 
@@ -127,6 +195,18 @@ def get_grib_filenames(date_list, hour, model, grib_dir, snwe=None):
     Returns:    grib_files - list of str, local grib file path
     """
     # area extent
+    def snwe2str(snwe):
+        """Get area extent in string"""
+        if not snwe:
+            return None
+        s, n, w, e = snwe
+        area = ''
+        area += f'_S{abs(s)}' if s < 0 else f'_N{abs(s)}'
+        area += f'_S{abs(n)}' if n < 0 else f'_N{abs(n)}'
+        area += f'_W{abs(w)}' if w < 0 else f'_E{abs(w)}'
+        area += f'_W{abs(e)}' if e < 0 else f'_E{abs(e)}'
+        return area
+
     area = snwe2str(snwe)
 
     grib_files = []
@@ -171,6 +251,22 @@ def closest_weather_model_hour(sar_acquisition_time, grib_source='ERA5'):
 def safe2date_time(safe_file, tropo_model):
     """generate date_list and hour from safe_list"""
 
+    def define_date(string):
+        """extract date from *.SAFE"""
+        filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
+        date = filename.split(str.encode('_'))[5][0:8]
+        return date
+
+    def define_second(string):
+        """extract CENTER_LINE_UTC from *.SAFE"""
+        filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
+        time1 = filename.split(str.encode('_'))[5][9:15]
+        time2 = filename.split(str.encode('_'))[6][9:15]
+        time1_second = int(time1[0:2]) * 3600 + int(time1[2:4]) * 60 + int(time1[4:6])
+        time2_second = int(time2[0:2]) * 3600 + int(time2[2:4]) * 60 + int(time2[4:6])
+        utc_sec = (time1_second + time2_second) / 2
+        return utc_sec
+
     def seconds_UTC(seconds):
         """generate second list"""
         if isinstance(seconds, list):
@@ -180,7 +276,6 @@ def safe2date_time(safe_file, tropo_model):
         else:
             print('\nUn-recognized CENTER_LINE_UTC input!')
             return None
-
         return secondsOut
 
     date_list = ptime.yyyymmdd(np.loadtxt(safe_file, dtype=bytes, converters={0:define_date}).astype(str).tolist())
@@ -193,39 +288,21 @@ def safe2date_time(safe_file, tropo_model):
     return date_list, hour
 
 
-def define_date(string):
-    """extract date from *.SAFE"""
-    filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
-    date = filename.split(str.encode('_'))[5][0:8]
-    return date
-
-
-def define_second(string):
-    """extract CENTER_LINE_UTC from *.SAFE"""
-    filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
-    time1 = filename.split(str.encode('_'))[5][9:15]
-    time2 = filename.split(str.encode('_'))[6][9:15]
-    time1_second = int(time1[0:2]) * 3600 + int(time1[2:4]) * 60 + int(time1[4:6])
-    time2_second = int(time2[0:2]) * 3600 + int(time2[2:4]) * 60 + int(time2[4:6])
-    utc_sec = (time1_second + time2_second) / 2
-    return utc_sec
-
-
-def ceil2multiple(x, step=10):
-    """Given a number x, find the smallest number in multiple of step >= x."""
-    assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
-    if x % step == 0:
-        return x
-    return x + (step - x % step)
-
-
-def floor2multiple(x, step=10):
-    """Given a number x, find the largest number in multiple of step <= x."""
-    assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
-    return x - x % step
-
-
 def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
+    # utils sub-functions
+    def ceil2multiple(x, step=10):
+        """Given a number x, find the smallest number in multiple of step >= x."""
+        assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
+        if x % step == 0:
+            return x
+        else:
+            return x + (step - x % step)
+
+    def floor2multiple(x, step=10):
+        """Given a number x, find the largest number in multiple of step <= x."""
+        assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
+        return x - x % step
+
     # get bounding box
     lat0, lat1, lon0, lon1 = get_bounding_box(meta, geom_file=geom_file)
 
@@ -241,22 +318,8 @@ def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
         W = floor2multiple(W, step=step)
         N = ceil2multiple(N, step=step)
         E = ceil2multiple(E, step=step)
+
     return (S, N, W, E)
-
-
-def snwe2str(snwe):
-    """Get area extent in string"""
-    if not snwe:
-        return None
-    s, n, w, e = snwe
-
-    area = ''
-    area += f'_S{abs(s)}' if s < 0 else f'_N{abs(s)}'
-    area += f'_S{abs(n)}' if n < 0 else f'_N{abs(n)}'
-    area += f'_W{abs(w)}' if w < 0 else f'_E{abs(w)}'
-    area += f'_W{abs(e)}' if e < 0 else f'_E{abs(e)}'
-
-    return area
 
 
 def get_bounding_box(meta, geom_file=None):
@@ -274,12 +337,10 @@ def get_bounding_box(meta, geom_file=None):
         lat1 = lat0 + lat_step * (length - 1)
         lon1 = lon0 + lon_step * (width - 1)
 
-        # 'Y_FIRST' not in 'degree'
-        # e.g. meters for UTM projection from ASF HyP3
-        y_unit = meta.get('Y_UNIT', 'degrees').lower()
-        if not y_unit.startswith('deg'):
-            lat0, lon0 = ut.to_latlon(meta['OG_FILE_PATH'], lon0, lat0)
-            lat1, lon1 = ut.to_latlon(meta['OG_FILE_PATH'], lon1, lat1)
+        # for UTM projection, e.g. ASF HyP3
+        if not meta.get('Y_UNIT', 'degrees').lower().startswith('deg'):
+            lat0, lon0 = ut.utm2latlon(meta, easting=lon0, northing=lat0)
+            lat1, lon1 = ut.utm2latlon(meta, easting=lon1, northing=lat1)
 
     else:
         # radar coordinates
@@ -299,8 +360,12 @@ def get_bounding_box(meta, geom_file=None):
             lon1 = np.nanmax(lons)
 
         else:
+            # use the rough (not accurate) lat/lon info of the four corners
             lats = [float(meta[f'LAT_REF{i}']) for i in [1,2,3,4]]
             lons = [float(meta[f'LON_REF{i}']) for i in [1,2,3,4]]
+            # for UTM projection, e.g. ASF HyP3
+            if not meta.get('Y_UNIT', 'degrees').lower().startswith('deg'):
+                lats, lons = ut.utm2latlon(meta, easting=lons, northing=lats)
             lat0 = np.mean(lats[0:2])
             lat1 = np.mean(lats[2:4])
             lon0 = np.mean(lons[0:3:2])
@@ -314,7 +379,7 @@ def check_exist_grib_file(gfile_list, print_msg=True):
     """Check input list of grib files, and return the existing ones with right size."""
     gfile_exist = ut.get_file_list(gfile_list)
     if gfile_exist:
-        file_sizes = [os.path.getsize(i) for i in gfile_exist] # if os.path.getsize(i) > 10e6]
+        file_sizes = [os.path.getsize(i) for i in gfile_exist]
         if file_sizes:
             comm_size = ut.most_common([i for i in file_sizes])
             if print_msg:
@@ -418,7 +483,13 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
 
     # Download grib file using PyAPS
     if len(date_list2dload) > 0:
-        hour = re.findall(r'\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))[0].replace('-', '_').split('_')[1]
+        # This was the default for a file pattern of "ERA5_N30_N50_W130_W110_20200403_14.grb"
+        pattern = re.findall(r'\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))
+        if len(pattern) == 0:
+            # This is an exception for when the file has a naming format like: "ERA5_N30_N40_W130_W110_20080125T000000_06.grb"
+            pattern = re.findall(r'\d{8}T\d{6}[-_]\d{2}', os.path.basename(grib_files2dload[0]))
+        hour = pattern[0].replace('-', '_').split('_')[1]
+        #hour = re.findall(r'\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))[0].replace('-', '_').split('_')[1]
         grib_dir = os.path.dirname(grib_files2dload[0])
 
         # Check for non-empty account info in PyAPS config file
@@ -445,7 +516,7 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
                     pa.NARRdload(date_list2dload, hour, grib_dir)
             except:
                 if i < 3:
-                    print(f'WARNING: the {i} attampt to download failed, retry it.\n')
+                    print(f'WARNING: the {i} attempt to download failed, retry it.\n')
                 else:
                     print('\n\n'+'*'*50)
                     print('WARNING: downloading failed for 3 times, stop trying and continue.')
@@ -560,10 +631,6 @@ def calc_delay_timeseries(inps):
         # for lookup table in geo-coded (gamma, roipac) and obs. in geo-coord
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
 
-        # convert coordinates to lat/lon, e.g. from UTM for ASF HyPP3
-        if not geom_obj.metadata.get('Y_UNIT', 'degrees').startswith('deg'):
-            inps.lat, inps.lon = ut.to_latlon(inps.atr['OG_FILE_PATH'], inps.lon, inps.lat)
-
     else:
         # for lookup table in geo-coded (gamma, roipac) and obs. in radar-coord
         inps.lat, inps.lon = ut.get_lat_lon_rdc(inps.atr)
@@ -588,7 +655,7 @@ def calc_delay_timeseries(inps):
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     num_date = len(inps.grib_files)
     date_list = [str(re.findall(r'\d{8}', os.path.basename(i))[0]) for i in inps.grib_files]
-    dates = np.array(date_list, dtype=np.string_)
+    dates = np.array(date_list, dtype=np.bytes_)
     ds_name_dict = {
         "date"       : [dates.dtype, (num_date,), dates],
         "timeseries" : [np.float32,  (num_date, length, width), None],
@@ -630,47 +697,6 @@ def calc_delay_timeseries(inps):
     prog_bar.close()
 
     return inps.tropo_file
-
-
-def correct_timeseries(dis_file, tropo_file, cor_dis_file):
-    # diff.py can handle different reference in space and time
-    # between the absolute tropospheric delay and the double referenced time-series
-    print('correcting relative delay for input time-series using diff.py')
-
-    iargs = [dis_file, tropo_file, '-o', cor_dis_file, '--force']
-    print('diff.py', ' '.join(iargs))
-
-    import mintpy.cli.diff
-    mintpy.cli.diff.main(iargs)
-
-    return cor_dis_file
-
-
-def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
-    print('correcting relative delay for input interferogram')
-
-    print(f'read phase from {dis_file}')
-    data, atr = readfile.read(dis_file, datasetName='phase')
-    date1, date2 = ptime.yyyymmdd(atr['DATE12'].split('-'))
-    ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
-
-    print(f'calc tropospheric delay for {date1}-{date2} from {tropo_file}')
-    tropo  = readfile.read(tropo_file, datasetName=date2)[0]
-    tropo -= readfile.read(tropo_file, datasetName=date1)[0]
-    tropo *= -4. * np.pi / float(atr['WAVELENGTH'])
-
-    # apply the correction and re-referencing
-    data -= tropo
-    data -= data[ref_y, ref_x]
-
-    print(f'read magnitude from {dis_file}')
-    mag = readfile.read(dis_file, datasetName='magnitude')[0]
-
-    print(f'write corrected data to {cor_dis_file}')
-    ds_dict = {'magnitude': mag, 'phase': data}
-    writefile.write(ds_dict, cor_dis_file, atr)
-
-    return cor_dis_file
 
 
 ###############################################################
@@ -716,25 +742,18 @@ def run_tropo_pyaps3(inps):
     else:
         print(f'Skip re-calculating and use existed troposhperic delay HDF5 file: {inps.tropo_file}.')
 
-    ## 3. correct tropo delay from displacement time-series
+    ## 3. correct tropo delay from displacement time-series (using diff.py)
     if inps.dis_file:
         print('\n'+'-'*80)
         print('Applying tropospheric correction to displacement file...')
         if ut.run_or_skip(inps.cor_dis_file, [inps.dis_file, inps.tropo_file]) == 'run':
-            ftype = inps.atr['FILE_TYPE']
-            if ftype == 'timeseries':
-                correct_timeseries(
-                    dis_file=inps.dis_file,
-                    tropo_file=inps.tropo_file,
-                    cor_dis_file=inps.cor_dis_file)
+            # diff.py can handle different reference in space and time
+            # e.g. the absolute delay and the double referenced time-series
+            print('correcting delay via diff.py')
+            iargs = [inps.dis_file, inps.tropo_file, '-o', inps.cor_dis_file, '--force']
+            print('diff.py', ' '.join(iargs))
+            mintpy.cli.diff.main(iargs)
 
-            elif ftype == '.unw':
-                correct_single_ifgram(
-                    dis_file=inps.dis_file,
-                    tropo_file=inps.tropo_file,
-                    cor_dis_file=inps.cor_dis_file)
-            else:
-                print(f'input file {ftype} is not timeseries nor .unw, correction is not supported yet.')
         else:
             print(f'Skip re-applying and use existed corrected displacement file: {inps.cor_dis_file}.')
     else:

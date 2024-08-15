@@ -35,10 +35,9 @@ def create_parser(subparsers=None):
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+',
-                        help='time-series file to display\n'
-                             'i.e.: timeseries_ERA5_ramp_demErr.h5 (MintPy)\n'
-                             '      LS-PARAMS.h5 (GIAnT)\n'
-                             '      S1_IW12_128_0593_0597_20141213_20180619.he5 (HDF-EOS5)')
+                        help='time-series file to display, e.g.:\n'
+                             'timeseries_ERA5_ramp_demErr.h5 (MintPy)\n'
+                             'S1_IW12_128_0593_0597_20141213_20180619.he5 (HDF-EOS5)')
     parser.add_argument('--label', dest='file_label', nargs='*',
                         help='labels to display for multiple input files')
     parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
@@ -75,10 +74,11 @@ def create_parser(subparsers=None):
     # temporal model fitting
     parser.add_argument('--nomodel', '--nofit', dest='plot_model', action='store_false',
                         help='Do not plot the prediction of the time function (deformation model) fitting.')
-    parser.add_argument('--plot-model-conf-int', '--plot-fit-conf-int', dest='plot_model_conf_int', action='store_true',
+    parser.add_argument('--plot-model-conf-int', '--plot-fit-conf-int',
+                        dest='plot_model_conf_int', action='store_true',
                         help='Plot the time function prediction confidence intervals.\n'
                              '[!-- Preliminary feature alert! --!]\n'
-                             '[!-- This feature is NOT throughly checked. '
+                             '[!-- This feature is NOT thoroughly checked. '
                              'Read the code before use. Interpret at your own risk! --!]')
 
     parser = arg_utils.add_timefunc_argument(parser)
@@ -102,8 +102,8 @@ def create_parser(subparsers=None):
     # other groups
     parser = arg_utils.add_data_disp_argument(parser)
     parser = arg_utils.add_dem_argument(parser)
-    parser = arg_utils.add_figure_argument(parser)
-    parser = arg_utils.add_gps_argument(parser)
+    parser = arg_utils.add_figure_argument(parser, figsize_img=True)
+    parser = arg_utils.add_gnss_argument(parser)
     parser = arg_utils.add_mask_argument(parser)
     parser = arg_utils.add_map_argument(parser)
     parser = arg_utils.add_memory_argument(parser)
@@ -124,9 +124,9 @@ def cmd_line_parse(iargs=None):
     # use sys.argv[1:] for command line call
     inps.argv = iargs if iargs else sys.argv[1:]
 
-    # check: --gps-comp option (not implemented for tsview yet)
-    if inps.gps_component:
-        msg = f'--gps-comp is not supported for {os.path.basename(__file__)}'
+    # check: --gnss-comp option (not implemented for tsview yet)
+    if inps.gnss_component:
+        msg = f'--gnss-comp is not supported for {os.path.basename(__file__)}'
         raise NotImplementedError(msg)
 
     # check: --label option (same number as input files)
@@ -154,11 +154,6 @@ def cmd_line_parse(iargs=None):
             msg += 'Ignore it and continue'
             print(msg)
 
-    # check: --noverbose option
-    # print tsview.py command line if --noverbose
-    if not inps.print_msg:
-        print('tsview.py', ' '.join(inps.argv))
-
     # default: -u / -c / --fig-size options
     inps.disp_unit = inps.disp_unit if inps.disp_unit else 'cm'
     inps.colormap = inps.colormap if inps.colormap else 'jet'
@@ -176,8 +171,8 @@ def main(iargs=None):
     from mintpy.tsview import timeseriesViewer
 
     # run
-    obj = timeseriesViewer(iargs=iargs)
-    obj.configure(inps)
+    obj = timeseriesViewer(inps)
+    obj.open()
     obj.plot()
     #obj.fig_img.canvas.mpl_disconnect(obj.cid)
 

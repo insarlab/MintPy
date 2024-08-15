@@ -134,7 +134,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                 inv_quality_name  - str, inversion quality type/name
                                     temporalCoherence for phase
                                     residual          for offset
-                                    no to turn OFF the calcualtion
+                                    no to turn OFF the calculation
     Returns:    ts                - 2D np.ndarray in size of (num_date, num_pixel), phase time-series
                 inv_quality       - 1D np.ndarray in size of (num_pixel), temporal coherence (for phase) or residual (for offset)
                 num_inv_obs       - 1D np.ndarray in size of (num_pixel), number of observations (ifgrams / offsets)
@@ -681,7 +681,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
             weight_sqrt[weight_sqrt < 0.005] = 0.005
 
             print('convert std. dev. to the inverse of variance')
-            weight_sqrt = 1. / weight_sqrt  # use squre root of weight, to faciliate WLS, same as for phase.
+            weight_sqrt = 1. / weight_sqrt  # use squre root of weight, to facilitate WLS, same as for phase.
 
             # prepare for Std time-series
             if calc_cov:
@@ -705,7 +705,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
                                dropIfgram=True)
 
     # translate zero phase value to nan (no-data value)
-    # becuase it's the common filled value used in phase masking
+    # because it's the common filled value used in phase masking
     if 'phase' in obs_ds_name.lower():
         stack_obs[stack_obs == 0.] = np.nan
         print(f'convert zero value in {obs_ds_name} to NaN (no-data value)')
@@ -937,7 +937,7 @@ def run_ifgram_inversion(inps):
 
     ## limit the number of threads in numpy/scipy to 1
     #   and save the original value for roll back afterwards
-    #   becuase it does not increase the speed much but does increase the CPU usage significantly
+    #   because it does not increase the speed much but does increase the CPU usage significantly
     #   as shown in the test note below.
     # Dataset: SanFranSenDT42 version 1.x, patch 1 (505 x 510 x 1021) only
     # Machine 1: Mac (6 Intel i7 CPUs/cores in 2.6 GHz)
@@ -1027,7 +1027,7 @@ def run_ifgram_inversion(inps):
     meta['REF_DATE'] = date_list[0]
 
     # 2.2 instantiate time-series
-    dates = np.array(date_list, dtype=np.string_)
+    dates = np.array(date_list, dtype=np.bytes_)
     pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
     ds_name_dict = {
         "date"       : [dates.dtype, (num_date,), dates],
@@ -1060,6 +1060,11 @@ def run_ifgram_inversion(inps):
     # 2.4 instantiate number of inverted observations
     meta['FILE_TYPE'] = 'mask'
     meta['UNIT'] = '1'
+    # ignore NO_DATA_VALUE from ifgram stack file here as 1) it makes sense
+    # and 2) to avoid the weird error at https://github.com/insarlab/MintPy/issues/1185
+    if 'NO_DATA_VALUE' in meta.keys():
+        meta.pop('NO_DATA_VALUE')
+
     ds_name_dict = {"mask" : [np.float32, (length, width)]}
     writefile.layout_hdf5(inps.numInvFile, ds_name_dict, metadata=meta)
 

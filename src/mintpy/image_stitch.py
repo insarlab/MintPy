@@ -13,7 +13,7 @@ import numpy as np
 from skimage.transform import rescale
 
 from mintpy.multilook import multilook_data
-from mintpy.utils import plot as pp, readfile, writefile
+from mintpy.utils import plot as pp, readfile, utils as ut, writefile
 
 
 #############################################################################################
@@ -133,13 +133,13 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     length = int(np.ceil((S - N) / lat_step))
 
     # index of input matrices in output matrix
-    vprint('estimate difference in the overlaping area')
+    vprint('estimate difference in the overlapping area')
     lon_seq = np.arange(W, W + width  * lon_step, lon_step)
     lat_seq = np.arange(N, N + length * lat_step, lat_step)
     x1, y1 = np.argmin(np.square(lon_seq - W1)), np.argmin(np.square(lat_seq - N1))
     x2, y2 = np.argmin(np.square(lon_seq - W2)), np.argmin(np.square(lat_seq - N2))
 
-    # estimate offset of the overlaping area
+    # estimate offset of the overlapping area
     mat11 = np.zeros([length, width]) * np.nan;
     mat22 = np.zeros([length, width]) * np.nan;
     mat11[y1:y1+length1, x1:x1+width1] = mat1
@@ -163,13 +163,12 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     # with the default value of NaN for float type and 0 for the other types
     vprint(f'create output metadata and matrix in shape of {(length, width)}')
     fill_value = np.nan if str(mat1.dtype).startswith('float') else 0
-    mat = np.zeros([length, width]) * fill_value
+    mat = np.zeros([length, width], dtype=mat1.dtype) * fill_value
 
     # fill the output matrix
     flag2 = np.isfinite(mat2)
     mat[y1:y1+length1, x1:x1+width1] = mat1
     mat[y2:y2+length2, x2:x2+width2][flag2] = mat2[flag2]
-    mat = np.array(mat, dtype=mat1.dtype)
 
     # output attributes
     atr = dict()
@@ -179,24 +178,41 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     atr['LENGTH'] = length
     atr['X_FIRST'] = W
     atr['Y_FIRST'] = N
+    print(f'update LENGTH/WIDTH: {length}/{width}')
+    print(f'update Y/X_FIRST: {N}/{W}')
+
+    # update REF_Y/X
+    coord = ut.coordinate(atr)
+    ref_y, ref_x = coord.geo2radar(float(atr['REF_LAT']), float(atr['REF_LON']))[:2]
+    atr['REF_Y'], atr['REF_X'] = ref_y, ref_x
+    print(f'update REF_Y/X: {ref_y}/{ref_x}')
+
+    # delete SUBSET_Y/XMIN/MAX
+    for key in ['SUBSET_XMIN', 'SUBSET_XMAX', 'SUBSET_YMIN', 'SUBSET_YMAX']:
+        if key in atr.keys():
+            atr.pop(key)
+            print(f'remove {key}')
 
     return mat, atr, mat11, mat22, mat_diff
 
 
-def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
+def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None, disp_scale=1, disp_vlim=None, disp_cmap=None):
     """plot stitching result"""
 
     # plot settings
     titles = ['file 1', 'file 2', 'stitched', 'difference']
+    if disp_scale != 1:
+        print(f'scale the data by a factor of {disp_scale} for plotting')
     mat_mli = multilook_data(mat, 20, 20, method='mean')
-    vmin = np.nanmin(mat_mli)
-    vmax = np.nanmax(mat_mli)
+    vmin = disp_vlim[0] if disp_vlim else np.nanmin(mat_mli) * disp_scale
+    vmax = disp_vlim[1] if disp_vlim else np.nanmax(mat_mli) * disp_scale
+
     fig_size = pp.auto_figure_size(ds_shape=mat.shape, scale=1.4, disp_cbar=True, print_msg=True)
 
     # plot
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=fig_size, sharex=True, sharey=True)
     for ax, data, title in zip(axs.flatten(), [mat11, mat22, mat, mat_diff], titles):
-        im = ax.imshow(data, vmin=vmin, vmax=vmax, interpolation='nearest')
+        im = ax.imshow(data * disp_scale, vmin=vmin, vmax=vmax, cmap=disp_cmap, interpolation='nearest')
         ax.set_title(title, fontsize=12)
         ax.tick_params(which='both', direction='in', labelsize=12, left=True, right=True, top=True, bottom=True)
     fig.tight_layout()
@@ -213,24 +229,23 @@ def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
     return
 
 
-def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_value=None):
+def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_value=None,
+                 disp_scale=1, disp_vlim=None, disp_cmap=None):
     """Stitch all input files into one
     """
     fext = os.path.splitext(fnames[0])[1]
     atr = readfile.read_attribute(fnames[0])
 
     # grab ds_names
-    ds_names = [None]
-    if fext in ['.h5', '.he5']:
-        # get the common dataset list among all input files
-        ds_names = set(readfile.get_dataset_list(fnames[0]))
-        for fname in fnames[1:]:
-            ds_names.intersection_update(readfile.get_dataset_list(fname))
-        ds_names = sorted(list(ds_names))
+    ds_names = set(readfile.get_dataset_list(fnames[0]))
+    # get the common dataset list among all input files
+    for fname in fnames[1:]:
+        ds_names.intersection_update(readfile.get_dataset_list(fname))
+    ds_names = sorted(list(ds_names))
 
-        # special treatment for velocity/time_function files
-        if atr['FILE_TYPE'] == 'velocity' and len(ds_names) > 1:
-            ds_names = ['velocity']
+    # special treatment for velocity/time_function files
+    if atr['FILE_TYPE'] == 'velocity' and len(ds_names) > 1:
+        ds_names = ['velocity']
 
     print(f'files to be stitched: {fnames}')
     print(f'datasets to be stitched: {ds_names}')
@@ -250,7 +265,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
             mat[mat==no_data_value] = np.nan
 
         # skip pixels with zero incidenceAngle for geometry files
-        if atr['FILE_TYPE'] == 'geometry' and 'incidenceAngle' in ds_names:
+        if atr['FILE_TYPE'] in ['geometry', 'los'] and 'incidenceAngle' in ds_names:
             print('ignore pixels with ZERO incidenceAngle')
             inc_angle = readfile.read(fnames[0], datasetName='incidenceAngle')[0]
             mat[inc_angle == 0] = np.nan
@@ -264,7 +279,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
             if no_data_value is not None:
                 mat2[mat2==no_data_value] = np.nan
             # skip pixels with zero incidenceAngle for geometry files
-            if atr['FILE_TYPE'] == 'geometry' and 'incidenceAngle' in ds_names:
+            if atr['FILE_TYPE'] in ['geometry', 'los'] and 'incidenceAngle' in ds_names:
                 print('ignore pixels with ZERO incidenceAngle')
                 inc_angle2 = readfile.read(fname, datasetName='incidenceAngle')[0]
                 mat2[inc_angle2 == 0] = np.nan
@@ -278,9 +293,15 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
             # plot
             if apply_offset:
                 print('plot stitching & shifting result ...')
-                suffix = f'{i}{i+1}'
-                out_fig = f'{os.path.splitext(out_file)[0]}_{suffix}.png'
-                plot_stitch(mat11, mat22, mat, mat_diff, out_fig=out_fig)
+                out_fig = f'{os.path.splitext(out_file)[0]}_{i}{i+1}.png'
+                plot_stitch(
+                    mat11, mat22,
+                    mat, mat_diff,
+                    out_fig=out_fig,
+                    disp_scale=disp_scale,
+                    disp_vlim=disp_vlim,
+                    disp_cmap=disp_cmap,
+                )
 
         dsDict[ds_name_out] = mat
 

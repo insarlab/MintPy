@@ -73,7 +73,7 @@ def cmd_line_parse(iargs=None):
     # import
     from mintpy.utils import readfile
 
-    # check: intput file coordinates system (required in geo)
+    # check: input file coordinates system (required in geo)
     atr = readfile.read_attribute(inps.ts_file)
     if "Y_FIRST" not in atr.keys():
         raise ValueError(f"input file {inps.ts_file} is NOT geocoded")

@@ -17,7 +17,7 @@ TEMPLATE1 = get_template_content('quick_overview')
 TEMPLATE2 = get_template_content('correct_unwrap_error')
 
 REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
+  Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis:
     Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
     doi:10.1016/j.cageo.2019.104331.
 """
@@ -116,7 +116,7 @@ def cmd_line_parse(iargs=None):
 
 def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
-    print('read options from tempalte file: '+os.path.basename(inps.template_file))
+    print('read options from template file: '+os.path.basename(inps.template_file))
 
     from mintpy.unwrap_error_phase_closure import key_prefix
     from mintpy.utils import readfile, utils1 as ut

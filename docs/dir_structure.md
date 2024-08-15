@@ -285,22 +285,22 @@ The corresponding template options for `load_data`:
 
 ```cfg
 mintpy.load.processor        = isce
-##NOTE: 150408 is the reference date of alosStack processing.
-##      (parameter "reference date of the stack" of alosStack input xml file)
+## NOTE: 150408 is the reference date of alosStack processing.
+##       (parameter "reference date of the stack" of alosStack input xml file)
 ##---------for ISCE only:
-mintpy.load.metaFile         = $DATA_DIR/NCalAlos2DT169/pairs/*-*/150408.track.xml
+mintpy.load.metaFile         = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/150408.track.xml
 mintpy.load.baselineDir      = $DATA_DIR/NCalAlos2DT169/baseline
 ##---------interferogram datasets:
 mintpy.load.unwFile          = $DATA_DIR/NCalAlos2DT169/pairs/*-*/insar/filt_*-*_5rlks_28alks.unw
 mintpy.load.corFile          = $DATA_DIR/NCalAlos2DT169/pairs/*-*/insar/*-*_5rlks_28alks.cor
 mintpy.load.connCompFile     = $DATA_DIR/NCalAlos2DT169/pairs/*-*/insar/filt_*-*_5rlks_28alks.unw.conncomp
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.hgt
-mintpy.load.lookupYFile      = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.lat
-mintpy.load.lookupXFile      = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.lon
-mintpy.load.incAngleFile     = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.los
-mintpy.load.azAngleFile      = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.los
-mintpy.load.waterMaskFile    = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.wbd
+mintpy.load.demFile          = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.hgt
+mintpy.load.lookupYFile      = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.lat
+mintpy.load.lookupXFile      = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.lon
+mintpy.load.incAngleFile     = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.los
+mintpy.load.azAngleFile      = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.los
+mintpy.load.waterMaskFile    = $DATA_DIR/NCalAlos2DT169/dates_res*/150408/insar/*_5rlks_28alks.wbd
 ```
 
 ### ARIA from [ARIA-tools](https://github.com/aria-tools/ARIA-tools) ###
@@ -378,36 +378,64 @@ mintpy.load.azAngleFile      = $DATA_DIR/SanFranSenDT42/azimuthAngle/*.vrt
 mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
 ```
 
-### [ASF HyP3](https://hyp3-docs.asf.alaska.edu/)
+### [HyP3](https://hyp3-docs.asf.alaska.edu/)
 
 1. Search, request and download interferograms using [hyp3_sdk](https://nbviewer.jupyter.org/github/ASFHyP3/hyp3-sdk/blob/main/docs/sdk_example.ipynb) or the [ASF Vertex website](https://search.asf.alaska.edu/) following the [story map](https://storymaps.arcgis.com/stories/68a8a3253900411185ae9eb6bb5283d3).
     + For at least one interferogram, download the accompanying DEM.
     + Unzip the downloaded files. E.g., `for f in *.zip; do unzip $f; done` in bash.
 
-2. Clip DEM and all interferograms to the same area using hyp3lib/[cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
+2. Clip all image files (interferograms, coherence, DEM, etc.) to the same area.
 
-Here is an example workflow: [smallbaselineApp_hyp3](https://nbviewer.jupyter.org/github/insarlab/MintPy-tutorial/blob/main/smallbaselineApp_hyp3.ipynb).
+An in-depth guide to performing these steps is available in this [Jupyter Notebook](https://github.com/ASFHyP3/hyp3-docs/blob/develop/docs/tutorials/hyp3_insar_stack_for_ts_analysis.ipynb).
+
+HyP3 produces two types of InSAR products: 1) scene-wide products using Gamma and 2) burst-wide products using ISCE2.
+
++ INSAR_GAMMA directory structure:
 
 ```
 $DATA_DIR/RidgecrestSenDT71
 ├── hyp3
-│   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_corr_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_dem_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_lv_theta_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_lv_phi_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_unw_phase_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_water_mask_clip.tif
-│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43.txt
+│   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_corr_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_dem_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_lv_theta_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_lv_phi_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_unw_phase_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE_water_mask_clip.tif
+│   │   ├── S1AA_20190610T015047_20190622T015048_VVP012_INT80_G_ueF_48FE.txt
 │   │   └── ...
-│   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28
-│   │   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28_corr_clip.tif
-│   │   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28_unw_phase_clip.tif
-│   │   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28.txt
+│   ├── S1AA_20190622T015048_20190704T015049_VVP012_INT80_G_ueF_44D1
+│   │   ├── S1AA_20190622T015048_20190704T015049_VVP012_INT80_G_ueF_44D1_corr_clip.tif
+│   │   ├── S1AA_20190622T015048_20190704T015049_VVP012_INT80_G_ueF_44D1_unw_phase_clip.tif
+│   │   ├── S1AA_20190622T015048_20190704T015049_VVP012_INT80_G_ueF_44D1.txt
 │   │   └── ...
 │   └── ...
 └── mintpy
     └── RidgecrestSenDT71.txt
+```
+
++ INSAR_ISCE2_BURST directory structure:
+
+```
+$DATA_DIR/MtEdgecumbeSenAT174
+├── hyp3
+│   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_dem_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_corr_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_lv_theta_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_lv_phi_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_unw_phase_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044_water_mask_clipped.tif
+│   │   ├── S1_372326_IW3_20141017_20141110_VV_INT80_7044.txt
+│   │   └── ...
+│   ├── S1_372326_IW3_20141110_20141204_VV_INT80_1894
+│   │   ├── S1_372326_IW3_20141110_20141204_VV_INT80_1894_corr_clipped.tif
+│   │   ├── S1_372326_IW3_20141110_20141204_VV_INT80_1894_unw_phase_clipped.tif
+│   │   ├── S1_372326_IW3_20141110_20141204_VV_INT80_1894.txt
+│   │   └── ...
+│   └── ...
+└── mintpy
+    └── MtEdgecumbeSenAT174.txt
 ```
 
 The corresponding template options for `load_data`:
@@ -431,40 +459,44 @@ Below is a recipe to prepare a stack of interferograms from Sentinel-1:
 + [https://topex.ucsd.edu/gmtsar/tar/sentinel_time_series_2.pdf](https://topex.ucsd.edu/gmtsar/tar/sentinel_time_series_2.pdf)
 
 ```
-$DATA_DIR/StHelensEnvDT156
+$DATA_DIR/SanFranBaySenD42
+├── baseline_table.dat
+├── supermaster.PRM
 ├── geometry
-│   └── topo_ll.grd
+|   ├── dem.grd
+|   ├── azimuth_angle.grd
+│   ├── incidence_angle.grd
+│   └── water_mask.grd
 ├── interferograms
 │   ├── 2004114_2004324
-│   │   ├── 20040423.LED
-│   │   ├── 20040423.PRM
-│   │   ├── 20041119.LED
-│   │   ├── 20041119.PRM
-│   │   ├── baseline.txt   #generated by SAT_baseline
-│   │   ├── corr.grd
 │   │   ├── corr_ll.grd
-│   │   ├── unwrap.grd
 │   │   └── unwrap_ll.grd
 │   ├── 2004114_2004359
 │   └── ...
 └── mintpy
-    └── StHelensEnvDT156.txt
+    └── SanFranBaySenD42.txt
 ```
 
-The corresponding template opptions for `load_data`:
+The corresponding template options for `load_data`:
 
 ```cfg
 ## manually specify the following attributes since they are missing from gmtsar products
+ALOOKS          = 8          #[int], number of looks in the azimuth direction
+RLOOKS          = 32         #[int], number of looks in the range direction
 HEADING         = -168.0     #[float], satellite heading angle, measured from the north in clockwise as positive
                              # One could open the *.kml file in Google Earth and measure it manually
-ORBIT_DIRECTION = DESCENDING #[ASCENDING, DESCENDING]
 
-mintpy.load.processor   = gmtsar
+mintpy.load.processor     = gmtsar
+mintpy.load.metaFile      = $DATA_DIR/SanFranBaySenD42/supermaster.PRM
+mintpy.load.baselineDir   = $DATA_DIR/SanFranBaySenD42/baseline_table.dat
 ##---------interferogram datasets:
-mintpy.load.unwFile     = $DATA_DIR/StHelensEnvDT156/interferograms/*/unwrap_ll.grd
-mintpy.load.corFile     = $DATA_DIR/StHelensEnvDT156/interferograms/*/corr_ll.grd
+mintpy.load.unwFile       = $DATA_DIR/SanFranBaySenD42/interferograms/*/unwrap_ll*.grd
+mintpy.load.corFile       = $DATA_DIR/SanFranBaySenD42/interferograms/*/corr_ll*.grd
 ##---------geometry datasets:
-mintpy.load.demFile     = $DATA_DIR/StHelensEnvDT156/geometry/topo_ll.grd
+mintpy.load.demFile       = $DATA_DIR/SanFranBaySenD42/geometry/dem.grd
+mintpy.load.incAngleFile  = $DATA_DIR/SanFranBaySenD42/geometry/incidence_angle.grd
+mintpy.load.azAngleFile   = $DATA_DIR/SanFranBaySenD42/geometry/azimuth_angle.grd
+mintpy.load.waterMaskFile = $DATA_DIR/SanFranBaySenD42/geometry/water_mask.grd
 ```
 
 ### Gamma ###

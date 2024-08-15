@@ -126,8 +126,8 @@ def cmd_line_parse(iargs=None):
 
     # check: --start/end-lalo (start/end_lalo --> start/end_yx)
     if inps.start_lalo and inps.end_lalo:
-        [y0, y1] = inps.coord.lalo2yx([inps.start_lalo[0], inps.end_lalo[0]], coord_type='lat')
-        [x0, x1] = inps.coord.lalo2yx([inps.start_lalo[1], inps.end_lalo[1]], coord_type='lon')
+        [y0, y1], [x0, x1] = inps.coord.lalo2yx([inps.start_lalo[0], inps.end_lalo[0]],
+                                                [inps.start_lalo[1], inps.end_lalo[1]])
         inps.start_yx = [y0, x0]
         inps.end_yx = [y1, x1]
 
@@ -191,9 +191,8 @@ def main(iargs=None):
 
     # run
     view_cmd = get_view_cmd(iargs)
-
-    obj = transectionViewer(iargs=iargs)
-    obj.configure(inps, view_cmd)
+    obj = transectionViewer(inps, view_cmd)
+    obj.open()
     obj.plot()
     obj.fig.canvas.mpl_disconnect(obj.cid)
 

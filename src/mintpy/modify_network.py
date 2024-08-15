@@ -82,7 +82,7 @@ def manual_select_pairs_to_remove(stackFile):
                 date12_click.append(date12)
                 ax.plot([datesNum[mIdx], datesNum[sIdx]], [pbase[mIdx], pbase[sIdx]], 'r', lw=4)
             else:
-                print(date12+' is not existed in input file')
+                print(date12+' does not exist in input file')
         plt.draw()
 
     fig.canvas.mpl_connect('button_press_event', onclick)
@@ -199,6 +199,15 @@ def get_date12_to_drop(inps):
         for ifg_idx, date12 in zip(inps.excludeIfgIndex, tempList):
             print(f'{ifg_idx} : {date12}')
 
+    # excludeDate12
+    if inps.excludeDate12:
+        tempList = [i for i in inps.excludeDate12 if i in date12ListAll]
+        date12_to_drop += tempList
+        print('--------------------------------------------------')
+        print(f'Drop ifgrams with the following date12: {len(tempList)}')
+        for date12 in tempList:
+            print(date12)
+
     # excludeDate
     if inps.excludeDate:
         tempList = [i for i in date12ListAll if any(j in inps.excludeDate for j in i.split('_'))]
@@ -231,7 +240,7 @@ def get_date12_to_drop(inps):
         print('use coherence-based network modification')
 
         # get area of interest for coherence calculation
-        pix_box = get_aoi_pix_box(obj.metadata, inps.lookupFile, inps.aoi_pix_box, inps.aoi_geo_box)
+        pix_box = get_aoi_pix_box(obj.metadata, inps.lookupFile, inps.aoiYX, inps.aoiLALO)
 
         # calculate spatial average coherence
         cohList = ut.spatial_average(inps.file,
@@ -263,7 +272,7 @@ def get_date12_to_drop(inps):
         print('use area-ratio-based network modification')
 
         # get area of interest for coherence calculation
-        pix_box = get_aoi_pix_box(obj.metadata, inps.lookupFile, inps.aoi_pix_box, inps.aoi_geo_box)
+        pix_box = get_aoi_pix_box(obj.metadata, inps.lookupFile, inps.aoiYX, inps.aoiLALO)
 
         # calculate average coherence in masked out areas as threshold
         meanMaskCoh = np.nanmean(ut.spatial_average(inps.file,
@@ -329,7 +338,7 @@ def get_date12_to_drop(inps):
     date12ListKept = obj.get_date12_list(dropIfgram=True)
     date12ListDropped = sorted(list(set(date12ListAll) - set(date12ListKept)))
     if date12_to_drop == date12ListDropped:
-        print('Calculated date12 to drop is the same as exsiting marked input file, skip updating file.')
+        print('Calculated date12 to drop is the same as existing marked input file, skip updating file.')
         date12_to_drop = None
     elif date12_to_drop == date12ListAll:
         raise Exception('Zero interferogram left! Please adjust your setting and try again.')

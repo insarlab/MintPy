@@ -1,10 +1,10 @@
-#! /usr/bin/env python3
+"""Simulate decorrelation noise/signal."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Dec 2019                           #
 ############################################################
-# Recommended usage:
+# Recommend usage:
 #   from mintpy.simulation import decorrelation as decor
 
 

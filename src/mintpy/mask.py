@@ -36,23 +36,27 @@ def mask_matrix(data, mask, fill_value=np.nan):
 
 
 def update_mask_with_inps(mask, inps, print_msg=True):
-    """Update mask matrix from input options: subset_x/y and threshold"""
+    """Update mask matrix from input options: subset_x/y and mask_vmin/vmax."""
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
     if inps.subset_x:
         mask[:, 0:inps.subset_x[0]] = 0
         mask[:, inps.subset_x[1]:] = 0
-        if print_msg:
-            print(f'mask out area not in x: {inps.subset_x}')
+        vprint(f'mask out area not in x: {inps.subset_x}')
 
     if inps.subset_y:
         mask[0:inps.subset_y[0], :] = 0
         mask[inps.subset_y[1]:, :] = 0
-        if print_msg:
-            print(f'mask out area not in y: {inps.subset_y}')
+        vprint(f'mask out area not in y: {inps.subset_y}')
 
-    if inps.threshold:
-        mask[mask < inps.threshold] = 0
-        if print_msg:
-            print(f'mask out pixels with value < {inps.threshold} in mask file')
+    if inps.mask_vmin:
+        mask = mask >= inps.mask_vmin
+        vprint(f'mask out pixels with value < {inps.mask_vmin} in mask file')
+
+    if inps.mask_vmax:
+        mask = mask <= inps.mask_vmax
+        vprint(f'mask out pixels with value > {inps.mask_vmax} in mask file')
+
     return mask
 
 
@@ -62,9 +66,8 @@ def mask_file(fname, mask_file, out_file=None, fill_value=np.nan, inps=None):
                 mask_file - str, mask file
                 out_file  - str, output file name
                 inps      - namespace object, including:
-                            subset_x
-                            subset_y
-                            threshold
+                            subset_x/y
+                            mask_vmin/vmax
     Returns:    out_file  - str, output file name
     """
 
@@ -121,18 +124,21 @@ def mask_isce_file(in_file, mask_file, out_file=None):
     print('setting the (phase) value on the masked out pixels to zero')
     fbase, ext = os.path.splitext(in_file)
     if ext == '.unw':
-        amp = readfile.read_binary(in_file, (length, width), data_type=data_type,
-                                   num_band=num_band, interleave=interleave, band=1)
-        pha = readfile.read_binary(in_file, (length, width), data_type=data_type,
-                                   num_band=num_band, interleave=interleave, band=2)
+        kwargs = dict(
+            shape=(length, width),
+            data_type=data_type,
+            num_band=num_band,
+            interleave=interleave,
+        )
+        amp = readfile.read_binary(in_file, band=1, **kwargs)
+        pha = readfile.read_binary(in_file, band=2, **kwargs)
         pha[mask == 0] = 0
         data = np.hstack((amp, pha)).flatten()
     elif ext == '.int':
         data = np.fromfile(in_file, dtype=data_type, count=length*width).reshape(-1, width)
-        #data[mask == 0] = np.abs(data[mask == 0])  #set the angle of complex data to zero
         data[mask == 0] = 0
     elif ext in ['.cor','.conncomp']:
-        data = readfile.read(in_file)[0] #, data_type=data_type, num_band=num_band, band_interleave=interleave, band=1)[0]
+        data = readfile.read(in_file)[0]
         data[mask == 0] = 0
     else:
         raise ValueError(f'unsupported ISCE file: {in_file}')

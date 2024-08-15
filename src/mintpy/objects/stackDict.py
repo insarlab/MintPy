@@ -1,13 +1,15 @@
+"""Classes for HDF5/MintPy file creation / writing."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Heresh Fattahi, Zhang Yunjun, 2017               #
 ############################################################
-# class used for data loading from InSAR stack to MintPy timeseries
 # Recommend import:
-#     from mintpy.objects.stackDict import (geometryDict,
-#                                           ifgramStackDict,
-#                                           ifgramDict)
+#   from mintpy.objects.stackDict import (
+#       geometryDict,
+#       ifgramStackDict,
+#       ifgramDict,
+#   )
 
 
 import os
@@ -218,7 +220,7 @@ class ifgramStackDict:
             ###############################
             # 2D dataset containing reference and secondary dates of all pairs
             dsName = 'date'
-            dsDataType = np.string_
+            dsDataType = np.bytes_
             dsShape = (numIfgram, 2)
             print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
                                                                               w=maxDigit,
@@ -412,7 +414,7 @@ class ifgramDict:
 ########################################################################################
 class geometryDict:
     """
-    Geometry object for Lat, Lon, Heigt, Incidence, Heading, Bperp, ... from the same platform and track.
+    Geometry object for Lat, Lon, Height, Incidence, Heading, Bperp, ... from the same platform and track.
 
     Example:
         from mintpy.utils import readfile
@@ -474,7 +476,7 @@ class geometryDict:
         if 'Y_FIRST' in self.extraMetadata.keys():
             # for dataset in geo-coordinates, use:
             # 1) incidenceAngle matrix if available OR
-            # 2) contant value from SLANT_RANGE_DISTANCE.
+            # 2) constant value from SLANT_RANGE_DISTANCE.
             ds_name = 'incidenceAngle'
             key = 'SLANT_RANGE_DISTANCE'
             if ds_name in self.dsNames:
@@ -489,7 +491,7 @@ class geometryDict:
                 data = ut.incidence_angle2slant_range_distance(self.extraMetadata, inc_angle)
 
             elif key in self.extraMetadata.keys():
-                print(f'geocoded input, use contant value from metadata {key}')
+                print(f'geocoded input, use constant value from metadata {key}')
                 length = int(self.extraMetadata['LENGTH'])
                 width = int(self.extraMetadata['WIDTH'])
                 range_dist = float(self.extraMetadata[key])
@@ -527,9 +529,9 @@ class geometryDict:
             return None
 
         if 'Y_FIRST' in self.extraMetadata.keys():
-            # for dataset in geo-coordinates, use contant value from INCIDENCE_ANGLE.
+            # for dataset in geo-coordinates, use constant value from INCIDENCE_ANGLE.
             key = 'INCIDENCE_ANGLE'
-            print(f'geocoded input, use contant value from metadata {key}')
+            print(f'geocoded input, use constant value from metadata {key}')
             if key in self.extraMetadata.keys():
                 length = int(self.extraMetadata['LENGTH'])
                 width = int(self.extraMetadata['WIDTH'])
@@ -670,7 +672,7 @@ class geometryDict:
                     # Write 1D dataset date accompnay the 3D bperp
                     dsName = 'date'
                     dsShape = (self.numDate,)
-                    dsDataType = np.string_
+                    dsDataType = np.bytes_
                     print(('create dataset /{d:<{w}} of {t:<25}'
                            ' in size of {s}').format(d=dsName,
                                                      w=maxDigit,
@@ -693,10 +695,7 @@ class geometryDict:
                                                              c=str(compression)))
 
                     # read
-                    data = np.array(self.read(family=dsName,
-                                              box=box,
-                                              xstep=xstep,
-                                              ystep=ystep)[0], dtype=dsDataType)
+                    data = self.read(family=dsName, box=box, xstep=xstep, ystep=ystep)[0]
 
                     # water body: -1/True  for water and 0/False for land
                     # water mask:  0/False for water and 1/True  for land
@@ -705,6 +704,12 @@ class geometryDict:
                         data = ~data
                         print('    input file "{}" is water body (True/False for water/land), '
                               'convert to water mask (False/True for water/land).'.format(fname))
+
+                    elif dsName == 'waterMask':
+                        # GMTSAR water/land mask: 1 for land, and nan for water / no data
+                        if np.sum(np.isnan(data)) > 0:
+                            print('    convert NaN value for waterMask to zero.')
+                            data[np.isnan(data)] = 0
 
                     elif dsName == 'height':
                         noDataValueDEM = -32768
@@ -743,13 +748,14 @@ class geometryDict:
                                 data = ut.wrap(data, wrap_range=[-180, 180])    # rewrap within -180 to 180
 
                     # write
+                    data = np.array(data, dtype=dsDataType)
                     ds = f.create_dataset(dsName,
                                           data=data,
                                           chunks=True,
                                           compression=compression)
 
             ###############################
-            # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
+            # Generate Dataset if it doesn't exist as a binary file: incidenceAngle, slantRangeDistance
             for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance'] if i not in self.dsNames]:
                 # Calculate data
                 data = None
@@ -911,7 +917,7 @@ class platformTrack:
 
         ##################
         # Despite the observation and quality files, the geometry may not exist
-        # for all pairs. Therfore we need to look at all pairs and get possible
+        # for all pairs. Therefore we need to look at all pairs and get possible
         # dataset names.
         self.dsetGeometryNames = []
         for pair in pairs:

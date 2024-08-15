@@ -47,41 +47,46 @@ def read_network_info(inps):
 
 
 class coherenceMatrixViewer():
-    """class for plot_coherence_matrix
+    """class for plot_coherence_matrix.
+
     Example:
+        from mintpy.cli.plot_coherence_matrix import cmd_line_parse
         from mintpy.plot_coherence_matrix import coherenceMatrixViewer
-        cmd = 'plot_coherence_matrix.py ./inputs/ifgramStack.h5 --noverbose --figsize 9 3 --yx 216 310'
-        obj = coherenceMatrixViewer(cmd)
-        obj.configure()
+
+        cmd = './inputs/ifgramStack.h5 --noverbose --figsize 9 3 --yx 216 310'
+        inps = cmd_line_parse(cmd.split())
+        obj = coherenceMatrixViewer(inps)
+        obj.open()
         obj.plot()
     """
-    def __init__(self, cmd=None, iargs=None):
-        if cmd:
-            iargs = cmd.split()[1:]
-        self.cmd = cmd
-        self.iargs = iargs
 
+    def __init__(self, inps):
         # figure variables
         self.figname = 'Coherence matrix'
         self.fig_size = None
         self.fig = None
         self.ax_img = None
         self.ax_mat = None
-        return
 
-    def configure(self, inps):
-        global vprint
-        vprint = print if inps.print_msg else lambda *args, **kwargs: None
-
-        # matplotlib backend setting
-        if not inps.disp_fig:
-            plt.switch_backend('Agg')
-
-        # read network info
-        inps = read_network_info(inps)
         # copy inps to self object
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
+
+
+    def open(self):
+        global vprint
+        vprint = print if self.print_msg else lambda *args, **kwargs: None
+
+        # print command line
+        if self.argv is not None:
+            print(f'{os.path.basename(__file__)} ' + ' '.join(self.argv))
+
+        # matplotlib backend setting
+        if not self.disp_fig:
+            plt.switch_backend('Agg')
+
+        # read network info
+        self = read_network_info(self)
 
         # auto figure size
         if not self.fig_size:
@@ -103,7 +108,7 @@ class coherenceMatrixViewer():
             if template['mintpy.networkInversion.maskDataset'] == 'coherence':
                 self.min_coh_used = float(template['mintpy.networkInversion.maskThreshold'])
                 vprint('Pixel-wised masking is applied in invert_network step')
-        return
+
 
     def plot(self):
         # Figure 1
@@ -112,22 +117,25 @@ class coherenceMatrixViewer():
         # Axes 1 - Image
         self.ax_img = self.fig.add_axes([0.05, 0.1, 0.4, 0.8])
         view_cmd = self.view_cmd.format(self.img_file)
-        d_img, atr, inps_img = view.prep_slice(view_cmd)
+        d_img, atr, view_inps = view.prep_slice(view_cmd)
+        self.coord = ut.coordinate(atr)
+
         if all(i is not None for i in self.yx):
-            inps_img.pts_marker = 'r^'
-            inps_img.pts_yx = np.array(self.yx).reshape(-1, 2)
+            view_inps.pts_marker = 'r^'
+            view_inps.pts_yx = np.array(self.yx).reshape(-1, 2)
 
             # point yx --> lalo for geocoded product
             if 'Y_FIRST' in atr.keys():
-                coord = ut.coordinate(atr)
-                inps_img.pts_lalo = np.array(coord.radar2geo(self.yx[0], self.yx[1])[0:2]).reshape(-1,2)
+                view_inps.pts_lalo = np.array(
+                    self.coord.radar2geo(
+                        self.yx[0],
+                        self.yx[1],
+                    )[0:2],
+                ).reshape(-1,2)
 
-        inps_img.print_msg = self.print_msg
-        self.ax_img = view.plot_slice(self.ax_img, d_img, atr, inps_img)[0]
-
-        # coordinate info
-        self.coord = ut.coordinate(atr)
-        self.fig_coord = inps_img.fig_coord
+        view_inps.print_msg = self.print_msg
+        self.ax_img = view.plot_slice(self.ax_img, d_img, atr, view_inps)[0]
+        self.fig_coord = view_inps.fig_coord
 
         # Axes 2 - coherence matrix
         self.ax_mat = self.fig.add_axes([0.55, 0.125, 0.40, 0.75])
@@ -174,7 +182,8 @@ class coherenceMatrixViewer():
             date12List=self.date12_list,
             cohList=coh.tolist(),
             date12List_drop=ex_date12_list,
-            p_dict=plotDict)[1]
+            p_dict=plotDict,
+        )[1]
 
         self.ax_mat.annotate('ifgrams\navailable', xy=(0.05, 0.05), xycoords='axes fraction', fontsize=12)
         self.ax_mat.annotate('ifgrams\nused', ha='right', xy=(0.95, 0.85), xycoords='axes fraction', fontsize=12)
@@ -202,8 +211,7 @@ class coherenceMatrixViewer():
     def update_coherence_matrix(self, event):
         if event.inaxes == self.ax_img:
             if self.fig_coord == 'geo':
-                yx = [self.coord.lalo2yx(event.ydata, coord_type='lat'),
-                      self.coord.lalo2yx(event.xdata, coord_type='lon')]
+                yx = self.coord.lalo2yx(event.ydata, event.xdata)
             else:
                 yx = [int(event.ydata+0.5),
                       int(event.xdata+0.5)]

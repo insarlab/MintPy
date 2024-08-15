@@ -12,7 +12,7 @@ import time
 import h5py
 import numpy as np
 
-import mintpy
+import mintpy.cli.diff
 from mintpy.constants import SPEED_OF_LIGHT
 from mintpy.objects import ionex, timeseries
 from mintpy.simulation import iono
@@ -262,7 +262,7 @@ def vtec2iono_ramp_timeseries(date_list, vtec_list, geom_file, iono_file, sub_te
 
     # prepare data matrix
     ds_dict = {}
-    ds_dict['date'] = np.array(date_list, dtype=np.string_)
+    ds_dict['date'] = np.array(date_list, dtype=np.bytes_)
     ds_dict['vtec'] = np.array(vtec_list, dtype=np.float32)
     ds_dict['timeseries'] = ts_ramp
 
@@ -277,22 +277,6 @@ def vtec2iono_ramp_timeseries(date_list, vtec_list, geom_file, iono_file, sub_te
     writefile.write(ds_dict, iono_file, metadata=meta)
 
     return iono_file
-
-
-def correct_timeseries(dis_file, iono_file, cor_dis_file):
-    """Correct time-series for the solid Earth tides."""
-    # diff.py can handle different reference in space and time
-    # between the absolute iono ramp and the double referenced time-series
-    print('\n------------------------------------------------------------------------------')
-    print('correcting relative delay for input time-series using diff.py')
-
-    iargs = [dis_file, iono_file, '-o', cor_dis_file]
-    print('diff.py', ' '.join(iargs))
-
-    import mintpy.cli.diff
-    mintpy.cli.diff.main(iargs)
-
-    return cor_dis_file
 
 
 def run_iono_tec(inps):
@@ -318,10 +302,13 @@ def run_iono_tec(inps):
             update_mode=inps.update_mode,
         )
 
-    ## correct
-    #correct_timeseries(dis_file=inps.dis_file,
-    #                   iono_file=inps.iono_file,
-    #                   cor_dis_file=inps.cor_dis_file)
+    ## correct (using diff.py)
+    ## diff.py can handle different reference in space and time
+    ## e.g. the absolute delay and the double referenced time-series
+    #print('correcting delay for using diff.py')
+    #iargs = [inps.dis_file, inps.iono_file, '-o', inps.cor_dis_file, '--force']
+    #print('diff.py', ' '.join(iargs))
+    #mintpy.cli.diff.main(iargs)
 
     # used time
     m, s = divmod(time.time() - start_time, 60)

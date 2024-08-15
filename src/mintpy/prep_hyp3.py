@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Forrest Williams, Mar 2021                       #
+# Author: Forrest Williams, Zhang Yunjun, Mar 2021         #
 ############################################################
 
 
@@ -14,30 +14,48 @@ from mintpy.utils import readfile, utils1 as ut, writefile
 
 
 #########################################################################
-def add_hyp3_metadata(fname,meta,is_ifg=True):
-    '''Read/extract attribute data from HyP3 metadata file and add to metadata dictionary
-    Inputs:
-        *unw_phase.tif, *corr.tif file name, *dem.tif, *inc_map.tif, e.g.
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase_clip.tif
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr_clip.tif
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif
-        Metadata dictionary (meta)
-    Output:
-        Metadata dictionary (meta)
+def add_hyp3_metadata(fname, meta, is_ifg=True):
+    '''Read/extract metadata from HyP3 metadata file and add to metadata dictionary.
+
+    Two types of ASF HyP3 products are supported: isce2_burst, gamma_scene
+    1. isce2_burst (burst-wide product using ISCE2) metadata file:
+        format: {SAT}_{FRAME}_{SUBSWATH}_{DATE1}_{DATE2}_{POL}_{RES}_{IDS}.txt
+        example: S1_213524_IW1_20170411_20170517_VV_INT80_8E81.txt
+        content:
+            Reference Granule: S1_213524_IW1_20170411T133605_VV_BD30-BURST
+            ...
+    2. gamma_scene (scene-wide product using Gamma) metadata file:
+        format: {SAT}_{DATE1}_{DATE2}_{POL}_{RES}_{SOFT}_{PROC}_{IDS}.txt
+        example: S1AA_20190610T135156_20190622T135157_VVP012_INT80_G_ueF_F8BF.txt
+        content:
+            Reference Granule: S1A_IW_SLC__1SDV_20190704T135158_20190704T135225_027968_032877_1C4D
+            ...
+
+    Parameters: fname  - str, path to the hyp3 data file, e.g. *unw_phase_clip*.tif, *dem_clip*.tif
+                meta   - dict, existing metadata
+                is_ifg - bool, is the data file interferogram (unw/corr) or geometry (dem/angles)
+    Returns:    meta   - dict, return metadata
     '''
 
-    # determine interferogram pair info and hyp3 metadata file name
-    sat, date1_str, date2_str, pol, res, soft, proc, ids, *_ = os.path.basename(fname).split('_')
-    job_id = '_'.join([sat, date1_str, date2_str, pol, res, soft, proc, ids])
-    directory = os.path.dirname(fname)
-    meta_file = f'{os.path.join(directory,job_id)}.txt'
+    # job_id -> prod_type and date1/2 objects
+    job_id = '_'.join(os.path.basename(fname).split('_')[:8])
+    if job_id.split('_')[2].startswith('IW'):
+        # burst-wide product using ISCE2
+        prod_type = 'isce2_burst'
+        date1, date2 = (dt.datetime.strptime(x,'%Y%m%d') for x in job_id.split('_')[3:5])
+    else:
+        # scene-wide product using Gamma
+        prod_type = 'gamma_scene'
+        date1, date2 = (dt.datetime.strptime(x,'%Y%m%dT%H%M%S') for x in job_id.split('_')[1:3])
 
-    # open and read hyp3 metadata
+    # read hyp3 metadata file
+    meta_file = os.path.join(os.path.dirname(fname), f'{job_id}.txt')
     hyp3_meta = {}
     with open(meta_file) as f:
         for line in f:
             key, value = line.strip().replace(' ','').split(':')[:2]
             hyp3_meta[key] = value
+    ref_granule = hyp3_meta['ReferenceGranule']
 
     # add universal hyp3 metadata
     meta['PROCESSOR'] = 'hyp3'
@@ -47,8 +65,7 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     meta['EARTH_RADIUS'] = hyp3_meta['Earthradiusatnadir']
     meta['HEIGHT'] = hyp3_meta['Spacecraftheight']
     meta['STARTING_RANGE'] = hyp3_meta['Slantrangenear']
-    # ensure negative value for the heading angle
-    meta['HEADING'] = float(hyp3_meta['Heading']) % 360. - 360.
+    meta['HEADING'] = float(hyp3_meta['Heading']) % 360. - 360.  # ensure negative value
 
     # add LAT/LON_REF1/2/3/4 based on whether satellite ascending or descending
     meta['ORBIT_DIRECTION'] = 'ASCENDING' if abs(meta['HEADING']) < 90 else 'DESCENDING'
@@ -76,32 +93,62 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
         meta['LON_REF3'] = str(E)
         meta['LON_REF4'] = str(W)
 
-    # note: HyP3 currently only supports Sentinel-1 data, so Sentinel-1
-    #       configuration is hard-coded.
-    if hyp3_meta['ReferenceGranule'].startswith('S1'):
+    # hard-coded metadata for Sentinel-1
+    if ref_granule.startswith('S1'):
         meta['PLATFORM'] = 'Sen'
         meta['ANTENNA_SIDE'] = -1
         meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
         meta['RANGE_PIXEL_SIZE'] = sensor.SEN['range_pixel_size'] * int(meta['RLOOKS'])
         meta['AZIMUTH_PIXEL_SIZE'] = sensor.SEN['azimuth_pixel_size'] * int(meta['ALOOKS'])
 
-    # note: HyP3 (incidence, azimuth) angle datasets are in the unit of radian
+    # HyP3 (incidence, azimuth) angle datasets are in the unit of radian,
     # which is different from the isce-2 convention of degree
     if any(x in os.path.basename(fname) for x in ['lv_theta', 'lv_phi']):
         meta['UNIT'] = 'radian'
 
-    # add metadata that is only relevant to interferogram files
+    # interferogram related metadata
     if is_ifg:
-        date1 = dt.datetime.strptime(date1_str,'%Y%m%dT%H%M%S')
-        date2 = dt.datetime.strptime(date2_str,'%Y%m%dT%H%M%S')
-        #date_avg = date1 + (date2 - date1) / 2
-        #date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-        #meta['CENTER_LINE_UTC'] = date_avg_seconds
         meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
         meta['P_BASELINE_TOP_HDR'] = hyp3_meta['Baseline']
         meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
 
-    return(meta)
+    # [optional] HDF-EOS5 metadata, including:
+    # beam_mode/swath, relative_orbit, first/last_frame, unwrap_method
+    if ref_granule.startswith('S1'):
+        # beam_mode
+        meta['beam_mode'] = 'IW'
+
+        if prod_type == 'isce2_burst':
+            # burst-wide product using ISCE2
+            meta['beam_swath'] = job_id.split('_')[2][2:]
+
+            # relative_orbit [to be added]
+            # first/last_frame [to be added]
+
+        else:
+            # scene-wide product using Gamma
+            meta['beam_swath'] = '123'
+
+            # relative_orbit
+            abs_orbit = int(hyp3_meta['ReferenceOrbitNumber'])
+            if ref_granule.startswith('S1A'):
+                meta['relative_orbit'] = ((abs_orbit - 73) % 175) + 1
+            elif ref_granule.startswith('S1B'):
+                meta['relative_orbit'] = ((abs_orbit - 202) % 175) + 1
+            else:
+                # add equation for Sentinel-C/D in the future
+                raise ValueError('Un-recognized Sentinel-1 satellite from {ref_granule}!')
+
+            # first/last_frame [to be completed]
+            t0, t1 = ref_granule.split('_')[-5:-3]
+            meta['startUTC'] = dt.datetime.strptime(t0, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
+            meta['stopUTC']  = dt.datetime.strptime(t1, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
+            # ascendingNodeTime [to be added]
+
+    # unwrap_method
+    meta['unwrap_method'] = hyp3_meta['Unwrappingtype']
+
+    return meta
 
 
 #########################################################################

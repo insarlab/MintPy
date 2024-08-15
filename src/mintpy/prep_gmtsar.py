@@ -19,8 +19,39 @@ from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 #########################################################################
+def get_ifg_file(ifg_dir, coord_type='geo', fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
+    """Get the interferogram data file path for a given interferogram directory.
+
+    Parameters: ifg_dir    - str, path of a given interferogram directory
+                coord_type - str, coordinate type in radar or geo
+                fbases     - list(str), data file base name to look for
+    Returns:    ifg_file   - str, path of the interferogram data file
+    """
+    ifg_file = None
+
+    # search interferogram data file
+    for fbase in fbases:
+        if coord_type == 'geo':
+            fnames = glob.glob(os.path.join(ifg_dir, f'{fbase}_ll*.grd'))
+        else:
+            fnames = glob.glob(os.path.join(ifg_dir, f'{fbase}.grd'))
+
+        if len(fnames) > 0:
+            ifg_file = fnames[0]
+            break
+
+    if not ifg_file:
+        print(f'WARNING: No {coord_type}-coord files found in {ifg_dir} with suffix: {fbases}')
+
+    return ifg_file
+
+
 def get_prm_files(ifg_dir):
-    """Get the date1/2.prm files in the interferogram directory."""
+    """Get the date1/2.prm files in the interferogram directory.
+
+    Parameters: ifg_dir   - str, path to the interferogram directory
+    Returns:    prm_files - list(str), path to the PRM metadata files
+    """
     prm_files = sorted(glob.glob(os.path.join(ifg_dir, '*.PRM')))
     prm_files = [i for i in prm_files if os.path.splitext(os.path.basename(i))[0].isdigit()]
     if len(prm_files) != 2:
@@ -29,14 +60,16 @@ def get_prm_files(ifg_dir):
 
 
 def get_multilook_number(ifg_dir, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
-    """Get the number of multilook in range and azimuth direction."""
+    """Get the number of multilook in range and azimuth direction.
+
+    Parameters: ifg_dir  - str, path to the interferogram directory
+    Returns:    a/rlooks - int, number of looks in the azimuth / range direction
+    """
     # grab an arbitrary file in radar-coordiantes
-    rdr_files = [os.path.join(ifg_dir, f'{i}.grd') for i in fbases]
-    if len(rdr_files) == 0:
-        raise ValueError(f'No radar-coord files found in {ifg_dir} with suffix: {fbases}')
+    rdr_file = get_ifg_file(ifg_dir, coord_type='radar')
 
     # read step info into multilook number
-    ds = gdal.Open(rdr_files[0], gdal.GA_ReadOnly)
+    ds = gdal.Open(rdr_file, gdal.GA_ReadOnly)
     transform = ds.GetGeoTransform()
     rlooks = int(abs(transform[1]))
     alooks = int(abs(transform[5]))
@@ -44,23 +77,28 @@ def get_multilook_number(ifg_dir, fbases=['corr', 'phase', 'phasefilt', 'unwrap'
 
 
 def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
-    """Get the LAT/LON_REF1/2/3/4 from *_ll.grd file."""
+    """Get the LAT/LON_REF1/2/3/4 from *_ll.grd file.
+
+    Parameters: ifg_dir  - str, path to the interferogram directory
+                prm_dict - dict, metadata from the PRM file
+                fbases   - list(str), data file base name to look for
+    Returns:    prm_dict - dict, metadata from the PRM file
+    """
     # grab an arbitrary file in geo-coordiantes
-    geo_files = [os.path.join(ifg_dir, f'{i}_ll.grd') for i in fbases]
-    if len(geo_files) == 0:
-        print(f'WARNING: No geo-coord files found in {ifg_dir} with suffix: {fbases}')
+    geo_file = get_ifg_file(ifg_dir, coord_type='geo')
+    if not geo_file:
         return prm_dict
 
     # read corners lat/lon info
-    ds = gdal.Open(geo_files[0], gdal.GA_ReadOnly)
+    ds = gdal.Open(geo_file, gdal.GA_ReadOnly)
     transform = ds.GetGeoTransform()
     x_step = abs(transform[1])
     y_step = abs(transform[5]) * -1.
     if not (1e-7 < x_step < 1.):
         raise ValueError('File {} is NOT geocoded!')
 
-    W = transform[0] - x_step / 2.
-    N = transform[3] - y_step / 2.
+    W = transform[0]
+    N = transform[3]
     E = W + x_step * ds.RasterXSize
     S = N + y_step * ds.RasterYSize
 
@@ -87,14 +125,20 @@ def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwra
 
 
 def get_slant_range_distance(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
-    """Get a constant slant range distance in the image center, for dataset in geo-coord."""
-    # grab an arbitrary file in radar-coordiantes
-    rdr_files = [os.path.join(ifg_dir, f'{i}.grd') for i in fbases]
-    if len(rdr_files) == 0:
+    """Get a constant slant range distance in the image center, for dataset in geo-coord.
+
+    Parameters: ifg_dir  - str, path to the interferogram directory
+                prm_dict - dict, metadata from the PRM file
+                fbases   - list(str), data file base name to look for
+    Returns:    prm_dict - dict, metadata from the PRM file
+    """
+    # grab an arbitrary file in geo/radar-coordiantes
+    geo_file = get_ifg_file(ifg_dir, coord_type='geo')
+    if not geo_file:
         raise ValueError(f'No radar-coord files found in {ifg_dir} with suffix: {fbases}')
 
     # read width from rdr_file
-    ds = gdal.Open(rdr_files[0], gdal.GA_ReadOnly)
+    ds = gdal.Open(geo_file, gdal.GA_ReadOnly)
     width = ds.RasterXSize
 
     near_range = float(prm_dict['STARTING_RANGE'])
@@ -105,9 +149,38 @@ def get_slant_range_distance(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasef
     return prm_dict
 
 
+def read_baseline_table(fname):
+    """Read GMTSAR baseline table file.
+
+    Example: baseline_table.dat file
+    #  file_ID         yyyyddd.fraction day_cnt    b_para           b_perp
+    S1_20141231_ALL_F2 2014364.5885345591 364  -58.814087517826  -16.031404204594
+    S1_20150301_ALL_F2 2015059.5885222249 424  -33.273566547687  -17.102628888348
+    S1_20150325_ALL_F2 2015083.5885250464 448 -104.664278131966 -142.776284597889
+
+    Parameters: fname - str, path to the baseline table file
+    Returns:    bdict - dict, perpendicular baseline dictionary
+    """
+    print(f'read baseline time-series from file: {fname}')
+    fc = np.loadtxt(fname, dtype=str, usecols=(1,4))
+    date_list = ptime.yyyyddd2yyyymmdd([x[:7] for x in fc[:,0]])
+    bperp_list = fc[:,1].astype(np.float32)
+    bdict = {}
+    for date_str, bperp in zip(date_list, bperp_list):
+        bdict[date_str] = bperp
+    return bdict
+
+
 #########################################################################
-def extract_gmtsar_metadata(unw_file, template_file, rsc_file=None, update_mode=True):
-    """Extract metadata from GMTSAR interferogram stack."""
+def extract_gmtsar_metadata(meta_file, unw_file, template_file, rsc_file=None, update_mode=True):
+    """Extract metadata from GMTSAR interferogram stack.
+
+    Parameters: meta_file     - str, path to the reference metadata file in PRM format
+                unw_file      - str, path to the unwrapped interferogram file
+                template_file - str, path to the template file
+                rsc_file      - str, path to the output metadata file in RSC format
+    Returns:    meta          - dict, extract common metadata
+    """
 
     # update_mode: check existing rsc_file
     if update_mode and ut.run_or_skip(rsc_file, in_file=unw_file, readable=False) == 'skip':
@@ -116,22 +189,22 @@ def extract_gmtsar_metadata(unw_file, template_file, rsc_file=None, update_mode=
     ifg_dir = os.path.dirname(unw_file)
 
     # 1. read *.PRM file
-    prm_file = get_prm_files(ifg_dir)[0]
-    meta = readfile.read_gmtsar_prm(prm_file)
+    #prm_file = get_prm_files(ifg_dir)[0]
+    meta = readfile.read_gmtsar_prm(meta_file)
     meta['PROCESSOR'] = 'gmtsar'
 
     # 2. read template file: HEADING, ORBIT_DIRECTION
     template = readfile.read_template(template_file)
-    for key in ['HEADING', 'ORBIT_DIRECTION']:
+    for key in ['HEADING', 'ALOOKS', 'RLOOKS']:
         if key in template.keys():
             meta[key] = template[key].lower()
         else:
-            raise ValueError('Attribute {} is missing! Please manually specify it in the template file.')
+            raise ValueError(f'Attribute {key} is missing! Please manually specify it in the template file.')
 
     # 3. grab A/RLOOKS from radar-coord data file
-    meta['ALOOKS'], meta['RLOOKS'] = get_multilook_number(ifg_dir)
-    meta['AZIMUTH_PIXEL_SIZE'] *= meta['ALOOKS']
-    meta['RANGE_PIXEL_SIZE'] *= meta['RLOOKS']
+    #meta['ALOOKS'], meta['RLOOKS'] = get_multilook_number(ifg_dir)
+    meta['AZIMUTH_PIXEL_SIZE'] *= int(meta['ALOOKS'])
+    meta['RANGE_PIXEL_SIZE'] *= int(meta['RLOOKS'])
 
     # 4. grab LAT/LON_REF1/2/3/4 from geo-coord data file
     meta = get_lalo_ref(ifg_dir, meta)
@@ -174,8 +247,19 @@ def extract_gmtsar_metadata(unw_file, template_file, rsc_file=None, update_mode=
     return meta
 
 
-def prepare_geometry(geom_files, meta, update_mode=True):
-    """Prepare .rsc file for all geometry files."""
+def prepare_geometry(template, meta, update_mode=True):
+    """Prepare .rsc file for all geometry files.
+
+    Parameters: template - dict, input file path/pattern
+                meta     - dict, common metadata for the entire stack
+    """
+    # grab all specified geometry files
+    geom_files = []
+    key_prefix = 'mintpy.load.'
+    for key in ['demFile', 'lookupYFile', 'lookupXFile', 'incAngleFile',
+                'azAngleFile', 'shadowMaskFile', 'waterMaskFile']:
+        if key_prefix + key in template.keys() and template[key_prefix + key]:
+            geom_files.append(glob.glob(template[key_prefix + key])[0])
     num_file = len(geom_files)
     if num_file == 0:
         raise FileNotFoundError('NO geometry file found!')
@@ -202,8 +286,13 @@ def prepare_geometry(geom_files, meta, update_mode=True):
     return
 
 
-def prepare_stack(unw_files, meta, update_mode=True):
-    """Prepare .rsc file for all unwrapped interferogram files."""
+def prepare_stack(unw_files, meta, bperp_dict, update_mode=True):
+    """Prepare .rsc file for all unwrapped interferogram files.
+
+    Parameters: unw_files  - list(str), path to the unwrapped interferogram files
+                meta       - dict, common metadata for the entire stack
+                bperp_dict - dict, perpendicular baseline time series
+    """
     num_file = len(unw_files)
     if num_file == 0:
         raise FileNotFoundError('NO unwrapped interferogram file found!')
@@ -222,22 +311,15 @@ def prepare_stack(unw_files, meta, update_mode=True):
         ifg_meta.update(readfile.read_gdal_vrt(unw_file))
 
         # add DATE12
-        prm_files = get_prm_files(ifg_dir)
-        date1, date2 = (os.path.splitext(os.path.basename(i))[0] for i in prm_files)
+        date1, date2 = os.path.basename(ifg_dir).replace('-', '_').split('_')
+        date1 = ptime.yyyyddd2yyyymmdd(date1)
+        date2 = ptime.yyyyddd2yyyymmdd(date2)
         ifg_meta['DATE12'] = f'{ptime.yymmdd(date1)}-{ptime.yymmdd(date2)}'
 
         # and P_BASELINE_TOP/BOTTOM_HDR
-        baseline_file = os.path.join(ifg_dir, 'baseline.txt')
-        if os.path.isfile(baseline_file):
-            bDict = readfile.read_template(baseline_file)
-            ifg_meta['P_BASELINE_TOP_HDR'] = bDict['B_perpendicular']
-            ifg_meta['P_BASELINE_BOTTOM_HDR'] = bDict['B_perpendicular']
-        else:
-            ifg_meta['P_BASELINE_TOP_HDR'] = '0'
-            ifg_meta['P_BASELINE_BOTTOM_HDR'] = '0'
-            msg = f'WARNING: No baseline file found in: {baseline_file}. '
-            msg += 'Set P_BASELINE* to 0 and continue.'
-            print(msg)
+        bperp = bperp_dict[date2] - bperp_dict[date1]
+        ifg_meta['P_BASELINE_TOP_HDR'] = bperp
+        ifg_meta['P_BASELINE_BOTTOM_HDR'] = bperp
 
         # write .rsc file
         rsc_file = unw_file+'.rsc'
@@ -256,22 +338,29 @@ def prepare_stack(unw_files, meta, update_mode=True):
 def prep_gmtsar(inps):
     # read file path from template file
     template = readfile.read_template(inps.template_file)
+    template = ut.check_template_auto_value(template)
+
+    inps.meta_file        = glob.glob(template['mintpy.load.metaFile'])[0]
+    inps.bperp_file       = glob.glob(template['mintpy.load.baselineDir'])[0]
     inps.unw_files = sorted(glob.glob(template['mintpy.load.unwFile']))
     inps.cor_files = sorted(glob.glob(template['mintpy.load.corFile']))
-    inps.dem_file = glob.glob(template['mintpy.load.demFile'])[0]
 
     # extract common metadata
-    rsc_file = os.path.join(inps.mintpy_dir, 'inputs/data.rsc')
+    rsc_file = os.path.join(os.path.dirname(inps.meta_file), 'data.rsc')
     meta = extract_gmtsar_metadata(
+        meta_file=inps.meta_file,
         unw_file=inps.unw_files[0],
         template_file=inps.template_file,
         rsc_file=rsc_file,
         update_mode=inps.update_mode,
     )
 
+    # read baseline
+    bperp_dict = read_baseline_table(inps.bperp_file)
+
     # prepare metadata for geometry files
     prepare_geometry(
-        geom_files=[inps.dem_file],
+        template=template,
         meta=meta,
         update_mode=inps.update_mode,
     )
@@ -280,6 +369,7 @@ def prep_gmtsar(inps):
     prepare_stack(
         unw_files=inps.unw_files,
         meta=meta,
+        bperp_dict=bperp_dict,
         update_mode=inps.update_mode,
     )
 

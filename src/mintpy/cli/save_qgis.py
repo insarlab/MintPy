@@ -37,6 +37,10 @@ def create_parser(subparsers=None):
     parser.add_argument('-B', '--geo-bbox', dest='geo_bbox', type=float, nargs=4, default=None,
                         metavar=('S','N','W','E'), help='bounding box in lat lon: South North West East')
 
+    # other options
+    parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true',
+                        help='Set displacement at the first acquisition to zero.')
+
     return parser
 
 

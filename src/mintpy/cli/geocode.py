@@ -35,6 +35,7 @@ degrees     --> meters on equator
 0.000833334 --> 90
 0.000555556 --> 60
 0.000462963 --> 50
+0.000370370 --> 40
 0.000277778 --> 30
 0.000185185 --> 20
 0.000092593 --> 10
@@ -69,7 +70,7 @@ def create_parser(subparsers=None):
     out = parser.add_argument_group('grid in geo-coordinates')
     out.add_argument('-b', '--bbox', dest='SNWE', type=float, nargs=4, metavar=('S', 'N', 'W', 'E'),
                      help='Bounding box for the area of interest.\n'
-                          'using coordinates of the uppler left corner of the first pixel\n'
+                          'using coordinates of the upper left corner of the first pixel\n'
                           '                 and the lower right corner of the last pixel\n'
                           "for radar2geo, it's the output spatial extent\n"
                           "for geo2radar, it's the input  spatial extent")
@@ -81,7 +82,7 @@ def create_parser(subparsers=None):
     interp.add_argument('-i', '--interp', dest='interpMethod', default='nearest', choices={'nearest', 'linear'},
                         help='interpolation/resampling method (default: %(default)s).')
     interp.add_argument('--fill', dest='fillValue', type=float, default=math.nan,
-                        help='Fill value for extrapolation (default: %(default)s).')
+                        help='Fill value for extrapolation (default: %(default)s or 0 for *.int/unw files).')
     interp.add_argument('-n','--nprocs', dest='nprocs', type=int, default=1,
                         help='number of processors to be used for calculation (default: %(default)s).\n'
                              'Note: Do not use more processes than available processor cores.')
@@ -109,6 +110,11 @@ def cmd_line_parse(iargs=None):
     # import
     from mintpy.utils import readfile, utils as ut
 
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
+
     # check
     if inps.templateFile:
         inps = read_template2inps(inps.templateFile, inps)
@@ -122,12 +128,12 @@ def cmd_line_parse(iargs=None):
 
     # check: --lookup (lookup table existence)
     if not inps.lookupFile:
-        # grab default lookup table
-        inps.lookupFile = ut.get_lookup_file(inps.lookupFile)
-
         # use isce-2 lat/lon.rdr file
         if not inps.lookupFile and inps.latFile:
             inps.lookupFile = inps.latFile
+
+        # grab default lookup table
+        inps.lookupFile = ut.get_lookup_file(inps.lookupFile)
 
         # final check
         if not inps.lookupFile:
@@ -169,6 +175,11 @@ def cmd_line_parse(iargs=None):
             print('ERROR: "--geo2radar" is NOT supported for "--software scipy"!')
             sys.exit(0)
 
+    # default: --fill (set default to zero for .int/unw file)
+    fext = os.path.splitext(inps.file[0])[1]
+    if '--fill' not in inps.argv and fext in ['.int', '.unw']:
+        inps.fillValue = 0
+
     return inps
 
 
@@ -196,6 +207,16 @@ def read_template2inps(template_file, inps):
                     iDict[key] = math.nan
                 else:
                     iDict[key] = float(value)
+
+    # ensure laloStep is a list of two items
+    key = 'laloStep'
+    if key in iDict.keys() and iDict[key]:
+        if len(iDict[key]) == 1:
+            lalo_step = iDict[key]
+            iDict[key] = [-1 * abs(lalo_step[0]), abs(lalo_step[0])]
+            print(f'single laloStep input {lalo_step} detected, convert into two as {iDict[key]}')
+        elif len(iDict[key]) > 2:
+            raise ValueError(f'laloStep input {iDict[key]} could NOT have >2 items!')
 
     # computing configurations
     key = 'mintpy.compute.maxMemory'

@@ -70,7 +70,7 @@ def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
 
 def get_lalo_ref(m_par_file, atr_dict={}):
     """Extract LAT/LON_REF1/2/3/4 from corner file, e.g. 130118_4rlks.amp.corner.
-    If it's not existed, call Gamma script - SLC_corners - to generate it from SLC par file
+    If it does not exist, call Gamma script - SLC_corners - to generate it from SLC par file
         e.g. 130118_4rlks.amp.par
 
     Parameters: m_par_file - str, path, reference date parameter file, i.e. 130118_4rlks.amp.par
@@ -110,7 +110,7 @@ def get_lalo_ref(m_par_file, atr_dict={}):
     return atr_dict
 
 
-def extract_metadata4interferogram(fname, sensor_name=None):
+def extract_metadata4interferogram(fname, sensor_name=None, geo_meta=None):
     """Read/extract attributes from Gamma .unw, .cor and .int file
     Parameters: fname - str, Gamma interferogram filename or path,
                         i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
@@ -179,13 +179,17 @@ def extract_metadata4interferogram(fname, sensor_name=None):
         rg_pixel_size = float(atr['RANGE_PIXEL_SIZE']) / float(atr['RLOOKS'])
         rg_fact = rg_resolution / rg_pixel_size
 
-        antenna_length = sensor.SENSOR_DICT[sensor_name]['antenna_length']
+        antenna_length = sensor.SENSOR_DICT[sensor_name.lower()]['antenna_length']
         az_resolution = antenna_length / 2
         az_pixel_size = float(atr['AZIMUTH_PIXEL_SIZE']) / float(atr['ALOOKS'])
         az_fact = az_resolution / az_pixel_size
 
         ncorr_looks = float(atr['RLOOKS']) * float(atr['ALOOKS']) / (rg_fact * az_fact)
         atr['NCORRLOOKS'] = ncorr_looks
+
+    # geo-coordinate metadata
+    if geo_meta:
+        atr.update(geo_meta)
 
     # Write to .rsc file
     try:
@@ -290,9 +294,9 @@ def extract_metadata4geometry_geo(fname):
     """
     # Get/read GAMMA par file
     ext = os.path.splitext(fname)[1]
-    if ext in ['.UTM_TO_RDC']:
+    if ext.lower().endswith(('to_rdc', '2_rdc', '2rdc')):
         par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
-    elif fname[0].endswith('.utm.dem'):
+    elif fname.endswith('.utm.dem'):
         par_file = fname+'.par'
     par_dict = readfile.read_gamma_par(par_file)
 
@@ -334,17 +338,53 @@ def extract_metadata4geometry_geo(fname):
     return rsc_file
 
 
+def extract_metadata_geo(dem_file):
+    """Extract metadata specific to datasets in geo-coordinates from the DEM file.
+
+    Parameters: dem_file - str, path to the DEM file
+    Returns:    geo_meta - dict, metadata specific to geo-coordinates
+    """
+    # return None if dem_file or its corresponding *.par file not exist
+    if not dem_file or not os.path.isfile(dem_file) or not os.path.isfile(dem_file+'.par'):
+        return None
+
+    # extract metadata
+    geo_meta = {}
+    par_dict = readfile.read_gamma_par(dem_file+'.par', skiprows=1)
+
+    # copy over the geo metadata
+    key_list = ['Y_FIRST', 'X_FIRST', 'Y_STEP', 'X_STEP']
+    for key in key_list:
+        geo_meta[key] = par_dict[key]
+
+    if par_dict['DEM_projection'] == 'EQA':
+        # lat/lon
+        geo_meta['Y_UNIT'] = 'deg'
+        geo_meta['X_UNIT'] = 'deg'
+    elif par_dict['DEM_projection'] == 'UTM':
+        # UTM
+        geo_meta['Y_UNIT'] = 'meter'
+        geo_meta['X_UNIT'] = 'meter'
+        # Note by Yunjun, Jun 25, 2204: hardwired to the north hemisphere for temporary purpose
+        geo_meta['UTM_ZONE'] = par_dict['projection_zone'] + 'N'
+
+    return geo_meta
+
+
 ###################################################################################################
 def prep_gamma(inps):
+
+    # extract metadata in geo-coordinates from DEM file
+    geo_meta = extract_metadata_geo(inps.dem_file)
 
     # loop for each file
     for fname in inps.file:
         # interferograms
         if inps.file_ext in ['.unw', '.cor', '.int']:
-            extract_metadata4interferogram(fname, sensor_name=inps.sensor.lower())
+            extract_metadata4interferogram(fname, sensor_name=inps.sensor, geo_meta=geo_meta)
 
         # geometry - geo
-        elif inps.file_ext in ['.UTM_TO_RDC'] or fname.endswith('.utm.dem'):
+        elif inps.file_ext.endswith(('to_rdc', '2_rdc', '2rdc')) or fname.endswith('.utm.dem'):
             extract_metadata4geometry_geo(fname)
 
         # geometry - radar

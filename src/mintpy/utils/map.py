@@ -1,11 +1,12 @@
+"""Utilities wrapped around cartopy/matplotlib for maps."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Joshua Zahner, Jun 2022            #
 ############################################################
 # Recommend import:
-#    from mintpy.utils.map import draw_lalo_label, draw_scalebar
-# OR from mintpy.utils import plot as pp
+#   from mintpy.utils.map import draw_lalo_label, draw_scalebar
+#   from mintpy.utils import plot as pp
 
 
 import numpy as np
@@ -76,6 +77,11 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
     Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
                 lats, lons, step = m.auto_lalo_sequence(geo_box)
     """
+    # check input arguments
+    if geo_box[1] <= geo_box[3] or geo_box[2] < geo_box[0]:
+        raise ValueError(f'Input geo_box {geo_box} has N <= S or E <= W! Check the order of (W, N, E, S).')
+    if lalo_step and lalo_step <= 0:
+        raise ValueError(f'Input lalo_step ({lalo_step}) must be positive!')
 
     max_lalo_dist = max([geo_box[1] - geo_box[3], geo_box[2] - geo_box[0]])
 
@@ -113,7 +119,8 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
 
 ############################################  Scale Bar  #############################################
 
-def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
+def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12,
+                  color='k', linewidth=2):
     """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
     ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
     Parameters: ax       : matplotlib.pyplot.axes object
@@ -164,9 +171,10 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
     lon1 = lon_c + length_disp / 2.0
 
     ## plot scale bar
-    ax.plot([lon0, lon1], [lat_c, lat_c], color=color)
-    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length_disp], color=color)
-    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], color=color)
+    kwargs = dict(color=color, linewidth=linewidth)
+    ax.plot([lon0, lon1], [lat_c, lat_c], **kwargs)
+    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length_disp], **kwargs)
+    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], **kwargs)
 
     ## plot scale bar label
     unit = 'm'

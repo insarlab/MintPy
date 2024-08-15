@@ -13,11 +13,16 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 #####################################################################################
 EXAMPLE = """example:
+  # same file types
   diff.py  velocity.h5    velocity_demErr.h5
   diff.py  timeseries.h5  inputs/ERA5.h5  -o timeseries_ERA5.h5
   diff.py  timeseries.h5  inputs/ERA5.h5  -o timeseries_ERA5.h5  --force
   diff.py  timeseries_ERA5_ramp_demErr.h5  ../GIANT/Stack/LS-PARAMS.h5 -o mintpy_giant.h5
   diff.py  reconUnwrapIfgram.h5  ./inputs/ifgramStack.h5  -o diffUnwrapIfgram.h5
+
+  # different file types
+  diff.py  filt_20220905_20230220.unw  ./inputs/ERA5.h5 -o filt_20220905_20230220_ERA5.unw
+  diff.py  timeseries.h5 ./inputs/ITRF14.h5 -o timeseries_ITRF14.h5
 
   # multiple files
   diff.py  waterMask.h5  maskSantiago.h5  maskFernandina.h5  -o maskIsabela.h5
@@ -51,9 +56,9 @@ def cmd_line_parse(iargs=None):
     # check
     # check: number of files == 2 for time-series and ifgram stack
     ftype = readfile.read_attribute(inps.file1)['FILE_TYPE']
-    if ftype in ['timeseries', 'ifgramStack']:
+    if ftype in ['timeseries', 'ifgramStack', '.unw']:
         if len(inps.file2) > 1:
-            raise SystemExit(f'ERROR: ONLY ONE file2 is inputed for {ftype} type!')
+            raise SystemExit(f'ERROR: ONLY ONE file2 is inputted for {ftype} type!')
 
     # check: --output (output file is required for number of files >=2)
     if not inps.out_file:

@@ -20,7 +20,7 @@ EXAMPLE = """example:
 """
 
 NOTE = """DEHM: Digital Ellipsoidal Height Model
-  yyxx.dehm with yy and xx indicating the coordinates of the upper left corner of the firt pixel.
+  yyxx.dehm with yy and xx indicating the coordinates of the upper left corner of the first pixel.
   where latitude = (yy + 1) / 1.5, longitude = xx + 100
 """
 

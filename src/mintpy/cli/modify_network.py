@@ -63,7 +63,9 @@ def create_parser(subparsers=None):
                              'i.e. ifgramStack.h5, date12_list.txt')
     parser.add_argument('--exclude-ifg-index', dest='excludeIfgIndex', nargs='*',
                         help='index of interferograms to remove/drop.\n1 as the first')
-    parser.add_argument('--exclude-date', dest='excludeDate', nargs='*',
+    parser.add_argument('--exclude-ifg','--ex-ifg','--ex-date12', dest='excludeDate12', nargs='*',
+                        help='pair(s) to remove/drop in YYYYMMDD_YYYYMMDD format.')
+    parser.add_argument('--exclude-date','--ex-date', dest='excludeDate', nargs='*',
                         help='date(s) to remove/drop, all interferograms included date(s) will be removed')
     parser.add_argument('--start-date', '--min-date', dest='startDate',
                         help='remove/drop interferograms with date earlier than start-date in YYMMDD or YYYYMMDD format')
@@ -88,9 +90,9 @@ def create_parser(subparsers=None):
     cohBased.add_argument('--mask', dest='maskFile', default='waterMask.h5',
                           help='Mask file used to calculate the spatial coherence '
                                '(default: waterMask.h5 or None)')
-    cohBased.add_argument('--aoi-yx', dest='aoi_pix_box', type=int, nargs=4, metavar=('X0', 'Y0', 'X1', 'Y1'), default=None,
+    cohBased.add_argument('--aoi-yx', dest='aoiYX', type=int, nargs=4, metavar=('X0', 'Y0', 'X1', 'Y1'), default=None,
                           help='AOI in row/column range for coherence calculation (default: %(default)s).')
-    cohBased.add_argument('--aoi-lalo', dest='aoi_geo_box', type=float, nargs=4, metavar=('W', 'S', 'E', 'N'), default=None,
+    cohBased.add_argument('--aoi-lalo', dest='aoiLALO', type=float, nargs=4, metavar=('W', 'S', 'E', 'N'), default=None,
                           help='AOI in lat/lon range for coherence calculation (default: %(default)s).')
     cohBased.add_argument('--lookup', dest='lookupFile',
                           help='Lookup table/mapping transformation file for geo/radar coordinate conversion.\n' +
@@ -109,14 +111,20 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from mintpy.utils import utils as ut
+    from mintpy.utils import ptime, readfile, utils as ut
 
     # check: --mask option
     if not os.path.isfile(inps.maskFile):
         inps.maskFile = None
 
-    # check: --exclude-ifg-index option (convert input index to continous index list)
+    # check: --exclude-ifg-index option (convert input index to continuous index list)
     inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
+
+    # check: --ex-date(12) options
+    if inps.excludeDate:
+        inps.exlcudeDate = ptime.yyyymmdd(inps.excludeDate)
+    if inps.excludeDate12:
+        inps.excludeDate12 = ptime.yyyymmdd_date12(inps.excludeDate12)
 
     # check: -t / --template option
     if inps.template_file:
@@ -125,8 +133,8 @@ def cmd_line_parse(iargs=None):
     # check: input arguments (required at least one)
     required_args = [
         inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-        inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaRatioBased,
-        inps.startDate, inps.endDate, inps.reset, inps.manual,
+        inps.excludeIfgIndex, inps.excludeDate, inps.excludeDate12, inps.coherenceBased,
+        inps.areaRatioBased, inps.startDate, inps.endDate, inps.reset, inps.manual,
     ]
     if all(not i for i in required_args + [inps.template_file]):
         msg = 'No input option found to remove interferogram, exit.\n'
@@ -136,6 +144,15 @@ def cmd_line_parse(iargs=None):
     # default: --lookup option
     if not inps.lookupFile:
         inps.lookupFile = ut.get_lookup_file()
+
+    # check: --aoi-lalo option (not for radar-coded products without lookup files)
+    if inps.aoiLALO:
+        atr = readfile.read_attribute(inps.file)
+        if not inps.lookupFile and 'Y_FIRST' not in atr.keys():
+            msg = 'WARNING: Can NOT use --aoi-lalo option for files in radar coordinates '
+            msg += 'without lookup file. Ignore this option and continue.'
+            print(msg)
+            inps.aoiLALO = None
 
     # default: turn --reset ON if:
     # 1) no input options found to drop ifgram AND
@@ -178,24 +195,20 @@ def read_template2inps(template_file, inps):
                 tmp = [i.strip() for i in value.split(',')]
                 sub_y = sorted(int(i.strip()) for i in tmp[0].split(':'))
                 sub_x = sorted(int(i.strip()) for i in tmp[1].split(':'))
-                inps.aoi_pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
+                inps.aoiYX = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
 
             elif key == 'aoiLALO':
                 tmp = [i.strip() for i in value.split(',')]
                 sub_lat = sorted(float(i.strip()) for i in tmp[0].split(':'))
                 sub_lon = sorted(float(i.strip()) for i in tmp[1].split(':'))
-                inps.aoi_geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
-
-                # Check lookup file
-                if not inps.lookupFile:
-                    print(f'Warning: NO lookup table file found! Can not use {key} option without it.')
-                    print('Skip this option.')
-                    inps.aoi_pix_box = None
+                inps.aoiLALO = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
 
             elif key in ['startDate', 'endDate']:
                 iDict[key] = ptime.yyyymmdd(value)
             elif key == 'excludeDate':
                 iDict[key] = ptime.yyyymmdd(value.split(','))
+            elif key == 'excludeDate12':
+                iDict[key] = ptime.yyyymmdd_date12(value.split(','))
             elif key == 'excludeIfgIndex':
                 iDict[key] += value.split(',')
                 iDict[key] = read_input_index_list(iDict[key], stackFile=inps.file)
@@ -221,7 +234,7 @@ def read_input_index_list(idxList, stackFile=None):
             print('Unrecoganized input: '+idx)
     idxListOut = sorted(set(idxListOut))
 
-    # remove index not existed in the input ifgram stack file
+    # remove index not existing in the input ifgram stack file
     if stackFile:
         obj = ifgramStack(stackFile)
         obj.open(print_msg=False)

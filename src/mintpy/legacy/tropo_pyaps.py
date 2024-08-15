@@ -18,6 +18,7 @@ try:
 except ImportError:
     raise ImportError('Cannot import pyaps!')
 
+import mintpy.cli.diff
 from mintpy.objects import geometry, timeseries
 from mintpy.utils import ptime, readfile, utils as ut, writefile
 
@@ -380,7 +381,7 @@ def dload_grib_pyaps(grib_file_list):
 def get_delay(grib_file, inps):
     """Get delay matrix using PyAPS for one acquisition
     Inputs:
-        grib_file - strng, grib file path
+        grib_file - string, grib file path
         atr       - dict, including the following attributes:
                     dem_file    - string, DEM file path
                     trop_model - string, Weather re-analysis data source
@@ -485,19 +486,6 @@ def get_delay_timeseries(inps, atr):
     return
 
 
-def correct_timeseries(dis_file, tropo_file, cor_dis_file):
-    # diff.py can handle different reference in space and time
-    # between the absolute tropospheric delay and the double referenced time-series
-    print('\n------------------------------------------------------------------------------')
-    print('correcting relative delay for input time-series using diff.py')
-    from mintpy import diff
-
-    iargs = [dis_file, tropo_file, '-o', cor_dis_file, '--force']
-    print('diff.py', ' '.join(iargs))
-    diff.main(iargs)
-    return cor_dis_file
-
-
 ###############################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
@@ -508,14 +496,21 @@ def main(iargs=None):
     if inps.trop_file:
         get_delay_timeseries(inps, atr)
 
-    if atr and atr['FILE_TYPE'] == 'timeseries':
-        inps.outfile = correct_timeseries(
-            inps.timeseries_file,
-            inps.trop_file,
-            inps.outfile,
-        )
+    if inps.dis_file:
+        print('\n'+'-'*80)
+        print('Applying tropospheric correction to displacement file...')
+        if ut.run_or_skip(inps.cor_dis_file, [inps.dis_file, inps.tropo_file]) == 'run':
+            # diff.py can handle different reference in space and time
+            # e.g. the absolute delay and the double referenced time-series
+            print('correcting delay for using diff.py')
+            iargs = [inps.timeseries_file, inps.tropo_file, '-o', inps.outfile, '--force']
+            print('diff.py', ' '.join(iargs))
+            mintpy.cli.diff.main(iargs)
+
+        else:
+            print(f'Skip re-applying and use existed corrected displacement file: {inps.cor_dis_file}.')
     else:
-        print('No input timeseries file, skip correcting tropospheric delays.')
+        print('No input displacement file, skip correcting tropospheric delays.')
 
     return inps.outfile
 

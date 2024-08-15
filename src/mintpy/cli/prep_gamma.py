@@ -39,13 +39,13 @@ NOTE = """
   2) secondary .par file, e.g. 130129_4rlks.amp.par
   3) interferogram .off file, e.g. 130118-130129_4rlks.off
 
-  Other metadata files are recommended and can be generated from the above 3 if not existed, more specifically:
+  Other metadata files are recommended and can be generated from the above 3 if not existing, more specifically:
   4) baseline files, e.g. 130118-130129_4rlks.baseline and 130118-130129_4rlks.base_perp,
       which can be generated from file 1-3 with Gamma command base_orbit and base_perp.
   5) corner files, e.g. 130118_4rlks.amp.corner_full and 130118_4rlks.amp.corner,
       which can be generated from file 1 with Gamma command SLC_corners.
 
-  This script will read all these files (generate 4 and 5 if not existed), merge them into one, convert their name from
+  This script will read all these files (generate 4 and 5 if not existing), merge them into one, convert their name from
   Gamma style to ROI_PAC style, and write to an metadata file, same name as input binary data file with suffix .rsc,
   e.g. diff_filt_HDR_130118-130129_4rlks.unw.rsc
 
@@ -100,9 +100,10 @@ NOTE = """
 
 EXAMPLE = """example:
   prep_gamma.py  diff_filt_HDR_20130118_20130129_4rlks.unw
-  prep_gamma.py  interferograms/*/diff_*rlks.unw --sensor sen
-  prep_gamma.py  interferograms/*/filt_*rlks.cor
-  prep_gamma.py  interferograms/*/diff_*rlks.int
+  prep_gamma.py  "interferograms/*/diff_*rlks.unw" --sensor sen --dem "../geometry/sim*rlks.utm.dem"
+  prep_gamma.py  "interferograms/*/diff_*rlks.unw" --sensor sen
+  prep_gamma.py  "interferograms/*/filt_*rlks.cor"
+  prep_gamma.py  "interferograms/*/diff_*rlks.int"
   prep_gamma.py  sim_20150911_20150922.hgt_sim
   prep_gamma.py  sim_20150911_20150922.utm.dem
   prep_gamma.py  sim_20150911_20150922.UTM_TO_RDC
@@ -119,6 +120,8 @@ def create_parser(subparsers=None):
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
     parser.add_argument('--sensor', dest='sensor', type=str, choices=SENSOR_NAMES,
                         help='SAR sensor')
+    parser.add_argument('--dem', dest='dem_file', type=str,
+                        help='DEM data file')
     return parser
 
 
@@ -132,14 +135,19 @@ def cmd_line_parse(iargs=None):
 
     # check
     inps.file = ut.get_file_list(inps.file, abspath=True)
-    inps.file_ext = os.path.splitext(inps.file[0])[1]
+    inps.file_ext = os.path.splitext(inps.file[0])[1].lower()
 
     # check: input file extension
-    ext_list = ['.unw', '.cor', '.int', '.dem', '.hgt_sim', '.UTM_TO_RDC']
-    if inps.file_ext not in ext_list:
+    ext_list = ['.unw', '.cor', '.int', '.dem', '.hgt_sim']
+    ext_ends = ['to_rdc', '2_rdc', '2rdc']
+    if inps.file_ext not in ext_list and not inps.file_ext.endswith(tuple(ext_ends)):
         msg = f'unsupported input file extension: {inps.file_ext}'
-        msg += f'\nsupported file extensions: {ext_list}'
+        msg += f'\nsupported file extensions: {ext_list + ["*"+x for x in ext_ends]}'
         raise ValueError(msg)
+
+    # check: --dem
+    if inps.dem_file:
+        inps.dem_file = ut.get_file_list(inps.dem_file, abspath=True)[0]
 
     return inps
 

@@ -91,7 +91,7 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, 
 
     # get list of boxes for block-by-block IO
     num_box = int(np.ceil((num_date * length * width * 4 * 2) / (max_memory * 1024**3)))
-    box_list = split_box2sub_boxes(
+    box_list, num_box = split_box2sub_boxes(
         box=(0, 0, width, length),
         num_split=num_box,
         dimension='y',

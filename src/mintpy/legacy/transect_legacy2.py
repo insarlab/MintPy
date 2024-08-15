@@ -233,8 +233,7 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
 def transect_lalo(z, atr, start_lalo, end_lalo, interpolation='nearest'):
     """Extract 2D matrix (z) value along the line [start_lalo, end_lalo]"""
     coord = ut.coordinate(atr)
-    [y0, y1] = coord.lalo2yx([start_lalo[0], end_lalo[0]], coord_type='lat')
-    [x0, x1] = coord.lalo2yx([start_lalo[1], end_lalo[1]], coord_type='lon')
+    [y0, y1], [x0, x1] = coord.lalo2yx([start_lalo[0], end_lalo[0]], [start_lalo[1], end_lalo[1]])
     transect = transect_yx(z, atr, [y0, x0], [y1, x1], interpolation)
     return transect
 
@@ -298,8 +297,8 @@ def plot_transect_location(ax, inps):
 
     coord = ut.coordinate(atr0)
     if inps.start_lalo and inps.end_lalo:
-        [y0, y1] = coord.lalo2yx([inps.start_lalo[0], inps.end_lalo[0]], coord_type='lat')
-        [x0, x1] = coord.lalo2yx([inps.start_lalo[1], inps.end_lalo[1]], coord_type='lon')
+        [y0, y1], [x0, x1] = coord.lalo2yx([inps.start_lalo[0], inps.end_lalo[0]],
+                                           [inps.start_lalo[1], inps.end_lalo[1]])
         inps.start_yx = [y0, x0]
         inps.end_yx = [y1, x1]
 
@@ -316,8 +315,7 @@ def plot_transect_location(ax, inps):
         if 0 <= col < data0.shape[1] and 0 <= row < data0.shape[0]:
             z = data0[row, col]
             if 'X_FIRST' in atr0.keys():
-                lat = coord.yx2lalo(row, coord_type='row')
-                lon = coord.yx2lalo(col, coord_type='col')
+                lat, lon = coord.yx2lalo(row, col)
                 return f'lon={lon:.4f}, lat={lat:.4f}, x={x:.0f},  y={y:.0f},  value={z:.4f}'
             else:
                 return f'x={x:.0f},  y={y:.0f},  value={z:.4f}'

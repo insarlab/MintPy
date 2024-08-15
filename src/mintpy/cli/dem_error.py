@@ -41,15 +41,16 @@ def create_parser(subparsers=None):
     parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
-    parser.add_argument('timeseries_file',
-                        help='Timeseries file to be corrrected')
+    parser.add_argument('ts_file', help='Time-series HDF5 file to be corrected.')
     parser.add_argument('-g', '--geometry', dest='geom_file',
                         help='geometry file including datasets:\n'+
                              'incidence angle\n'+
                              'slant range distance\n' +
                              'and/or 3D perpendicular baseline')
-    parser.add_argument('-o', '--outfile',
-                        help='Output file name for corrected time-series')
+    parser.add_argument('-o', '--outfile', dest='ts_cor_file',
+                        help='Output file name for corrected time-series (default: add suffix of "_demErr")')
+    parser.add_argument('--dem-err-file','--dem-error-file', dest='dem_err_file', default='demErr.h5',
+                        help='Output file name for the estimated DEM error (default: %(default)s).')
 
     defo_model = parser.add_argument_group('temporal deformation model')
     defo_model.add_argument('-t', '--template', dest='template_file',
@@ -59,7 +60,7 @@ def create_parser(subparsers=None):
                                  'All dates will be corrected for DEM residual phase still.')
     defo_model.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
                             help='polynomial order number of temporal deformation model (default: %(default)s).')
-    defo_model.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
+    defo_model.add_argument('-s', '--step-date', dest='stepDate', nargs='*', default=[],
                             help='Date of step jump for temporal deformation model (default: %(default)s).'+
                                  ' i.e. date of earthquake/volcanic eruption')
     defo_model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
@@ -69,7 +70,7 @@ def create_parser(subparsers=None):
                         help='Use phase velocity instead of phase for inversion constrain.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip inversion if:\n'+
-                             '1) output timeseries file already exists, readable '+
+                             '1) output time-series file already exists, readable '+
                              'and newer than input interferograms file\n' +
                              '2) all configuration parameters are the same.')
     # computing
@@ -106,10 +107,18 @@ def cmd_line_parse(iargs=None):
     if inps.polyOrder < 1:
         raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
 
-    # default: --output
-    if not inps.outfile:
-        fbase = os.path.splitext(inps.timeseries_file)[0]
-        inps.outfile = f'{fbase}_demErr.h5'
+    # check: --output / --dem-error-file option (must be HDF5 file)
+    for fname in [inps.ts_cor_file, inps.dem_err_file]:
+        if fname:
+            fext = os.path.splitext(fname)[1]
+            if fext not in ['.h5','.he5']:
+                msg = f'--output / --dem-err-file option ({fext}) supports HDF5 file only!'
+                raise ValueError(msg)
+
+    # default: --output option
+    if not inps.ts_cor_file:
+        fbase = os.path.splitext(inps.ts_file)[0]
+        inps.ts_cor_file = f'{fbase}_demErr.h5'
 
     return inps
 
@@ -134,7 +143,7 @@ def read_template2inps(template_file, inps):
         elif value:
             if key in ['polyOrder']:
                 iDict[key] = int(value)
-            elif key in ['excludeDate','stepFuncDate']:
+            elif key in ['excludeDate','stepDate']:
                 iDict[key] = ptime.yyyymmdd(value.split(','))
 
     # computing configurations

@@ -1,10 +1,11 @@
+"""Class wrapped around pyresample/scipy for resampling."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
 # Recommend import:
-#     from mintpy.objects.resample import resample
+#   from mintpy.objects.resample import resample
 
 
 import os
@@ -19,10 +20,9 @@ with warnings.catch_warnings():
     warnings.simplefilter('ignore', UserWarning)
     import pyresample as pr
 
+from mintpy.constants import EARTH_RADIUS
 from mintpy.objects.cluster import split_box2sub_boxes
 from mintpy.utils import ptime, readfile, utils0 as ut
-
-EARTH_RADIUS = 6378122.65   # m
 
 
 class resample:
@@ -206,7 +206,7 @@ class resample:
 
         if self.software == 'pyresample':
             # move 1st/time dimension to the last
-            # so that rows/cols axis are the frist, as required by pyresample
+            # so that rows/cols axis are the first, as required by pyresample
             if len(src_data.shape) == 3:
                 src_data = np.moveaxis(src_data, 0, -1)
 
@@ -246,13 +246,14 @@ class resample:
                     max_memory - float, memory size in GB
                     scale_fac  - float, scale factor from data size to memory used
                                  empirically estimated.
-        Returns:    num_box    - int, number of boxes to be splitted
+        Returns:    num_box    - int, number of boxes to be split
         """
         num_box = 1
 
         # auto split into list of boxes if max_memory > 0
         if src_file and os.path.isfile(src_file) and max_memory > 0:
             # get max dataset shape
+            atr = readfile.read_attribute(src_file)
             fext = os.path.splitext(src_file)[1]
             if fext in ['.h5', '.he5']:
                 with h5py.File(src_file, 'r') as f:
@@ -260,11 +261,14 @@ class resample:
                                  if isinstance(f[i], h5py.Dataset)]
                     max_ds_size = max(np.prod(i) for i in ds_shapes)
             else:
-                atr = readfile.read_attribute(src_file)
                 max_ds_size = int(atr['LENGTH']) * int(atr['WIDTH'])
 
+            # scale the size for complex arrays
+            if atr.get('DATA_TYPE', 'float32').startswith('complex'):
+                max_ds_size *= 6 if atr['DATA_TYPE'].endswith('128') else 3
+
             # calc num_box
-            num_box = int(np.ceil((max_ds_size * 4 * 4) / (max_memory * 1024**3)))
+            num_box = int(np.ceil((max_ds_size * 4 * 6) / (max_memory * 1024**3)))
 
         return num_box
 
@@ -283,14 +287,101 @@ class resample:
         return radius
 
 
+    def get_lat_lon_step(self, src_lat0, src_lat1, src_lon0, src_lon1):
+        """Get/check the lat/lon step size for geocoding.
+
+        Approach 1: ensure the same pixel area before / after resampling
+            Treat the pixel in radar coordinates as an rotated rectangle. Use the bounding
+                box of the rotated rectangle for the ratio between lat and lon steps. Then
+                scale the lat and lon step size to ensure the same area between the pixels
+                in radar and geo coordinates.
+            This is recommended, but it requires metadata on the pixel size info.
+            Link: https://math.stackexchange.com/questions/4001034
+
+        Approach 2: ensure the same matrix shape before / after resampling
+            This is the backup approach if approach 1 does not work.
+
+        Parameters: src_lat0/1   - float, max/min latitude  in degree of the input data file
+                    src_lon0/1   - float, min/max longitude in degree of the input data file
+        Returns:    lat/lon_step - float, output step size in latitude/longitude in degree
+        """
+
+        if self.lalo_step is not None:
+            # use input lat/lon step
+            lat_step, lon_step = self.lalo_step
+
+        else:
+            # calculate default lat/lon step
+            # approach 1: ensure the same pixel area
+            print('calculate output pixel size using approach 1 '
+                  '(same pixel area before/after resampling)')
+
+            # check required metadata
+            meta = {**self.lut_meta, **self.src_meta}
+            key_list = [
+                'AZIMUTH_PIXEL_SIZE',
+                'HEADING',
+                'HEIGHT',
+                'RANGE_PIXEL_SIZE',
+                'STARTING_RANGE',
+                'WIDTH',
+            ]
+            key_not_found = [x for x in key_list if x not in meta.keys()]
+            if len(key_not_found) == 0:
+
+                # azimuth angle (rotation angle) in radian
+                az_angle = np.deg2rad(abs(ut.heading2azimuth_angle(float(meta['HEADING']))))
+
+                # radar pixel size in meter
+                az_step = ut.azimuth_ground_resolution(meta)
+                rg_step = ut.range_ground_resolution(meta)
+
+                # geo pixel size in meter
+                x_step = rg_step * abs(np.cos(az_angle)) + az_step * abs(np.sin(az_angle))
+                y_step = rg_step * abs(np.sin(az_angle)) + az_step * abs(np.cos(az_angle))
+                scale_factor = np.sqrt((rg_step * az_step) / (x_step * y_step))
+                x_step *= scale_factor
+                y_step *= scale_factor
+
+                # geo pixel size in degree
+                lat_c = (src_lat0 + src_lat1) / 2.
+                lon_step = np.rad2deg(x_step / (EARTH_RADIUS * np.cos(np.deg2rad(lat_c))))
+                lat_step = np.rad2deg(y_step / EARTH_RADIUS) * -1.
+
+            else:
+                # approach 2: ensure the same matrix shape
+                msg = 'WARNING: NOT all required metadata are found. '
+                msg += f'Missing metadata: {key_not_found}. Switch to approach 2.\n'
+                msg += 'calculate output pixel size using approach 2 '
+                msg += '(same matrix shape before/after resampling)'
+                print(msg)
+
+                # ensure the same matrix shape before / after geocoding
+                # if not enough metadata found for the above
+                lut_len = int(self.lut_meta['LENGTH'])
+                lut_wid = int(self.lut_meta['WIDTH'])
+                lat_step = (src_lat1 - src_lat0) / (lut_len - 1)
+                lon_step = (src_lon1 - src_lon0) / (lut_wid - 1)
+
+        # ensure lat/lon step sign
+        lat_step = abs(lat_step) * -1.
+        lon_step = abs(lon_step)
+
+        return lat_step, lon_step
+
+
     ##------------------------------ resample using pyresample -------------------------------------##
 
     def prepare_geometry_definition_radar(self):
         """Get src_def and dest_def for lookup table in radar-coord (from ISCE, DORIS)"""
 
-        def mark_lat_lon_anomoly(lat, lon):
+        def find_valid_lat_lon(lat, lon):
             """mask pixels with abnormal values (0, etc.)
             This is found on sentinelStack multiple swath lookup table file.
+
+            Parameters: lat/lon - 2D np.ndarray in float32, latitude/longitude in degrees.
+            Returns:    lat/lon - 2D np.ndarray in float32, latitude/longitude in degrees.
+                        mask    - 2D np.ndarray in bool, 1/0 for valid/invalid pixels.
             """
             # ignore pixels with zero value
             zero_mask = np.multiply(lat != 0., lon != 0.)
@@ -302,7 +393,7 @@ class resample:
                 bin_value, bin_edge = np.histogram(data[mask], bins=10)
                 # if there is anomaly, histogram won't be evenly distributed
                 while np.max(bin_value) > np.sum(zero_mask) * 0.3:
-                    # find the continous bins where the largest bin is --> normal data range
+                    # find the continuous bins where the largest bin is --> normal data range
                     bin_value_thres = ut.median_abs_deviation_threshold(bin_value, cutoff=3)
                     bin_label = ndimage.label(bin_value > bin_value_thres)[0]
                     idx = np.where(bin_label == bin_label[np.argmax(bin_value)])[0]
@@ -327,7 +418,7 @@ class resample:
         lon_file = self.lon_file if self.lon_file else self.lut_file
         lut_lat = readfile.read(lat_file, datasetName='latitude')[0].astype(np.float32)
         lut_lon = readfile.read(lon_file, datasetName='longitude')[0].astype(np.float32)
-        lut_lat, lut_lon, mask = mark_lat_lon_anomoly(lut_lat, lut_lon)
+        lut_lat, lut_lon, mask = find_valid_lat_lon(lut_lat, lut_lon)
 
         # radar2geo (with block-by-block support)
         if 'Y_FIRST' not in self.src_meta.keys():
@@ -339,24 +430,7 @@ class resample:
             src_lon1 = np.nanmax(lut_lon[mask])
 
             # parameter 1 - lalo_step (output grid)
-            if self.lalo_step is None:
-                try:
-                    # ensure the same pixel area before / after geocoding
-                    merged_meta = {**self.lut_meta, **self.src_meta}
-                    lat_c = (src_lat0 + src_lat1) / 2.
-                    lat_step, lon_step = ut.auto_lat_lon_step_size(merged_meta, lat_c)
-
-                except KeyError:
-                    # ensure the same matrix shape before / after geocoding
-                    # if not enough metadata found for the above
-                    lat_step = (src_lat1 - src_lat0) / (lut_lat.shape[0] - 1)
-                    lon_step = (src_lon1 - src_lon0) / (lut_lat.shape[1] - 1)
-                self.lalo_step = (abs(lat_step) * -1., abs(lon_step))
-
-            else:
-                # ensure lat/lon step sign
-                self.lalo_step = (abs(self.lalo_step[0]) * -1.,
-                                  abs(self.lalo_step[1]) * 1.)
+            self.lalo_step = self.get_lat_lon_step(src_lat0, src_lat1, src_lon0, src_lon1)
             print(f'output pixel size in (lat, lon) in degree: {self.lalo_step}')
 
             # parameter 2 / 3 - SNWE (at pixel outer boundary; output grid) / length & width
@@ -383,13 +457,12 @@ class resample:
 
             # split dest_box (in grid)
             # and update num_box based on the actual dest_box_list
-            self.dest_box_list = split_box2sub_boxes(
+            self.dest_box_list, self.num_box = split_box2sub_boxes(
                 box=(0, 0, self.width, self.length),
                 num_split=self.num_box,
                 dimension='y',
                 print_msg=True,
             )
-            self.num_box = len(self.dest_box_list)
 
             # dest_box --> src_box / src_def / dest_def
             for i, dest_box in enumerate(self.dest_box_list):
@@ -546,8 +619,7 @@ class resample:
             print(f'output area extent in (S, N, W, E) in degree: {self.SNWE}')
 
             # parameter 3 - length / width (output grid)
-            self.length = dest_box[3] - dest_box[1]
-            self.width = dest_box[2] - dest_box[0]
+            self.length, self.width = dest_box[3], dest_box[2]
 
             # parameter 4 - list of boxes & geometry definitions
 

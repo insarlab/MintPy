@@ -15,6 +15,7 @@ EXAMPLE = """example:
   save_gdal.py geo/geo_timeseries_ERA5_demErr.h5  -d 20200505_20200517 --of ENVI
   save_gdal.py geo/geo_ifgramStack.h5 -d unwrapPhase-20101120_20110220 --of ISCE
   save_gdal.py geo/geo_ifgramStack.h5 -d   coherence-20101120_20110220 --of ISCE
+  save_gdal.py geo_20230225.slc
 """
 
 

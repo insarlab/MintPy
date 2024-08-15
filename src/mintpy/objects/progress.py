@@ -1,11 +1,12 @@
+"""Classes for progress bar."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Dec 2020                           #
 ############################################################
 # Recommend import:
-#    from mintpy.objects.progress import progressBar
-# OR from mintpy.utils import ptime
+#   from mintpy.objects.progress import progressBar
+#   from mintpy.utils import ptime
 
 
 import io
@@ -36,7 +37,7 @@ class FileProgressObject(io.FileIO):
 
     def read(self, size):
         perc = self.tell() / self._total_size * 100
-        msg = f"extracting: {self.tell()/(1024**2):.1f} of {self._total_size/(1024**2):.1f} MB - {perc:.0f}%"
+        msg = f"extracting: {self.tell()/(1024**2):.0f} of {self._total_size/(1024**2):.0f} MB - {perc:.0f}%"
         sys.stdout.write("\r" + msg)
         sys.stdout.flush()
         return io.FileIO.read(self, size)

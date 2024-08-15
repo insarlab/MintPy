@@ -1,3 +1,131 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64.0", "setuptools_scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "mintpy"
+description = "Miami INsar Time-series software in PYthon"
+authors = [
+    { name = "Zhang Yunjun", email = "yunjunz@outlook.com" },
+    { name = "Heresh Fattahi", email = "hersh.fattahi@gmail.com" },
+]
+requires-python = ">=3.8"
+
+keywords = ["InSAR", "deformation", "time-series", "volcano", "tectonics", "geodesy", "geophysics", "remote-sensing"]
+license = {text = "GPL-3.0-or-later"}
+classifiers=[
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+
+# see section: setuptools_scm
+# https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html#dynamic-metadata
+# dependencies will be read from text files
+dynamic = ["version", "readme", "dependencies", "optional-dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/insarlab/MintPy"
+Documentation = "https://mintpy.readthedocs.io/"
+Issues = "https://github.com/insarlab/MintPy/issues"
+
+# Entry points for the command line interface
+[project.scripts]
+"mintpy" = "mintpy.__main__:main"
+"add.py" = "mintpy.cli.add:main"
+"asc_desc2horz_vert.py" = "mintpy.cli.asc_desc2horz_vert:main"
+"closure_phase_bias.py" = "mintpy.cli.closure_phase_bias:main"
+"dem_error.py" = "mintpy.cli.dem_error:main"
+"dem_gsi.py" = "mintpy.cli.dem_gsi:main"
+"diff.py" = "mintpy.cli.diff:main"
+"generate_mask.py" = "mintpy.cli.generate_mask:main"
+"geocode.py" = "mintpy.cli.geocode:main"
+"ifgram_inversion.py" = "mintpy.cli.ifgram_inversion:main"
+"image_math.py" = "mintpy.cli.image_math:main"
+"image_stitch.py" = "mintpy.cli.image_stitch:main"
+"info.py" = "mintpy.cli.info:main"
+"iono_split_spectrum.py" = "mintpy.cli.iono_split_spectrum:main"
+"iono_tec.py" = "mintpy.cli.iono_tec:main"
+"load_data.py" = "mintpy.cli.load_data:main"
+"load_gbis.py" = "mintpy.cli.load_gbis:main"
+"local_oscilator_drift.py" = "mintpy.cli.local_oscilator_drift:main"
+"lookup_geo2radar.py" = "mintpy.cli.lookup_geo2radar:main"
+"mask.py" = "mintpy.cli.mask:main"
+"modify_network.py" = "mintpy.cli.modify_network:main"
+"multilook.py" = "mintpy.cli.multilook:main"
+"multi_transect.py" = "mintpy.multi_transect:main"
+"plate_motion.py" = "mintpy.cli.plate_motion:main"
+"plot_coherence_matrix.py" = "mintpy.cli.plot_coherence_matrix:main"
+"plot_network.py" = "mintpy.cli.plot_network:main"
+"plot_transection.py" = "mintpy.cli.plot_transection:main"
+"prep_aria.py" = "mintpy.cli.prep_aria:main"
+"prep_cosicorr.py" = "mintpy.cli.prep_cosicorr:main"
+"prep_fringe.py" = "mintpy.cli.prep_fringe:main"
+"prep_gamma.py" = "mintpy.cli.prep_gamma:main"
+"prep_gmtsar.py" = "mintpy.cli.prep_gmtsar:main"
+"prep_hyp3.py" = "mintpy.cli.prep_hyp3:main"
+"prep_isce.py" = "mintpy.cli.prep_isce:main"
+"prep_nisar.py" = "mintpy.cli.prep_nisar:main"
+"prep_roipac.py" = "mintpy.cli.prep_roipac:main"
+"prep_snap.py" = "mintpy.cli.prep_snap:main"
+"reference_date.py" = "mintpy.cli.reference_date:main"
+"reference_point.py" = "mintpy.cli.reference_point:main"
+"remove_hdf5_dset.py" = "mintpy.cli.remove_hdf5_dset:main"
+"remove_ramp.py" = "mintpy.cli.remove_ramp:main"
+"s1ab_range_bias.py" = "mintpy.cli.s1ab_range_bias:main"
+"save_gbis.py" = "mintpy.cli.save_gbis:main"
+"save_gdal.py" = "mintpy.cli.save_gdal:main"
+"save_gmt.py" = "mintpy.cli.save_gmt:main"
+"save_hdfeos5.py" = "mintpy.cli.save_hdfeos5:main"
+"save_kite.py" = "mintpy.cli.save_kite:main"
+"save_kmz.py" = "mintpy.cli.save_kmz:main"
+"save_kmz_timeseries.py" = "mintpy.cli.save_kmz_timeseries:main"
+"save_qgis.py" = "mintpy.cli.save_qgis:main"
+"save_roipac.py" = "mintpy.cli.save_roipac:main"
+"smallbaselineApp.py" = "mintpy.cli.smallbaselineApp:main"
+"solid_earth_tides.py" = "mintpy.cli.solid_earth_tides:main"
+"spatial_average.py" = "mintpy.cli.spatial_average:main"
+"spatial_filter.py" = "mintpy.cli.spatial_filter:main"
+"subset.py" = "mintpy.cli.subset:main"
+"temporal_average.py" = "mintpy.cli.temporal_average:main"
+"temporal_derivative.py" = "mintpy.cli.temporal_derivative:main"
+"temporal_filter.py" = "mintpy.cli.temporal_filter:main"
+"timeseries2velocity.py" = "mintpy.cli.timeseries2velocity:main"
+"timeseries_rms.py" = "mintpy.cli.timeseries_rms:main"
+"tropo_gacos.py" = "mintpy.cli.tropo_gacos:main"
+"tropo_phase_elevation.py" = "mintpy.cli.tropo_phase_elevation:main"
+"tropo_pyaps3.py" = "mintpy.cli.tropo_pyaps3:main"
+"tsview.py" = "mintpy.cli.tsview:main"
+"unwrap_error_bridging.py" = "mintpy.cli.unwrap_error_bridging:main"
+"unwrap_error_phase_closure.py" = "mintpy.cli.unwrap_error_phase_closure:main"
+"view.py" = "mintpy.cli.view:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+readme = { file = ["docs/README.md"], content-type = "text/markdown" }
+
+# extra requirements: `pip install mintpy[test]` or `pip install .[test]`
+[tool.setuptools.dynamic.optional-dependencies.test]
+file = ["tests/requirements.txt"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mintpy = [
+    "data/*.js",
+    "data/*.png",
+    "data/colormaps/*.cpt",
+    "defaults/*.cfg",
+    "defaults/*.yaml",
+]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"

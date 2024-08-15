@@ -1,3 +1,4 @@
+"""Utilities to write files."""
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -170,7 +171,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
                 data_list = [data_list[0], data_list[0]]
                 meta['BANDS'] = 2
 
-        elif fext in ['.cor', '.hgt']:
+        elif fext in ['.cor']:
+            # remove .hgt as it can be float64 in isce2.
             meta['DATA_TYPE'] = 'float32'
             meta['INTERLEAVE'] = 'BIL'
             if meta.get('PROCESSOR', 'isce') == 'roipac':
@@ -184,7 +186,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
             meta['DATA_TYPE'] = 'float32'
             meta['INTERLEAVE'] = 'BIL'
 
-        elif fext in ['.utm_to_rdc']:
+        elif fext.endswith(('to_rdc', '2_rdc', '2rdc')):
             # Gamma lookup table
             meta['BANDS'] = 2
             meta['DATA_TYPE'] = 'float32'
@@ -266,7 +268,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
     }
 
     # structure for timeseries
-    dates = np.array(date_list, np.string_)
+    dates = np.array(date_list, np.bytes_)
     ds_name_dict = {
         "date"       : [np.dtype("S8"), (num_date,), dates],
         "bperp"      : [np.float32,     (num_date,), pbase],
@@ -345,7 +347,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
             if key in ['connectComponent']:
                 ds_comp = 'lzf'
 
-            # changable dataset shape
+            # changeable dataset shape
             if len(data_shape) == 3:
                 max_shape = (None, data_shape[1], data_shape[2])
             else:
@@ -506,7 +508,7 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
     """Write attribute dict into ROI_PAC .rsc file
     Inputs:
         metadata : dict, attributes dictionary
-        out_file : rsc file name, to which attribute is writen
+        out_file : rsc file name, to which attribute is written
         update_mode : bool, skip writing if
                       1) output file existed AND
                       2) no new metadata key/value
@@ -659,7 +661,7 @@ def write_isce_xml(meta, fname, print_msg=True):
     return
 
 
-def write_isce_file(data, out_file, file_type='isce_unw'):
+def write_isce_file(data, out_file, file_type='isce_unw', print_msg=True):
     """write data to file in ISCE format
 
     Parameters: data      - 2D np.ndarray, binary data matrix
@@ -672,6 +674,8 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
 
     # write data to binary file
     data.tofile(out_file)
+    if print_msg:
+        print(f'write file: {out_file}')
 
     # write isce xml metadata file
     length, width = data.shape
@@ -708,7 +712,7 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
     else:
         raise ValueError(f'un-recognized ISCE file type: {file_type}')
 
-    write_isce_xml(meta, out_file)
+    write_isce_xml(meta, out_file, print_msg=print_msg)
 
     return out_file
 
@@ -756,7 +760,7 @@ def write_float32(*args):
     Format of the binary file is same as roi_pac unw, cor, or hgt data.
           should rename to write_rmg_float32()
 
-    Exmaple:
+    Example:
             write_float32(phase, out_file)
             write_float32(amp, phase, out_file)
     """

@@ -7,6 +7,7 @@
 
 
 import glob
+import os
 import sys
 
 from mintpy.utils import arg_utils
@@ -46,6 +47,8 @@ def create_parser(subparsers=None):
                         help='FRInGE geometry directory (default: %(default)s).\n'
                              'This is used to grab 1) bounding box\n'
                              '                 AND 2) geometry source directory where the binary files are.')
+    parser.add_argument('-w','--water-mask', dest='water_mask_file', type=str, default='./geometry/waterMask.rdr',
+                        help='path to water mask file (default: %(default)s or None if not exist).')
 
     parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default='../reference/IW*.xml',
                         help='metadata file (default: %(default)s).\n'
@@ -79,6 +82,13 @@ def cmd_line_parse(iargs=None):
 
     # check: --meta-file option (if contains wildcard)
     inps.metaFile = sorted(glob.glob(inps.metaFile))[0]
+
+    # check: --water-mask option (if default/input file exists)
+    if not os.path.isfile(inps.water_mask_file):
+        msg = f'WARNING: default/input water mask file ({inps.water_mask_file}) NOT found, '
+        msg += 'continue without it (by setting water_mask_file to None).'
+        print(msg)
+        inps.water_mask_file = None
 
     return inps
 

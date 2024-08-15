@@ -13,6 +13,7 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from skimage.transform import resize
 
+import mintpy.cli.diff
 from mintpy.objects import timeseries
 from mintpy.utils import ptime, readfile, utils as ut, writefile
 
@@ -188,7 +189,7 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
     # instantiate time-series
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     num_date = len(date_list)
-    dates = np.array(date_list, dtype=np.string_)
+    dates = np.array(date_list, dtype=np.bytes_)
     ds_name_dict = {
         "date"       : [dates.dtype, (num_date,), dates],
         "timeseries" : [np.float32,  (num_date, length, width), None],
@@ -243,39 +244,6 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
     return tropo_file
 
 
-def correct_timeseries(dis_file, tropo_file, cor_dis_file):
-    # diff.py can handle different reference in space and time
-    # between the absolute tropospheric delay and the double referenced time-series
-    print('\n------------------------------------------------------------------------------')
-    print('correcting relative delay for input time-series using diff.py')
-
-    iargs = [dis_file, tropo_file, '-o', cor_dis_file, '--force']
-    print('diff.py', ' '.join(iargs))
-
-    import mintpy.cli.diff
-    mintpy.cli.diff.main(iargs)
-
-    return cor_dis_file
-
-
-def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
-    print('\n------------------------------------------------------------------------------')
-    print('correcting relative delay for input interferogram')
-
-    print(f'read data from {dis_file}')
-    data, atr = readfile.read(dis_file, datasetName='phase')
-    date1, date2 = ptime.yyyymmdd(atr['DATE12'].split('-'))
-
-    print(f'calc tropospheric delay for {date1}-{date2} from {tropo_file}')
-    tropo  = readfile.read(tropo_file, datasetName=f'timeseries-{date2}')[0]
-    tropo -= readfile.read(tropo_file, datasetName=f'timeseries-{date1}')[0]
-    tropo *= -4. * np.pi / float(atr['WAVELENGTH'])
-
-    print(f'write corrected data to {cor_dis_file}')
-    writefile.write(data - tropo, cor_dis_file, atr)
-    return cor_dis_file
-
-
 ############################################################################
 def run_tropo_gacos(inps):
 
@@ -286,20 +254,12 @@ def run_tropo_gacos(inps):
         geom_file=inps.geom_file,
         gacos_dir=inps.gacos_dir)
 
-    # correct tropo delay from dis time-series
-    ftype = readfile.read_attribute(inps.dis_file)['FILE_TYPE']
-    if ftype == 'timeseries':
-        correct_timeseries(
-            dis_file=inps.dis_file,
-            tropo_file=inps.tropo_file,
-            cor_dis_file=inps.cor_dis_file)
-
-    elif ftype == '.unw':
-        correct_single_ifgram(
-            dis_file=inps.dis_file,
-            tropo_file=inps.tropo_file,
-            cor_dis_file=inps.cor_dis_file)
-    else:
-        print(f'ERROR: input file {ftype} is not timeseries nor .unw, correction is not supported yet!')
+    # correct tropo delay (using diff.py)
+    # diff.py can handle different reference in space and time
+    # e.g. the absolute delay and the double referenced time-series
+    print('correcting delay for using diff.py')
+    iargs = [inps.dis_file, inps.tropo_file, '-o', inps.cor_dis_file, '--force']
+    print('diff.py', ' '.join(iargs))
+    mintpy.cli.diff.main(iargs)
 
     return
