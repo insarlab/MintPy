@@ -194,7 +194,7 @@ def incidence_angle2slant_range_distance(atr, inc_angle):
     if isinstance(inc_angle, str):
         inc_angle = float(inc_angle)
     inc_angle = np.array(inc_angle, dtype=np.float32) / 180 * np.pi
-    r = float(atr['EARTH_RADIUS'])
+    r = float(atr.get('EARTH_RADIUS', EARTH_RADIUS))
     H = float(atr['HEIGHT'])
 
     # calculate 2R based on the law of sines
@@ -229,7 +229,7 @@ def azimuth_ground_resolution(atr):
 
     proc = atr.get('PROCESSOR', 'isce')
     if proc in ['roipac', 'isce']:
-        Re = float(atr['EARTH_RADIUS'])
+        Re = float(atr.get('EARTH_RADIUS', EARTH_RADIUS))
         height = float(atr['HEIGHT'])
         az_step = float(atr['AZIMUTH_PIXEL_SIZE']) * Re / (Re + height)
     elif proc == 'gamma':
