@@ -63,23 +63,20 @@ def resample_file(file, target_length, target_width):
 def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
     """Calculate the difference between two time-series files.
 
-    Parameters:
-        file1         - str, path of file1
-        file2         - str, path of file2
-        out_file      - str, path of output file
-        force_diff    - bool, overwrite existing output file
-        max_num_pixel - float, maximum number of pixels for each block
-    Returns:
-        out_file      - str, path of output file
+    Parameters: file1         - str, path of file1
+                file2         - str, path of file2
+                out_file      - str, path of output file
+                force_diff    - bool, overwrite existing output file
+                max_num_pixel - float, maximum number of pixels for each block
+    Returns:    out_file      - str, path of output file
     """
 
-    # Basic info
+    # basic info
     atr1 = readfile.read_attribute(file1)
     atr2 = readfile.read_attribute(file2)
     k1 = atr1['FILE_TYPE']
     k2 = atr2['FILE_TYPE']
     date_list1 = timeseries(file1).get_date_list()
-
     if k2 == 'timeseries':
         date_list2 = timeseries(file2).get_date_list()
         unit_fac = 1.
@@ -87,10 +84,10 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
         date_list2 = giantTimeseries(file2).get_date_list()
         unit_fac = 0.001
 
-    # Check reference point
+    # check reference point
     ref_date, ref_y, ref_x = check_reference(atr1, atr2)
 
-    # Check dates shared by two time-series files
+    # check dates shared by two timeseries files
     date_list_shared = [i for i in date_list1 if i in date_list2]
     date_flag_shared = np.ones((len(date_list1)), dtype=np.bool_)
     if date_list_shared != date_list1:
@@ -109,7 +106,7 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
     else:
         ref_val = None
 
-    # Instantiate the output file
+    # instantiate the output file
     writefile.layout_hdf5(out_file, ref_file=file1)
 
     # Resample file2 if necessary
@@ -140,8 +137,10 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
             print(f'\n------- processing patch {i+1} out of {num_box} --------------')
             print(f'box: {box}')
 
-        # Extract corresponding block from resampled data2
-        data2 = data2_resampled[:, box[1]:box[3], box[0]:box[2]]
+        # read data2 (consider different reference_date/pixel)
+        print(f'read from file: {file2}')
+        data2 = data2_resampled[:, box[1]:box[3], box[0]:box[2]]* unit_fac
+
 
         if ref_val is not None:
             print(f'* referencing data from {os.path.basename(file2)} to y/x: {ref_y}/{ref_x}')
@@ -152,22 +151,21 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
             ref_ind = date_list_shared.index(ref_date)
             data2 -= np.tile(data2[ref_ind, :, :], (data2.shape[0], 1, 1))
 
-        # Read the corresponding block from file1
+        # read data1
         print(f'read from file: {file1}')
         data1 = readfile.read(file1, box=box)[0]
 
-        # Apply differencing
+        # apply differencing
         mask = data1 == 0.
         data1[date_flag_shared] -= data2
-        data1[mask] = 0.  # Do not change zero phase value
+        data1[mask] = 0.                   # Do not change zero phase value
         del data2
 
-        # Write the block to the output file
+        # write the block
         block = [0, data1.shape[0], box[1], box[3], box[0], box[2]]
         writefile.write_hdf5_block(out_file, data=data1, datasetName=k1, block=block)
 
     return out_file
-
 
 def diff_timeseries_and_velocity(file1, file2, out_file, max_num_pixel=2e8):
     """Calculate the difference between a time-series file and a velocity file.
