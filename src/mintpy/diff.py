@@ -102,7 +102,7 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
 
     if ref_y and ref_x:
         ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
-        ref_val = readfile.read(file2, datasetName=date_list_shared, box=ref_box)[0] * unit_fac
+        ref_val = readfile.read(file1, datasetName=date_list_shared, box=ref_box)[0] * unit_fac
     else:
         ref_val = None
 
