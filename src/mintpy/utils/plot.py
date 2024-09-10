@@ -1683,21 +1683,22 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         elif data_unit[0] == 'km':  scale *= 1000.
 
     elif data_unit[0] == 'radian':
-        phase2range = -float(metadata['WAVELENGTH']) / (4*np.pi)
-        if   disp_unit[0] == 'mm':  scale *= phase2range * 1000.0
-        elif disp_unit[0] == 'cm':  scale *= phase2range * 100.0
-        elif disp_unit[0] == 'dm':  scale *= phase2range * 10.0
-        elif disp_unit[0] == 'm' :  scale *= phase2range * 1.0
-        elif disp_unit[0] == 'km':  scale *= phase2range * 1/1000.0
-        elif disp_unit[0] in ['in','inch']:  scale *= phase2range * 39.3701
-        elif disp_unit[0] in ['ft','foot']:  scale *= phase2range * 3.28084
-        elif disp_unit[0] in ['yd','yard']:  scale *= phase2range * 1.09361
-        elif disp_unit[0] in ['mi','mile']:  scale *= phase2range * 0.000621371
-        elif disp_unit[0] in ['radians','radian','rad','r']:
+        if disp_unit[0] in ['radians','radian','rad','r']:
             pass
         else:
-            print('Unrecognized phase/length unit:', disp_unit[0])
-            pass
+            phase2range = -float(metadata['WAVELENGTH']) / (4*np.pi)
+            if disp_unit[0] == 'mm':  scale *= phase2range * 1000.0
+            elif disp_unit[0] == 'cm':  scale *= phase2range * 100.0
+            elif disp_unit[0] == 'dm':  scale *= phase2range * 10.0
+            elif disp_unit[0] == 'm' :  scale *= phase2range * 1.0
+            elif disp_unit[0] == 'km':  scale *= phase2range * 1/1000.0
+            elif disp_unit[0] in ['in','inch']:  scale *= phase2range * 39.3701
+            elif disp_unit[0] in ['ft','foot']:  scale *= phase2range * 3.28084
+            elif disp_unit[0] in ['yd','yard']:  scale *= phase2range * 1.09361
+            elif disp_unit[0] in ['mi','mile']:  scale *= phase2range * 0.000621371
+            else:
+                print('Unrecognized phase/length unit:', disp_unit[0])
+                pass
 
     # amplitude/coherence unit - 1
     elif data_unit[0] == '1':
