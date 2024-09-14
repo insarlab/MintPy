@@ -1686,6 +1686,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         if disp_unit[0] in ['radians','radian','rad','r']:
             pass
         else:
+            # grab WAVELENGTH only if disp_unit[0] is not radian
             phase2range = -float(metadata['WAVELENGTH']) / (4*np.pi)
             if disp_unit[0] == 'mm':  scale *= phase2range * 1000.0
             elif disp_unit[0] == 'cm':  scale *= phase2range * 100.0
