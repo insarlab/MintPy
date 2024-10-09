@@ -206,13 +206,13 @@ def check_map_projection(inps, metadata, print_msg=True):
         msg = 'initiate cartopy map projection: '
         if inps.coord_unit.startswith('deg'):
             inps.map_proj_obj = ccrs.PlateCarree()
-            vprint(msg + 'PlateCarree')
+            print(msg + 'PlateCarree')
 
         elif inps.coord_unit.startswith('meter'):
             if 'UTM_ZONE' in metadata.keys():
                 utm_zone = metadata['UTM_ZONE']
                 inps.map_proj_obj = ccrs.UTM(utm_zone)
-                vprint(msg + f'UTM zone {utm_zone}')
+                print(msg + f'UTM zone {utm_zone}')
 
                 # check --lalo-label (works for PlateCarree only)
                 if inps.lalo_label:
