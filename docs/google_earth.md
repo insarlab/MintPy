@@ -2,7 +2,7 @@ MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Mar
 
 ### 1. Displacement time-series ###
 
-`save_kmz_timeseries.py` takes 3D displacement time-series file and outputs a KMZ file with interactive time-seires plot.
+`save_kmz_timeseries.py` takes 3D displacement time-series file and outputs a KMZ file with interactive time-series plot.
 
 <p align="center">
   <img src="https://insarlab.github.io/figs/docs/mintpy/GoogleEarth-FernandinaSenD128-TS.jpg">
