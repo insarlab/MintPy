@@ -49,7 +49,8 @@ EXAMPLE = """example:
   prep_aria.py -t SanFranSenDT42.txt
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt'
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' -a '../azimuthAngle/*.vrt' -w ../mask/watermask.msk
-
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' --set '../stack/setStack.vrt' --tropo '../stack/troposphereTotal/HRRR_stack.vrt' --iono '../stack/ionStack.vrt'
+  
   # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
   # reference: https://github.com/aria-tools/ARIA-tools
   ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
@@ -106,6 +107,20 @@ def create_parser(subparsers=None):
                       help='Name of the azimuth angle file.')
     geom.add_argument('-w','--water-mask', dest='waterMaskFile', type=str,
                       help='Name of the water mask file')
+    
+    # correction layers: troposphereTotal, ionosphere, solidEarthTides
+    corr = parser.add_argument_group('corrections')
+    corr.add_argument('-ct', '--tropo', dest='tropoFile', type=str,
+                      help='Name of the Troposhere Delay stack file', default=None)
+    corr.add_argument('-ci', '--iono', dest='ionoFile', type=str,
+                    help='Name of the Ionosphere Delay stack file', default=None)
+    corr.add_argument('-cs', '--set', dest='setFile', type=str,
+                    help='Name of the Solid Earth Tides stack file', default=None)
+    corr.add_argument('--cluster', dest='cluster', type=str, choices={'local', 'pbs', None},
+                    help='Parallelize inversion of correction layers w Dask', default=None)
+    corr.add_argument('-n', '--num-workers', dest='num_workers', type=str,
+                    help='Dask number of workers', default='2')
+
     return parser
 
 
@@ -146,10 +161,14 @@ def cmd_line_parse(iargs = None):
         # search for wildcard pattern
         fnames = glob.glob(iDict[key]) if iDict[key] else []
 
-        # user the first element if more than one exist
+        # return the first element if more than one exist
+        # except for tropo, for which multiple inputs could be passed
         if len(fnames) > 0:
-            iDict[key] = fnames[0]
-            print('{k:<{w}} : {f}'.format(k=key, w=max_digit, f=fnames[0]))
+            if 'tropo' not in key:
+                iDict[key] = fnames[0]
+            else:
+                iDict[key] = fnames
+            print('{k:<{w}} : {f}'.format(k=key, w=max_digit, f=iDict[key]))
 
         elif key in required_ds_keys:
             # raise exception if any required DS is missing
