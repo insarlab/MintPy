@@ -55,6 +55,71 @@ def check_reference(atr1, atr2):
     return ref_date, ref_y, ref_x
 
 
+def diff_timeseries_v2(file1, file2, out_file, force_diff=False):
+    """Calculate the difference between two time-series files,
+    assuming the two files have the same spatial coverage.
+    """
+
+    # basic info
+    atr1 = readfile.read_attribute(file1)
+    atr2 = readfile.read_attribute(file2)
+    k1 = atr1['FILE_TYPE']
+    k2 = atr2['FILE_TYPE']
+    length1, width1 = int(atr1['LENGTH']), int(atr1['WIDTH'])
+    length2, width2 = int(atr2['LENGTH']), int(atr2['WIDTH'])
+    date_list1 = timeseries(file1).get_date_list()
+    date_list2 = timeseries(file2).get_date_list()
+
+    # check file size
+    different_size = False
+    if length1 != length2 or width1 != width2:
+        different_size = True
+        kwargs = dict(
+            output_shape=(length1, width1),
+            order=1,
+            mode='constant',
+            anti_aliasing=True,
+            preserve_range=True,
+        )
+        print('WARNING: file 1/2 have different sizes:')
+        print(f'    file 1: ({atr1["LENGTH"]}, {atr1["WIDTH"]})')
+        print(f'    file 2: ({atr2["LENGTH"]}, {atr2["WIDTH"]})')
+    if different_size and not force_diff:
+        raise Exception('To enforce the differencing anyway, use --force option.')
+
+    # check reference date / point
+    ref_date, ref_y, ref_x = check_reference(atr1, atr2)
+    if ref_date:
+        ref_data = readfile.read(file2, datasetName=ref_date, resize2shape=(length1, width1))[0]
+        if different_size:
+            ref_data = resize(ref_data, **kwargs)
+
+    # check dates shared by two timeseries files
+    date_list_shared = [i for i in date_list1 if i in date_list2]
+    if date_list_shared != date_list1:
+        print(f'WARNING: {file2} does not contain all dates in {file1}')
+        if force_diff:
+            date_list_ex = list(set(date_list1) - set(date_list_shared))
+            print('Continue and enforce the differencing for their shared dates only.')
+            print(f'\twith following dates are ignored for differencing:\n{date_list_ex}')
+        else:
+            raise Exception('To enforce the differencing anyway, use --force option.')
+
+    # get reference matrix
+    if ref_date:
+        ref_val = readfile.read(file2, datasetName=ref_date, resize2shape=(length1, width1))[0]
+    else:
+        ref_val = None
+
+    #for date_str in date_list1:
+    #    if date_str in date_list2:
+    #        # read
+    #        # substract
+    #    else:
+    #        # do nothing
+    #    #write
+
+
 def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
     """Calculate the difference between two time-series files.
 
@@ -78,6 +143,16 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
     elif k2 == 'giantTimeseries':
         date_list2 = giantTimeseries(file2).get_date_list()
         unit_fac = 0.001
+
+    # check file size and resolution
+    different_size = False
+    if any(int(atr1[x]) != int(atr2[x]) for x in ['LENGTH', 'WIDTH']):
+        different_size = True
+        print('WARNING: file 1/2 have different sizes:')
+        print(f'    file 1: ({atr1["LENGTH"]}, {atr1["WIDTH"]})')
+        print(f'    file 2: ({atr2["LENGTH"]}, {atr2["WIDTH"]})')
+    if different_size and not force_diff:
+        raise Exception('Could NOT run differencing on files with different sizes! Use --force option to overwrite.')
 
     # check reference point
     ref_date, ref_y, ref_x = check_reference(atr1, atr2)
