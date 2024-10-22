@@ -505,6 +505,9 @@ class TimeSeriesAnalysis:
                     elif method == 'pyaps':
                         fname1 = f'{os.path.splitext(fname0)[0]}_{model}.h5'
 
+                    elif method == 'HTC':
+                        fname1 = f'{os.path.splitext(fname0)[0]}_tropHTC.h5'
+                    
                     else:
                         msg = f'un-recognized tropospheric correction method: {method}'
                         raise ValueError(msg)
@@ -615,8 +618,11 @@ class TimeSeriesAnalysis:
 
     def run_tropospheric_delay_correction(self, step_name):
         """Correct tropospheric delays."""
-        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
+        #TODO
+        #geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        geom_file = os.path.join(self.workDir, './inputs/geometry.Geo.h5')
+        #mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
+        mask_file = os.path.join(self.workDir, 'temporalCoherence.h5')
 
         fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
         in_file = fnames['input']
@@ -688,6 +694,18 @@ class TimeSeriesAnalysis:
 
                         else:
                             raise ValueError(f'un-recognized dataset name: {tropo_model}.')
+            # High-frequency Texture Correlation (Yang et al., 2024)         
+            elif method == 'HTC': 
+                #TODO
+                velocity_dir = self.template['mintpy.tropospheric.velocityDir']
+                window_size = self.template['mintpy.tropospheric.windowSize']
+                overlap_ratio = self.template['mintpy.tropospheric.overlapRatio']
+                iargs = [in_file, '-g', geom_file, '-m', mask_file, '-o', out_file, '-v', velocity_dir, '-w' , window_size, '-r', overlap_ratio]
+                print('tropospheric delay correction with high frequency texture correlation approach')
+                print('\ntropo_HTC.py', ' '.join(iargs))
+                if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                    import mintpy.cli.tropo_HTC
+                    mintpy.cli.tropo_HTC.main(iargs)
 
         else:
             print('No tropospheric delay correction.')
