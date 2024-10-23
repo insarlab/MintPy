@@ -8,7 +8,7 @@ h5py
 joblib
 lxml
 matplotlib
-numpy
+numpy==1.25.0
 pyaps3>=0.3
 pykml>=0.2
 pyproj

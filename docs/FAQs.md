@@ -66,3 +66,32 @@ Option 1: If MintPy could read your data files, e.g. via testing with `view.py`,
 This is very similar to the existing ISCE/topsStack + MintPy example on Fernandina volcano.
 
 Option 2: Write a independent script to handle the data reading, attributes/metadata preparation and writing into HDF5 file, like `prep_aria.py`, as shown in the ARIA + MintPy example on San Francisco Bay.
+
+### 3. Matrix Multiplication Issue with NumPy and Workaround
+
+When performing matrix multiplication using NumPy, users may encounter performance issues, especially with large matrices. This is due to the fact that NumPy relies on BLAS and LAPACK libraries, which may not be optimized for all systems.
+
+#### Workaround using PyTorch
+
+A practical workaround is to use PyTorch, which provides efficient implementations for matrix operations and can leverage GPUs for acceleration. Here is a simple example of how to perform matrix multiplication using PyTorch:
+
+```python
+import torch
+
+# Create two random matrices
+matrix_a = torch.rand(1000, 1000)
+matrix_b = torch.rand(1000, 1000)
+
+# Perform matrix multiplication
+result = torch.matmul(matrix_a, matrix_b)
+```
+
+#### Alternative Solution: Downgrading NumPy
+
+Another solution is to downgrade NumPy to a version that may have better performance characteristics for your specific system configuration. This can be done using pip:
+
+```bash
+pip install numpy==1.19.5
+```
+
+However, be cautious with downgrading as it may affect compatibility with other packages.
