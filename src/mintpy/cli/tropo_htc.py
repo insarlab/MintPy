@@ -18,8 +18,8 @@ REFERENCE = """reference:
 """
 #TODO
 EXAMPLE = """example:
-  tropo_HTC.py  timeseries_ramp_demErr.h5  -v velocity.h5  -g inputs/geometryRadar.h5  -m maskTempCoh.h5
-  tropo_HTC .py  geo_timeseries_demErr.h5  -g geo_geometryRadar.h5     -m geo_maskTempCoh.h5
+  tropo_htc.py  timeseries_ramp_demErr.h5  -v velocity.h5  -g inputs/geometryRadar.h5  -m maskTempCoh.h5
+  tropo_htc .py  geo_timeseries_demErr.h5  -g geo_geometryRadar.h5     -m geo_maskTempCoh.h5
 """
 
 def create_parser(subparsers=None):
@@ -71,10 +71,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.tropo_HTC import run_tropo_HTC
+    from MintPy.src.mintpy.tropo_htc import run_tropo_htc
 
     # run
-    run_tropo_HTC(inps)
+    run_tropo_htc(inps)
 
 
 ############################################################################

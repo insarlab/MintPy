@@ -8,7 +8,8 @@
 import os
 import cv2
 import numpy as np
-from scipy.interpolate import interp2d
+from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import griddata
 
 from mintpy.mask import mask_matrix
 from mintpy.objects import timeseries
@@ -19,15 +20,21 @@ from mintpy.utils import readfile, writefile
 def read_topographic_data(geom_file, meta):
     print('read height & incidenceAngle from file: '+geom_file)
     dem = readfile.read(geom_file, datasetName='height', print_msg=False)[0]
-    inc_angle = readfile.read(geom_file, datasetName='incidenceAngle', print_msg=False)[0]
-    dem *= 1.0/np.cos(inc_angle*np.pi/180.0)
-
-    ref_y = int(meta['REF_Y'])
-    ref_x = int(meta['REF_X'])
-    dem -= dem[ref_y, ref_x]
-
-    # Design matrix for elevation v.s. phase
-    # dem = dem.flatten()
+    Na, Nr = dem.shape
+    dataLine = dem.flatten()
+    
+    # 找到非NaN值的索引
+    index = np.where(~np.isnan(dataLine))[0]
+    x = np.ceil(index / Na).astype(int)
+    y = np.mod(index, Na).astype(int)
+    
+    # 创建插值网格
+    xi = np.arange(0, Nr)
+    yi = np.arange(0, Na)
+    
+    # 使用三次样条插值
+    dataInp = griddata((x, y), dataLine[index], (xi[None, :], yi[:, None]), method='cubic')
+    dem[np.isnan(dem)] = dataInp[np.isnan(dem)]
     return dem
 
 def read_velocity_data(velo_file, meta):
@@ -37,7 +44,7 @@ def read_velocity_data(velo_file, meta):
     return velocity
 
 
-def estimate_local_slope(dem, ts_data, inps, n_ref):
+def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
     """Estimate local slope based on texture correlation for each acquisition of timeseries
     Parameters: dem     : 2D array in size of (          length, width)
                 ts_data : 3D array in size of (num_date, length, width)
@@ -53,33 +60,45 @@ def estimate_local_slope(dem, ts_data, inps, n_ref):
     Iteration = 10
     rg = 40
     step = 0.0001
+    lamda = 0.3284035 # TODO
+    
+    # TODO
+    #ref_y = int(meta['REF_Y'])
+    #ref_x = int(meta['REF_X'])
+    ref_y = 282
+    ref_x = 204
 
     velocity = readfile.read(inps.velo_file, datasetName='velocity')[0]
 
     print('reading mask from file: '+inps.mask_file)
     mask_coh = readfile.read(inps.mask_file, datasetName='temporalCoherence')[0]
+    mask_coh = np.where(mask_coh < 0.87, np.nan, 1) #TODO
+    
     maskdef = 0 #TODO
     mask_def = create_deformation_mask(dem, velocity, maskdef)
     mask = mask_def * mask_coh
 
-
-    Na, Nr, N = ts_data.shape
+    N, Na, Nr = ts_data.shape
     #Na, Nr = dem.shape
     W = inps.windowsize
     w = (W-1)/2
     overlap = round(inps.overlapratio*(2*w+1))
-    Na_C = np.arange(w + 1, Na - w - overlap + 1, 2 * w - overlap)
-    Nr_C = np.arange(w + 1, Nr - w - overlap + 1, 2 * w - overlap)
+    Na_C = np.arange(w + 1, Na + 1, 2 * w - overlap)
+    Nr_C = np.arange(w + 1, Nr + 1, 2 * w - overlap)
     
-    k_LLF = np.zeros(len(Na_C), len(Nr_C), N)
-    d_LLF = np.zeros(len(Na_C), len(Nr_C), N)
-    k_HTC = np.zeros(len(Na_C), len(Nr_C), N)
+    k_LLF = np.zeros((N, len(Na_C), len(Nr_C)))
+    d_LLF = np.zeros((N, len(Na_C), len(Nr_C)))
+    k_htc = np.zeros((N, len(Na_C), len(Nr_C)))
 
-    for na in range(0, len(Na_C)):
-        for nr in range(0, len(Nr_C)):
+    
+    ts_data = 4 * np.pi / lamda * ts_data[:N, :, :]
+    reference_value = ts_data[:, ref_y-1, ref_x-1]
+    ts_data = ts_data - reference_value[:, np.newaxis, np.newaxis]
+    ts_data[np.isnan(ts_data)] = 0
+
+    for na, nac in enumerate(Na_C):
+        for nr, nrc in enumerate(Nr_C):
             # patch
-            nac = Na_C[na]
-            nrc = Nr_C[nr]
             u = nac - w
             U = np.where(u < 1, 1, u)
             d = nac + w
@@ -89,80 +108,87 @@ def estimate_local_slope(dem, ts_data, inps, n_ref):
             r = nrc + w
             R = np.where(r > Nr, Nr, r)
 
-            if na == len(Na_C):
+            if na == len(Na_C) - 1:
                 D = Na
-            if nr == len(Nr_C):
+            if nr == len(Nr_C) - 1:
                 R = Nr
+            U = int(U)
+            D = int(D)
+            L = int(L)
+            R = int(R)    
             tmp = np.full((Na, Nr), np.nan)
-            tmp[U:D, L:R] = 1
-            mask_process = mask
+            tmp[U-1:D, L-1:R] = 1
+            mask_process = mask.copy()
             mask_process[np.isnan(tmp)] = np.nan
 
             # solve
-            result_compare = np.zeros(4, N)
-            for n in range(0, N):
+            result_compare = np.zeros((N, 4))
+            for n in range(N):
                 if n == n_ref:
                     continue
 
                 # ----------- initial value ----------- #
                 # mask
-                mask_std = np.ones(Na, Nr) * mask_process
+                mask_std = np.ones((Na, Nr)) * mask_process
 
                 # iterative linear fitting
                 # res+step = 0.5 # step [rad]
                 # Iteration = 10
-                for iter in range(1, Iteration + 1):
+                for iter in range(Iteration):
                     # linear fitting
-                    phase_tmp = ts_data[:, :, n] * mask_process
+                    phase_tmp = ts_data[n, :, :] * mask_std
                     dem_tmp = dem * mask_std
-                    coe = np.polyfit(dem[~np.isnan(mask_std)], phase_tmp[~np.isnan(mask_std)], 1)
+                    valid_idx = ~np.isnan(phase_tmp) & ~np.isnan(dem_tmp)
+                    if np.nansum(valid_idx) == 0:
+                        continue
+                    coe = np.polyfit(dem[valid_idx], phase_tmp[valid_idx], 1)
                     cor_tmp = phase_tmp - coe[0]*dem_tmp - coe[1]
 
                     # result recording
-                    if iter == 1:
-                        result_compare[0, n] = coe[0]
-                        result_compare[3, n] = coe[1]
+                    if iter == 0:
+                        result_compare[n, 0] = coe[0]
+                        result_compare[n, 3] = coe[1]
                     
                     # mask uploading
-                    max_tmp = np.max(np.max(np.abs(cor_tmp))) #TODO
+                    max_tmp = np.nanmax(np.abs(cor_tmp)) #TODO
                     max_tmp = np.where(max_tmp > res_step, max_tmp - res_step, max_tmp)
                     mask_std[np.abs(cor_tmp) > max_tmp] = np.nan
 
-                    if sum(np.sum(~np.isnan(mask_std))) < sum(np.sum(~np.isnan(mask_process))) / 10: #TODO
+                    if np.nansum(~np.isnan(mask_std)) < np.nansum(~np.isnan(mask_process)) / 10: #TODO
                         break
 
                 # ----------- texture correlation ----------- #        
-                mask_tmp = mask[U:D, L:R]
+                mask_tmp = mask[U-1:D, L-1:R]
                 
-                A = dem[U:D, L:R]
-                A_LP = cv2.GaussianBlur(A, (w2, w2), sigmaX=w1, sigmaY=w1)
+                A = dem[U-1:D, L-1:R]
+                A_LP = cv2.GaussianBlur(A, (w2, w2), sigmaX=w1, borderType=cv2.BORDER_REPLICATE)
                 A = A - A_LP
                 A_line = A[~np.isnan(mask_tmp)]
                 A_line = A_line / np.linalg.norm(A_line)
-
+                
                 # range = 40
                 # step = 0.0001
                 # left
                 k_left = -rg * step + coe[0]
-                phase_ts_Scor_tmp = ts_data[:, :, n] - k_left * dem
-                C = phase_ts_Scor_tmp[U:D, L:R]
+                phase_ts_Scor_tmp = ts_data[n, :, :] - k_left * dem
+                C = phase_ts_Scor_tmp[U-1:D, L-1:R]
                 C[np.isnan(C)] = 0
-                C_LP = cv2.GaussianBlur(A, (w2, w2), sigmaX=w1, sigmaY=w1)
+                C_LP = cv2.GaussianBlur(C, (w2, w2), sigmaX=w1, borderType=cv2.BORDER_REPLICATE)
                 C = C - C_LP
                 C_line = C[~np.isnan(mask_tmp)]
                 C_line = C_line / np.linalg.norm(C_line)
-                conv_AC = np.sum(A_line * C_line)
+                conv_AC = np.nansum(A_line * C_line)
                 record_left = np.abs(conv_AC)
                 # right
                 k_right = rg * step + coe[0]
-                phase_ts_Scor_tmp = ts_data[:, :, n] - k_right * dem
-                C = phase_ts_Scor_tmp[U:D, L:R]
+                phase_ts_Scor_tmp = ts_data[n, :, :] - k_right * dem
+                C = phase_ts_Scor_tmp[U-1:D, L-1:R]
                 C[np.isnan(C)] = 0
-                C_LP = cv2.GaussianBlur(A, (w2, w2), sigmaX=w1, sigmaY=w1)
+                C_LP = cv2.GaussianBlur(C, (w2, w2), sigmaX=w1, borderType=cv2.BORDER_REPLICATE)
                 C = C - C_LP
                 C_line = C[~np.isnan(mask_tmp)]
                 C_line = C_line / np.linalg.norm(C_line)
-                conv_AC = np.sum(A_line * C_line)
+                conv_AC = np.nansum(A_line * C_line)
                 record_right = np.abs(conv_AC)
 
                 if record_left >= record_right:
@@ -173,75 +199,89 @@ def estimate_local_slope(dem, ts_data, inps, n_ref):
                     record = np.zeros(len(k))
 
                 for i in range(0, len(k)):
-                    phase_ts_Scor_tmp = ts_data[:, :, n] - k[i] * dem
-                    C = phase_ts_Scor_tmp[U:D, L:R]
+                    phase_ts_Scor_tmp = ts_data[n, :, :] - k[i] * dem
+                    C = phase_ts_Scor_tmp[U-1:D, L-1:R]
                     C[np.isnan(C)] = 0
-                    C_LP = cv2.GaussianBlur(A, (w2, w2), sigmaX=w1, sigmaY=w1)
+                    C_LP = cv2.GaussianBlur(C, (w2, w2), sigmaX=w1, borderType=cv2.BORDER_REPLICATE)
                     C = C - C_LP
                     C_line = C[~np.isnan(mask_tmp)]
                     C_line = C_line / np.linalg.norm(C_line)
 
-                    conv_AC = np.sum(A_line * C_line)
+                    conv_AC = np.nansum(A_line * C_line)
                     record[i] = np.abs(conv_AC)
 
                 # slope
-                index = np.where(record == np.min(record))[0]
-                result_compare[1, n] = coe[0]
-                result_compare[2, n] = k[index]
+                #index = np.where(record == np.min(record))[0]
+                index = np.argmin(record)
+                result_compare[n, 1] = coe[0]
+                result_compare[n, 2] = k[index]
             
             # result recording
-            k_LLF[na, nr, :] = result_compare[0, :]
-            d_LLF[na, nr, :] = result_compare[3, :]
-            k_HTC[na, nr, :] = result_compare[2, :]
-    return [k_LLF, d_LLF, k_HTC]
+            k_LLF[:, na, nr] = result_compare[:, 0]
+            d_LLF[:, na, nr] = result_compare[:, 3]
+            k_htc[:, na, nr] = result_compare[:, 2]
+    return [k_LLF, d_LLF, k_htc]
 
-def slope_interpolation(ts_data, inps, k_HTC):
+def slope_interpolation(ts_data, inps, k_htc):
     """Filtering parameters for obtaining high-frequency texture correlation"""
     sigma_slope = 7
     w_slope = 7   
 
-    Na, Nr, N = ts_data.shape
+    N, Na, Nr = ts_data.shape
     #Na, Nr = dem.shape
     W = inps.windowsize
     w = (W-1)/2
     overlap = round(inps.overlapratio*(2*w+1))
-    Na_C = np.arange(w + 1, Na - w - overlap + 1, 2 * w - overlap)
-    Nr_C = np.arange(w + 1, Nr - w - overlap + 1, 2 * w - overlap)
+    Na_C = np.arange(w + 1, Na + 1, 2 * w - overlap)
+    Nr_C = np.arange(w + 1, Na + 1, 2 * w - overlap)
     # grid
     Y = Na_C.reshape(-1, 1) * np.ones((1, len(Nr_C)))
-    X = np.ones((len(Na_C), 1)) * Nr_C.reshape(-1, 1)
+    X = np.ones((len(Na_C), 1)) * Nr_C
 
-    Xq, Yq = np.meshgrid(np.arange(1, Nr+1), np.arange(1, Na+1))
-
-    # K_HTC
-    k_HTC_interp = np.zeros(Na, Nr, N)
-    for n in range(0, N):
-        k_HTC_filt = cv2.GaussianBlur(k_HTC[:, :, n], (w_slope, w_slope), sigmaX=sigma_slope, sigmaY=sigma_slope)
-        f_interp = interp2d(X, Y, k_HTC_filt, kind='spline')
-        k_HTC_interp[:, :, n] = f_interp(Xq, Yq).reshape(k_HTC_interp[:, :, n].shape) #TODO 
+    Xq, Yq = np.meshgrid(np.arange(0, Nr), np.arange(0, Na))
     
-    return k_HTC_interp
+    # K_htc
+    k_htc_interp = np.zeros((N, Na, Nr))
+    for n in range(0, N):
+        k_htc_filt = cv2.GaussianBlur(k_htc[n, :, :], (w_slope, w_slope), sigmaX=sigma_slope, borderType=cv2.BORDER_REPLICATE)
+        spline = RectBivariateSpline(Na_C, Nr_C, k_htc_filt) #TODO
+        k_htc_interp[n, :, :] = spline.ev(Xq, Yq)
+        #f_interp = interp2d(X.flatten(), Y.flatten(), k_htc_filt, kind='spline')
+        #k_htc_interp[n, :, :] = f_interp(Xq, Yq).reshape(Xq.shape) #TODO 
+    
+    return k_htc_interp
 
-def intercept_filtering(dem, ts_data, inps, k_HTC_interp, meta):
+def intercept_filtering(dem, ts_data, inps, k_htc_interp, meta):
     """Filtering parameters for obtaining high-frequency texture correlation"""
     sigma_intercept = 251 
     w_intercept = 251 
 
-    ref_y = int(meta['REF_Y'])
-    ref_x = int(meta['REF_X'])
+    # TODO
+    #ref_y = int(meta['REF_Y'])
+    #ref_x = int(meta['REF_X'])
+    ref_y = 282
+    ref_x = 204
+    N, Na, Nr = ts_data.shape
+    lamda = 0.3284035
 
-    phase_ts_HTC_low = ts_data
-    intercept = np.zeros(phase_ts_HTC_low.shape)
-    for n in range(0, N):
-        tmp = ts_data[:, :, n] - k_HTC_interp[:, :, n] * dem
-        tmp_filt = cv2.GaussianBlur(tmp, (w_intercept, w_intercept), sigmaX=sigma_intercept, sigmaY=sigma_intercept)
-        tmp = tmp - tmp_filt
-        phase_ts_HTC_low[:, :, n] = tmp
-        intercept[:, :, n] = tmp_filt
+    ts_data = 4 * np.pi / lamda * ts_data[:N, :, :]
+    reference_value = ts_data[:, ref_y-1, ref_x-1]
+    ts_data = ts_data - reference_value[:, np.newaxis, np.newaxis]
+    ts_data[np.isnan(ts_data)] = 0
+
+    phase_ts_htc_low = ts_data
     
-    phase_ts_HTC_low = phase_ts_HTC_low - phase_ts_HTC_low[ref_y, ref_x, :] #TODO
+    intercept = np.zeros(phase_ts_htc_low.shape)
+    for n in range(0, N):
+        tmp = ts_data[n, :, :] - k_htc_interp[n, :, :] * dem
+        tmp_filt = cv2.GaussianBlur(tmp, (w_intercept, w_intercept), sigmaX=sigma_intercept, borderType=cv2.BORDER_REPLICATE)
+        tmp = tmp - tmp_filt
+        phase_ts_htc_low[n, :, :] = tmp
+        intercept[n, :, :] = tmp_filt
+    reference_phase = phase_ts_htc_low[:, ref_y - 1, ref_x - 1]   
+    phase_ts_htc_low = phase_ts_htc_low - reference_phase[:, np.newaxis, np.newaxis] #TODO
 
-    return phase_ts_HTC_low
+    return phase_ts_htc_low
     
     
 
@@ -256,7 +296,7 @@ def create_deformation_mask(dem, rate, maskdef):
 
 ############################################################################
 
-def run_tropo_HTC(inps):
+def run_tropo_htc(inps):
 
     # read time-series data
     ts_obj = timeseries(inps.timeseries_file)
@@ -269,21 +309,21 @@ def run_tropo_HTC(inps):
     dem = read_topographic_data(inps.geom_file, ts_obj.metadata)
     #TODO
     # slope estimation
-    k_HTC = estimate_local_slope(dem, ts_data, inps, n_ref)[2]
+    k_htc = estimate_local_slope(dem, ts_data, inps, n_ref, ts_obj.metadata)[2]
     # slope interpolation
-    k_HTC_interp = slope_interpolation(ts_data, inps, k_HTC)
+    k_htc_interp = slope_interpolation(ts_data, inps, k_htc)
     # intercept filtering
-    ts_HTC_low = intercept_filtering(dem, ts_data, inps, k_HTC_interp, ts_obj.metadata)
-
+    ts_htc_low = intercept_filtering(dem, ts_data, inps, k_htc_interp, ts_obj.metadata)
+    lamda = 0.3284035 #TODO
+    ts_htc_data = lamda / 4 /np.pi * ts_htc_low
     # write corrected time-series file
     meta = dict(ts_obj.metadata)
-    meta['mintpy.troposphericDelay.polyOrder'] = str(inps.poly_order)
     if not inps.outfile:
         fbase = os.path.splitext(inps.timeseries_file)[0]
-        inps.outfile - f'{fbase}_tropHTC.h5'
+        inps.outfile - f'{fbase}_trophtc.h5'
     
     writefile.write(
-        ts_data,
+        ts_htc_data,
         out_file=inps.outfile,
         metadata=meta,
         ref_file=inps.timeseries_file
