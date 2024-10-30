@@ -329,7 +329,8 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
         noDataValues[dsName] = ds.GetRasterBand(1).GetNoDataValue()
 
         fileName = os.path.basename(stackFiles[dsName])
-        print(f'grab NoDataValue for {fileName:<{max_digit}}: {noDataValues[dsName]:<5} and convert to 0.')
+        print(f'grab NoDataValue for {fileName:<{max_digit}}: '
+              f'{noDataValues[dsName]:<5} and convert to 0.')
         ds = None
 
     # sort the order of interferograms based on date1_date2 with date1 < date2
@@ -375,10 +376,10 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
                 bnd = dsStack.GetRasterBand(bndIdx)
                 data = bnd.ReadAsArray(**kwargs)
                 if xstep * ystep > 1:
-                    mli_method_spec = mli_method if stackName not in \
+                    mli_method_spec = mli_method if dsName not in \
                         ['connCompStack'] else 'nearest'
                     print(f'apply {xstep} x {ystep} multilooking/downsampling via '
-                          f'{mli_method_spec} to: {stackName}')
+                          f'{mli_method_spec} to: {dsName}')
                     data = multilook_data(data, ystep, xstep, method=mli_method_spec)
                 data[data == noDataValues[dsName]] = 0  #assign pixel with no-data to 0
 
@@ -423,101 +424,101 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
 
 
 # OPTIONAL - ARIA model-based corrections troposphereTotal, solidearthtides
-def write_model_stack(outfile, corrStack, box=None, 
+def write_timeseries(outfile, corrStack, box=None,
                       xstep=1, ystep=1, mli_method='nearest'): 
-        """Write SET and TropsphericDelay corrections to HDF5 file from stack VRT files
-         Correction layers are stored for each SAR acquisition date
+    """Write SET and TropsphericDelay corrections to HDF5 file from stack VRT files
+       Correction layers are stored for each SAR acquisition date
 
-        ARIA_GUNW_NC_PATH:
-        troposhereTotal : models GMAO, HRRR, HRES, ERA5 '/science/grids/corrections/external/troposphere/'
-        solidEarthTides '/science/grids/corrections/derived/solidearthtides/'
-        """
+    ARIA_GUNW_NC_PATH:
+    troposhereTotal : models GMAO, HRRR, HRES, ERA5 '/science/grids/corrections/external/troposphere/'
+    solidEarthTides '/science/grids/corrections/derived/solidearthtides/'
+    """
 
-        print('-'*50)
+    print('-'*50)
 
-        # determine field length for printing
-        max_digit = len(os.path.basename(str(corrStack)))
+    # determine field length for printing
+    max_digit = len(os.path.basename(str(corrStack)))
 
-        if corrStack is not None:
-            print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(corrStack), w=max_digit))
+    if corrStack is not None:
+        print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(corrStack), w=max_digit))
 
-            # check all files exist
-            if not os.path.exists(corrStack):
-                raise Exception("%s does not exist" % corrStack)
+        # check all files exist
+        if not os.path.exists(corrStack):
+            raise Exception("%s does not exist" % corrStack)
 
-        # open raster
-        dsCor = gdal.Open(corrStack, gdal.GA_ReadOnly)
-        # extract NoDataValue (from the last date.vrt file for example)
-        ds = gdal.Open(dsCor.GetFileList()[-1], gdal.GA_ReadOnly)
-        noDataValue = ds.GetRasterBand(1).GetNoDataValue()
-        ds = None
+    # open raster
+    dsCor = gdal.Open(corrStack, gdal.GA_ReadOnly)
+    # extract NoDataValue (from the last date.vrt file for example)
+    ds = gdal.Open(dsCor.GetFileList()[-1], gdal.GA_ReadOnly)
+    noDataValue = ds.GetRasterBand(1).GetNoDataValue()
+    ds = None
 
-        # get the layer name (for tropo this will get the model name)
-        layer = dsCor.GetRasterBand(1).GetMetadataDomainList()[0]
+    # get the layer name (for tropo this will get the model name)
+    layer = dsCor.GetRasterBand(1).GetMetadataDomainList()[0]
 
-        # Get the wavelength. need to convert radians to meters
-        wavelength = np.float64(dsCor.GetRasterBand(1).GetMetadata(layer)["Wavelength (m)"])
-        phase2range = wavelength / (4.*np.pi)
+    # Get the wavelength. need to convert radians to meters
+    wavelength = np.float64(dsCor.GetRasterBand(1).GetMetadata(layer)["Wavelength (m)"])
+    phase2range = -wavelength / (4.*np.pi)
 
-        # get model dates and time
-        nDate = dsCor.RasterCount
-        dateDict = {}
-        sensingDict = {}
+    # get model dates and time
+    nDate = dsCor.RasterCount
+    dateDict = {}
+    sensingDict = {}
+    for ii in range(nDate):
+        bnd = dsCor.GetRasterBand(ii+1)
+        date = bnd.GetMetadata(layer)["Dates"]
+        utc = dt.datetime.strptime(date + ',' + \
+                                   bnd.GetMetadata(layer)["UTCTime (HH:MM:SS.ss)"],
+                                   "%Y%m%d,%H:%M:%S.%f")
+        dateDict[date] = ii+1
+        sensingDict[ii+1] = str(utc)
+    dateList = sorted(dateDict.keys())
+    print(f'number of {layer} datasets: {len(dateList)}')
+
+    # box to gdal arguments
+    # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
+    if box is not None:
+        kwargs = dict(
+            xoff=box[0],
+            yoff=box[1],
+            win_xsize=box[2]-box[0],
+            win_ysize=box[3]-box[1])
+    else:
+        kwargs = dict()
+
+    if xstep * ystep > 1:
+        msg = f'apply {xstep} x {ystep} multilooking/downsampling via {mli_method} to {layer}'
+        print(msg)
+
+    print(f'writing data to HDF5 file {outfile} with a mode ...')
+    with h5py.File(outfile, "a") as f:
+        prog_bar = ptime.progressBar(maxValue=nDate)
         for ii in range(nDate):
-            bnd = dsCor.GetRasterBand(ii+1)
-            date = bnd.GetMetadata(layer)["Dates"]
-            utc = dt.datetime.strptime(date + ',' + \
-                                       bnd.GetMetadata(layer)["UTCTime (HH:MM:SS.ss)"],
-                                       "%Y%m%d,%H:%M:%S.%f")
-            dateDict[date] = ii+1
-            sensingDict[ii+1] = str(utc)
-        dateList = sorted(dateDict.keys())
-        print(f'number of {layer} datasets: {len(dateList)}')
+            date = dateList[ii]
+            bndIdx = dateDict[date]
+            utc = sensingDict[bndIdx] 
+            prog_bar.update(ii+1, suffix=f'{date} {ii+1}/{nDate}')
 
-        # box to gdal arguments
-        # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
-        if box is not None:
-            kwargs = dict(
-                xoff=box[0],
-                yoff=box[1],
-                win_xsize=box[2]-box[0],
-                win_ysize=box[3]-box[1])
-        else:
-            kwargs = dict()
+            f["date"][ii] = date.encode("utf-8")
+            f["sensingMid"][ii] = utc.encode("utf-8")
 
-        if xstep * ystep > 1:
-            msg = f'apply {xstep} x {ystep} multilooking/downsampling via {mli_method} to {layer}'
-            print(msg)
+            bnd = dsCor.GetRasterBand(bndIdx)
+            data = bnd.ReadAsArray(**kwargs)
+            data = multilook_data(data, ystep, xstep, method=mli_method)
+            data[data == noDataValue] = 0         #assign pixel with no-data to 0
+            data[np.isnan(data)] = 0              #assign nan pixel to 0
+            f["timeseries"][ii,:,:] = data * phase2range
 
-        print(f'writing data to HDF5 file {outfile} with a mode ...')
-        with h5py.File(outfile, "a") as f:
-            prog_bar = ptime.progressBar(maxValue=nDate)
-            for ii in range(nDate):
-                    date = dateList[ii]
-                    bndIdx = dateDict[date]
-                    utc = sensingDict[bndIdx] 
-                    prog_bar.update(ii+1, suffix=f'{date} {ii+1}/{nDate}')
+        prog_bar.close()
 
-                    f["date"][ii] = date.encode("utf-8")
-                    f["sensingMid"][ii] = utc.encode("utf-8")
+        # add MODIFICATION_TIME metadata to each 3D dataset
+        for dsName in ['timeseries']:
+            f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
 
-                    bnd = dsCor.GetRasterBand(bndIdx)
-                    data = bnd.ReadAsArray(**kwargs)
-                    data = multilook_data(data, ystep, xstep, method=mli_method)
-                    data[data == noDataValue] = 0         #assign pixel with no-data to 0
-                    data[np.isnan(data)] = 0              #assign nan pixel to 0
-                    f["timeseries"][ii,:,:] = data * phase2range 
+    print(f'finished writing to HD5 file: {outfile}\n')
+    dsCor = None
 
-            prog_bar.close()
-
-            # add MODIFICATION_TIME metadata to each 3D dataset
-            for dsName in ['timeseries']:
-                f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
-
-        print(f'finished writing to HD5 file: {outfile}\n')
-        dsCor = None
-
-        return outfile     
+    return outfile
 
 
 def get_number_of_epochs(vrtfile):
@@ -537,10 +538,10 @@ def get_correction_layer(correction_filename):
     else:
         # ionosphere, solid earth tides
         layer_type = layer_name
-    
+
     #close
     ds = None
-    
+
     return layer_name, layer_type
 
 ####################################################################################
@@ -679,7 +680,7 @@ def load_aria(inps):
     # Loop through other correction layers also provided as epochs
     # handle multiple tropo stacks (if specified)
     if inps.tropoFile is None:
-         inps.tropoFile = [None]
+        inps.tropoFile = [None]
     correction_layers = inps.tropoFile + [inps.setFile]
     for layer in correction_layers:
         if layer:
@@ -710,9 +711,9 @@ def load_aria(inps):
                     )
 
                 # write data to disk
-                write_model_stack(
+                write_timeseries(
                     f'{out_dir}/{layer_name}_ARIA.h5',
-                    corrStack=layer,  
+                    corrStack=layer,
                     box=box,
                     xstep=inps.xstep,
                     ystep=inps.ystep,
@@ -722,5 +723,3 @@ def load_aria(inps):
     # used time
     m, s = divmod(time.time() - start_time, 60)
     print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
-
-
