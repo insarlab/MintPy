@@ -5,12 +5,12 @@
 ############################################################
 
 
+import datetime as dt
 import os
 import time
 
 import h5py
 import numpy as np
-import datetime as dt
 
 try:
     from osgeo import gdal
@@ -425,7 +425,7 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
 
 # OPTIONAL - ARIA model-based corrections troposphereTotal, solidearthtides
 def write_timeseries(outfile, corrStack, box=None,
-                      xstep=1, ystep=1, mli_method='nearest'): 
+                      xstep=1, ystep=1, mli_method='nearest'):
     """Write SET and TropsphericDelay corrections to HDF5 file from stack VRT files
        Correction layers are stored for each SAR acquisition date
 
@@ -496,7 +496,7 @@ def write_timeseries(outfile, corrStack, box=None,
         for ii in range(nDate):
             date = dateList[ii]
             bndIdx = dateDict[date]
-            utc = sensingDict[bndIdx] 
+            utc = sensingDict[bndIdx]
             prog_bar.update(ii+1, suffix=f'{date} {ii+1}/{nDate}')
 
             f["date"][ii] = date.encode("utf-8")
@@ -676,7 +676,7 @@ def load_aria(inps):
                 mli_method=inps.method,
             )
 
-    # 3.2 - model based corrections: SolidEarthTides and Troposphere 
+    # 3.2 - model based corrections: SolidEarthTides and Troposphere
     # Loop through other correction layers also provided as epochs
     # handle multiple tropo stacks (if specified)
     if inps.tropoFile is None:
@@ -717,7 +717,7 @@ def load_aria(inps):
                     box=box,
                     xstep=inps.xstep,
                     ystep=inps.ystep,
-                    ) 
+                    )
     print('-'*50)
 
     # used time
