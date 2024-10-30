@@ -52,9 +52,9 @@ EXAMPLE = """example:
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' --set '../stack/setStack.vrt' --tropo '../stack/troposphereTotal/HRRR_stack.vrt' --iono '../stack/ionStack.vrt'
   
   # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
-  # reference: https://github.com/aria-tools/ARIA-tools
-  ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
-  ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download --num_threads 4 --verbose
+  ariaDownload.py --track 71 --bbox "34.21 34.31 -118.60 -118.43" --start 20240101 --end 20240301
+  ariaTSsetup.py -f "products/*.nc" --bbox "34.21 34.31 -118.60 -118.43" --mask Download --num_threads 4 --layers "solidEarthTide, troposphereTotal, ionosphere" --tropo_models HRRR
+  prep_aria.py -s stack -d DEM/glo_90.dem -i incidenceAngle/*.vrt -a azimuthAngle/*.vrt -w mask/esa_world_cover_2021.msk --set stack/setStack.vrt --tropo stack/troposphereTotal/HRRRStack.vrt --iono stack/ionoStack.vrt
 """
 
 def create_parser(subparsers=None):
