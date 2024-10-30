@@ -6,12 +6,11 @@
 
 
 import os
-import cv2
 import numpy as np
-from scipy.interpolate import RectBivariateSpline
+import scipy
 from scipy.interpolate import griddata
+from scipy.interpolate import interp2d
 
-from mintpy.mask import mask_matrix
 from mintpy.objects import timeseries
 from mintpy.utils import readfile, writefile
 
@@ -61,6 +60,8 @@ def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
     rg = 40
     step = 0.0001
     lamda = 0.3284035 # TODO
+    # w2 = 2 * int(truncate * sigma + 0.5) + 1
+    truncate = ((w2 - 1)/2 - 0.5)/w1
     
     # TODO
     #ref_y = int(meta['REF_Y'])
@@ -161,7 +162,7 @@ def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
                 mask_tmp = mask[U-1:D, L-1:R]
                 
                 A = dem[U-1:D, L-1:R]
-                A_LP = cv2.GaussianBlur(A, (w2, w2), sigmaX=w1, borderType=cv2.BORDER_REPLICATE)
+                A_LP = scipy.ndimage.gaussian_filter(A, sigma=w1, truncate=truncate, mode='nearest')
                 A = A - A_LP
                 A_line = A[~np.isnan(mask_tmp)]
                 A_line = A_line / np.linalg.norm(A_line)
@@ -173,7 +174,7 @@ def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
                 phase_ts_Scor_tmp = ts_data[n, :, :] - k_left * dem
                 C = phase_ts_Scor_tmp[U-1:D, L-1:R]
                 C[np.isnan(C)] = 0
-                C_LP = cv2.GaussianBlur(C, (w2, w2), sigmaX=w1, borderType=cv2.BORDER_REPLICATE)
+                C_LP = scipy.ndimage.gaussian_filter(C, sigma=w1, truncate=truncate, mode='nearest')
                 C = C - C_LP
                 C_line = C[~np.isnan(mask_tmp)]
                 C_line = C_line / np.linalg.norm(C_line)
@@ -184,7 +185,7 @@ def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
                 phase_ts_Scor_tmp = ts_data[n, :, :] - k_right * dem
                 C = phase_ts_Scor_tmp[U-1:D, L-1:R]
                 C[np.isnan(C)] = 0
-                C_LP = cv2.GaussianBlur(C, (w2, w2), sigmaX=w1, borderType=cv2.BORDER_REPLICATE)
+                C_LP = scipy.ndimage.gaussian_filter(C, sigma=w1, truncate=truncate, mode='nearest')
                 C = C - C_LP
                 C_line = C[~np.isnan(mask_tmp)]
                 C_line = C_line / np.linalg.norm(C_line)
@@ -202,7 +203,7 @@ def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
                     phase_ts_Scor_tmp = ts_data[n, :, :] - k[i] * dem
                     C = phase_ts_Scor_tmp[U-1:D, L-1:R]
                     C[np.isnan(C)] = 0
-                    C_LP = cv2.GaussianBlur(C, (w2, w2), sigmaX=w1, borderType=cv2.BORDER_REPLICATE)
+                    C_LP = scipy.ndimage.gaussian_filter(C, sigma=w1, truncate=truncate, mode='nearest')
                     C = C - C_LP
                     C_line = C[~np.isnan(mask_tmp)]
                     C_line = C_line / np.linalg.norm(C_line)
@@ -226,7 +227,7 @@ def slope_interpolation(ts_data, inps, k_htc):
     """Filtering parameters for obtaining high-frequency texture correlation"""
     sigma_slope = 7
     w_slope = 7   
-
+    truncate_slope = ((w_slope - 1)/2 - 0.5)/sigma_slope
     N, Na, Nr = ts_data.shape
     #Na, Nr = dem.shape
     W = inps.windowsize
@@ -243,9 +244,9 @@ def slope_interpolation(ts_data, inps, k_htc):
     # K_htc
     k_htc_interp = np.zeros((N, Na, Nr))
     for n in range(0, N):
-        k_htc_filt = cv2.GaussianBlur(k_htc[n, :, :], (w_slope, w_slope), sigmaX=sigma_slope, borderType=cv2.BORDER_REPLICATE)
-        spline = RectBivariateSpline(Na_C, Nr_C, k_htc_filt) #TODO
-        k_htc_interp[n, :, :] = spline.ev(Xq, Yq)
+        k_htc_filt = scipy.ndimage.gaussian_filter(k_htc[n, :, :], sigma=sigma_slope, truncate=truncate_slope, mode='nearest')
+        f = interp2d(Y, X, k_htc_filt, kind='cubic')
+        k_htc_interp[n, :, :] = f(Yq, Xq)
         #f_interp = interp2d(X.flatten(), Y.flatten(), k_htc_filt, kind='spline')
         #k_htc_interp[n, :, :] = f_interp(Xq, Yq).reshape(Xq.shape) #TODO 
     
@@ -255,7 +256,7 @@ def intercept_filtering(dem, ts_data, inps, k_htc_interp, meta):
     """Filtering parameters for obtaining high-frequency texture correlation"""
     sigma_intercept = 251 
     w_intercept = 251 
-
+    truncate_intercept = ((w_intercept - 1)/2 - 0.5)/sigma_intercept
     # TODO
     #ref_y = int(meta['REF_Y'])
     #ref_x = int(meta['REF_X'])
@@ -274,7 +275,7 @@ def intercept_filtering(dem, ts_data, inps, k_htc_interp, meta):
     intercept = np.zeros(phase_ts_htc_low.shape)
     for n in range(0, N):
         tmp = ts_data[n, :, :] - k_htc_interp[n, :, :] * dem
-        tmp_filt = cv2.GaussianBlur(tmp, (w_intercept, w_intercept), sigmaX=sigma_intercept, borderType=cv2.BORDER_REPLICATE)
+        tmp_filt = scipy.ndimage.gaussian_filter(tmp, sigma=w_intercept, truncate=truncate_intercept, mode='nearest')
         tmp = tmp - tmp_filt
         phase_ts_htc_low[n, :, :] = tmp
         intercept[n, :, :] = tmp_filt
@@ -320,7 +321,7 @@ def run_tropo_htc(inps):
     meta = dict(ts_obj.metadata)
     if not inps.outfile:
         fbase = os.path.splitext(inps.timeseries_file)[0]
-        inps.outfile - f'{fbase}_trophtc.h5'
+        inps.outfile = f'{fbase}_trophtc.h5'
     
     writefile.write(
         ts_htc_data,
