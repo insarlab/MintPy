@@ -121,9 +121,12 @@ def cmd_line_parse(iargs=None):
     inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
 
     # check: --ex-date(12) options
+    # and ignore , in the inputs
     if inps.excludeDate:
-        inps.exlcudeDate = ptime.yyyymmdd(inps.excludeDate)
+        inps.excludeDate = ' '.join(inps.excludeDate).replace(',', ' ').split()
+        inps.excludeDate = ptime.yyyymmdd(inps.excludeDate)
     if inps.excludeDate12:
+        inps.excludeDat12e = ' '.join(inps.excludeDate12).replace(',', ' ').split()
         inps.excludeDate12 = ptime.yyyymmdd_date12(inps.excludeDate12)
 
     # check: -t / --template option
