@@ -50,7 +50,7 @@ EXAMPLE = """example:
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt'
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' -a '../azimuthAngle/*.vrt' -w ../mask/watermask.msk
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' --set '../stack/setStack.vrt' --tropo '../stack/troposphereTotal/HRRR_stack.vrt' --iono '../stack/ionStack.vrt'
-  
+
   # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
   ariaDownload.py --track 71 --bbox "34.21 34.31 -118.60 -118.43" --start 20240101 --end 20240301
   ariaTSsetup.py -f "products/*.nc" --bbox "34.21 34.31 -118.60 -118.43" --mask Download --num_threads 4 --layers "solidEarthTide, troposphereTotal, ionosphere" --tropo_models HRRR
@@ -107,7 +107,7 @@ def create_parser(subparsers=None):
                       help='Name of the azimuth angle file.')
     geom.add_argument('-w','--water-mask', dest='waterMaskFile', type=str,
                       help='Name of the water mask file')
-    
+
     # correction layers: troposphereTotal, ionosphere, solidEarthTides
     corr = parser.add_argument_group('corrections')
     corr.add_argument('-ct', '--tropo', dest='tropoFile', type=str,
