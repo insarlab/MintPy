@@ -653,7 +653,7 @@ def load_aria(inps):
         }
         meta['FILE_TYPE'] = 'ifgramStack'
 
-        layer_name, layer_type = get_correction_layer(inps.ionoFile)
+        layer_name, _ = get_correction_layer(inps.ionoFile)
 
         if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[0]) == 'run':
             outname = f'{out_dir}/ionStack.h5'
@@ -685,7 +685,7 @@ def load_aria(inps):
     for layer in correction_layers:
         if layer:
             # get name and type
-            layer_name, layer_type = get_correction_layer(layer)
+            layer_name, _ = get_correction_layer(layer)
             num_dates = get_number_of_epochs(layer)
 
             meta['FILE_TYPE'] = 'timeseries'
