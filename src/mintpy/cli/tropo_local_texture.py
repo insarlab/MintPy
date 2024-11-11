@@ -18,7 +18,7 @@ REFERENCE = """reference:
 """
 #TODO
 EXAMPLE = """example:
-  tropo_local_texture.py  timeseries_ramp_demErr.h5  -v velocity.h5  -g inputs/geometryRadar.h5  -m maskTempCoh.h5
+  tropo_local_texture.py  timeseries_ramp_demErr.h5 -g inputs/geometryRadar.h5  -m maskTempCoh.h5
 """
 
 def create_parser(subparsers=None):
