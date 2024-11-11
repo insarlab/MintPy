@@ -2,7 +2,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
+# Author: Yang Qingyue, Hu Changyang, 2024                 #
 ############################################################
 
 import argparse
@@ -18,8 +18,7 @@ REFERENCE = """reference:
 """
 #TODO
 EXAMPLE = """example:
-  tropo_htc.py  timeseries_ramp_demErr.h5  -v velocity.h5  -g inputs/geometryRadar.h5  -m maskTempCoh.h5
-  tropo_htc .py  geo_timeseries_demErr.h5  -g geo_geometryRadar.h5     -m geo_maskTempCoh.h5
+  tropo_local_texture.py  timeseries_ramp_demErr.h5  -v velocity.h5  -g inputs/geometryRadar.h5  -m maskTempCoh.h5
 """
 
 def create_parser(subparsers=None):
@@ -35,8 +34,6 @@ def create_parser(subparsers=None):
                         help='DEM file used for correlation calculation.')
     parser.add_argument('-m', '--mask', dest='mask_file', required=True,
                         help='mask file for pixels used for correlation calculation')
-    parser.add_argument('-v', '--velocity', dest='velo_file', required=True,
-                        help='velocity file for generation of deformation mask')
     
     parser.add_argument('-w', '--windowsize', type=int, default=141,
                         help='window size (square window, must be odd number).')
@@ -53,14 +50,13 @@ def cmd_line_parse(iargs=None):
 
     # check: -r / --overlapration option (must be within [0,1])
     if inps.overlapratio and (not 0.0 <= inps.overlapratio <= 1.0):
-        msg = f'overlap ratio {inps.overlapratio} is NOT within [0.1, 1.0]'
+        msg = f'overlap ratio {inps.overlapratio} is NOT within [0.0, 1.0]'
         raise argparse.ArgumentTypeError(msg)
     
-    #check: -w / --windowsize option (must be odd number)
+    # check: -w / --windowsize option (must be odd number)
     if inps.windowsize and (inps.windowsize % 2 == 0):
         msg = f'window size {inps.windowsize} is NOT odd number'
         raise argparse.ArgumentTypeError(msg)
-    #TODO
 
     return inps
 
@@ -71,10 +67,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from MintPy.src.mintpy.tropo_htc import run_tropo_htc
+    from mintpy.tropo_local_texture import run_tropo_local_texture
 
     # run
-    run_tropo_htc(inps)
+    run_tropo_local_texture(inps)
 
 
 ############################################################################
