@@ -72,7 +72,7 @@ def search_gnss(SNWE, start_date=None, end_date=None, source='UNR', site_list_fi
     # ensure that site data formatting is consistent
     sites['site'] = np.array([site.upper() for site in sites['site']])
     # ensure longitude values in (-180, 180]
-    sites['lon'] = _set_longitude_range(sites['lon'], lon_range='-180to180')
+    sites['lon'] = ut.standardize_longitude(sites['lon'], limit='-180to180')
     vprint(f'load {len(sites["site"]):d} GNSS sites with fields: {" ".join(sites.keys())}')
 
     # limit in space
@@ -391,42 +391,6 @@ def get_ESESES_url_prefix():
 
     return url_prefix
 
-
-def _set_longitude_range(lon, lon_range='-180to180'):
-    """Set the longitude data range.
-
-    Parameters: lon       - float / np.ndarray, longitude in degree
-                lon_range - str, -180to180 or 0to360
-    Returns:    lon       - float / np.ndarray, longitude in degree
-    """
-
-    # ensure data within (-180, 360)
-    if np.nanmax(lon) >= 360:
-        if np.isscalar(lon):
-            lon -= 360
-        else:
-            lon[lon >= 360] -= 360
-    elif np.nanmin(lon) <= -180:
-        if np.isscalar(lon):
-            lon += 360
-        else:
-            lon[lon <= -180] += 360
-
-    # range option 1: ensure data within (-180, 180]
-    if lon_range == '-180to180' and np.nanmax(lon) > 180:
-        if np.isscalar(lon):
-            lon -= 360
-        else:
-            lon[lon > 180] -= 360
-
-    # range option 2: ensure data within [0, 360)
-    elif lon_range == '0to360' and np.nanmin(lon) < 0:
-        if np.isscalar(lon):
-            lon += 360
-        else:
-            lon[lon < 0] += 360
-
-    return lon
 
 
 #################################### GNSS-GSI utility functions #####################################
@@ -905,7 +869,7 @@ class GNSS_UNR(GNSS):
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1, max_rows=10)
         self.site_lat, self.site_lon = data[0, 20:22].astype(float)
         # ensure longitude in the range of (-180, 180]
-        self.site_lon = _set_longitude_range(self.site_lon, lon_range='-180to180')
+        self.site_lon = ut.standardize_longitude(self.site_lon, limit='-180to180')
 
         return self.site_lat, self.site_lon
 
@@ -1029,7 +993,7 @@ class GNSS_ESESES(GNSS):
             self.site_lon = float(lon_line.split()[-1])
 
         # ensure longitude in the range of (-180, 180]
-        self.site_lon = _set_longitude_range(self.site_lon, lon_range='-180to180')
+        self.site_lon = ut.standardize_longitude(self.site_lon, limit='-180to180')
 
         return self.site_lat, self.site_lon
 
@@ -1136,7 +1100,7 @@ class GNSS_SIDESHOW(GNSS):
         self.site_lat = float(site_lat)
         self.site_lon = float(site_lon)
         # ensure longitude in the range of (-180, 180]
-        self.site_lon = _set_longitude_range(self.site_lon, lon_range='-180to180')
+        self.site_lon = ut.standardize_longitude(self.site_lon, limit='-180to180')
 
         if print_msg == True:
             print(f'\t{self.site_lat:f}, {self.site_lon:f}')
@@ -1230,7 +1194,7 @@ class GNSS_GENERIC(GNSS):
         ind = sites['site'].tolist().index(self.site)
         site_lat, site_lon = sites['lat'][ind], sites['lon'][ind]
         # ensure longitude in the range of (-180, 180]
-        site_lon = _set_longitude_range(site_lon, lon_range='-180to180')
+        site_lon = ut.standardize_longitude(site_lon, limit='-180to180')
 
         return site_lat, site_lon
 
