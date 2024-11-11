@@ -509,7 +509,7 @@ class TimeSeriesAnalysis:
 
                     elif method == 'local_texture':
                         fname1 = f'{os.path.splitext(fname0)[0]}_tropolocaltexture.h5'
-                    
+
                     else:
                         msg = f'un-recognized tropospheric correction method: {method}'
                         raise ValueError(msg)
@@ -620,10 +620,10 @@ class TimeSeriesAnalysis:
 
     def run_tropospheric_delay_correction(self, step_name):
         """Correct tropospheric delays."""
-        #TODO
         geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        #geom_file = os.path.join(self.workDir, 'inputs/geometryGeo.h5')
         mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
+        #For test only
+        #geom_file = os.path.join(self.workDir, 'inputs/geometryGeo.h5')
         #mask_file = os.path.join(self.workDir, 'temporalCoherence.h5')
 
         fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
@@ -696,8 +696,8 @@ class TimeSeriesAnalysis:
 
                         else:
                             raise ValueError(f'un-recognized dataset name: {tropo_model}.')
-            # High-frequency Texture Correction (Yang et al., 2024)         
-            elif method == 'local_texture': 
+            # High-frequency Texture Correction (Yang et al., 2024)
+            elif method == 'local_texture':
                 window_size = self.template['mintpy.troposphericDelay.windowSize']
                 overlap_ratio = self.template['mintpy.troposphericDelay.overlapRatio']
                 iargs = [in_file, '-g', geom_file, '-m', mask_file, '-o', out_file, '-w' , window_size, '-r', overlap_ratio]
