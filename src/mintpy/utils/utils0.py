@@ -267,6 +267,30 @@ def touch(fname_list, times=None):
 
 
 ################################## Coordinate ##########################################
+def standardize_longitude(lon, limit='-180to180'):
+    """Normalize the longitude value range into (-180, 180] or [0, 360).
+
+    Parameters: lon   - float / np.ndarray, longitude in degree
+                limit - str, -180to180 or 0to360
+    Returns:    lon   - float / np.ndarray, longitude in degree
+    """
+    lon = np.asarray(lon)
+
+    # ensure data within (-180, 360)
+    lon = np.where(lon >= 360, lon - 360, lon)
+    lon = np.where(lon <= -180, lon + 360, lon)
+
+    # range option 1: ensure data within (-180, 180]
+    if limit == '-180to180':
+        lon = np.where(lon > 180, lon - 360, lon)
+
+    # range option 2: ensure data within [0, 360)
+    elif limit == '0to360' and np.nanmin(lon) < 0:
+        lon = np.where(lon < 0, lon + 360, lon)
+
+    return float(lon) if np.isscalar(lon) else lon
+
+
 def utm_zone2epsg_code(utm_zone):
     """Convert UTM Zone string to EPSG code.
 

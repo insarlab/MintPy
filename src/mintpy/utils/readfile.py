@@ -699,7 +699,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             cpx_band = 'magnitude'
 
         elif fext in ['.mli', '.rmli']:
-            byte_order = 'little-endian'
+            byte_order = 'little-endian'   # big-endian
 
     # SNAP
     # BEAM-DIMAP data format
