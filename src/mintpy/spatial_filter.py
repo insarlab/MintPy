@@ -195,6 +195,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
             data = filter_data(data, filter_type, filter_par)
 
         # save
+        data *= ~np.isnan(data)
         dsDict[ds_name] = data
 
     # write to file
