@@ -211,7 +211,7 @@ def slope_interpolation(ts_data, inps, k_htc):
     Returns:    k_htc_interp   : 3D array in size of (num_date, length, width)
     """
 
-    """Filtering parameters for obtaining high-frequency texture correlation"""
+    # Filtering parameters for obtaining high-frequency texture correlation
     sigma_slope = 7 # standard deviation for gaussian filter
     w_slope = 7 # window size for gaussian filter
     truncate_slope = ((w_slope - 1)/2 - 0.5)/sigma_slope # truncation factor for gaussian filter
