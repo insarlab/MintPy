@@ -43,7 +43,7 @@ def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
     Returns:    k_htc   : 3D array in size of (num_date, length, width), length and width depend on the window size and overlap ratio
     """
 
-    """Filtering parameters for obtaining high-frequency texture"""
+    # Filtering parameters for obtaining high-frequency texture
     w1 = 9  # slope filtering parameters used in gaussian filter
     w2 = 13 # texture correlation filtering parameters used in gaussian filter
     res_step = 0.5 # step size for mask updating
@@ -116,7 +116,7 @@ def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
                 # iterative linear fitting
                 # res+step = 0.5 # step [rad]
                 # Iteration = 10
-                for iter in range(Iteration):
+                for i in range(Iteration):
                     # linear fitting
                     phase_tmp = ts_data[n, :, :] * mask_std
                     dem_tmp = dem * mask_std
@@ -127,7 +127,7 @@ def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
                     cor_tmp = phase_tmp - coe[0]*dem_tmp - coe[1]
 
                     # result recording
-                    if iter == 0:
+                    if i == 0:
                         result_compare[n, 0] = coe[0]
                         result_compare[n, 3] = coe[1]
 
@@ -180,7 +180,7 @@ def estimate_local_slope(dem, ts_data, inps, n_ref, meta):
                     k = np.arange(-rg, 1) * step + coe[0]
                     record = np.zeros(len(k))
 
-                for i in range(0, len(k)):
+                for i in enumerate(k):
                     phase_ts_Scor_tmp = ts_data[n, :, :] - k[i] * dem
                     C = phase_ts_Scor_tmp[U-1:D, L-1:R]
                     C[np.isnan(C)] = 0
@@ -228,14 +228,15 @@ def slope_interpolation(ts_data, inps, k_htc):
         k_htc_filt = scipy.ndimage.gaussian_filter(k_htc[n, :, :], sigma=sigma_slope, truncate=truncate_slope, mode='nearest')
         # interpolation
         result = np.zeros((Na, Nr))
-        coords = Na_C - 1
+        coords_y = Na_C - 1
+        coords_x = Nr_C - 1
         # Row interpolation
         for i in range(k_htc_filt.shape[0]):
-            spline_x = UnivariateSpline(coords, k_htc_filt[i, :], k=3, s=0)
+            spline_x = UnivariateSpline(coords_x, k_htc_filt[i, :], k=3, s=0)
             result[i, :] = spline_x(np.arange(0, Nr))
         # Column interpolation
         for j in range(Nr):
-            spline_y = UnivariateSpline(coords, result[:k_htc_filt.shape[0], j], k=3, s=0)
+            spline_y = UnivariateSpline(coords_y, result[:k_htc_filt.shape[0], j], k=3, s=0)
             result[:, j] = spline_y(np.arange(0, Na))
 
         k_htc_interp[n] = result
@@ -251,14 +252,14 @@ def intercept_filtering(dem, ts_data, inps, k_htc_interp, meta):
     Returns:    phase_ts_htc_low   : 3D array in size of (num_date, length, width)
     """
 
-    """Filtering parameters for obtaining high-frequency texture correlation"""
+    # Filtering parameters for obtaining high-frequency texture correlation
     sigma_intercept = 251 # standard deviation for gaussian filter
     w_intercept = 251 # window size for gaussian filter
     truncate_intercept = ((w_intercept - 1)/2 - 0.5)/sigma_intercept # truncation factor for gaussian filter
     ref_y = int(meta['REF_Y'])
     ref_x = int(meta['REF_X'])
     lamda = float(meta['WAVELENGTH'])
-    N, Na, Nr = ts_data.shape
+    N = ts_data.shape[0]
 
     ts_data = 4 * np.pi / lamda * ts_data[:N, :, :]
     reference_value = ts_data[:, ref_y-1, ref_x-1]
