@@ -641,7 +641,6 @@ def load_aria(inps):
     ########## output file 3 - correction layers
 
     # 3.1 - ionosphere
-    # Invert Iono stack and write out cube
     if inps.ionoFile:
         # define correction dataset structure for ifgramStack
         ds_name_dict = {

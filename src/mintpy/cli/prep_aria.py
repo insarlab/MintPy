@@ -116,10 +116,6 @@ def create_parser(subparsers=None):
                     help='Name of the Ionosphere Delay stack file', default=None)
     corr.add_argument('-cs', '--set', dest='setFile', type=str,
                     help='Name of the Solid Earth Tides stack file', default=None)
-    corr.add_argument('--cluster', dest='cluster', type=str, choices={'local', 'pbs', None},
-                    help='Parallelize inversion of correction layers w Dask', default=None)
-    corr.add_argument('-n', '--num-workers', dest='num_workers', type=str,
-                    help='Dask number of workers', default='2')
 
     return parser
 
