@@ -160,8 +160,6 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
 
         if ref_val is not None:
             print(f'* referencing data from {os.path.basename(file2)} to y/x: {ref_y}/{ref_x}')
-            print(np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2])).shape)
-            print(ref_val.shape)
             data2 -= np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2]))
 
         if ref_date:
