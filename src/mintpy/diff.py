@@ -19,6 +19,7 @@ from mintpy.objects import (
     timeseries,
 )
 from mintpy.utils import ptime, readfile, time_func, writefile
+from skimage.transform import resize
 
 
 #####################################################################################
@@ -55,9 +56,16 @@ def check_reference(atr1, atr2):
     return ref_date, ref_y, ref_x
 
 
-def diff_timeseries_v2(file1, file2, out_file, force_diff=False):
-    """Calculate the difference between two time-series files,
-    assuming the two files have the same spatial coverage.
+def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
+    """Calculate the difference between two time-series files. 
+    file1.shape and file1.shape are different.
+
+    Parameters: file1         - str, path of file1
+                file2         - str, path of file2
+                out_file      - str, path of output file
+                force_diff    - bool, overwrite existing output file
+                max_num_pixel - float, maximum number of pixels for each block
+    Returns:    out_file      - str, path of output file
     """
 
     # basic info
@@ -68,7 +76,12 @@ def diff_timeseries_v2(file1, file2, out_file, force_diff=False):
     length1, width1 = int(atr1['LENGTH']), int(atr1['WIDTH'])
     length2, width2 = int(atr2['LENGTH']), int(atr2['WIDTH'])
     date_list1 = timeseries(file1).get_date_list()
-    date_list2 = timeseries(file2).get_date_list()
+    if k2 == 'timeseries':
+        date_list2 = timeseries(file2).get_date_list()
+        unit_fac = 1.
+    elif k2 == 'giantTimeseries':
+        date_list2 = giantTimeseries(file2).get_date_list()
+        unit_fac = 0.001
 
     # check file size
     different_size = False
@@ -96,69 +109,6 @@ def diff_timeseries_v2(file1, file2, out_file, force_diff=False):
 
     # check dates shared by two timeseries files
     date_list_shared = [i for i in date_list1 if i in date_list2]
-    if date_list_shared != date_list1:
-        print(f'WARNING: {file2} does not contain all dates in {file1}')
-        if force_diff:
-            date_list_ex = list(set(date_list1) - set(date_list_shared))
-            print('Continue and enforce the differencing for their shared dates only.')
-            print(f'\twith following dates are ignored for differencing:\n{date_list_ex}')
-        else:
-            raise Exception('To enforce the differencing anyway, use --force option.')
-
-    # get reference matrix
-    if ref_date:
-        ref_val = readfile.read(file2, datasetName=ref_date, resize2shape=(length1, width1))[0]
-    else:
-        ref_val = None
-
-    #for date_str in date_list1:
-    #    if date_str in date_list2:
-    #        # read
-    #        # substract
-    #    else:
-    #        # do nothing
-    #    #write
-
-
-def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
-    """Calculate the difference between two time-series files.
-
-    Parameters: file1         - str, path of file1
-                file2         - str, path of file2
-                out_file      - str, path of output file
-                force_diff    - bool, overwrite existing output file
-                max_num_pixel - float, maximum number of pixels for each block
-    Returns:    out_file      - str, path of output file
-    """
-
-    # basic info
-    atr1 = readfile.read_attribute(file1)
-    atr2 = readfile.read_attribute(file2)
-    k1 = atr1['FILE_TYPE']
-    k2 = atr2['FILE_TYPE']
-    date_list1 = timeseries(file1).get_date_list()
-    if k2 == 'timeseries':
-        date_list2 = timeseries(file2).get_date_list()
-        unit_fac = 1.
-    elif k2 == 'giantTimeseries':
-        date_list2 = giantTimeseries(file2).get_date_list()
-        unit_fac = 0.001
-
-    # check file size and resolution
-    different_size = False
-    if any(int(atr1[x]) != int(atr2[x]) for x in ['LENGTH', 'WIDTH']):
-        different_size = True
-        print('WARNING: file 1/2 have different sizes:')
-        print(f'    file 1: ({atr1["LENGTH"]}, {atr1["WIDTH"]})')
-        print(f'    file 2: ({atr2["LENGTH"]}, {atr2["WIDTH"]})')
-    if different_size and not force_diff:
-        raise Exception('Could NOT run differencing on files with different sizes! Use --force option to overwrite.')
-
-    # check reference point
-    ref_date, ref_y, ref_x = check_reference(atr1, atr2)
-
-    # check dates shared by two timeseries files
-    date_list_shared = [i for i in date_list1 if i in date_list2]
     date_flag_shared = np.ones((len(date_list1)), dtype=np.bool_)
     if date_list_shared != date_list1:
         print(f'WARNING: {file2} does not contain all dates in {file1}')
@@ -170,11 +120,21 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
         else:
             raise Exception('To enforce the differencing anyway, use --force option.')
 
+    # get reference matrix
     if ref_y and ref_x:
         ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
-        ref_val = readfile.read(file2, datasetName=date_list_shared, box=ref_box)[0] * unit_fac
+        ref_val = []
+        for date in date_list_shared:
+            ref_val.append(readfile.read(file2, datasetName=date, box=ref_box,resize2shape=(length1, width1))[0])
+        ref_val = np.array(ref_val)* unit_fac
     else:
         ref_val = None
+
+    # resample data2
+    data2_resample = []
+    for date in date_list_shared:
+        data2_resample.append(readfile.read(file2, datasetName=date, resize2shape=(length1, width1))[0])
+    data2_resample = np.array(data2_resample)* unit_fac
 
     # instantiate the output file
     writefile.layout_hdf5(out_file, ref_file=file1)
@@ -196,10 +156,12 @@ def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8)
 
         # read data2 (consider different reference_date/pixel)
         print(f'read from file: {file2}')
-        data2 = readfile.read(file2, datasetName=date_list_shared, box=box)[0] * unit_fac
+        data2 = data2_resample[:,box[1]:box[3],box[0]:box[2]]
 
         if ref_val is not None:
             print(f'* referencing data from {os.path.basename(file2)} to y/x: {ref_y}/{ref_x}')
+            print(np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2])).shape)
+            print(ref_val.shape)
             data2 -= np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2]))
 
         if ref_date:
