@@ -10,6 +10,7 @@ import shutil
 import time
 
 import numpy as np
+from skimage.transform import resize
 
 from mintpy.objects import (
     IFGRAM_DSET_NAMES,
@@ -19,7 +20,6 @@ from mintpy.objects import (
     timeseries,
 )
 from mintpy.utils import ptime, readfile, time_func, writefile
-from skimage.transform import resize
 
 
 #####################################################################################
@@ -57,8 +57,8 @@ def check_reference(atr1, atr2):
 
 
 def diff_timeseries(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
-    """Calculate the difference between two time-series files. 
-    file1.shape and file1.shape are different.
+    """Calculate the difference between two time-series files.
+    file1.shape and file2.shape are different.
 
     Parameters: file1         - str, path of file1
                 file2         - str, path of file2
