@@ -168,62 +168,64 @@ def write_shape_file(fDict, shp_file, box=None, zero_first=False):
 
     lats, lons = ut.get_lat_lon(ts_obj.metadata, geom_file=fDict['Geometry'], box=box)
 
-    ###Loop over all datasets in context managers to skip close statements
-    with h5py.File(fDict['TimeSeries'], 'r') as tsid:
-        with h5py.File(fDict['Coherence'], 'r') as cohid:
-            with h5py.File(fDict['Velocity'], 'r') as velid:
-                with h5py.File(fDict['Geometry'], 'r') as geomid:
+    ### Use context managers to skip close statements
+    with (
+        h5py.File(fDict["TimeSeries"], "r") as tsid,
+        h5py.File(fDict["Coherence"], "r") as cohid,
+        h5py.File(fDict["Velocity"], "r") as velid,
+        h5py.File(fDict["Geometry"], "r") as geomid,
+    ):
+        length = box[3] - box[1]
+        width = box[2] - box[0]
 
-                    length = box[3] - box[1]
-                    width = box[2] - box[0]
+        # Start counter
+        counter = 1
+        prog_bar = ptime.progressBar(maxValue=nValid)
 
-                    #Start counter
-                    counter = 1
-                    prog_bar = ptime.progressBar(maxValue=nValid)
+        # For each line
+        for i in range(length):
+            line = i + box[1]
 
-                    #For each line
-                    for i in range(length):
-                        line = i + box[1]
+            # read data for the line
+            ts = tsid["timeseries"][:, line, box[0] : box[2]].astype(np.float64)
+            if zero_first:
+                ts -= np.tile(ts[0, :], (ts.shape[0], 1))
 
-                        # read data for the line
-                        ts = tsid['timeseries'][:, line, box[0]:box[2]].astype(np.float64)
-                        if zero_first:
-                            ts -= np.tile(ts[0, :], (ts.shape[0], 1))
+            coh = cohid["temporalCoherence"][line, box[0] : box[2]].astype(np.float64)
+            vel = velid["velocity"][line, box[0] : box[2]].astype(np.float64)
+            vel_std = velid["velocityStd"][line, box[0] : box[2]].astype(np.float64)
+            hgt = geomid["height"][line, box[0] : box[2]].astype(np.float64)
+            lat = lats[i, :].astype(np.float64)
+            lon = lons[i, :].astype(np.float64)
 
-                        coh = cohid['temporalCoherence'][line, box[0]:box[2]].astype(np.float64)
-                        vel = velid['velocity'][line, box[0]:box[2]].astype(np.float64)
-                        vel_std = velid['velocityStd'][line, box[0]:box[2]].astype(np.float64)
-                        hgt = geomid['height'][line, box[0]:box[2]].astype(np.float64)
-                        lat = lats[i, :].astype(np.float64)
-                        lon = lons[i, :].astype(np.float64)
+            for j in range(width):
+                if mask[i, j] == 0:
+                    continue
 
-                        for j in range(width):
-                            if mask[i, j] == 0:
-                                continue
+                # Create metadata dict
+                rdict = {
+                    "CODE": hex(counter)[2:].zfill(8),
+                    "HEIGHT": hgt[j],
+                    "H_STDEV": 0.0,
+                    "VEL": vel[j] * 1000,
+                    "V_STDEV": vel_std[j] * 1000,
+                    "COHERENCE": coh[j],
+                    "EFF_AREA": 1,
+                }
 
-                            #Create metadata dict
-                            rdict = { 'CODE'      : hex(counter)[2:].zfill(8),
-                                      'HEIGHT'    : hgt[j],
-                                      'H_STDEV'   : 0.,
-                                      'VEL'       : vel[j]*1000,
-                                      'V_STDEV'   : vel_std[j]*1000,
-                                      'COHERENCE' : coh[j],
-                                      'EFF_AREA'  : 1}
+                for ind, date in enumerate(ts_obj.dateList):
+                    rdict[f"D{date}"] = ts[ind, j] * 1000
 
-                            for ind, date in enumerate(ts_obj.dateList):
-                                rdict[f'D{date}'] = ts[ind, j] * 1000
+                # Create feature with definition
+                feature = ogr.Feature(layerDefn)
+                add_metadata(feature, [lon[j], lat[j]], rdict)
+                layer.CreateFeature(feature)
+                feature = None
 
-                            #Create feature with definition
-                            feature = ogr.Feature(layerDefn)
-                            add_metadata(feature, [lon[j], lat[j]], rdict)
-                            layer.CreateFeature(feature)
-                            feature = None
-
-                            # update counter / progress bar
-                            counter += 1
-                            prog_bar.update(counter, every=100, suffix=f'line {counter}/{nValid}')
-                    prog_bar.close()
-
+                # update counter / progress bar
+                counter += 1
+                prog_bar.update(counter, every=100, suffix=f"line {counter}/{nValid}")
+        prog_bar.close()
     print(f'finished writing to file: {shp_file}')
     return shp_file
 
