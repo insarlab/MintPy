@@ -524,6 +524,12 @@ def get_date_range(dmin, dmax, dstep=1, dunit='D', out_fmt='%Y%m%d'):
 
     # prepare date range
     dt_objs = np.arange(t1, t2+tstep, tstep, dtype='datetime64').astype('O')
+
+    # ensure output dt_list is within [dmin, dmax]
+    if dt_objs[-1] > t2:
+        dt_objs = dt_objs[:-1]
+
+    # convert datetime.datetime object into given string format
     dt_list = [obj.strftime(out_fmt) for obj in dt_objs]
 
     return dt_list
