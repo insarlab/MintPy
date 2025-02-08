@@ -414,6 +414,25 @@ SEN = {
 }
 
 
+##--------------------  S-band  --------------------##
+
+# HJ-1C (Huan Jing-1C)
+# https://www.eoportal.org/satellite-missions/hj-1
+# Liu et al. (2014, J Radar), doi: 10.3724/SP.J.1300.2013.13050
+# spatial resolution: 10 m (4 looks)
+# swath width: 100 km
+HJ1C = {
+    # orbit
+    'altitude'                   : 502e3,     # m
+    'orbit_inclination'          : 97.3,      # deg
+    'repeat_cycle'               : 31,        # day
+    # sar / antenna
+    'carrier_frequency'          : 3.13e9,    # Hz
+    'pulse_repetition_frequency' : 2600,      # Hz, 2600-3700
+    'chirp_bandwidth'            : 60.0e6,    # Hz
+}
+
+
 ##--------------------  L-band  --------------------##
 
 # Seasat
@@ -534,6 +553,7 @@ SAOCOM = {
 }
 
 # LuTan-1 (stripmap mode)
+# Table 1 from Wang et al. (2024, GRSM) at https://doi.org/10.1109/MGRS.2024.3478761
 # Table 1 from Liu et al. (2022, EUSAR) at https://ieeexplore.ieee.org/document/9944327
 # preliminary version: the azimuth bandwidth/frequency/pixelsize might change
 LT1 = {
@@ -547,7 +567,7 @@ LT1 = {
     'antenna_width'              : 3.4,       # m
     'doppler_bandwidth'          : 2544,      # Hz
     'pulse_repetition_frequency' : 2934,      # Hz
-    'chirp_bandwidth'            : 60.0e6,    # Hz
+    'chirp_bandwidth'            : 80.0e6,    # Hz
     'azimuth_pixel_size'         : 2.35,      # m
     'range_pixel_size'           : 1.67,      # m
     'azimuth_resolution'         : 7.15,      # m

@@ -391,3 +391,18 @@ def remove_reference_pixel(File):
         atrDrop[i] = 'None'
     File = ut.add_attribute(File, atrDrop)
     return File
+
+
+def run_reference_point(inps):
+    """Select spatial reference point.
+
+    Parameters: inps - namespace
+    Example:    inps = cmd_line_parse(iargs)
+                run_reference_point(inps)
+    """
+    inps = read_reference_input(inps)
+
+    if inps.go_reference:
+        reference_file(inps)
+
+    return
