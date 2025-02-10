@@ -38,6 +38,9 @@ EXAMPLE = """example:
   tropo_pyaps3.py -d SAFE_files.txt
   # download datasets (covering the area of interest)
   tropo_pyaps3.py -d SAFE_files.txt -g inputs/geometryRadar.h5
+
+  # debug mode (to facilitate potential pyaps3 debugging)
+  tropo_pyaps3.py -f timeseries.h5 -g inputs/geometryRadar.h5 --debug
 """
 
 SAFE_FILE = """SAFE_files.txt:
