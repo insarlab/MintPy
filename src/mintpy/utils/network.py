@@ -212,7 +212,7 @@ def critical_perp_baseline(sensor_name, inc_angle=30, print_msg=False):
 
     # calculate critical perpendicular baseline
     bperp_crit = wvl * (range_bandwidth / SPEED_OF_LIGHT) * near_range * np.tan(np.deg2rad(inc_angle))
-    print(f'critical perpendicular baseline: {bperp_crit} m') if verbose else None
+    print(f'critical perpendicular baseline: {bperp_crit} m') if print_msg else None
 
     return bperp_crit
 
