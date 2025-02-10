@@ -18,6 +18,7 @@ SENSOR_NAME_VARIATION = {
     'env'   : ['env', 'envisat', 'asar'],
     'ers'   : ['ers', 'ers1', 'ers2', 'ers12'],
     'gf3'   : ['gfen3', 'gaofen3', 'g3', 'gaofen'],
+    'hj1c'  : ['hj1', 'huanjing1c'],
     'jers'  : ['jers', 'jers1'],
     'ksat5' : ['ksat5', 'kompsat5', 'kompsat', 'kmps5'],
     'lt1'   : ['lt1', 'lt', 'lutan', 'lutan1'],
@@ -569,9 +570,37 @@ LT1 = {
     'pulse_repetition_frequency' : 2934,      # Hz
     'chirp_bandwidth'            : 80.0e6,    # Hz
     'azimuth_pixel_size'         : 2.35,      # m
-    'range_pixel_size'           : 1.67,      # m
     'azimuth_resolution'         : 7.15,      # m
+    'range_pixel_size'           : 1.67,      # m
     'range_resolution'           : 2.50,      # m
+}
+
+# UAVSAR-L
+# Reference:
+#   https://earth.jpl.nasa.gov/estd-missions/airborne/uavsar/
+#   https://airbornescience.nasa.gov/instrument/Uninhabited_Aerial_Vehicle_Synthetic_Aperture_Radar
+#   https://www.eoportal.org/other-space-activities/uavsar
+#   Fore et al. (2015) at https://doi.org/10.1109/TGRS.2014.2377637
+#   Hu et al. (2020) at https://doi.org/10.1038/s41467-020-16617-7
+# Parameters:
+#   swath width = 16e3 m
+#   fly path accuracy <= 10 m
+#   instrument power = 3.1e3 W
+#   noise equivalent sigma zero < -50 dB
+#   operating altitude range = 2e3 - 18e3 m
+#   ground speed range = 100 - 250 m/s
+UAV_L = {
+    # orbit
+    'altitude'                   : 13.8e3,    # m, 2 - 18 km
+    # sar / antenna
+    'carrier_frequency'          : 1.2575e9,  # Hz
+    'antenna_length'             : 1.6,       # m
+    'antenna_width'              : 0.5,       # m
+    'chirp_bandwidth'            : 80e6,      # Hz
+    'range_resolution'           : 1.8,       # m
+    'range_pixel_size'           : 1.67,      # m
+    'azimuth_resolution'         : 0.8,       # m
+    'azimuth_pixel_size'         : 0.6,       # m
 }
 
 # NISAR
@@ -608,11 +637,14 @@ SENSOR_DICT = {
     'rsat2' : RSAT2,
     'rcm'   : RCM,
     'gf3'   : GF3,
+    # S-band
+    'hj1c'  : HJ1C,
     # L-band
     'jers'  : JERS,
     'alos'  : ALOS,
     'alos2' : ALOS2,
     'alos4' : ALOS4,
     'lt1'   : LT1,
+    'uav'   : UAV_L,
     'ni'    : NISAR_L,
 }
