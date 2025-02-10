@@ -466,10 +466,13 @@ def check_pyaps_account_config(tropo_model):
 
 
 ###############################################################
-def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
+def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None, debug_mode=False):
     """Download weather re-analysis grib files using PyAPS
-    Parameters: grib_files : list of string of grib files
-    Returns:    grib_files : list of string
+    Parameters: grib_files  - list of string of grib files needed
+                tropo_model - str, global tropospheric model name
+                snwe        - tuple(float), bounding box in latitude/longitude (for ERA5)
+                debug_mode  - bool, enable the debug model while downloading via pyaps3
+    Returns:    grib_files  - list of string of grib files after downloading
     """
     print('-'*50)
     print('downloading weather model data using PyAPS ...')
@@ -495,33 +498,41 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
         # Check for non-empty account info in PyAPS config file
         check_pyaps_account_config(tropo_model)
 
-        # try 3 times to download, then use whatever downloaded to calculate delay
-        i = 0
-        while i < 3:
-            i += 1
-            try:
-                if tropo_model in ['ERA5', 'ERAINT']:
-                    pa.ECMWFdload(
-                        date_list2dload,
-                        hour,
-                        grib_dir,
-                        model=tropo_model,
-                        snwe=snwe,
-                        flist=grib_files2dload)
+        # call pyapd3 to download
+        kwargs = dict(model=tropo_model, snwe=snwe, flist=grib_files2dload)
+        if debug_mode:
+            # in the debug mode, if issue occurred, show the full error message and stop
+            if tropo_model in ['ERA5', 'ERAINT']:
+                pa.ECMWFdload(date_list2dload, hour, grib_dir, **kwargs)
 
-                elif tropo_model == 'MERRA':
-                    pa.MERRAdload(date_list2dload, hour, grib_dir)
+            elif tropo_model == 'MERRA':
+                pa.MERRAdload(date_list2dload, hour, grib_dir)
 
-                elif tropo_model == 'NARR':
-                    pa.NARRdload(date_list2dload, hour, grib_dir)
-            except:
-                if i < 3:
-                    print(f'WARNING: the {i} attempt to download failed, retry it.\n')
-                else:
-                    print('\n\n'+'*'*50)
-                    print('WARNING: downloading failed for 3 times, stop trying and continue.')
-                    print('*'*50+'\n\n')
-                pass
+            elif tropo_model == 'NARR':
+                pa.NARRdload(date_list2dload, hour, grib_dir)
+
+        else:
+            # in the operation mode, try to download 3 times, then use whatever downloaded and continue
+            i = 0
+            while i < 3:
+                i += 1
+                try:
+                    if tropo_model in ['ERA5', 'ERAINT']:
+                        pa.ECMWFdload(date_list2dload, hour, grib_dir, **kwargs)
+
+                    elif tropo_model == 'MERRA':
+                        pa.MERRAdload(date_list2dload, hour, grib_dir)
+
+                    elif tropo_model == 'NARR':
+                        pa.NARRdload(date_list2dload, hour, grib_dir)
+                except:
+                    if i < 3:
+                        print(f'WARNING: the {i} attempt to download failed, retry it.\n')
+                    else:
+                        print('\n\n'+'*'*50)
+                        print('WARNING: downloading failed for 3 times, stop trying and continue.')
+                        print('*'*50+'\n\n')
+                    pass
 
     # check potentially corrupted files
     grib_files = check_exist_grib_file(grib_files, print_msg=False)
@@ -728,7 +739,9 @@ def run_tropo_pyaps3(inps):
         inps.grib_files = dload_grib_files(
             inps.grib_files,
             tropo_model=inps.tropo_model,
-            snwe=inps.snwe)
+            snwe=inps.snwe,
+            debug_mode=inps.debug_mode,
+        )
 
     ## 2. calculate tropo delay and save to h5 file
     if not inps.geom_file:
