@@ -318,8 +318,8 @@ def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
         W = floor2multiple(W, step=step)
         N = ceil2multiple(N, step=step)
         E = ceil2multiple(E, step=step)
-
-    return (S, N, W, E)
+    # modified by fukun 2025.2.14, return (S, N, W, E)->return (int(S), int(N), int(W), int(E))
+    return (int(S), int(N), int(W), int(E))
 
 
 def get_bounding_box(meta, geom_file=None):
