@@ -24,7 +24,7 @@ WEATHER_MODEL_HOURS = {
     'MERRA'  : [0, 6, 12, 18],
 }
 
-INT_DATA_TYPES = (int, np.int16, np.int32, np.int64)
+# INT_DATA_TYPES = (int, np.int16, np.int32, np.int64)
 
 
 ###############################################################
@@ -292,7 +292,7 @@ def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
     # utils sub-functions
     def ceil2multiple(x, step=10):
         """Given a number x, find the smallest number in multiple of step >= x."""
-        assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
+        # assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
         if x % step == 0:
             return x
         else:
@@ -300,17 +300,17 @@ def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
 
     def floor2multiple(x, step=10):
         """Given a number x, find the largest number in multiple of step <= x."""
-        assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
+        # assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
         return x - x % step
 
     # get bounding box
     lat0, lat1, lon0, lon1 = get_bounding_box(meta, geom_file=geom_file)
 
     # lat/lon0/1 --> SNWE
-    S = np.floor(min(lat0, lat1) - min_buffer).astype(int)
-    N = np.ceil( max(lat0, lat1) + min_buffer).astype(int)
-    W = np.floor(min(lon0, lon1) - min_buffer).astype(int)
-    E = np.ceil( max(lon0, lon1) + min_buffer).astype(int)
+    S = np.floor(min(lat0, lat1) - min_buffer)
+    N = np.ceil( max(lat0, lat1) + min_buffer)
+    W = np.floor(min(lon0, lon1) - min_buffer)
+    E = np.ceil( max(lon0, lon1) + min_buffer)
 
     # SNWE in multiple of 10
     if step > 1:
@@ -318,7 +318,8 @@ def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
         W = floor2multiple(W, step=step)
         N = ceil2multiple(N, step=step)
         E = ceil2multiple(E, step=step)
-    # modified by fukun 2025.2.14, return (S, N, W, E)->return (int(S), int(N), int(W), int(E))
+
+    # return native int format, as cdsapi-0.7.3 does not support numpy.int64
     return (int(S), int(N), int(W), int(E))
 
 
