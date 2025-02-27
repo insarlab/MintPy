@@ -332,7 +332,8 @@ class TimeSeriesAnalysis:
 
     def run_unwrap_error_correction(self, step_name):
         """Correct phase-unwrapping errors"""
-        method = self.template['mintpy.unwrapError.method']
+        # ignore whitespace
+        method = self.template['mintpy.unwrapError.method'].replace(' ', '')
         if not method:
             print('phase-unwrapping error correction is OFF.')
             return
