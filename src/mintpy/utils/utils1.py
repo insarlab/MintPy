@@ -558,7 +558,7 @@ def update_template_file(template_file, extra_dict, delimiter='='):
                 # link: https://docs.python.org/3/library/re.html
                 value2search = value
                 # 1. interpret special symbols as characters
-                for symbol in ['*', '[', ']', '(', ')']:
+                for symbol in ['*', '[', ']', '(', ')', '+']:
                     value2search = value2search.replace(symbol, fr"\{symbol}")
                 # 2. use "= {OLD_VALUE}" for search/replace to be more robust
                 # against the scenario when key name contains {OLD_VALUE}
