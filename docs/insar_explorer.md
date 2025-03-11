@@ -24,5 +24,5 @@ Displacement time-series can be visualized in QGIS InSAR Explorer plugin. The pl
 3. Launch InSAR Explorer and Click on any point to plot the time series.
 
 
-### More informatin ###
+### More information ###
 For more details on using the plugin, please refer to the [InSAR Explore documentation](https://insar-explorer.readthedocs.io/).
