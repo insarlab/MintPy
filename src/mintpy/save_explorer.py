@@ -45,7 +45,7 @@ def save_explorer(inps):
         if mask is not None:
             data[~mask] = np.nan
 
-        out_file = inps.outdir + '/' + os.path.splitext(os.path.basename(inps.vel_file))[0] + '_mm.grd'
+        out_file = os.path.join(inps.outdir, os.path.splitext(os.path.basename(inps.vel_file))[0] + '_mm.grd')
         write_grd_file(data, atr, out_file)
 
 
