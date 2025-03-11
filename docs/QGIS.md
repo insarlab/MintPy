@@ -20,4 +20,4 @@ ramp_color('RdBu', scale_linear(VEL, -20, 20, 0, 1))
 </p>
 
 The exported shapefile can also be used in QGIS [InSAR Explorer plugin](https://plugins.qgis.org/plugins/insar_explorer-dev/) for visualization of time-series data.
-For more details on using the plugin, please refer to the [InSAR Explore documentation](https://insar-explorer.readthedocs.io/).
+For more details on using the plugin, please refer to the [InSAR Explorer documentation](https://insar-explorer.readthedocs.io/).
