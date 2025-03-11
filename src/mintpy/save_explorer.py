@@ -23,7 +23,7 @@ def convert2mm(data, atr):
     elif atr['UNIT'] in ['mm', 'mm/year']:
         return data
     else:
-        raise Exception(f"ERROR: unit {atr['UNIT']} is not supported!")
+        raise ValueError(f"ERROR: unit {atr['UNIT']} is not supported!")
 
 
 def save_explorer(inps):
