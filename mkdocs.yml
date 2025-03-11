@@ -34,6 +34,7 @@ nav:
         - Google Earth KMZ: google_earth.md
         - HDF-EOS5: hdfeos5.md
         - QGIS: QGIS.md
+        - InSAR Explorer: insar_explorer.md
     - API Documentation:
         - Attributes: api/attributes.md
         - Colormaps: api/colormaps.md
