@@ -820,7 +820,6 @@ class GNSS_UNR(GNSS):
         #           http://geodesy.unr.edu/gps_timeseries/tenv3/IGS14/CASU.tenv3
         if not self.url_prefix:
             self.url_prefix = f'https://geodesy.unr.edu/gps_timeseries/tenv3/{self.version}'
-        print(self.url_prefix)
         self.url = os.path.join(self.url_prefix, os.path.basename(self.file))
 
 
