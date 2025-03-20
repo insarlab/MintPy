@@ -21,7 +21,7 @@ from mintpy.objects.coord import coordinate
 from mintpy.utils import ptime, readfile, time_func, utils1 as ut
 
 GNSS_SITE_LIST_URLS = {
-    'UNR'      : 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt',
+    'UNR'      : 'https://geodesy.unr.edu/NGLStationPages/DataHoldings.txt',
     'ESESES'   : 'http://garner.ucsd.edu/pub/measuresESESES_products/Velocities/ESESES_Velocities.txt',
     'SIDESHOW' : 'https://sideshow.jpl.nasa.gov/post/tables/table2.html',
     'GENERIC'  : None,
@@ -819,7 +819,8 @@ class GNSS_UNR(GNSS):
         # examples: http://geodesy.unr.edu/gps_timeseries/tenv3/IGS08/1LSU.IGS08.tenv3
         #           http://geodesy.unr.edu/gps_timeseries/tenv3/IGS14/CASU.tenv3
         if not self.url_prefix:
-            self.url_prefix = f'http://geodesy.unr.edu/gps_timeseries/tenv3/{self.version}'
+            self.url_prefix = f'https://geodesy.unr.edu/gps_timeseries/tenv3/{self.version}'
+        print(self.url_prefix)
         self.url = os.path.join(self.url_prefix, os.path.basename(self.file))
 
 
@@ -845,8 +846,8 @@ class GNSS_UNR(GNSS):
 
         # get plot file url
         url_prefix = {
-            'IGS08' : 'http://geodesy.unr.edu/tsplots/IGS08/TimeSeries',
-            'IGS14' : 'http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries',
+            'IGS08' : 'https://geodesy.unr.edu/tsplots/IGS08/TimeSeries',
+            'IGS14' : 'https://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries',
         }[self.version]
         plot_file_url = os.path.join(url_prefix, f'{self.site}.png')
 
