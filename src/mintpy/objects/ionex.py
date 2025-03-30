@@ -49,7 +49,7 @@ def dload_ionex(date_str, tec_dir, sol_code='jpl', date_fmt='%Y%m%d', print_msg=
     fname_dst_uncomp = fname_dst[:-2]
 
     # download - compose cmd
-    cmd = f'wget --continue --auth-no-challenge "{fname_src}"'
+    cmd = f'wget --continue --auth-no-challenge "{fname_src}" -O "{fname_dst}"'
     if os.path.isfile(fname_dst) and os.path.getsize(fname_dst) > 1000:
         cmd += ' --timestamping'
     cmd += ' --quiet' if not print_msg else ''
@@ -230,6 +230,22 @@ def interp_3d_maps(tec_maps, mins, lats, lons, utc_min, lat, lon, interp_method=
     return tec_val
 
 
+
+def datetime_to_gps_week(dd):
+    """
+    Calculates the GPS week number from a datetime object.
+
+    Inputs:
+        dd: A datetime object.
+
+    Returns:
+        The GPS week number (integer).
+    """
+    time_delta = dd - dt.datetime(1980, 1, 6)
+    gps_week = time_delta.days // 7
+    return gps_week
+
+
 def get_ionex_filename(date_str, tec_dir=None, sol_code='jpl', date_fmt='%Y%m%d'):
     """Get the file name of IONEX files.
 
@@ -241,22 +257,47 @@ def get_ionex_filename(date_str, tec_dir=None, sol_code='jpl', date_fmt='%Y%m%d'
                 date_fmt - str, date format code
                            https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes
     Returns:    tec_file - str, path to the local uncompressed TEC file OR remote compressed TECfile
-    """
-    dd = dt.datetime.strptime(date_str, date_fmt)
-    doy = f'{dd.timetuple().tm_yday:03d}'
-    yy = str(dd.year)[2:4]
 
-    # file name base
-    fname = f"{sol_code.lower()}g{doy}0.{yy}i.Z"
+    """
+
+    url_dir = "https://cddis.nasa.gov/archive/gnss/products/ionex"
+
+    ## Name change:
+    #   The ionospheric products since GPS week 2238 (November 27, 2022), are in transition to the IGS long product filename convention.
+    #    + https://igs.org/products/
+    #    + https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/atmospheric_products.html#iono
+    GPS_WEEK_2238 = dt.datetime(2022,11,27)
+
+    dd  = dt.datetime.strptime(date_str, date_fmt)
+    doy = f'{dd.timetuple().tm_yday:03d}'
+    yy  = str(dd.year)[2:4]
+
+    local_name = f"{sol_code.lower()}g{doy}0.{yy}i"
+
+    if dd >= GPS_WEEK_2238:
+        # new file name base: IGS0OPSTYP_YYYYDDDHHMM_01D_SMP_CNT.INX.gz
+        wwww = str(datetime_to_gps_week(dd))
+        yyyy = str(dd.year)
+        hh   = '00' # f'{dd.hour:02d}'
+        mm   = '00' # f'{dd.minute:02d}'
+        SMP  = '02H'
+        CNT  = 'GIM'
+
+        fbase = f'IGS0OPSFIN_{yyyy}{doy}{hh}{mm}_01D_{SMP}_{CNT}.INX.gz'
+        #url_subdir = wwww
+        url_subdir = str(dd.year)+'/'+doy
+    else:
+        # old file name base
+        fbase = local_name
+        url_subdir = str(dd.year)+'/'+doy
 
     # full path
     if tec_dir:
         # local uncompressed file path
-        tec_file = os.path.join(tec_dir, fname[:-2])
+        tec_file = os.path.join(tec_dir, local_name)
     else:
         # remote compressed file path
-        url_dir = "https://cddis.nasa.gov/archive/gnss/products/ionex"
-        tec_file = os.path.join(url_dir, str(dd.year), doy, fname)
+        tec_file = os.path.join(url_dir, url_subdir, fbase)
 
     return tec_file
 
