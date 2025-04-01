@@ -99,6 +99,12 @@ def cmd_line_parse(iargs=None):
     if ftype not in ['ifgramStack']:
         raise ValueError(f'input file is not ifgramStack: {ftype}')
 
+    # check: --num-sample and --min-area options (positive)
+    if inps.numSample <=0:
+        raise ValueError(f'--num-sample option must be > 0 ({inps.numSample})!')
+    if inps.connCompMinArea <=0:
+        raise ValueError(f'--min-area option must be > 0 ({inps.connCompMinArea})!')
+
     # check: --cc-mask option (required for "--action correct")
     if inps.action == 'correct' and not os.path.isfile(inps.cc_mask_file):
         raise FileNotFoundError(inps.cc_mask_file)
