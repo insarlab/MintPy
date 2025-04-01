@@ -844,7 +844,7 @@ def load_data(inps):
             box=iDict['box4geo'],
             xstep=iDict['xstep'],
             ystep=iDict['ystep'],
-            compression='lzf')
+            compression=iDict['compression'])
 
     if run_or_skip(geom_radar_file, geom_radar_obj, iDict['box'], **kwargs) == 'run':
         geom_radar_obj.write2hdf5(
@@ -853,7 +853,7 @@ def load_data(inps):
             box=iDict['box'],
             xstep=iDict['xstep'],
             ystep=iDict['ystep'],
-            compression='lzf',
+            compression=iDict['compression'],
             extra_metadata=extraDict)
 
     # observations: ifgram, ion or offset
