@@ -110,7 +110,7 @@ def main(iargs=None):
         # add "date" dataset for timeseries
         if inps.dset_name and inps.dset_name == 'timeseries':
             date_list = [os.path.basename(os.path.dirname(x)) for x in inps.file]
-            dsDict['date'] = np.array(date_list, dtype=np.string_)
+            dsDict['date'] = np.array(date_list, dtype=np.bytes_)
 
     # metadata
     if inps.metadata:

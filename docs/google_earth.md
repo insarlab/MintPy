@@ -2,10 +2,10 @@ MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Mar
 
 ### 1. Displacement time-series ###
 
-`save_kmz_timeseries.py` takes 3D displacement time-series file and outputs a KMZ file with interactive time-seires plot.
+`save_kmz_timeseries.py` takes 3D displacement time-series file and outputs a KMZ file with interactive time-series plot.
 
 <p align="center">
-  <img src="https://yunjunzhang.files.wordpress.com/2019/02/fernandinasendt128_ge-1.png">
+  <img src="https://insarlab.github.io/figs/docs/mintpy/GoogleEarth-FernandinaSenD128-TS.jpg">
 </p>
 
 [Download KMZ file](https://miami.box.com/v/FernandinaSenDT128TS)
@@ -15,7 +15,7 @@ MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Mar
 `save_kmz.py` takes any 2D matrix and outputs a KMZ file with a overlay image.
 
 <p align="center">
-  <img src="https://yunjunzhang.files.wordpress.com/2019/02/vel_fernandinasendt128_ge.png">
+  <img src="https://insarlab.github.io/figs/docs/mintpy/GoogleEarth-FernandinaSenD128-VEL.jpg">
 </p>
 
 [Download KMZ file](https://miami.box.com/v/FernandinaSenDT128VEL)
@@ -35,7 +35,7 @@ The script samples the input 3D dataset at 3 levels of details by default (`--st
 The low- and moderate-resolution LODs cover the entire region, while the high-resolution LOD covers only the actively deforming regions. These regions (red boxes below) are currently identified as boxes having >20% pixels with velocity magnitude > the global velocity median absolute deviation (`mintpy.save_kmz_timeseries.get_boxes4deforming_area`).
 
 <p align="center">
-  <img src="https://yunjunzhang.files.wordpress.com/2020/03/defo_area.png">
+  <img src="https://insarlab.github.io/figs/docs/mintpy/GoogleEarth-FernandinaSenD128-defoArea.png">
 </p>
 
 2. Region-based Network Links

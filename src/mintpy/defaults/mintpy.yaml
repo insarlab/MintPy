@@ -67,7 +67,7 @@ jobqueue:
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
 
-    # LSF resource manager options
+    # Slurm resource manager options
     shebang: "#!/usr/bin/env bash"
     queue: null
     project: null

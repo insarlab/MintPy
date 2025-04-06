@@ -38,6 +38,9 @@ EXAMPLE = """example:
   tropo_pyaps3.py -d SAFE_files.txt
   # download datasets (covering the area of interest)
   tropo_pyaps3.py -d SAFE_files.txt -g inputs/geometryRadar.h5
+
+  # debug mode (to facilitate potential pyaps3 debugging)
+  tropo_pyaps3.py -f timeseries.h5 -g inputs/geometryRadar.h5 --debug
 """
 
 SAFE_FILE = """SAFE_files.txt:
@@ -90,6 +93,9 @@ def create_parser(subparsers=None):
     parser.add_argument('--hour', type=str, help='time of data in HH, e.g. 12, 06')
     parser.add_argument('-o','--output', dest='cor_dis_file',
                         help='Output file name for trospheric corrected timeseries.')
+    parser.add_argument('--debug', '--debug-mode', dest='debug_mode', action='store_true',
+                        help='Enable debug mode, i.e. run pyaps3 without try/except to show the full message '
+                             'and potential stopping points.')
 
     # delay calculation
     delay = parser.add_argument_group('delay calculation')

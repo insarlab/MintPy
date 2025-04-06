@@ -207,6 +207,21 @@ SPECIAL_STR2NUM = {
     'nan'   : np.nan,
 }
 
+GMTSAR_SENSOR_ID2NAME = {
+    1 : 'ers',
+    2 : 'ers',
+    3 : 'rs1',
+    4 : 'env',
+    5 : 'alos',
+    6 : 'tsx',
+    7 : 'csk',
+    8 : 'csk',
+    9 : 'rs2',
+    10: 'sen',
+    11: 'gf3',
+    12: 'lt1',
+}
+
 
 #########################################################################
 def numpy_to_gdal_dtype(np_dtype: DTypeLike) -> int:
@@ -684,7 +699,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             cpx_band = 'magnitude'
 
         elif fext in ['.mli', '.rmli']:
-            byte_order = 'little-endian'
+            byte_order = 'little-endian'   # big-endian
 
     # SNAP
     # BEAM-DIMAP data format
@@ -1795,6 +1810,14 @@ def _attribute_gmtsar2roipac(prm_dict_in):
         else:
             prm_dict['ANTENNA_SIDE'] = '1'
 
+    # orbdir -> ORBIT_DIRECTION
+    key = 'orbdir'
+    if key in prm_dict_in.keys():
+        prm_dict['ORBIT_DIRECTION'] = {
+            'A' : 'ASCENDING',
+            'D' : 'DESCENDING',
+        }[prm_dict[key]]
+
     # SC_vel -> AZIMUTH_PIXEL_SIZE (in single look)
     key = 'SC_vel'
     if key in prm_dict_in.keys():
@@ -1815,6 +1838,9 @@ def _attribute_gmtsar2roipac(prm_dict_in):
     dt_center = (float(prm_dict['SC_clock_start']) + float(prm_dict['SC_clock_stop'])) / 2.0
     t_center = dt_center - int(dt_center)
     prm_dict['CENTER_LINE_UTC'] = str(t_center * 24. * 60. * 60.)
+
+    # SC_identity -> PLATFORM
+    prm_dict['PLATFORM'] = GMTSAR_SENSOR_ID2NAME[int(prm_dict['SC_identity'])]
 
     return prm_dict
 
@@ -1899,7 +1925,8 @@ def read_snap_dim(fname):
     bases = ds.find("MDElem[@name='Baselines']").findall("MDElem")[0].findall("MDElem")
 
     # date12
-    dates = [x.get('name').split(':')[1].strip() for x in bases]
+    # support both delimiters of : and _
+    dates = [re.split(':|_', x.get('name'))[1].strip() for x in bases][-2:]
     [date1, date2] = sorted(dt.datetime.strptime(x, '%d%b%Y').strftime('%Y%m%d') for x in dates)
     dim_dict['DATE12'] = f'{date1[2:]}-{date2[2:]}'
 

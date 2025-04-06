@@ -382,7 +382,7 @@ def read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2template_key):
     pairsDict = {}
     for i, dsPath0 in enumerate(dsPathDict[dsName0]):
         # date string used in the file/dir path
-        # YYYYDDD       for gmtsar [modern Julian date]
+        # YYYYDDD       for gmtsar [day of the year - 1]
         # YYYYMMDDTHHMM for uavsar
         # YYYYMMDD      for all the others
         date6s = readfile.read_attribute(dsPath0)['DATE12'].replace('_','-').split('-')

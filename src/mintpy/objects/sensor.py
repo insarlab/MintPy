@@ -18,6 +18,7 @@ SENSOR_NAME_VARIATION = {
     'env'   : ['env', 'envisat', 'asar'],
     'ers'   : ['ers', 'ers1', 'ers2', 'ers12'],
     'gf3'   : ['gfen3', 'gaofen3', 'g3', 'gaofen'],
+    'hj1c'  : ['hj1', 'huanjing1c'],
     'jers'  : ['jers', 'jers1'],
     'ksat5' : ['ksat5', 'kompsat5', 'kompsat', 'kmps5'],
     'lt1'   : ['lt1', 'lt', 'lutan', 'lutan1'],
@@ -368,6 +369,7 @@ RCM = {
 # Table 2 & 6 in https://directory.eoportal.org/web/eoportal/satellite-missions/g/gaofen-3
 # https://www.eoportal.org/satellite-missions/gaofen-3
 # Li et al. (2018, RS) at https://doi.org/10.3390/rs10121929
+# Table I in Yang et al. (2023, IEEE-TGRS) at https://doi.org/10.1109/TGRS.2023.3238707
 GF3 = {
     # orbit
     'altitude'                   : 755e3,     # m
@@ -377,7 +379,11 @@ GF3 = {
     'carrier_frequency'          : 5.4e9,     # Hz
     'antenna_length'             : 15,        # m
     'antenna_width'              : 1.5,       # m
+    'pulse_repetition_frequency' : 1412.18,   # Hz
+    'chirp_bandwidth'            : 60.00e6,   # Hz
     'sampling_frequency'         : 533.33e6,  # Hz
+    'azimuth_pixel_size'         : 4.77,      # m, FSII mode
+    'range_pixel_size'           : 2.25,      # m, FSII mode
 }
 
 # Sentinel-1 Interferometric Wide (IW / TOPS) swath mode
@@ -406,6 +412,25 @@ SEN = {
     'IW1' : {'range_resolution' : 2.7, 'azimuth_resolution': 22.5},
     'IW2' : {'range_resolution' : 3.1, 'azimuth_resolution': 22.7},
     'IW3' : {'range_resolution' : 3.5, 'azimuth_resolution': 22.6},
+}
+
+
+##--------------------  S-band  --------------------##
+
+# HJ-1C (Huan Jing-1C)
+# https://www.eoportal.org/satellite-missions/hj-1
+# Liu et al. (2014, J Radar), doi: 10.3724/SP.J.1300.2013.13050
+# spatial resolution: 10 m (4 looks)
+# swath width: 100 km
+HJ1C = {
+    # orbit
+    'altitude'                   : 502e3,     # m
+    'orbit_inclination'          : 97.3,      # deg
+    'repeat_cycle'               : 31,        # day
+    # sar / antenna
+    'carrier_frequency'          : 3.13e9,    # Hz
+    'pulse_repetition_frequency' : 2600,      # Hz, 2600-3700
+    'chirp_bandwidth'            : 60.0e6,    # Hz
 }
 
 
@@ -529,6 +554,7 @@ SAOCOM = {
 }
 
 # LuTan-1 (stripmap mode)
+# Table 1 from Wang et al. (2024, GRSM) at https://doi.org/10.1109/MGRS.2024.3478761
 # Table 1 from Liu et al. (2022, EUSAR) at https://ieeexplore.ieee.org/document/9944327
 # preliminary version: the azimuth bandwidth/frequency/pixelsize might change
 LT1 = {
@@ -542,11 +568,39 @@ LT1 = {
     'antenna_width'              : 3.4,       # m
     'doppler_bandwidth'          : 2544,      # Hz
     'pulse_repetition_frequency' : 2934,      # Hz
-    'chirp_bandwidth'            : 60.0e6,    # Hz
+    'chirp_bandwidth'            : 80.0e6,    # Hz
     'azimuth_pixel_size'         : 2.35,      # m
-    'range_pixel_size'           : 1.67,      # m
     'azimuth_resolution'         : 7.15,      # m
+    'range_pixel_size'           : 1.67,      # m
     'range_resolution'           : 2.50,      # m
+}
+
+# UAVSAR-L
+# Reference:
+#   https://earth.jpl.nasa.gov/estd-missions/airborne/uavsar/
+#   https://airbornescience.nasa.gov/instrument/Uninhabited_Aerial_Vehicle_Synthetic_Aperture_Radar
+#   https://www.eoportal.org/other-space-activities/uavsar
+#   Fore et al. (2015) at https://doi.org/10.1109/TGRS.2014.2377637
+#   Hu et al. (2020) at https://doi.org/10.1038/s41467-020-16617-7
+# Parameters:
+#   swath width = 16e3 m
+#   fly path accuracy <= 10 m
+#   instrument power = 3.1e3 W
+#   noise equivalent sigma zero < -50 dB
+#   operating altitude range = 2e3 - 18e3 m
+#   ground speed range = 100 - 250 m/s
+UAV_L = {
+    # orbit
+    'altitude'                   : 13.8e3,    # m, 2 - 18 km
+    # sar / antenna
+    'carrier_frequency'          : 1.2575e9,  # Hz
+    'antenna_length'             : 1.6,       # m
+    'antenna_width'              : 0.5,       # m
+    'chirp_bandwidth'            : 80e6,      # Hz
+    'range_resolution'           : 1.8,       # m
+    'range_pixel_size'           : 1.67,      # m
+    'azimuth_resolution'         : 0.8,       # m
+    'azimuth_pixel_size'         : 0.6,       # m
 }
 
 # NISAR
@@ -583,11 +637,14 @@ SENSOR_DICT = {
     'rsat2' : RSAT2,
     'rcm'   : RCM,
     'gf3'   : GF3,
+    # S-band
+    'hj1c'  : HJ1C,
     # L-band
     'jers'  : JERS,
     'alos'  : ALOS,
     'alos2' : ALOS2,
     'alos4' : ALOS4,
     'lt1'   : LT1,
+    'uav'   : UAV_L,
     'ni'    : NISAR_L,
 }

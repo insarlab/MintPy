@@ -206,13 +206,13 @@ def check_map_projection(inps, metadata, print_msg=True):
         msg = 'initiate cartopy map projection: '
         if inps.coord_unit.startswith('deg'):
             inps.map_proj_obj = ccrs.PlateCarree()
-            vprint(msg + 'PlateCarree')
+            print(msg + 'PlateCarree')
 
         elif inps.coord_unit.startswith('meter'):
             if 'UTM_ZONE' in metadata.keys():
                 utm_zone = metadata['UTM_ZONE']
                 inps.map_proj_obj = ccrs.UTM(utm_zone)
-                vprint(msg + f'UTM zone {utm_zone}')
+                print(msg + f'UTM zone {utm_zone}')
 
                 # check --lalo-label (works for PlateCarree only)
                 if inps.lalo_label:
@@ -1652,9 +1652,15 @@ class viewer():
             no_data_val = readfile.get_no_data_value(self.file)
             if self.no_data_value is not None:
                 vprint(f'masking pixels with NO_DATA_VALUE of {self.no_data_value}')
+                # convert integer to floating to enable masking with nan
+                if np.issubdtype(data.dtype, np.integer):
+                    data = np.array(data, np.float32)
                 data[data == self.no_data_value] = np.nan
             elif no_data_val is not None and not np.isnan(no_data_val):
                 vprint(f'masking pixels with NO_DATA_VALUE of {no_data_val}')
+                # convert integer to floating to enable masking with nan
+                if np.issubdtype(data.dtype, np.integer):
+                    data = np.array(data, np.float32)
                 data[data == no_data_val] = np.nan
 
             # update/save mask info

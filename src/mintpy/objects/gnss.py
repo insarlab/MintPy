@@ -21,10 +21,10 @@ from mintpy.objects.coord import coordinate
 from mintpy.utils import ptime, readfile, time_func, utils1 as ut
 
 GNSS_SITE_LIST_URLS = {
-    'UNR'          : 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt',
-    'ESESES'       : 'http://garner.ucsd.edu/pub/measuresESESES_products/Velocities/ESESES_Velocities.txt',
-    'JPL-SIDESHOW' : 'https://sideshow.jpl.nasa.gov/post/tables/table2.html',
-    'GENERIC'      : None,
+    'UNR'      : 'https://geodesy.unr.edu/NGLStationPages/DataHoldings.txt',
+    'ESESES'   : 'http://garner.ucsd.edu/pub/measuresESESES_products/Velocities/ESESES_Velocities.txt',
+    'SIDESHOW' : 'https://sideshow.jpl.nasa.gov/post/tables/table2.html',
+    'GENERIC'  : None,
 }
 GNSS_SOURCES = list(GNSS_SITE_LIST_URLS.keys())
 
@@ -64,14 +64,15 @@ def search_gnss(SNWE, start_date=None, end_date=None, source='UNR', site_list_fi
         sites = read_UNR_site_list(site_list_file)
     elif source == 'ESESES':
         sites = read_ESESES_site_list(site_list_file)
-    elif source == 'JPL-SIDESHOW':
-        sites = read_JPL_SIDESHOW_site_list(site_list_file)
+    elif source == 'SIDESHOW':
+        sites = read_SIDESHOW_site_list(site_list_file)
     elif source == 'GENERIC':
         sites = read_GENERIC_site_list(site_list_file)
 
     # ensure that site data formatting is consistent
     sites['site'] = np.array([site.upper() for site in sites['site']])
-    sites['lon'][sites['lon'] > 180] -= 360         # ensure lon values in (-180, 180]
+    # ensure longitude values in (-180, 180]
+    sites['lon'] = ut.standardize_longitude(sites['lon'], limit='-180to180')
     vprint(f'load {len(sites["site"]):d} GNSS sites with fields: {" ".join(sites.keys())}')
 
     # limit in space
@@ -143,7 +144,7 @@ def read_UNR_site_list(site_list_file:str):
 
 
 def read_ESESES_site_list(site_list_file:str):
-    """Return names and lon/lat values for JPL GNSS stations.
+    """Return names and lon/lat values for JPL/SOPAC ESESES GNSS stations.
     """
     fc = np.loadtxt(site_list_file, skiprows=17, dtype=str)
     sites = {
@@ -154,8 +155,8 @@ def read_ESESES_site_list(site_list_file:str):
     return sites
 
 
-def read_JPL_SIDESHOW_site_list(site_list_file:str):
-    """Return names and lon/lat values for JPL-SIDESHOW GNSS stations.
+def read_SIDESHOW_site_list(site_list_file:str):
+    """Return names and lon/lat values for JPL SIDESHOW GNSS stations.
     """
     fc = np.loadtxt(site_list_file, comments='<', skiprows=9, dtype=str)
     sites = {
@@ -348,8 +349,8 @@ def get_gnss_class(source:str):
         return GNSS_UNR
     elif source == 'ESESES':
         return GNSS_ESESES
-    elif source == 'JPL-SIDESHOW':
-        return GNSS_JPL_SIDESHOW
+    elif source == 'SIDESHOW':
+        return GNSS_SIDESHOW
     elif source == 'GENERIC':
         return GNSS_GENERIC
     else:
@@ -791,6 +792,11 @@ class GNSS_UNR(GNSS):
     at University of Nevada, Reno (UNR).
 
     Website: http://geodesy.unr.edu/NGLStationPages/GlobalStationList
+
+    Reference:
+      Blewitt, G., Hammond, W., & Kreemer, C. (2018). Harnessing the GPS data
+        explosion for interdisciplinary science. Eos, 99. doi:10.1029/2018EO104623
+
     """
     def __init__(self, site: str, data_dir=None, version='IGS14', url_prefix=None):
         super().__init__(
@@ -813,7 +819,7 @@ class GNSS_UNR(GNSS):
         # examples: http://geodesy.unr.edu/gps_timeseries/tenv3/IGS08/1LSU.IGS08.tenv3
         #           http://geodesy.unr.edu/gps_timeseries/tenv3/IGS14/CASU.tenv3
         if not self.url_prefix:
-            self.url_prefix = f'http://geodesy.unr.edu/gps_timeseries/tenv3/{self.version}'
+            self.url_prefix = f'https://geodesy.unr.edu/gps_timeseries/tenv3/{self.version}'
         self.url = os.path.join(self.url_prefix, os.path.basename(self.file))
 
 
@@ -839,8 +845,8 @@ class GNSS_UNR(GNSS):
 
         # get plot file url
         url_prefix = {
-            'IGS08' : 'http://geodesy.unr.edu/tsplots/IGS08/TimeSeries',
-            'IGS14' : 'http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries',
+            'IGS08' : 'https://geodesy.unr.edu/tsplots/IGS08/TimeSeries',
+            'IGS14' : 'https://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries',
         }[self.version]
         plot_file_url = os.path.join(url_prefix, f'{self.site}.png')
 
@@ -862,6 +868,9 @@ class GNSS_UNR(GNSS):
 
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1, max_rows=10)
         self.site_lat, self.site_lon = data[0, 20:22].astype(float)
+        # ensure longitude in the range of (-180, 180]
+        self.site_lon = ut.standardize_longitude(self.site_lon, limit='-180to180')
+
         return self.site_lat, self.site_lon
 
 
@@ -982,8 +991,9 @@ class GNSS_ESESES(GNSS):
             # longitude
             lon_line = [x for x in lines if x.startswith('# East Longitude')][0].strip('\n')
             self.site_lon = float(lon_line.split()[-1])
-            # ensure longitude in the range of (-180, 180]
-            self.site_lon -= 0 if self.site_lon <= 180 else 360
+
+        # ensure longitude in the range of (-180, 180]
+        self.site_lon = ut.standardize_longitude(self.site_lon, limit='-180to180')
 
         return self.site_lat, self.site_lon
 
@@ -1037,17 +1047,25 @@ class GNSS_ESESES(GNSS):
                 self.std_e, self.std_n, self.std_u)
 
 
-class GNSS_JPL_SIDESHOW(GNSS):
-    """GNSS class for daily solutions processed by JPL-SIDESHOW.
+class GNSS_SIDESHOW(GNSS):
+    """GNSS class for daily solutions processed by JPL SIDESHOW,
+    funded by NASA's Space Geodesy Task.
 
     Website: https://sideshow.jpl.nasa.gov/pub/
+             https://sideshow.jpl.nasa.gov/post/series.html
+
+    Reference:
+      Heflin, M., Donnellan, A., Parker, J., Lyzenga, G., Moore, A., Ludwig, L. G., et al.
+        (2020). Automated Estimation and Tools to Extract Positions, Velocities, Breaks, and
+        Seasonal Terms From Daily GNSS Measurements: Illuminating Nonlinear Salton Trough
+        Deformation. Earth and Space Science, 7(7), e2019EA000644, doi:10.1029/2019EA000644
     """
     def __init__(self, site: str, data_dir=None, version='IGS14', url_prefix=None):
         super().__init__(
             site=site,
             data_dir=data_dir,
             version=version,
-            source='JPL-SIDESHOW',
+            source='SIDESHOW',
             url_prefix=url_prefix,
         )
 
@@ -1068,7 +1086,9 @@ class GNSS_JPL_SIDESHOW(GNSS):
         Returns:    self.lat/lon - float
         """
         # need to refer to the site list
-        site_list_file = os.path.basename(GNSS_SITE_LIST_URLS['JPL-SIDESHOW'])
+        site_list_file = os.path.basename(GNSS_SITE_LIST_URLS['SIDESHOW'])
+        if not os.path.exists(site_list_file):
+            dload_site_list(out_file=site_list_file, source=self.source, print_msg=True)
 
         # find site in site list file
         with open(site_list_file) as site_list:
@@ -1079,6 +1099,8 @@ class GNSS_JPL_SIDESHOW(GNSS):
         # format
         self.site_lat = float(site_lat)
         self.site_lon = float(site_lon)
+        # ensure longitude in the range of (-180, 180]
+        self.site_lon = ut.standardize_longitude(self.site_lon, limit='-180to180')
 
         if print_msg == True:
             print(f'\t{self.site_lat:f}, {self.site_lon:f}')
@@ -1170,7 +1192,11 @@ class GNSS_GENERIC(GNSS):
         """
         sites = read_GENERIC_site_list('GenericList.txt')
         ind = sites['site'].tolist().index(self.site)
-        return sites['lat'][ind], sites['lon'][ind]
+        site_lat, site_lon = sites['lat'][ind], sites['lon'][ind]
+        # ensure longitude in the range of (-180, 180]
+        site_lon = ut.standardize_longitude(site_lon, limit='-180to180')
+
+        return site_lat, site_lon
 
 
     def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):

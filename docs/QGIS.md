@@ -10,11 +10,11 @@ ramp_color('RdBu', scale_linear(VEL, -20, 20, 0, 1))
 ```
 
 <p align="left">
-  <img width="1000" src="https://yunjunzhang.files.wordpress.com/2019/11/ps-time-series-viewer-1.png">
+  <img width="1000" src="https://insarlab.github.io/figs/docs/mintpy/QGIS-PS-TSV-map.png">
 </p>
 
 5. Click the [PS Time Series Viewer logo](https://gitlab.com/faunalia/ps-speed/blob/master/icons/logo.png) to activate the tool, and click/play on the map to display the time-series!
 
 <p align="left">
-  <img width="800" src="https://yunjunzhang.files.wordpress.com/2019/11/ps-time-series-viewer-2.png">
+  <img width="800" src="https://insarlab.github.io/figs/docs/mintpy/QGIS-PS-TSV-point.png">
 </p>

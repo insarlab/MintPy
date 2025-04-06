@@ -1027,7 +1027,7 @@ def run_ifgram_inversion(inps):
     meta['REF_DATE'] = date_list[0]
 
     # 2.2 instantiate time-series
-    dates = np.array(date_list, dtype=np.string_)
+    dates = np.array(date_list, dtype=np.bytes_)
     pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
     ds_name_dict = {
         "date"       : [dates.dtype, (num_date,), dates],

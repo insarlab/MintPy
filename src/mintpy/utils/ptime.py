@@ -236,6 +236,29 @@ def yymmdd2yyyymmdd(date):
     return date
 
 
+def yyyyddd2yyyymmdd(date_in):
+    """Convert GMTSAR folder name in YYYYDDD into YYYYMMDD.
+    Parameters: date_in  - str/list, GMTSAR date format in YYYYDDD, where DDD is the day of year - 1
+    Returns:    date_out - str/list, date in YYYYMMDD format
+    """
+    if isinstance(date_in, str):
+        year, doy = date_in[:4], date_in[-3:]
+        dt_obj = dt.datetime(int(year), 1, 1) + dt.timedelta(days=int(doy))
+        date_out = dt_obj.strftime('%Y%m%d')
+
+    elif isinstance(date_in, list):
+        date_out = []
+        for date_str in date_in:
+            year, doy = date_str[:4], date_str[-3:]
+            dt_obj = dt.datetime(int(year), 1, 1) + dt.timedelta(days=int(doy))
+            date_out.append(dt_obj.strftime('%Y%m%d'))
+
+    else:
+        return None
+
+    return date_out
+
+
 def yy2yyyy(year):
     """Convert year str from YY to YYYY format"""
     if year[0] == '9':
@@ -501,6 +524,12 @@ def get_date_range(dmin, dmax, dstep=1, dunit='D', out_fmt='%Y%m%d'):
 
     # prepare date range
     dt_objs = np.arange(t1, t2+tstep, tstep, dtype='datetime64').astype('O')
+
+    # ensure output dt_list is within [dmin, dmax]
+    if dt_objs[-1] > t2:
+        dt_objs = dt_objs[:-1]
+
+    # convert datetime.datetime object into given string format
     dt_list = [obj.strftime(out_fmt) for obj in dt_objs]
 
     return dt_list

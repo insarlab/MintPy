@@ -17,6 +17,7 @@ from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
 from scipy import sparse
 
+from mintpy.constants import SPEED_OF_LIGHT
 from mintpy.objects import ifgramStack, sensor
 from mintpy.utils import ptime, readfile
 
@@ -183,19 +184,37 @@ def get_date12_list(fname, dropIfgram=False):
     return date12_list
 
 
-def critical_perp_baseline(sensor_name, inc_angle, print_msg=False):
-    """Critical Perpendicular Baseline for each satellite"""
-    # Jers: 5.712e3 m (near_range=688849.0551m)
-    # Alos: 6.331e3 m (near_range=842663.2917m)
-    # Tsx : 8.053e3 m (near_range=634509.1271m)
-    sensor_dict = sensor.SENSOR_DICT[sensor_name.lower()]
-    wvl = SPEED_OF_LIGHT / sensor_dict['carrier_frequency']
-    near_range = 688849  # Yunjun 5/2016, case for Jers, need a automatic way to get this number
-    rg_bandwidth = sensor_dict['chirp_bandwidth']
-    bperp_c = wvl * (rg_bandwidth / SPEED_OF_LIGHT) * near_range * np.tan(inc_angle * np.pi / 180.0)
-    if print_msg:
-        print(f'Critical Perpendicular Baseline: {bperp_c} m')
-    return bperp_c
+def critical_perp_baseline(sensor_name, inc_angle=30, print_msg=False):
+    """Calculate the critical Perpendicular Baseline for each satellite.
+
+    Parameters: sensor_name - str, SAR sensor name
+                inc_angle   - float, LOS incidence angle in degrees
+    Returns:    bperp_crit  - float, critical perpendicular baseline in meters
+                              typical values: LT1 : 26.6 km
+                                              TSX :  8.1 km
+                                              ALOS:  6.3 km
+                                              JERS:  5.7 km
+    """
+    sensor_name = sensor_name.lower()
+    if sensor_name not in sensor.SENSOR_DICT.keys():
+        raise ValueError(f'Un-recognized sensor_name: {sensor_name}')
+
+    # sensor parameters
+    near_range = {
+        # typical values
+        'lt1' : 725702,
+        'tsx' : 634509,
+        'alos': 842663,
+        'jers': 688849,
+    }[sensor_name]
+    wvl = SPEED_OF_LIGHT / sensor.SENSOR_DICT[sensor_name]['carrier_frequency']
+    range_bandwidth = sensor.SENSOR_DICT[sensor_name]['chirp_bandwidth']
+
+    # calculate critical perpendicular baseline
+    bperp_crit = wvl * (range_bandwidth / SPEED_OF_LIGHT) * near_range * np.tan(np.deg2rad(inc_angle))
+    print(f'critical perpendicular baseline: {bperp_crit} m') if print_msg else None
+
+    return bperp_crit
 
 
 def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
@@ -227,14 +246,16 @@ def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
     return dop_overlap
 
 
-def simulate_coherence_v2(date12_list, decor_time=200.0, coh_resid=0.2, inc_angle=40, sensor_name='Sen',
-                          display=False):
+def simulate_coherence_v2(date12_list, decor_time=200.0, coh_resid=0.2, inc_angle=40,
+                          SNR=22, sensor_name='Sen', display=False):
     """Simulate coherence version 2 (without using bl_list.txt file).
     Parameters: date12_list - list of string in YYYYMMDD_YYYYMMDD format, indicating pairs configuration
                 decor_time  - float, decorrelation rate in days, time for coherence to drop to 1/e of its initial value
                 coh_resid   - float, long-term coherence, minimum attainable coherence value
                 inc_angle   - float, incidence angle in degrees
                 sensor_name - string, SAR sensor name
+                SNR         - float, signal-to-noise ratio in dB
+                              NESZ = -22 dB from Table 1 in https://sentinels.copernicus.eu/web/sentinel
                 display     - bool, display result as matrix or not
     Returns:    coh         - 2D np.array in size of (ifgram_num)
     """
@@ -244,8 +265,7 @@ def simulate_coherence_v2(date12_list, decor_time=200.0, coh_resid=0.2, inc_angl
     date_list = sorted(list(set(date1s + date2s)))
     tbase_list = ptime.date_list2tbase(date_list)[0]
 
-    SNR = 22  # NESZ = -22 dB from Table 1 in https://sentinels.copernicus.eu/web/sentinel/
-    coh_thermal = 1. / (1. + 1./SNR)
+    coh_thermal = 1. / ( 1. + 1. / 10**(SNR / 10) )
 
     # bperp
     rng = np.random.default_rng(2)
@@ -314,7 +334,7 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
     tbase_list = ptime.date_list2tbase(date_list)[0]
 
     # Thermal decorrelation (Zebker and Villasenor, 1992, Eq.4)
-    SNR = 19.5  # hardwired for Envisat (Guarnieri, 2013)
+    SNR = 10 ** (19.5 / 10)  # hardwired for Envisat (Guarnieri, 2013)
     coh_thermal = 1. / (1. + 1./SNR)
 
     pbase_c = critical_perp_baseline(sensor_name, inc_angle)

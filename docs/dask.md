@@ -1,6 +1,6 @@
 # Configure dask for parallel processing #
 
-Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-by-epoch basis. This implementation strategy allows processing different blocks (in space or in time) in parallel. For this purpose, we use the [`Dask`](https://docs.dask.org/en/latest/) library for its dynamic task scheduling and data collection. Dask support is currently implemented in `ifgram_inversion.py` and `dem_error.py` only (expansions to other modules are welcomed) through a thin wrapper in [`mintpy.objects.cluster`](../mintpy/objects/cluster.py). We have tested two types of clusters:
+Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-by-epoch basis. This implementation strategy allows processing different blocks (in space or in time) in parallel. For this purpose, we use the [`Dask`](https://docs.dask.org/en/latest/) library for its dynamic task scheduling and data collection. Dask support is currently implemented in `ifgram_inversion.py` and `dem_error.py` only (expansions to other modules are welcomed) through a thin wrapper in [`mintpy.objects.cluster`](../src/mintpy/objects/cluster.py). We have tested two types of clusters:
 
 + **local cluster:** on a single machine (laptop or computing node) with multiple CPU cores, suitable for laptops, local cluster/stations and distributed High Performance Cluster (HPC). No job scheduler is required.
 + **non-local cluster:** on a distributed HPC with job scheduler installed, including PBS, LSF and SLURM.
@@ -54,7 +54,7 @@ A typical run time without local cluster is 30 secs and with 8 workers 11.4 secs
 
 To show the run time improvement, we test three datasets (South Isabela, Fernandina, and Kilauea) with different number of cores and same amount of allocated memory (4 GB) on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
 
-![Dask LocalCluster Performance](https://yunjunzhang.files.wordpress.com/2020/08/dask_local_cluster_performance.png)
+![Dask LocalCluster Performance](https://insarlab.github.io/figs/docs/mintpy/dask_local_cluster_performance.png)
 
 #### 1.5 Known problems ####
 
@@ -69,7 +69,7 @@ PBScluster did not work either. But we tested only on a small server without sha
 -------------------------------------------
 The parallel proceesing on multiple machines is supported via [`Dask-jobqueue`](https://jobqueue.dask.org/en/latest/index.html). One can specify configuration either with keyword arguments when creating a `Cluster` object, or with a configuration file in YAML format. MintPy assumes the YAML configuration file only.
 
-We provide an example [YAML configuration file](../mintpy/defaults/mintpy.yaml), besides the `dask.yaml`,  `distributed.yaml` and `jobqueue.yaml` files in `~/.config/dask` installed by dask by default. One can copy it over to the `~/.config/dask` directory as below for dask to identify and use it.
+We provide an example [YAML configuration file](../src/mintpy/defaults/mintpy.yaml), besides the `dask.yaml`,  `distributed.yaml` and `jobqueue.yaml` files in `~/.config/dask` installed by dask by default. One can copy it over to the `~/.config/dask` directory as below for dask to identify and use it.
 
 ```bash
 cp $MINTPY_HOME/src/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml

@@ -210,9 +210,9 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_comp='enu2los',
         # dataset
         ds_dict = {
             'timeseries' : ts_set,
-            'date'       : np.array(date_list, dtype=np.string_),
+            'date'       : np.array(date_list, dtype=np.bytes_),
             'sensingMid' : np.array([i.strftime('%Y%m%dT%H%M%S') for i in dt_objs],
-                                    dtype=np.string_),
+                                    dtype=np.bytes_),
         }
 
         # write

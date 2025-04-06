@@ -90,4 +90,4 @@ HDF-EOS5 file format is used as the input of the University of Miami's web viewe
 
 <p align="center"><b>http://insarmaps.miami.edu</b><br></p>
 
-[![InSAR Web Viewer](https://yunjunzhang.files.wordpress.com/2019/06/web_viewer_kujualosat422.png)](http://insarmaps.miami.edu/)
+[![InSAR Web Viewer](https://insarlab.github.io/figs/docs/mintpy/insarmaps-KujuAlosA422.png)](http://insarmaps.miami.edu/)

@@ -14,6 +14,8 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
         giant
         ramp
         sensor
+    /stdproc
+        multilook
     /utils
         /solvers
             l1
