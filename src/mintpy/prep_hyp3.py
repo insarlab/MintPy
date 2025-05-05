@@ -24,7 +24,18 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         content:
             Reference Granule: S1_213524_IW1_20170411T133605_VV_BD30-BURST
             ...
-    2. gamma_scene (scene-wide product using Gamma) metadata file:
+
+    2. isce2_multi_burst (multi-burst product using ISCE2):
+        - Metadata filename format:
+            {SAT}_{PATH}_{LON_L}_{LON_U}_{LAT_L}_{LAT_U}_{DATE1}_{DATE2}_{POL}_{RES}_{JOBID}
+        - Example:
+            S1A_064_E053_1_N27_3_E054_1_N27_8_20200604_20200616_VV_INT80_7EB5.txt
+        - Content:
+            Reference Granule: S1_290876_IW1_20200604T005150_VV_XXXX-BURST, S1_290875_IW1_20200604T005147_VV_XXXX-BURST
+            Secondary Granule: S1_290876_IW1_20200616T005150_VV_YYYY-BURST, S1_290875_IW1_20200616T005147_VV_YYYY-BURST
+            ...
+
+    3. gamma_scene (scene-wide product using Gamma) metadata file:
         format: {SAT}_{DATE1}_{DATE2}_{POL}_{RES}_{SOFT}_{PROC}_{IDS}.txt
         example: S1AA_20190610T135156_20190622T135157_VVP012_INT80_G_ueF_F8BF.txt
         content:
@@ -38,11 +49,17 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
     '''
 
     # job_id -> prod_type and date1/2 objects
-    job_id = '_'.join(os.path.basename(fname).split('_')[:8])
-    if job_id.split('_')[2].startswith('IW'):
+    job_id = '_'.join(os.path.splitext(os.path.basename(os.path.dirname(fname)))[0].split('_'))
+    parts = job_id.split('_')
+
+    if parts[2].startswith('IW'):
         # burst-wide product using ISCE2
         prod_type = 'isce2_burst'
         date1, date2 = (dt.datetime.strptime(x,'%Y%m%d') for x in job_id.split('_')[3:5])
+    elif parts[10].isdigit() and parts[11].isdigit():
+        prod_type = 'isce2_multi_burst'
+        date1, date2 = (dt.datetime.strptime(x, '%Y%m%d') for x in parts[10:12])
+        print(f"date1: {date1}, date2: {date2}")
     else:
         # scene-wide product using Gamma
         prod_type = 'gamma_scene'
@@ -55,7 +72,7 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         for line in f:
             key, value = line.strip().replace(' ','').split(':')[:2]
             hyp3_meta[key] = value
-    ref_granule = hyp3_meta['ReferenceGranule']
+    ref_granule = hyp3_meta['ReferenceGranule'].split(',')[0].strip() 
 
     # add universal hyp3 metadata
     meta['PROCESSOR'] = 'hyp3'
@@ -118,11 +135,17 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         # beam_mode
         meta['beam_mode'] = 'IW'
 
-        if prod_type == 'isce2_burst':
+        if prod_type == 'isce2_burst' or prod_type == 'isce2_multi_burst':
             # burst-wide product using ISCE2
             meta['beam_swath'] = job_id.split('_')[2][2:]
 
-            # relative_orbit [to be added]
+            # relative_orbit -> https://forum.step.esa.int/t/sentinel-1-relative-orbit-from-filename/7042
+            abs_orbit = int(hyp3_meta['ReferenceOrbitNumber'])
+            if job_id.startswith('S1A'):
+                meta['relative_orbit'] = ((abs_orbit - 73) % 175) + 1
+            elif job_id.startswith('S1B'):
+                meta['relative_orbit'] = ((abs_orbit - 202) % 175) + 1
+
             # first/last_frame [to be added]
 
         else:
@@ -137,7 +160,7 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
                 meta['relative_orbit'] = ((abs_orbit - 202) % 175) + 1
             else:
                 # add equation for Sentinel-C/D in the future
-                raise ValueError('Un-recognized Sentinel-1 satellite from {ref_granule}!')
+                raise ValueError(f'Un-recognized Sentinel-1 satellite from {ref_granule}!')
 
             # first/last_frame [to be completed]
             t0, t1 = ref_granule.split('_')[-5:-3]
