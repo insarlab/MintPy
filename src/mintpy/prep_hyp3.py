@@ -52,19 +52,25 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
     job_id = '_'.join(os.path.splitext(os.path.basename(os.path.dirname(fname)))[0].split('_'))
     parts = job_id.split('_')
 
+    if len(parts) < 8:
+        raise ValueError(f"Unexpected format: {job_id}")
+
     if parts[2].startswith('IW'):
         # burst-wide product using ISCE2
         prod_type = 'isce2_burst'
-        date1, date2 = (dt.datetime.strptime(x,'%Y%m%d') for x in job_id.split('_')[3:5])
-    elif parts[10].isdigit() and parts[11].isdigit():
+        date1 = dt.datetime.strptime(parts[3], '%Y%m%d')
+        date2 = dt.datetime.strptime(parts[4], '%Y%m%d')    
+    
+    elif len(parts) >= 12 and parts[10].isdigit() and parts[11].isdigit():
         prod_type = 'isce2_multi_burst'
-        date1, date2 = (dt.datetime.strptime(x, '%Y%m%d') for x in parts[10:12])
-        print(f"date1: {date1}, date2: {date2}")
+        date1 = dt.datetime.strptime(parts[10], '%Y%m%d')
+        date2 = dt.datetime.strptime(parts[11], '%Y%m%d')
+
     else:
         # scene-wide product using Gamma
         prod_type = 'gamma_scene'
-        date1, date2 = (dt.datetime.strptime(x,'%Y%m%dT%H%M%S') for x in job_id.split('_')[1:3])
-
+        date1 = dt.datetime.strptime(parts[1], '%Y%m%dT%H%M%S')
+        date2 = dt.datetime.strptime(parts[2], '%Y%m%dT%H%M%S')
     # read hyp3 metadata file
     meta_file = os.path.join(os.path.dirname(fname), f'{job_id}.txt')
     hyp3_meta = {}
