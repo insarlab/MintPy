@@ -71,6 +71,7 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         prod_type = 'gamma_scene'
         date1 = dt.datetime.strptime(parts[1], '%Y%m%dT%H%M%S')
         date2 = dt.datetime.strptime(parts[2], '%Y%m%dT%H%M%S')
+
     # read hyp3 metadata file
     meta_file = os.path.join(os.path.dirname(fname), f'{job_id}.txt')
     hyp3_meta = {}
