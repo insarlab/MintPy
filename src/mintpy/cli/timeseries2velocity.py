@@ -42,6 +42,10 @@ EXAMPLE = """example:
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq residue
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq covariance --ts-cov timeseriesCov.h5
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq bootstrap
+
+  # remove specific time function components
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --periodic 1 --step 20170910 --save-res --res-file timeseriesResidual.h5
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --periodic 1 --step 20170910 --save-res --rm-timefun periodic --res-file timeseries_ERA5_demErr_periodic.h5
 """
 
 DROP_DATE_TXT = """exclude_date.txt:
@@ -103,10 +107,13 @@ def create_parser(subparsers=None):
 
     # residual file
     resid = parser.add_argument_group('Residual file', 'Save residual displacement time-series to HDF5 file.')
-    resid.add_argument('--save-res', '--save_residual', dest='save_res', action='store_true',
+    resid.add_argument('--save-res', dest='save_res', action='store_true',
                        help='Save the residual displacement time-series to HDF5 file.')
-    resid.add_argument('--res-file', '--residual-file', dest='res_file', default='timeseriesResidual.h5',
+    resid.add_argument('--res-file', dest='res_file', default='timeseriesResidual.h5',
                        help='Output file name for the residual time-series file (default: %(default)s).')
+    resid.add_argument('--rm-timefun', dest='rm_timefuns', nargs='*', default=['all'],
+                       choices={'all', 'polynomial' , 'periodic', 'step', 'polyline', 'exp', 'log'},
+                       help='Specify the time functions to be removed from the input (default: %(default)s).')
 
     # computing
     parser = arg_utils.add_memory_argument(parser)
@@ -122,6 +129,11 @@ def cmd_line_parse(iargs=None):
 
     # import
     from mintpy.utils import readfile, utils as ut
+
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
 
     # check
     atr = readfile.read_attribute(inps.timeseries_file)
@@ -177,11 +189,24 @@ def cmd_line_parse(iargs=None):
         # get suffix
         fbase = os.path.splitext(os.path.basename(inps.timeseries_file))[0]
         if fbase in ['timeseriesRg', 'timeseriesAz']:
+            # for range/azimuth offset time series
             suffix = fbase.split('timeseries')[-1]
+        elif 'all' not in inps.rm_timefuns:
+            # for residual time series file with specified time function components
+            suffix = '_' + '_'.join(inps.rm_timefuns)
         else:
+            # for regular phase time series
             suffix = ''
         # compose default output filename
         inps.outfile = f'velocity{suffix}.h5'
+        if suffix:
+            print(f'output velocity file: {inps.outfile}')
+
+    # default: --res-file option (for specified time function components)
+    if '--res-file' not in inps.argv and 'all' not in inps.rm_timefuns:
+        suffix = '_'.join(inps.rm_timefuns)
+        inps.res_file = f'{os.path.splitext(inps.timeseries_file)[0]}_{suffix}.h5'
+        print(f'output residual time series file: {inps.res_file}')
 
     return inps
 

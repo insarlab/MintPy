@@ -430,10 +430,18 @@ def run_timeseries2time_func(inps):
 
         # write - residual file
         if inps.save_res:
+            print('calculating the time series residual ...')
             block = [0, num_date, box[1], box[3], box[0], box[2]]
             ts_res = np.full((num_date, box_len*box_wid), np.nan, dtype=np.float32)
+
             # calculate the time-series residual
-            ts_res[:, mask] = ts_data - np.dot(G, m)[:, mask]
+            print(f'remove time functions: {inps.rm_timefuns}')
+            if 'all' in inps.rm_timefuns:
+                ts_res[:, mask] = ts_data - np.dot(G, m)[:, mask]
+            else:
+                rm_ds_names, rm_ds_inds = timefun_names2ds_names(inps.rm_timefuns, ds_dict.keys())
+                ts_res[:, mask] = ts_data - np.dot(G[:, rm_ds_inds], m[rm_ds_inds, :])[:, mask]
+
             # write to HDF5 file
             writefile.write_hdf5_block(inps.res_file,
                                        data=ts_res.reshape(num_date, box_len, box_wid),
@@ -445,6 +453,45 @@ def run_timeseries2time_func(inps):
     print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
     return inps.outfile
+
+
+def timefun_names2ds_names(timefun_names, all_ds_names):
+    """Grab all dataset names in the input ds_names_all related to the given time function names.
+
+    Parameters: timefun_names - list(str), list of time function names of interest
+                all_ds_names  - list(str), list of available dataset names
+    Returns:    out_ds_names  - list(str), list of dataset names matched with the given time function names
+                out_ds_inds   - list(int), list of index of the matched datasets in the inverted dataset list
+    """
+    # remove 1) dataset endswith "Std" and 2) "residue", as they are not directly inverted.
+    inv_ds_names = [x for x in all_ds_names if not x.endswith('Std') and x not in ['residue']]
+
+    timefun_name2ds_name_patterns = {
+        'polynomial' : ['intercept', 'velocity', 'acceleration', 'poly*'],
+        'periodic'   : ['annual*', 'semiAnnual*', 'period*'],
+        'step'       : ['step*'],
+        'polyline'   : ['velocityPost*'],
+        'exp'        : ['exp*'],
+        'log'        : ['log*'],
+    }
+
+    # grab all matched dataset names
+    out_ds_names = []
+    for timefun_name in timefun_names:
+        ds_name_patterns = timefun_name2ds_name_patterns[timefun_name]
+        for ds_name_pattern in ds_name_patterns:
+            if ds_name_pattern.endswith('*'):
+                # search dataset that matches with the wildcard pattern
+                prefix = ds_name_pattern[:-1]
+                out_ds_names += [x for x in inv_ds_names if x.startswith(prefix)]
+            elif ds_name_pattern in inv_ds_names:
+                # grab dataset that matches exactly with the input
+                out_ds_names.append(ds_name_pattern)
+
+    # calc the dataset index
+    out_ds_inds = [inv_ds_names.index(x) for x in out_ds_names]
+
+    return out_ds_names, out_ds_inds
 
 
 def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, residue=None):
@@ -460,7 +507,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
     Examples:   # read input model parameters into dict
                 model = read_inps2model(inps, date_list=inps.date_list)
                 # for time series cube
-                ds_name_dict, ds_name_dict = model2hdf5_dataset(model, ds_shape=(200,300))[1:]
+                ds_name_dict, ds_unit_dict = model2hdf5_dataset(model, ds_shape=(200,300))[1:]
                 ds_dict = model2hdf5_dataset(model, m, m_std, mask=mask)[0]
                 # for time series point
                 ds_unit_dict = model2hdf5_dataset(model)[2]
