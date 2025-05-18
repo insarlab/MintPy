@@ -9,7 +9,6 @@
 import sys
 
 from mintpy.utils.arg_utils import create_argument_parser
-
 EXAMPLE = """example:
   save_gdal.py geo/geo_velocity.h5
   save_gdal.py geo/geo_timeseries_ERA5_demErr.h5  -d 20200505_20200517 --of ENVI
@@ -31,6 +30,10 @@ def create_parser(subparsers=None):
                         help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file base name. Extension is fixed by GDAL driver')
+    parser.add_argument('-m','--mask', dest='mask_file', metavar='FILE',
+                        help='mask file for display')
+    parser.add_argument('--zero-mask', dest='zero_mask', action='store_true',
+                        help='Mask pixels with zero value.')
     parser.add_argument('--of', '--out-format', '--output-format', dest='out_format', default='GTiff',
                         help='file format as defined by GDAL driver name, e.g. GTiff, ENVI, default: %(default)s\n'
                              'GDAL driver names can be found at https://gdal.org/drivers/raster/index.html')
