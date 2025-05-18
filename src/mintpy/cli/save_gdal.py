@@ -15,6 +15,8 @@ EXAMPLE = """example:
   save_gdal.py geo/geo_ifgramStack.h5 -d unwrapPhase-20101120_20110220 --of ISCE
   save_gdal.py geo/geo_ifgramStack.h5 -d   coherence-20101120_20110220 --of ISCE
   save_gdal.py geo_20230225.slc
+  save_gdal.py geo/timeseries.h5 -d 20230217 -m maskTempCoh.h5
+  save_gdal.py geo/timeseries.h5 -d 20230217 --zero-mask
 """
 
 
