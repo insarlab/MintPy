@@ -21,9 +21,10 @@ jobs:
             # install miniforge
             mkdir -p ${HOME}/tools
             cd ${HOME}/tools
-            wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-            bash Miniforge3-Linux-x86_64.sh -b -p ${HOME}/tools/miniforge
-            ${HOME}/tools/miniforge/bin/mamba init bash
+            wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+            bash Miniforge3.sh -b -p ${HOME}/tools/miniforge
+            source "${HOME}/tools/miniforge/etc/profile.d/conda.sh"
+            source "${HOME}/tools/miniforge/etc/profile.d/mamba.sh"
             # modify/export env var PATH to BASH_ENV to be shared across run steps
             echo 'export PATH=${CONDA_PREFIX}/bin:${PATH}' >> ${BASH_ENV}
 
