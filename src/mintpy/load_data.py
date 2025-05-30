@@ -103,9 +103,6 @@ def read_inps2dict(inps):
             iDict[prefix+key] = template[prefix+key]
     print('processor : {}'.format(iDict['processor']))
 
-    if iDict['compression'] is False:
-        iDict['compression'] = None
-
     # group - multilook
     prefix = 'mintpy.multilook.'
     key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
@@ -199,7 +196,7 @@ def read_subset_box(iDict):
     if geo_box is not None:
         pix_box = coord.bbox_geo2radar(geo_box)
         pix_box = coord.check_box_within_data_coverage(pix_box)
-        print(f'input bounding box of interest in lalo: {geo_box}')
+        print(f'input bounding box of interest in lat/lon: {geo_box}')
     print(f'box to read for datasets in y/x: {pix_box}')
 
     # Get box for geocoded lookup table (for gamma/roipac)
@@ -837,6 +834,9 @@ def load_data(inps):
     geom_geo_file = os.path.abspath('./inputs/geometryGeo.h5')
     geom_radar_file = os.path.abspath('./inputs/geometryRadar.h5')
 
+    # use 'lzf' HDF compression for a significantly smaller geometry file size, w/o much impact on the performance
+    compression = 'lzf' if iDict['compression'] == 'default' else iDict['compression']
+
     if run_or_skip(geom_geo_file, geom_geo_obj, iDict['box4geo'], **kwargs) == 'run':
         geom_geo_obj.write2hdf5(
             outputFile=geom_geo_file,
@@ -844,7 +844,7 @@ def load_data(inps):
             box=iDict['box4geo'],
             xstep=iDict['xstep'],
             ystep=iDict['ystep'],
-            compression='lzf')
+            compression=compression)
 
     if run_or_skip(geom_radar_file, geom_radar_obj, iDict['box'], **kwargs) == 'run':
         geom_radar_obj.write2hdf5(
@@ -853,7 +853,7 @@ def load_data(inps):
             box=iDict['box'],
             xstep=iDict['xstep'],
             ystep=iDict['ystep'],
-            compression='lzf',
+            compression=compression,
             extra_metadata=extraDict)
 
     # observations: ifgram, ion or offset
@@ -865,8 +865,9 @@ def load_data(inps):
     ]
     stack_files = ['ifgramStack.h5', 'ionStack.h5', 'offsetStack.h5']
     stack_files = [os.path.abspath(os.path.join('./inputs', x)) for x in stack_files]
-    for ds_name2tmpl_opt, stack_file in zip(stack_ds_name2tmpl_key_list, stack_files):
+    compression = None if iDict['compression'] == 'default' else iDict['compression']
 
+    for ds_name2tmpl_opt, stack_file in zip(stack_ds_name2tmpl_key_list, stack_files):
         # initiate dict objects
         stack_obj = read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2tmpl_opt)
 
@@ -884,7 +885,7 @@ def load_data(inps):
                 xstep=iDict['xstep'],
                 ystep=iDict['ystep'],
                 mli_method=iDict['method'],
-                compression=iDict['compression'],
+                compression=compression,
                 extra_metadata=extraDict,
                 geom_obj=geom_obj)
 
