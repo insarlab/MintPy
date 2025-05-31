@@ -73,8 +73,9 @@ def create_parser(subparsers=None):
                         help='output HDF5 file')
     parser.add_argument('--update', dest='updateMode', action='store_true',
                         help='Enable the update mode: checking dataset already loaded.')
-    parser.add_argument('--compression', choices={'gzip', 'lzf', None}, default=None,
-                        help='HDF5 file compression, default: %(default)s')
+    parser.add_argument('--compression', choices={'gzip', 'lzf', None, 'default'}, default='default',
+                        help='HDF5 file compression, default: %(default)s'+
+                             '  default: None for stack, lzf for geometry.')
 
     # ifgramStack
     stack = parser.add_argument_group('interferogram stack')
