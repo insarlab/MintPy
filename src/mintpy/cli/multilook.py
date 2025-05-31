@@ -21,7 +21,7 @@ EXAMPLE = """example:
 
   # --off-file option: use as reference to adjust for the irregular size from isce2 dense offsets
   multilook.py lat.rdr.full.vrt -x 128 -y 64 -o lat.rdr.mli --off-file dense_offsets.bil -m nearest
-  multilook.py ../../geom_reference/lat.rdr.full -x 300 -y 100 -o lat.rdr --off-file offset.bip - m nearest
+  multilook.py ../../geom_reference/lat.rdr.full -x 300 -y 100 -o lat.rdr --off-file offset.bip -m nearest
 """
 
 
