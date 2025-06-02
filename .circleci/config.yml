@@ -53,37 +53,37 @@ jobs:
             ${MINTPY_HOME}/tests/dem_error.py
 
       - run:
-          name: Integration Test 1 - FernandinaSenDT128 (ISCE2/topsStack)
+          name: Integration Test 1/6 - FernandinaSenDT128 (ISCE2/topsStack)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
 
       - run:
-          name: Integration Test 2 - SanFranSenDT42 (ARIA)
+          name: Integration Test 2/6 - SanFranSenDT42 (ARIA)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
 
       - run:
-          name: Integration Test 3 - RidgecrestSenDT71 (HyP3)
+          name: Integration Test 3/6 - RidgecrestSenDT71 (HyP3)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset RidgecrestSenDT71
 
       - run:
-          name: Integration Test 4 - SanFranBaySenD42 (GMTSAR)
+          name: Integration Test 4/6 - SanFranBaySenD42 (GMTSAR)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranBaySenD42
 
       - run:
-          name: Integration Test 5 - WellsEnvD2T399 (Gamma)
+          name: Integration Test 5/6 - WellsEnvD2T399 (Gamma)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
       - run:
-          name: Integration Test 6 - WCapeSenAT29 (SNAP)
+          name: Integration Test 6/6 - WCapeSenAT29 (SNAP)
           command: |
             mkdir -p ${HOME}/data
             ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
