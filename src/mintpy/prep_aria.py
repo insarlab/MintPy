@@ -589,7 +589,7 @@ def load_aria(inps):
             inps.outfile[0],
             ds_name_dict,
             metadata=meta,
-            compression=inps.compression,
+            compression=None if inps.compression == 'default' else inps.compression,
         )
 
         write_ifgram_stack(
@@ -623,7 +623,7 @@ def load_aria(inps):
             inps.outfile[1],
             ds_name_dict,
             metadata=meta,
-            compression=inps.compression,
+            compression='lzf' if inps.compression == 'default' else inps.compression,
         )
 
         # write data to disk
@@ -661,7 +661,7 @@ def load_aria(inps):
                 outname,
                 ds_name_dict,
                 metadata=meta,
-                compression=inps.compression,
+                compression=None if inps.compression == 'default' else inps.compression,
                 )
 
             # write data to disk
@@ -706,7 +706,7 @@ def load_aria(inps):
                     f'{out_dir}/{layer_name}_ARIA.h5',
                     ds_name_dict,
                     metadata=meta,
-                    compression=inps.compression,
+                    compression=None if inps.compression == 'default' else inps.compression,
                     )
 
                 # write data to disk
