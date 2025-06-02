@@ -477,7 +477,7 @@ def read_aux_subset2inps(inps):
         print('convert bounding box in lat/lon to y/x')
         print(f'input bounding box in lat/lon: {geo_box}')
         if not os.path.isfile(inps.lookup_file):
-            raise FileNotFound(f'lookup file {inps.lookup_file} NOT found!')
+            raise FileNotFoundError(f'lookup file {inps.lookup_file} NOT found!')
 
         # convert geo_box to pix_box
         coord = ut.coordinate(atr, lookup_file=inps.lookup_file)
