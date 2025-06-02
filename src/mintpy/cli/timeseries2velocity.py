@@ -203,7 +203,7 @@ def cmd_line_parse(iargs=None):
             print(f'output velocity file: {inps.outfile}')
 
     # default: --res-file option (for specified time function components)
-    if '--res-file' not in inps.argv and 'all' not in inps.rm_timefuns:
+    if inps.save_res and '--res-file' not in inps.argv and 'all' not in inps.rm_timefuns:
         suffix = '_'.join(inps.rm_timefuns)
         inps.res_file = f'{os.path.splitext(inps.timeseries_file)[0]}_{suffix}.h5'
         print(f'output residual time series file: {inps.res_file}')
