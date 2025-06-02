@@ -62,7 +62,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    inps.argv = iargs if iargs else sys.argv[1:]
+    inps.argv = iargs or sys.argv[1:]
     print('{} {}'.format(os.path.basename(__file__), ' '.join(inps.argv)))
 
     return inps
