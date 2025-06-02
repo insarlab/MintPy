@@ -483,7 +483,7 @@ def read_aux_subset2inps(inps):
         coord = ut.coordinate(atr, lookup_file=inps.lookup_file)
         geo_box = (inps.subset_lon[0], inps.subset_lat[1],
                    inps.subset_lon[1], inps.subset_lat[0])    # (W, N, E, S)
-        pix_box = coord.bbox_geo2radar(geo_box)
+        pix_box = coord.bbox_geo2radar(geo_box, buf=0)
         pix_box = coord.check_box_within_data_coverage(pix_box)
         print(f'box to read for datasets in y/x: {pix_box}')
 
