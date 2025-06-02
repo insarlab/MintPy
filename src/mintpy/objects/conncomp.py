@@ -31,18 +31,24 @@ def label_conn_comp(mask, min_area=2.5e3, erosion_size=5, print_msg=False):
                                connected regions are assigned the same value
                 num_label    - int, number of labeled regions
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
 
     # label
     label_img, num_label = measure.label(mask, connectivity=1, return_num=True)
 
     ## remove small regions
-    min_area = min(min_area, label_img.size * 3e-3)
-    if print_msg:
-        print(f'remove regions with area < {int(min_area)}')
-    mask = morph.remove_small_objects(label_img, min_size=min_area, connectivity=1)
-    label_img[mask == 0] = 0
-    # update label
-    label_img, num_label = measure.label(label_img, connectivity=1, return_num=True) # re-label
+    # skip if there is only one region
+    if num_label > 1:
+        if min_area > label_img.size * 3e-3:
+            vprint(f'set minimum region size from {min_area} to {label_img.size*3e-3} (image_size * 0.3%)')
+            min_area = min(min_area, label_img.size * 3e-3)
+
+        vprint(f'remove regions with area < {int(min_area)} pixels')
+        mask = morph.remove_small_objects(label_img, min_size=min_area, connectivity=1)
+        label_img[mask == 0] = 0
+
+        # update label (re-label)
+        label_img, num_label = measure.label(label_img, connectivity=1, return_num=True)
 
     ## remove regions that would disappear after erosion
     # to ensure the consistency between label_img and label_bound
@@ -52,17 +58,13 @@ def label_conn_comp(mask, min_area=2.5e3, erosion_size=5, print_msg=False):
 
         erosion_regions = measure.regionprops(label_erosion_img)
         if len(erosion_regions) < num_label:
-            if print_msg:
-                print('regions lost during morphological erosion operation:')
+            vprint('regions lost during morphological erosion operation:')
 
             label_erosion = [reg.label for reg in erosion_regions]
             for orig_reg in measure.regionprops(label_img):
                 if orig_reg.label not in label_erosion:
                     label_img[label_img == orig_reg.label] = 0
-                    if print_msg:
-                        print('label: {}, area: {}, bbox: {}'.format(orig_reg.label,
-                                                                     orig_reg.area,
-                                                                     orig_reg.bbox))
+                    vprint(f'label: {orig_reg.label}, area: {orig_reg.area}, bbox: {orig_reg.bbox}')
 
             # update label
             label_img, num_label = measure.label(label_img, connectivity=1, return_num=True)

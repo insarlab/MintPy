@@ -699,7 +699,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             cpx_band = 'magnitude'
 
         elif fext in ['.mli', '.rmli']:
-            byte_order = 'little-endian'
+            byte_order = 'little-endian'   # big-endian
 
     # SNAP
     # BEAM-DIMAP data format
@@ -1925,7 +1925,8 @@ def read_snap_dim(fname):
     bases = ds.find("MDElem[@name='Baselines']").findall("MDElem")[0].findall("MDElem")
 
     # date12
-    dates = [x.get('name').split(':')[1].strip() for x in bases]
+    # support both delimiters of : and _
+    dates = [re.split(':|_', x.get('name'))[1].strip() for x in bases][-2:]
     [date1, date2] = sorted(dt.datetime.strptime(x, '%d%b%Y').strftime('%Y%m%d') for x in dates)
     dim_dict['DATE12'] = f'{date1[2:]}-{date2[2:]}'
 

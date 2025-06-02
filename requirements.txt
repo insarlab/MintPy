@@ -9,7 +9,7 @@ joblib
 lxml
 matplotlib
 numpy
-pyaps3>=0.3
+pyaps3>=0.3.6
 pykml>=0.2
 pyproj
 pyresample

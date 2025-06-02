@@ -102,6 +102,19 @@ def test_get_ionex_value():
         print(f'Interpolation method ({method:8s}) with rotation ({str(rotate):5s}): Pass.')
 
 
+def test_plot_ionex():
+    """Test mintpy.objects.ionex.plot_ionex()"""
+    # get IONEX file path
+    tec_file = ionex.get_ionex_filename(
+        date_str,
+        tec_dir=tec_dir,
+        sol_code=sol_code,
+    )
+
+    # plot IONEX file
+    ionex.plot_ionex(tec_file, save_fig=True)
+
+
 if __name__ == '__main__':
 
     print('-'*50)
@@ -112,3 +125,5 @@ if __name__ == '__main__':
     test_read_ionex()
 
     test_get_ionex_value()
+
+    #test_plot_ionex()

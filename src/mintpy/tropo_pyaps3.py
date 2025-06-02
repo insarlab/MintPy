@@ -24,7 +24,7 @@ WEATHER_MODEL_HOURS = {
     'MERRA'  : [0, 6, 12, 18],
 }
 
-INT_DATA_TYPES = (int, np.int16, np.int32, np.int64)
+# INT_DATA_TYPES = (int, np.int16, np.int32, np.int64)
 
 
 ###############################################################
@@ -292,7 +292,7 @@ def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
     # utils sub-functions
     def ceil2multiple(x, step=10):
         """Given a number x, find the smallest number in multiple of step >= x."""
-        assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
+        # assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
         if x % step == 0:
             return x
         else:
@@ -300,17 +300,17 @@ def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
 
     def floor2multiple(x, step=10):
         """Given a number x, find the largest number in multiple of step <= x."""
-        assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
+        # assert isinstance(x, INT_DATA_TYPES), f'input number is not int: {type(x)}'
         return x - x % step
 
     # get bounding box
     lat0, lat1, lon0, lon1 = get_bounding_box(meta, geom_file=geom_file)
 
     # lat/lon0/1 --> SNWE
-    S = np.floor(min(lat0, lat1) - min_buffer).astype(int)
-    N = np.ceil( max(lat0, lat1) + min_buffer).astype(int)
-    W = np.floor(min(lon0, lon1) - min_buffer).astype(int)
-    E = np.ceil( max(lon0, lon1) + min_buffer).astype(int)
+    S = np.floor(min(lat0, lat1) - min_buffer)
+    N = np.ceil( max(lat0, lat1) + min_buffer)
+    W = np.floor(min(lon0, lon1) - min_buffer)
+    E = np.ceil( max(lon0, lon1) + min_buffer)
 
     # SNWE in multiple of 10
     if step > 1:
@@ -319,7 +319,8 @@ def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
         N = ceil2multiple(N, step=step)
         E = ceil2multiple(E, step=step)
 
-    return (S, N, W, E)
+    # return native int format, as cdsapi-0.7.3 does not support numpy.int64
+    return (int(S), int(N), int(W), int(E))
 
 
 def get_bounding_box(meta, geom_file=None):
@@ -466,10 +467,13 @@ def check_pyaps_account_config(tropo_model):
 
 
 ###############################################################
-def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
+def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None, debug_mode=False):
     """Download weather re-analysis grib files using PyAPS
-    Parameters: grib_files : list of string of grib files
-    Returns:    grib_files : list of string
+    Parameters: grib_files  - list of string of grib files needed
+                tropo_model - str, global tropospheric model name
+                snwe        - tuple(float), bounding box in latitude/longitude (for ERA5)
+                debug_mode  - bool, enable the debug model while downloading via pyaps3
+    Returns:    grib_files  - list of string of grib files after downloading
     """
     print('-'*50)
     print('downloading weather model data using PyAPS ...')
@@ -495,33 +499,41 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
         # Check for non-empty account info in PyAPS config file
         check_pyaps_account_config(tropo_model)
 
-        # try 3 times to download, then use whatever downloaded to calculate delay
-        i = 0
-        while i < 3:
-            i += 1
-            try:
-                if tropo_model in ['ERA5', 'ERAINT']:
-                    pa.ECMWFdload(
-                        date_list2dload,
-                        hour,
-                        grib_dir,
-                        model=tropo_model,
-                        snwe=snwe,
-                        flist=grib_files2dload)
+        # call pyapd3 to download
+        kwargs = dict(model=tropo_model, snwe=snwe, flist=grib_files2dload)
+        if debug_mode:
+            # in the debug mode, if issue occurred, show the full error message and stop
+            if tropo_model in ['ERA5', 'ERAINT']:
+                pa.ECMWFdload(date_list2dload, hour, grib_dir, **kwargs)
 
-                elif tropo_model == 'MERRA':
-                    pa.MERRAdload(date_list2dload, hour, grib_dir)
+            elif tropo_model == 'MERRA':
+                pa.MERRAdload(date_list2dload, hour, grib_dir)
 
-                elif tropo_model == 'NARR':
-                    pa.NARRdload(date_list2dload, hour, grib_dir)
-            except:
-                if i < 3:
-                    print(f'WARNING: the {i} attempt to download failed, retry it.\n')
-                else:
-                    print('\n\n'+'*'*50)
-                    print('WARNING: downloading failed for 3 times, stop trying and continue.')
-                    print('*'*50+'\n\n')
-                pass
+            elif tropo_model == 'NARR':
+                pa.NARRdload(date_list2dload, hour, grib_dir)
+
+        else:
+            # in the operation mode, try to download 3 times, then use whatever downloaded and continue
+            i = 0
+            while i < 3:
+                i += 1
+                try:
+                    if tropo_model in ['ERA5', 'ERAINT']:
+                        pa.ECMWFdload(date_list2dload, hour, grib_dir, **kwargs)
+
+                    elif tropo_model == 'MERRA':
+                        pa.MERRAdload(date_list2dload, hour, grib_dir)
+
+                    elif tropo_model == 'NARR':
+                        pa.NARRdload(date_list2dload, hour, grib_dir)
+                except:
+                    if i < 3:
+                        print(f'WARNING: the {i} attempt to download failed, retry it.\n')
+                    else:
+                        print('\n\n'+'*'*50)
+                        print('WARNING: downloading failed for 3 times, stop trying and continue.')
+                        print('*'*50+'\n\n')
+                    pass
 
     # check potentially corrupted files
     grib_files = check_exist_grib_file(grib_files, print_msg=False)
@@ -728,7 +740,9 @@ def run_tropo_pyaps3(inps):
         inps.grib_files = dload_grib_files(
             inps.grib_files,
             tropo_model=inps.tropo_model,
-            snwe=inps.snwe)
+            snwe=inps.snwe,
+            debug_mode=inps.debug_mode,
+        )
 
     ## 2. calculate tropo delay and save to h5 file
     if not inps.geom_file:

@@ -118,6 +118,7 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     else:
         print(f'number of interferograms: {C.shape[1]}')
         print(f'number of triplets: {C.shape[0]}')
+        print(f'used dataset name: {dsName}')
 
     # calculate number of nonzero closure phase
     ds_size = (C.shape[0] * 2 + C.shape[1]) * length * width * 4
@@ -308,7 +309,7 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
 
 def correct_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=None,
                                        ccName='connectComponent', dsNameIn='unwrapPhase',
-                                       dsNameOut='unwrapPhase_phaseClosure'):
+                                       dsNameOut='unwrapPhase_phaseClosure', cc_min_area=2.5e3):
     print('-'*50)
     print(f'correct unwrapping error in {ifgram_file} with phase closure ...')
     stack_obj = ifgramStack(ifgram_file)
@@ -359,7 +360,7 @@ def correct_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_f
                 if water_mask is not None:
                     cc[water_mask == 0] = 0
                 cc_obj = conncomp.connectComponent(conncomp=cc, metadata=stack_obj.metadata)
-                cc_obj.label()
+                cc_obj.label(min_area=cc_min_area)
                 local_regions = measure.regionprops(cc_obj.labelImg)
 
                 # matching regions and correct unwrap error
@@ -420,6 +421,7 @@ def run_unwrap_error_phase_closure(inps):
             water_mask_file=inps.waterMaskFile,
             dsNameIn=inps.datasetNameIn,
             dsNameOut=inps.datasetNameOut,
+            cc_min_area=inps.connCompMinArea,
         )
 
     else:
