@@ -347,8 +347,8 @@ class coordinate:
             rg_step_deg = 180./np.pi * rg_step / (self.earth_radius * np.cos(lat_c * np.pi/180.))
 
             az, rg = np.zeros(lat.shape), np.zeros(lat.shape)
-            x_factor = 10
-            y_factor = 10
+            x_factor = 4
+            y_factor = 4
 
             # search the overlap area of buffer in x/y direction and use the cross center
             if lat.size == 1:
@@ -409,8 +409,8 @@ class coordinate:
                 x_factor = 2 * np.ceil(abs(lut.lon_step) / rg_step)
                 y_factor = 2 * np.ceil(abs(lut.lat_step) / az_step)
             except:
-                x_factor = 10
-                y_factor = 10
+                x_factor = 4
+                y_factor = 4
 
             if 'SUBSET_XMIN' in self.src_metadata.keys():
                 rg += int(self.src_metadata['SUBSET_XMIN'])
@@ -493,17 +493,15 @@ class coordinate:
     def bbox_geo2radar(self, geo_box, buf=None, print_msg=False):
         """Calculate bounding box in x/y for file in radar coord, based on input geo box.
         Parameters: geo_box - tuple of 4 float, indicating the UL/LR lon/lat
-                    buf     - buffer [number of pixel]
+                    buf     - int, buffer length in number of pixels
         Returns:    pix_box - tuple of 4 int, indicating the UL/LR x/y of the bounding box in radar coord
                               for the corresponding lat/lon coverage.
         """
         lat = np.array([geo_box[3], geo_box[3], geo_box[1], geo_box[1]])
         lon = np.array([geo_box[0], geo_box[2], geo_box[0], geo_box[2]])
         y, x, y_res, x_res = self.geo2radar(lat, lon, print_msg=print_msg)
-
         if buf is None:
             buf = 2 * np.max(np.abs([x_res, y_res]))
-
         pix_box = (np.min(x) - buf, np.min(y) - buf,
                    np.max(x) + buf, np.max(y) + buf)
         return pix_box

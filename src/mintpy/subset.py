@@ -183,53 +183,27 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
     # Use subset_lat/lon input if existed,  priority: lat/lon > y/x > len/wid
     coord = ut.coordinate(meta_dict)
-
-    if 'Y_FIRST' in meta_dict.keys():
-        geocoded_flag =True
+    if subset_dict.get('subset_lat', None):
+        sub_y = coord.lalo2yx(subset_dict['subset_lat'], None)[0]
+    elif subset_dict['subset_y']:
+        sub_y = subset_dict['subset_y']
     else:
-        geocoded_flag =False
+        sub_y = [0, length]
 
-    if geocoded_flag:
-        if subset_dict.get('subset_lat', None):
-            sub_y = coord.lalo2yx(subset_dict['subset_lat'], None)[0]
-        else:
-            sub_y = [0, length]
-
-        if subset_dict.get('subset_lon', None):
-            sub_x = coord.lalo2yx(None, subset_dict['subset_lon'])[1]
-        else:
-            sub_x = [0, width]
-
-        # Get subset box in y/x
-        sub_x = sorted(sub_x)
-        sub_y = sorted(sub_y)
-        pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
-
-        # Get subset box in lat/lon from subset box in y/x
-        geo_box = coord.box_pixel2geo(pix_box)
-
-    # for data in radar coordinates
+    if subset_dict.get('subset_lon', None):
+        sub_x = coord.lalo2yx(None, subset_dict['subset_lon'])[1]
+    elif subset_dict['subset_x']:
+        sub_x = subset_dict['subset_x']
     else:
-        if subset_dict.get('subset_lat', None):
-            geo_box = (subset_dict['subset_lon'][0], subset_dict['subset_lat'][1], subset_dict['subset_lon'][1], subset_dict['subset_lat'][0])
-            pix_box = coord.bbox_geo2radar(geo_box, buf=0)
-        else:
-            if subset_dict['subset_y']:
-                sub_y = subset_dict['subset_y']
-            else:
-                sub_y = [0, length]
+        sub_x = [0, width]
 
-            if subset_dict['subset_x']:
-                sub_x = subset_dict['subset_x']
-            else:
-                sub_x = [0, width]
-                 # Get subset box in y/x
-            sub_x = sorted(sub_x)
-            sub_y = sorted(sub_y)
-            pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
+    # Get subset box in y/x
+    sub_x = sorted(sub_x)
+    sub_y = sorted(sub_y)
+    pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
 
-            # Get subset box in lat/lon from subset box in y/x
-            geo_box = coord.box_pixel2geo(pix_box)
+    # Get subset box in lat/lon from subset box in y/x
+    geo_box = coord.box_pixel2geo(pix_box)
 
     return pix_box, geo_box
 
@@ -444,6 +418,8 @@ def subset_file(fname, subset_dict_input, out_file=None):
     return out_file
 
 
+################################ CLI utility ################################
+
 def read_aux_subset2inps(inps):
     # Convert All Inputs into subset_y/x/lat/lon
     # Input Priority: subset_y/x/lat/lon > reference > template > tight
@@ -491,5 +467,30 @@ def read_aux_subset2inps(inps):
 
         # Update subset_y/x/lat/lon
         inps = subset_box2inps(inps, pix_box, geo_box)
+
+    # scenario: subset radar-coded file using lat/lon
+    atr = readfile.read_attribute(inps.file[0])
+    if ('Y_FIRST' not in atr.keys()
+            and (inps.subset_lat is not None and inps.subset_lon is not None)
+            and (inps.subset_y is None and inps.subset_x is None)
+            and inps.lookup_file is not None):
+        print('convert bounding box in lat/lon to y/x')
+        print(f'input bounding box in lat/lon: {geo_box}')
+        if not os.path.isfile(inps.lookup_file):
+            raise FileNotFound(f'lookup file {inps.lookup_file} NOT found!')
+
+        # convert geo_box to pix_box
+        coord = ut.coordinate(atr, lookup_file=inps.lookup_file)
+        geo_box = (inps.subset_lon[0], inps.subset_lat[1],
+                   inps.subset_lon[1], inps.subset_lat[0])    # (W, N, E, S)
+        pix_box = coord.bbox_geo2radar(geo_box)
+        pix_box = coord.check_box_within_data_coverage(pix_box)
+        print(f'box to read for datasets in y/x: {pix_box}')
+
+        # update inps
+        inps.subset_x = [pix_box[0], pix_box[2]]
+        inps.subset_y = [pix_box[1], pix_box[3]]
+        inps.subset_lat = None
+        inps.subset_lon = None
 
     return inps
