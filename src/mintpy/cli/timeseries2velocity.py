@@ -112,7 +112,7 @@ def create_parser(subparsers=None):
     resid.add_argument('--res-file', dest='res_file', default='timeseriesResidual.h5',
                        help='Output file name for the residual time-series file (default: %(default)s).')
     resid.add_argument('--rm-timefun', dest='rm_timefuns', nargs='*', default=['all'],
-                       choices={'all', 'polynomial' , 'periodic', 'step', 'polyline', 'exp', 'log'},
+                       choices=['all', 'polynomial', 'periodic', 'step', 'polyline', 'exp', 'log'],
                        help='Specify the time functions to be removed from the input (default: %(default)s).')
 
     # computing
