@@ -439,7 +439,7 @@ def run_timeseries2time_func(inps):
             if 'all' in inps.rm_timefuns:
                 ts_res[:, mask] = ts_data - np.dot(G, m)[:, mask]
             else:
-                rm_ds_names, rm_ds_inds = timefun_names2ds_names(inps.rm_timefuns, ds_dict.keys())
+                rm_ds_inds = timefun_names2ds_names(inps.rm_timefuns, ds_dict.keys())[1]
                 ts_res[:, mask] = ts_data - np.dot(G[:, rm_ds_inds], m[rm_ds_inds, :])[:, mask]
 
             # write to HDF5 file
