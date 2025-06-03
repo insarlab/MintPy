@@ -115,7 +115,7 @@ def download_ionex_files(date_list, tec_dir, sol_code='jpl'):
         for i, date_str in enumerate(date_list2dload):
             print('-'*20)
             print(f'DATE {i+1}/{num_date2dload}: {date_str}')
-            ionex.dload_ionex(date_str, tec_dir=tec_dir, sol_code=sol_code, print_msg=True)
+            ionex.dload_ionex(date_str, tec_dir=tec_dir, sol_code=sol_code)
 
         # print file size info, after downloading
         fsizes = [os.path.getsize(i) / 1024 if os.path.isfile(i) else 0 for i in fnames]
