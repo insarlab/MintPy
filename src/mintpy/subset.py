@@ -418,6 +418,8 @@ def subset_file(fname, subset_dict_input, out_file=None):
     return out_file
 
 
+################################ CLI utility ################################
+
 def read_aux_subset2inps(inps):
     # Convert All Inputs into subset_y/x/lat/lon
     # Input Priority: subset_y/x/lat/lon > reference > template > tight
@@ -465,5 +467,30 @@ def read_aux_subset2inps(inps):
 
         # Update subset_y/x/lat/lon
         inps = subset_box2inps(inps, pix_box, geo_box)
+
+    # scenario: subset radar-coded file using lat/lon
+    atr = readfile.read_attribute(inps.file[0])
+    if ('Y_FIRST' not in atr.keys()
+            and (inps.subset_lat is not None and inps.subset_lon is not None)
+            and (inps.subset_y is None and inps.subset_x is None)
+            and inps.lookup_file is not None):
+        print('convert bounding box in lat/lon to y/x')
+        print(f'input bounding box in lat/lon: {geo_box}')
+        if not os.path.isfile(inps.lookup_file):
+            raise FileNotFoundError(f'lookup file {inps.lookup_file} NOT found!')
+
+        # convert geo_box to pix_box
+        coord = ut.coordinate(atr, lookup_file=inps.lookup_file)
+        geo_box = (inps.subset_lon[0], inps.subset_lat[1],
+                   inps.subset_lon[1], inps.subset_lat[0])    # (W, N, E, S)
+        pix_box = coord.bbox_geo2radar(geo_box, buf=0)
+        pix_box = coord.check_box_within_data_coverage(pix_box)
+        print(f'box to read for datasets in y/x: {pix_box}')
+
+        # update inps
+        inps.subset_x = [pix_box[0], pix_box[2]]
+        inps.subset_y = [pix_box[1], pix_box[3]]
+        inps.subset_lat = None
+        inps.subset_lon = None
 
     return inps

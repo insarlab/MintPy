@@ -118,6 +118,7 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     else:
         print(f'number of interferograms: {C.shape[1]}')
         print(f'number of triplets: {C.shape[0]}')
+        print(f'used dataset name: {dsName}')
 
     # calculate number of nonzero closure phase
     ds_size = (C.shape[0] * 2 + C.shape[1]) * length * width * 4
