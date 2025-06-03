@@ -186,7 +186,7 @@ def dload_ionex(date_str: str, tec_dir: str, sol_code='jpl', date_fmt='%Y%m%d'):
     if (not os.path.isfile(out_path)
             or os.path.getsize(out_path) < 600e3
             or os.path.getmtime(out_path) < os.path.getmtime(fpath)):
-        result = subprocess.run(
+        subprocess.run(
             ["gunzip", "--decompress", "--keep", str(fpath)], check=True, capture_output=True
         )
 
