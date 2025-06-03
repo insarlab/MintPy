@@ -129,8 +129,7 @@ def save_gdal(inps):
         print('masking out pixels with zero value')
         data[data == 0] = np.nan
 
-
-    ## write file
+    ## write data to file
     # output file name
     if not inps.outfile:
         fbase = pp.auto_figure_title(inps.file, inps.dset, vars(inps))
