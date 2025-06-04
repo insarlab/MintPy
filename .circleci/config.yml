@@ -18,7 +18,7 @@ jobs:
             apt update
             apt-get update --yes && apt-get upgrade --yes
             apt-get install --yes git wget
-            # install miniforge
+            # install miniforge (https://github.com/conda-forge/miniforge?tab=readme-ov-file#as-part-of-a-ci-pipeline)
             mkdir -p ${HOME}/tools
             cd ${HOME}/tools
             wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
