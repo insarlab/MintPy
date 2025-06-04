@@ -115,7 +115,21 @@ def save_gdal(inps):
         print(f'read {inps.ref_date} from file: {inps.file}')
         data -= readfile.read(inps.file, datasetName=inps.ref_date)[0]
 
-    ## write file
+    # mask
+    if inps.mask_file:
+        mask = pp.read_mask(
+            inps.file,
+            mask_file=inps.mask_file,
+            datasetName=inps.dset)[0]
+        if mask is not None:
+            print(f'masking out pixels with zero value in file: {inps.mask_file}')
+            data[mask == 0] = np.nan
+        del mask
+    if inps.zero_mask:
+        print('masking out pixels with zero value')
+        data[data == 0] = np.nan
+
+    ## write data to file
     # output file name
     if not inps.outfile:
         fbase = pp.auto_figure_title(inps.file, inps.dset, vars(inps))

@@ -75,8 +75,6 @@ def create_parser(subparsers=None):
                         help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--enforce', '-f', dest='updateMode', action='store_false',
                         help='Disable the update mode, or skip checking dataset already loaded.')
-    parser.add_argument('--compression', choices={'gzip', 'lzf', None}, default=None,
-                        help='compress loaded geometry while writing HDF5 file, default: None.')
 
     return parser
 
