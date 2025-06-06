@@ -459,6 +459,7 @@ def plot_ionex(tec_file, save_fig=False):
     from cartopy import crs as ccrs
     from matplotlib import pyplot as plt
     from matplotlib.animation import FuncAnimation
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
 
     from mintpy.utils.map import draw_lalo_label, round_to_1
 
@@ -478,14 +479,14 @@ def plot_ionex(tec_file, save_fig=False):
 
     # init figure
     proj_obj = ccrs.PlateCarree()
-    fig, ax = plt.subplots(figsize=[9, 4], subplot_kw=dict(projection=proj_obj))
+    fig, ax = plt.subplots(figsize=[8, 4], subplot_kw=dict(projection=proj_obj))
     im = ax.imshow(
         tec_maps[0,:,:], vmin=0, vmax=vmax,
         extent=(W, E, S, N), origin='upper',
         animated=True, interpolation='nearest',
     )
 
-    ax.coastlines()
+    cl = ax.coastlines()
     draw_lalo_label(
         ax,
         geo_box=(W, N, E, S),
@@ -494,7 +495,9 @@ def plot_ionex(tec_file, save_fig=False):
     )
 
     # colorbar
-    cbar = fig.colorbar(im, shrink=0.5)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="1.5%", pad=0.05, axes_class=plt.Axes)
+    cbar = fig.colorbar(im, cax=cax)
     cbar.set_label('TECU')
     fig.tight_layout()
 
@@ -510,12 +513,13 @@ def plot_ionex(tec_file, save_fig=False):
 
         # update image & title
         im.set_array(tec_maps[ind,:,:])
+        cl.set_visible(True)
         dt_obj = date_obj + dt.timedelta(minutes=mins[ind])
         ax.set_title(f'{dt_obj.isoformat()} - {sol_name}')
-        return im,
+        return im, cl
 
     # play animation
-    ani = FuncAnimation(fig, animate, interval=200, blit=True, save_count=num_map)
+    ani = FuncAnimation(fig, animate, interval=200, blit=False, save_count=num_map)
 
     # output
     out_fig = f'{os.path.abspath(tec_file)}.gif'
