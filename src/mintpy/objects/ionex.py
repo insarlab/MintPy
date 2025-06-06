@@ -59,7 +59,7 @@ def get_ionex_filename(date_str, tec_dir=None, sol_code='jpl', date_fmt='%Y%m%d'
                            https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/atmospheric_products.html
                 date_fmt - str, date format code
                            https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes
-    Returns:    tec_file - str, path to the local uncompressed TEC file [for tec_dir != None]
+    Returns:    tec_file - str, path to the local decompressed TEC file [for tec_dir != None]
                              or url  to the remote  compressed TEC file [for tec_dir == None]
     """
     # basic time info
@@ -103,7 +103,7 @@ def get_ionex_filename(date_str, tec_dir=None, sol_code='jpl', date_fmt='%Y%m%d'
     if tec_dir:
         # local file path
         tec_file = os.path.join(tec_dir, remote_name)
-        # get the uncompressed file name for the local file
+        # get the decompressed file name for the local file
         tec_file = os.path.splitext(tec_file)[0]
     else:
         # remote file url
@@ -137,7 +137,7 @@ def dload_ionex(date_str: str, tec_dir: str, sol_code='jpl', date_fmt='%Y%m%d'):
                 tec_dir  - str, local directory to save the downloaded files.
                 sol_code - str, IGS TEC analysis center code.
                 date_fmt - str, date format code
-    Returns:    out_path - str, path to the local uncompressed IONEX file.
+    Returns:    out_path - str, path to the local decompressed IONEX file.
     """
 
     # get the source (remote) and destination (local) file path/url
@@ -150,7 +150,7 @@ def dload_ionex(date_str: str, tec_dir: str, sol_code='jpl', date_fmt='%Y%m%d'):
         return out_path
 
     # download: grab authentication creditionals
-    print(f'downloading {url} to {os.path.dirname(fpath)} ...')
+    print(f'downloading {url} ...')
     try:
         parsed = netrc.netrc().authenticators(EARTH_DATA_AUTH_HOST)
         assert parsed is not None
@@ -175,17 +175,18 @@ def dload_ionex(date_str: str, tec_dir: str, sol_code='jpl', date_fmt='%Y%m%d'):
         # handle any errors here
         print(e)
 
-    # uncompress the downloaded file
+    # decompress the downloaded file
     # Note: the .Z format is based on the LZW compression used by the UNIX compress command, and Python
-    # does not have built-in support for this format, so we call the uncompress command line tool first,
-    # then read the uncompressed file in plain text.
-    # Run the command line tools if uncompressed file:
+    # does not have built-in support for this format, so we call the decompress command line tool first,
+    # then read the decompressed file in plain text.
+    # Run the command line tools if decompressed file:
     #   1) does not exist or
     #   2) smaller than 600k in size or
     #   3) older than the compressed file.
     if (not os.path.isfile(out_path)
             or os.path.getsize(out_path) < 600e3
             or os.path.getmtime(out_path) < os.path.getmtime(fpath)):
+        print(f'decompressing {fpath}')
         subprocess.run(
             ["gunzip", "--decompress", "--keep", str(fpath)], check=True, capture_output=True
         )
@@ -451,7 +452,7 @@ def read_ionex(tec_file):
 def plot_ionex(tec_file, save_fig=False):
     """Plot the IONEX file as animation.
 
-    Parameters: tec_file - str, path to the local uncompressed IONEX file
+    Parameters: tec_file - str, path to the local decompressed IONEX file
                 save_fig - bool, save the animation to file
     Returns:    out_fig  - str, path to the output animation file
     """
