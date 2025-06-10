@@ -421,7 +421,7 @@ def check_pyaps_account_config(tropo_model):
 
     # for ERA5: ~/.cdsapirc
     if tropo_model == 'ERA5' and os.path.isfile(rc_file):
-        fc = np.loadtxt('.cdsapirc', dtype=str)
+        fc = np.loadtxt(rc_file, dtype=str)
         if not (fc[0,0] == 'url:' and fc[0,1] == 'https://cds.climate.copernicus.eu/api'):
             raise ValueError('CDS account is NOT setup to the latest format! Check https://github.com/insarlab/PyAPS/.')
 

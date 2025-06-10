@@ -194,14 +194,23 @@ class coordinate:
         To support point outside of value pool/matrix, could use np.polyfit to fit a line
         for y and x value buffer and return the intersection point row/col
         """
-        ymin = y - y_factor;  ymax = y + y_factor
-        xmin = x - x_factor;  xmax = x + x_factor
-        if not geo_coord:
-            ymin = max(ymin, 0.5)
-            xmin = max(xmin, 0.5)
-        mask_y = np.multiply(self.lut_y >= ymin, self.lut_y <= ymax)
-        mask_x = np.multiply(self.lut_x >= xmin, self.lut_x <= xmax)
-        mask_yx = np.multiply(mask_y, mask_x)
+        # iterate multiple times if the given y/x_factor is too small, resulting in no overlap
+        num_iter = 1
+        mask_yx = np.zeros(self.lut_y.shape, dtype=np.bool_)
+        while np.sum(mask_yx) <= 0 and num_iter<=3:
+            # search overlap
+            ymin = y - y_factor;  ymax = y + y_factor
+            xmin = x - x_factor;  xmax = x + x_factor
+            if not geo_coord:
+                ymin = max(ymin, 0.5)
+                xmin = max(xmin, 0.5)
+            mask_y = np.multiply(self.lut_y >= ymin, self.lut_y <= ymax)
+            mask_x = np.multiply(self.lut_x >= xmin, self.lut_x <= xmax)
+            mask_yx = np.multiply(mask_y, mask_x)
+            # prepare for the next iteration
+            y_factor *= 2
+            x_factor *= 2
+            num_iter += 1
 
         # for debugging only
         if debug_mode:
