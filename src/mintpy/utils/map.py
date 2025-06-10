@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 ##########################################  Lat/Lon Labels  ##########################################
 
 def draw_lalo_label(ax, geo_box, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4, lalo_offset=None,
-                    projection=ccrs.PlateCarree(), font_size=None, print_msg=True):
+                    *, direction='in', projection=ccrs.PlateCarree(), font_size=None, print_msg=True):
     """Auto draw lat/lon label/tick based on coverage from geo_box
     Parameters: ax           : cartopy axes.
                 geo_box      : 4-tuple of float, (W, N, E, S) in degree
@@ -28,6 +28,7 @@ def draw_lalo_label(ax, geo_box, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max
                 lalo_max_num : int, maximum number of major ticks for X/Y axes
                 lalo_offset  : float, distance in points between tick and label.
                                Set to negative value to move the ticklabel inside the plot.
+                direction    : str, tick direction, in or out.
                 projection   : cartopy.crs object
                 ...
     Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
@@ -42,7 +43,7 @@ def draw_lalo_label(ax, geo_box, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max
         print(f'plot lat/lon label in step of {lalo_step} and location of {lalo_loc}')
 
     # ticklabel/tick style
-    ax.tick_params(which='both', direction='in', labelsize=font_size,
+    ax.tick_params(which='both', direction=direction, labelsize=font_size,
                    left=True, right=True, top=True, bottom=True,
                    labelleft=lalo_loc[0], labelright=lalo_loc[1],
                    labeltop=lalo_loc[2], labelbottom=lalo_loc[3])

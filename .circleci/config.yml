@@ -34,10 +34,7 @@ jobs:
           command: |
             export PYTHONUNBUFFERED=1
             # install dependencies and source code
-            # pin gdal version as "<=3.8" because:
-            # 1) gdal-3.9 could not read the GMT-6 *.grd file properly
-            # 2) gdal-3.9 could not be imported in circle CI (https://github.com/insarlab/MintPy/issues/1220)
-            mamba install --verbose --yes --file ${MINTPY_HOME}/requirements.txt gdal"<=3.8"
+            mamba install --verbose --yes --file ${MINTPY_HOME}/requirements.txt gdal libgdal-netcdf
             python -m pip install ${MINTPY_HOME}
             # test installation
             smallbaselineApp.py -h

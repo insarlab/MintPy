@@ -1,5 +1,6 @@
-gdal<=3.8       # for ISCE-2/3, ARIA, FRInGE, HyP3, GMTSAR users; gdal-3.9 could not read GMT *.grd file's coordinate info properly [for GMTSAR]
-isce2           # for ISCE-2 users
+gdal            # for users of ISCE-2/3, ARIA, FRInGE, HyP3, GMTSAR users
+libgdal-netcdf  # for users of GMTSAR users
+isce2           # for users of ISCE-2 users
 pre-commit      # for developers
 pyfftw
 setuptools_scm
