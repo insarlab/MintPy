@@ -78,8 +78,8 @@ def download_ionex_files(date_list, tec_dir, sol_code='jpl'):
     print('https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/atmospheric_products.html')
     num_date = len(date_list)
     n = len(str(num_date))
-    print(f'number of TEC files to download: {num_date}')
     print(f'local TEC file directory: {tec_dir}')
+    print(f'number of TEC files required: {num_date}')
 
     # output file names/sizes
     fnames = []
@@ -107,6 +107,8 @@ def download_ionex_files(date_list, tec_dir, sol_code='jpl'):
         date_list2dload = [d for d, s in zip(date_list, fsizes) if s < fsizec * 0.9]
 
     num_date2dload = len(date_list2dload)
+    print(f'number of TEC files existing with consistent file size: {num_date - num_date2dload}')
+    print(f'number of TEC files to download: {num_date2dload}')
     if num_date2dload == 0:
         print(f'ALL files exists with consistent file size (~{fsizec:.0f} KB)'
               ' --> skip re-downloading.\n')
@@ -115,12 +117,12 @@ def download_ionex_files(date_list, tec_dir, sol_code='jpl'):
         for i, date_str in enumerate(date_list2dload):
             print('-'*20)
             print(f'DATE {i+1}/{num_date2dload}: {date_str}')
-            ionex.dload_ionex(date_str, tec_dir=tec_dir, sol_code=sol_code, print_msg=True)
+            ionex.dload_ionex(date_str, tec_dir=tec_dir, sol_code=sol_code)
 
         # print file size info, after downloading
         fsizes = [os.path.getsize(i) / 1024 if os.path.isfile(i) else 0 for i in fnames]
         for i in range(num_date):
-            print(f'[{i+1:0{n}d}/{num_date}] {fnames[i]}: {fsizes[i]:.2f} KB')
+            print(f'[{i+1:0{n}d}/{num_date}] {date_list[i]} at {fnames[i]}: {fsizes[i]:.2f} KB')
 
     return fnames
 

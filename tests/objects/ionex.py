@@ -24,17 +24,13 @@ def prep_test_data(prep_mode=True):
         tec_dir=tec_dir,
         sol_code=sol_code,
     )
+    print(f'TEC file: {tec_file}')
 
     if prep_mode:
-
         # download
         if not os.path.isfile(tec_file):
-            print(f'download IONEX at {date_str} from {sol_code} to {tec_dir}')
-            tec_file = ionex.dload_ionex(
-                date_str=date_str,
-                tec_dir=tec_dir,
-                sol_code=sol_code,
-            )
+            print(f'download IONEX at {date_str} from {sol_code} to {tec_file}')
+            ionex.dload_ionex(date_str, tec_dir=tec_dir, sol_code=sol_code)
 
         # plot
         print('plotting IONEX file as animation')
