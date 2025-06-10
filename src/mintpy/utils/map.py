@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 ##########################################  Lat/Lon Labels  ##########################################
 
 def draw_lalo_label(ax, geo_box, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4, lalo_offset=None,
-                    direction='in', projection=ccrs.PlateCarree(), font_size=None, print_msg=True):
+                    *, direction='in', projection=ccrs.PlateCarree(), font_size=None, print_msg=True):
     """Auto draw lat/lon label/tick based on coverage from geo_box
     Parameters: ax           : cartopy axes.
                 geo_box      : 4-tuple of float, (W, N, E, S) in degree

@@ -82,7 +82,7 @@ Install dependencies into a new environment, e.g. named "insar":
 # Add "isce2"               below to install extra dependencies if you use ISCE-2
 # Add "gdal"                below to install extra dependencies if you use ARIA, FRInGE, HyP3
 # Add "gdal libgdal-netcdf" below to install extra dependencies if you use GMTSAR
-mamba create --name insar --file ~/tools/MintPy/requirements.txt isce2
+mamba create --name insar --file ~/tools/MintPy/requirements.txt
 ```
 
 or install dependencies into an existing environment:
