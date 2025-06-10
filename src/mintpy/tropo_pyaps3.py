@@ -415,39 +415,40 @@ def check_pyaps_account_config(tropo_model):
     Parameters: tropo_model - str, tropo model being used to calculate tropospheric delay
     Returns:    None
     """
-    # Convert MintPy tropo model name to data archive center name
-    # NARR model included for completeness but no key required
-    MODEL2ARCHIVE_NAME = {
-        'ERA5' : 'CDS',
-        'ERAI' : 'ECMWF',
-        'MERRA': 'MERRA',
-        'NARR' : 'NARR',
-    }
-    SECTION_OPTS = {
-        'CDS'  : ['key'],
-        'ECMWF': ['email', 'key'],
-        'MERRA': ['user', 'password'],
-    }
-
-    # Default values in cfg file
-    default_values = [
-        'the-email-address-used-as-login@ecmwf-website.org',
-        'the-user-name-used-as-login@earthdata.nasa.gov',
-        'the-password-used-as-login@earthdata.nasa.gov',
-        'the-email-adress-used-as-login@ucar-website.org',
-        'your-uid:your-api-key',
-    ]
-
-    # account file for pyaps3 < and >= 0.3.0
-    cfg_file = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
+    # account file
     rc_file = os.path.expanduser('~/.cdsapirc')
+    cfg_file = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
 
     # for ERA5: ~/.cdsapirc
     if tropo_model == 'ERA5' and os.path.isfile(rc_file):
-        pass
+        fc = np.loadtxt('.cdsapirc', dtype=str)
+        if not (fc[0,0] == 'url:' and fc[0,1] == 'https://cds.climate.copernicus.eu/api'):
+            raise ValueError('CDS account is NOT setup to the latest format! Check https://github.com/insarlab/PyAPS/.')
 
     # check account info for the following models
     elif tropo_model in ['ERA5', 'ERAI', 'MERRA']:
+        # Convert MintPy tropo model name to data archive center name
+        # NARR model included for completeness but no key required
+        MODEL2ARCHIVE_NAME = {
+            'ERA5' : 'CDS',
+            'ERAI' : 'ECMWF',
+            'MERRA': 'MERRA',
+            'NARR' : 'NARR',
+        }
+        SECTION_OPTS = {
+            'CDS'  : ['key'],
+            'ECMWF': ['email', 'key'],
+            'MERRA': ['user', 'password'],
+        }
+        # Default values in cfg file
+        default_values = [
+            'the-email-address-used-as-login@ecmwf-website.org',
+            'the-user-name-used-as-login@earthdata.nasa.gov',
+            'the-password-used-as-login@earthdata.nasa.gov',
+            'the-email-adress-used-as-login@ucar-website.org',
+            'your-uid:your-api-key',
+        ]
+
         section = MODEL2ARCHIVE_NAME[tropo_model]
 
         # Read model.cfg file
@@ -476,7 +477,7 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None, debug_mode=False
     Returns:    grib_files  - list of string of grib files after downloading
     """
     print('-'*50)
-    print('downloading weather model data using PyAPS ...')
+    print(f'downloading weather model data using PyAPS (version {pa.__version__}) ...')
 
     # Get date list to download (skip already downloaded files)
     grib_files_exist = check_exist_grib_file(grib_files, print_msg=True)

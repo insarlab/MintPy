@@ -475,7 +475,6 @@ def read_aux_subset2inps(inps):
             and (inps.subset_y is None and inps.subset_x is None)
             and inps.lookup_file is not None):
         print('convert bounding box in lat/lon to y/x')
-        print(f'input bounding box in lat/lon: {geo_box}')
         if not os.path.isfile(inps.lookup_file):
             raise FileNotFoundError(f'lookup file {inps.lookup_file} NOT found!')
 
@@ -485,6 +484,7 @@ def read_aux_subset2inps(inps):
                    inps.subset_lon[1], inps.subset_lat[0])    # (W, N, E, S)
         pix_box = coord.bbox_geo2radar(geo_box, buf=0)
         pix_box = coord.check_box_within_data_coverage(pix_box)
+        print(f'input bounding box in lat/lon: {geo_box}')
         print(f'box to read for datasets in y/x: {pix_box}')
 
         # update inps

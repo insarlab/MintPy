@@ -16,6 +16,8 @@ EXAMPLE = """example:
   save_gdal.py geo/geo_ifgramStack.h5 -d unwrapPhase-20101120_20110220 --of ISCE
   save_gdal.py geo/geo_ifgramStack.h5 -d   coherence-20101120_20110220 --of ISCE
   save_gdal.py geo_20230225.slc
+  save_gdal.py geo/timeseries.h5 -d 20230217 -m maskTempCoh.h5
+  save_gdal.py geo/timeseries.h5 -d 20230217 --zero-mask
 """
 
 
@@ -31,8 +33,12 @@ def create_parser(subparsers=None):
                         help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file base name. Extension is fixed by GDAL driver')
+    parser.add_argument('-m','--mask', dest='mask_file', metavar='FILE',
+                        help='mask file (default: %(default)s).')
+    parser.add_argument('--zm','--zero-mask', dest='zero_mask', action='store_true',
+                        help='Mask pixels with zero value (default: %(default)s)..')
     parser.add_argument('--of', '--out-format', '--output-format', dest='out_format', default='GTiff',
-                        help='file format as defined by GDAL driver name, e.g. GTiff, ENVI, default: %(default)s\n'
+                        help='file format as defined by GDAL driver name, e.g. GTiff, ENVI (default: %(default)s).\n'
                              'GDAL driver names can be found at https://gdal.org/drivers/raster/index.html')
     return parser
 
