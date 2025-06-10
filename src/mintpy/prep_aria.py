@@ -370,7 +370,6 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
             f["dropIfgram"][ii] = True
 
             # loop through stacks
-            print(stackFiles.keys())
             for dsName in stackFiles.keys():
                 dsStack = gdal.Open(stackFiles[dsName], gdal.GA_ReadOnly)
                 bnd = dsStack.GetRasterBand(bndIdx)
@@ -378,8 +377,6 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
                 if xstep * ystep > 1:
                     mli_method_spec = mli_method if dsName not in \
                         ['connCompStack'] else 'nearest'
-                    print(f'apply {xstep} x {ystep} multilooking/downsampling via '
-                          f'{mli_method_spec} to: {dsName}')
                     data = multilook_data(data, ystep, xstep, method=mli_method_spec)
                 data[data == noDataValues[dsName]] = 0  #assign pixel with no-data to 0
 
