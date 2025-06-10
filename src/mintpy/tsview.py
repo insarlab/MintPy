@@ -21,6 +21,21 @@ from mintpy.utils import plot as pp, ptime, readfile, time_func, utils as ut
 
 ###########################################################################################
 def read_init_info(inps):
+    """Read and initialize metadata and parameters.
+
+    Parameters
+    ----------
+    inps : Namespace
+        Input arguments from the command line parser.
+
+    Returns
+    -------
+    inps : Namespace
+        Updated input arguments with additional attributes.
+    atr : dict
+        Metadata dictionary of the first input file.
+    """
+
     # Time Series Info
     atr = readfile.read_attribute(inps.file[0])
     atr['DATA_TYPE'] = atr.get('DATA_TYPE', 'float32')
@@ -364,6 +379,8 @@ def read_timeseries_data(inps):
 
 
 def plot_ts_errorbar(ax, dis_ts, inps, ppar):
+    """Plot displacement time series with error bars."""
+
     # make a local copy
     dates = np.array(inps.dates)
     d_ts = dis_ts[:]
@@ -405,6 +422,8 @@ def plot_ts_errorbar(ax, dis_ts, inps, ppar):
 
 
 def plot_ts_scatter(ax, dis_ts, inps, ppar):
+    """Plot displacement time series as a scatter plot."""
+
     # make a local copy
     dates = np.array(inps.dates)
     d_ts = dis_ts[:]
