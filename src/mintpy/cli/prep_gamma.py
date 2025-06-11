@@ -138,7 +138,7 @@ def cmd_line_parse(iargs=None):
     inps.file_ext = os.path.splitext(inps.file[0])[1].lower()
 
     # check: input file extension
-    ext_list = ['.unw', '.cor', '.int', '.dem', '.hgt_sim']
+    ext_list = ['.unw', '.cor', '.int', '.conncomp', '.dem', '.hgt_sim']
     ext_ends = ['to_rdc', '2_rdc', '2rdc']
     if inps.file_ext not in ext_list and not inps.file_ext.endswith(tuple(ext_ends)):
         msg = f'unsupported input file extension: {inps.file_ext}'

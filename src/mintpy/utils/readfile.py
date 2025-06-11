@@ -844,6 +844,9 @@ def get_slice_list(fname, no_complex=False):
 
         elif fext in ['.unw', '.ion']:
             slice_list = ['magnitude', 'phase']
+            # gamma unw file has only one band for phase
+            if num_band == 1:
+                slice_list = ['phase']
 
         elif fext in ['.int', '.slc'] or (dtype.startswith('c') and num_band == 1):
             if no_complex:
