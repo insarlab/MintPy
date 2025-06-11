@@ -30,7 +30,7 @@ DSET_INFO = {
         'url':'https://zenodo.org/record/6662079/files/SanFranSenDT42.tar.xz',      # 280 MB
     },
     'RidgecrestSenDT71':{
-        'processor':'ASF HyP3',
+        'processor':'HyP3',
         'url':'https://zenodo.org/record/11049257/files/RidgecrestSenDT71.tar.xz',  # 240 MB
     },
     'SanFranBaySenD42':{

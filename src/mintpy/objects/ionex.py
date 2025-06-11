@@ -12,10 +12,13 @@
 
 
 import datetime as dt
+import netrc
 import os
 import re
+import subprocess
 
 import numpy as np
+import requests
 from scipy.interpolate import RegularGridInterpolator, interpn
 
 from mintpy.utils import ptime
@@ -29,51 +32,166 @@ IGS_SOLUTION_NAMES = {
     'uqr' : 'UPC (15-min; rapid)'
 }
 
+# https://cddis.nasa.gov/archive/gnss/products/ionex/2025/009/
+# accessed at June 3, 2025
+SOL_CODE2SMP = {
+    'CAS' : '30M',
+    'COD' : '01H',
+    'ESA' : '02H',
+    'IGS' : '02H',
+    'JPL' : '02H',
+    'UPC' : '02H',
+}
+
+# Constants
+EARTH_DATA_AUTH_HOST = "urs.earthdata.nasa.gov"
+
 
 ################################## Download ####################################
 
-def dload_ionex(date_str, tec_dir, sol_code='jpl', date_fmt='%Y%m%d', print_msg=False):
+def get_ionex_filename(date_str, tec_dir=None, sol_code='jpl', date_fmt='%Y%m%d'):
+    """Get the file name of IONEX files.
+
+    Parameters: date_str - str, date in date_fmt format
+                tec_dir  - str, path to the local TEC file directory
+                           Set to None for the http path.
+                sol_code - str, GIM analysis center code in 3 digit
+                           https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/atmospheric_products.html
+                date_fmt - str, date format code
+                           https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes
+    Returns:    tec_file - str, path to the local decompressed TEC file [for tec_dir != None]
+                             or url  to the remote  compressed TEC file [for tec_dir == None]
+    """
+    # basic time info
+    dd = dt.datetime.strptime(date_str, date_fmt)
+    yy = str(dd.year)[2:4]
+    yyyy = str(dd.year)
+    doy = f'{dd.timetuple().tm_yday:03d}'
+
+    # file name
+    # transition to the IGS long product filename convention sicne GPS week 2238 (Nov 27, 2022)
+    # reference:
+    #   https://files.igs.org/pub/resource/guidelines/Guidelines_for_Long_Product_Filenames_in_the_IGS_v2.0.pdf
+    #   https://igs.org/products/#ionosphere
+    #   https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/atmospheric_products.html#iono
+    # The following use the IGS PDF file as the official reference, as the NASA website above (accessed on June 3, 2025)
+    #   did not describe the new convention correctly.
+    GPS_WEEK_2238 = dt.datetime(2022,11,27)
+    if dd >= GPS_WEEK_2238:
+        # Name convention since GPS week 2238
+        #   {YYYY}/{DDD}/{AAA}0OPS{TTT}_{YYYYDDDHHMM}_01D_SMP_CNT.INX.gz
+        #   where YYYY - 4-digit year
+        #         DDD  - 3-digit day of year
+        #         AAA  - analysis center name
+        #         TTT  - solution type identifier, FIN or RAP
+        #         SMP  - temporal product sampling resolution
+        #         CNT  - content type, GIM or ROT
+        SMP  = SOL_CODE2SMP[sol_code.upper()]
+        remote_name = f"{sol_code.upper()}0OPSFIN_{yyyy}{doy}0000_01D_{SMP}_GIM.INX.gz"
+    else:
+        # Name format before GPS week 2237
+        #   {YYYY}/{DDD}/{AAA}g{DDD}{#}.{YY}i.Z  for vertical TEC maps
+        #   {YYYY}/{DDD}/roti{DDD}0.{YY}f.Z      for Daily ROTI (rate of TEC index) product
+        #   where YYYY - 4-digit year
+        #         DDD  - 3-digit day of year
+        #         AAA  - analysis center name
+        #         #    - file number for the day, typically 0
+        #         YY   - 2-digit year
+        remote_name = f"{sol_code.lower()}g{doy}0.{yy}i.Z"
+
+    # full path / url
+    if tec_dir:
+        # local file path
+        tec_file = os.path.join(tec_dir, remote_name)
+        # get the decompressed file name for the local file
+        tec_file = os.path.splitext(tec_file)[0]
+    else:
+        # remote file url
+        url_dir = f"https://cddis.nasa.gov/archive/gnss/products/ionex/{yyyy}/{doy}"
+        tec_file = os.path.join(url_dir, remote_name)
+
+    return tec_file
+
+
+class SessionWithHeaderRedirection(requests.Session):
+    """Class to maintain headers after EarthData Login redirect.
+
+    This code was adapted from the examples available here:
+    https://urs.earthdata.nasa.gov/documentation/for_users/data_access/python
+    """
+
+    def __init__(self, username, password, auth_host=EARTH_DATA_AUTH_HOST):
+        """Initialize the SessionWithHeaderRedirection class."""
+        super().__init__()
+        self.auth = (username, password)
+        self.auth_host = auth_host
+
+
+def dload_ionex(date_str: str, tec_dir: str, sol_code='jpl', date_fmt='%Y%m%d'):
     """Download IGS vertical TEC files in IONEX format.
 
-    Parameters: date_str         - str, date in date_fmt format.
-                tec_dir          - str, local directory to save the downloaded files.
-                sol_code         - str, IGS TEC analysis center code.
-                date_fmt         - str, date format code
-    Returns:    fname_dst_uncomp - str, path to the local uncompressed IONEX file.
+    This code was adapted from the OPERA repo here:
+    https://github.com/opera-adt/disp-s1/blob/main/src/disp_s1/ionosphere.py
+
+    Parameters: date_str - str, date in date_fmt format.
+                tec_dir  - str, local directory to save the downloaded files.
+                sol_code - str, IGS TEC analysis center code.
+                date_fmt - str, date format code
+    Returns:    out_path - str, path to the local decompressed IONEX file.
     """
 
     # get the source (remote) and destination (local) file path/url
-    kwargs = dict(sol_code=sol_code, date_fmt=date_fmt)
-    fname_src = get_ionex_filename(date_str, tec_dir=None, **kwargs)
-    fname_dst = get_ionex_filename(date_str, tec_dir=tec_dir, **kwargs) + '.Z'
-    fname_dst_uncomp = fname_dst[:-2]
+    url = get_ionex_filename(date_str, tec_dir=None, sol_code=sol_code, date_fmt=date_fmt)
+    fpath = os.path.join(tec_dir, os.path.basename(url))
+    out_path = os.path.splitext(fpath)[0]
 
-    # download - compose cmd
-    cmd = f'wget --continue --auth-no-challenge "{fname_src}"'
-    if os.path.isfile(fname_dst) and os.path.getsize(fname_dst) > 1000:
-        cmd += ' --timestamping'
-    cmd += ' --quiet' if not print_msg else ''
+    # check existing local file
+    if os.path.isfile(fpath) and os.path.getsize(fpath) > 100e3:
+        return out_path
 
-    if print_msg:
-        print(cmd)
+    # download: grab authentication creditionals
+    print(f'downloading {url} ...')
+    try:
+        parsed = netrc.netrc().authenticators(EARTH_DATA_AUTH_HOST)
+        assert parsed is not None
+        username, _, password = parsed
+    except (FileNotFoundError, TypeError):
+        raise ValueError("No authentication credentials found in ~/.netrc!")
 
-    # downlload - run cmd in output dir
-    pwd = os.getcwd()
-    os.chdir(tec_dir)
-    os.system(cmd)
-    os.chdir(pwd)
+    # download: create session with the user credentials
+    session = SessionWithHeaderRedirection(username, password)
 
-    # uncompress
-    # if output file 1) does not exist or 2) smaller than 400k in size or 3) older
-    if (not os.path.isfile(fname_dst_uncomp)
-            or os.path.getsize(fname_dst_uncomp) < 600e3
-            or os.path.getmtime(fname_dst_uncomp) < os.path.getmtime(fname_dst)):
-        cmd = f"gzip --force --keep --decompress {fname_dst}"
-        if print_msg:
-            print(cmd)
-        os.system(cmd)
+    try:
+        # submit the request using the session
+        response = session.get(url, stream=True)
+        # raise an exception in case of http errors
+        response.raise_for_status()
 
-    return fname_dst_uncomp
+        with open(fpath, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                f.write(chunk)
+
+    except requests.exceptions.HTTPError as e:
+        # handle any errors here
+        print(e)
+
+    # decompress the downloaded file
+    # Note: the .Z format is based on the LZW compression used by the UNIX compress command, and Python
+    # does not have built-in support for this format, so we call the decompress command line tool first,
+    # then read the decompressed file in plain text.
+    # Run the command line tools if decompressed file:
+    #   1) does not exist or
+    #   2) smaller than 600k in size or
+    #   3) older than the compressed file.
+    if (not os.path.isfile(out_path)
+            or os.path.getsize(out_path) < 600e3
+            or os.path.getmtime(out_path) < os.path.getmtime(fpath)):
+        print(f'decompressing {fpath}')
+        subprocess.run(
+            ["gunzip", "--decompress", "--keep", str(fpath)], check=True, capture_output=True
+        )
+
+    return out_path
 
 
 #################################### Read ######################################
@@ -230,35 +348,14 @@ def interp_3d_maps(tec_maps, mins, lats, lons, utc_min, lat, lon, interp_method=
     return tec_val
 
 
-def get_ionex_filename(date_str, tec_dir=None, sol_code='jpl', date_fmt='%Y%m%d'):
-    """Get the file name of IONEX files.
-
-    Parameters: date_str - str, date in date_fmt format
-                tec_dir  - str, path to the local TEC file directory
-                           Set to None for the http path.
-                sol_code - str, GIM analysis center code in 3 digit
-                           https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/atmospheric_products.html
-                date_fmt - str, date format code
-                           https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes
-    Returns:    tec_file - str, path to the local uncompressed TEC file OR remote compressed TECfile
+def datetime_to_gps_week(dd):
+    """Calculates the GPS week number from a datetime object.
+    Parameters: dd       - datetime, a datetime object.
+    Returns:    gps_week - int, the GPS week number.
     """
-    dd = dt.datetime.strptime(date_str, date_fmt)
-    doy = f'{dd.timetuple().tm_yday:03d}'
-    yy = str(dd.year)[2:4]
-
-    # file name base
-    fname = f"{sol_code.lower()}g{doy}0.{yy}i.Z"
-
-    # full path
-    if tec_dir:
-        # local uncompressed file path
-        tec_file = os.path.join(tec_dir, fname[:-2])
-    else:
-        # remote compressed file path
-        url_dir = "https://cddis.nasa.gov/archive/gnss/products/ionex"
-        tec_file = os.path.join(url_dir, str(dd.year), doy, fname)
-
-    return tec_file
+    time_delta = dd - dt.datetime(1980, 1, 6)
+    gps_week = time_delta.days // 7
+    return gps_week
 
 
 def get_ionex_date(tec_file, date_fmt='%Y-%m-%d'):
@@ -355,13 +452,14 @@ def read_ionex(tec_file):
 def plot_ionex(tec_file, save_fig=False):
     """Plot the IONEX file as animation.
 
-    Parameters: tec_file - str, path to the local uncompressed IONEX file
+    Parameters: tec_file - str, path to the local decompressed IONEX file
                 save_fig - bool, save the animation to file
     Returns:    out_fig  - str, path to the output animation file
     """
     from cartopy import crs as ccrs
     from matplotlib import pyplot as plt
     from matplotlib.animation import FuncAnimation
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
 
     from mintpy.utils.map import draw_lalo_label, round_to_1
 
@@ -381,14 +479,14 @@ def plot_ionex(tec_file, save_fig=False):
 
     # init figure
     proj_obj = ccrs.PlateCarree()
-    fig, ax = plt.subplots(figsize=[9, 4], subplot_kw=dict(projection=proj_obj))
+    fig, ax = plt.subplots(figsize=[8, 4], subplot_kw=dict(projection=proj_obj))
     im = ax.imshow(
         tec_maps[0,:,:], vmin=0, vmax=vmax,
         extent=(W, E, S, N), origin='upper',
         animated=True, interpolation='nearest',
     )
 
-    ax.coastlines()
+    cl = ax.coastlines()
     draw_lalo_label(
         ax,
         geo_box=(W, N, E, S),
@@ -397,7 +495,9 @@ def plot_ionex(tec_file, save_fig=False):
     )
 
     # colorbar
-    cbar = fig.colorbar(im, shrink=0.5)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="1.5%", pad=0.05, axes_class=plt.Axes)
+    cbar = fig.colorbar(im, cax=cax)
     cbar.set_label('TECU')
     fig.tight_layout()
 
@@ -413,12 +513,13 @@ def plot_ionex(tec_file, save_fig=False):
 
         # update image & title
         im.set_array(tec_maps[ind,:,:])
+        cl.set_visible(True)
         dt_obj = date_obj + dt.timedelta(minutes=mins[ind])
         ax.set_title(f'{dt_obj.isoformat()} - {sol_name}')
-        return im,
+        return im, cl
 
     # play animation
-    ani = FuncAnimation(fig, animate, interval=200, blit=True, save_count=num_map)
+    ani = FuncAnimation(fig, animate, interval=200, blit=False, save_count=num_map)
 
     # output
     out_fig = f'{os.path.abspath(tec_file)}.gif'

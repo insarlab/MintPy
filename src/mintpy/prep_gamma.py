@@ -111,13 +111,14 @@ def get_lalo_ref(m_par_file, atr_dict={}):
 
 
 def extract_metadata4interferogram(fname, sensor_name=None, geo_meta=None):
-    """Read/extract attributes from Gamma .unw, .cor and .int file
+    """Read/extract attributes from Gamma .unw/cor/int/conncomp file
     Parameters: fname - str, Gamma interferogram filename or path,
                         i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
     Returns:    atr   - dict, Attributes dictionary
     """
     file_dir = os.path.dirname(fname)
     file_basename = os.path.basename(fname)
+    file_ext = os.path.splitext(fname)[1]
 
     rsc_file = fname+'.rsc'
     # if os.path.isfile(rsc_file):
@@ -135,7 +136,9 @@ def extract_metadata4interferogram(fname, sensor_name=None, geo_meta=None):
     m_date, s_date = date12.replace('-', '_').split('_')
     atr['DATE12'] = ptime.yymmdd(m_date)+'-'+ptime.yymmdd(s_date)
     lks = os.path.splitext(file_basename)[0].split(date12)[1]
-    #lks = os.path.splitext(file_basename.split(date12)[1])[0]
+    # for the *.unw.conncomp file, apply the splitext once again
+    if '.' in lks:
+        lks = os.path.splitext(lks)[0]
 
     # Read .off and .par file
     off_files = file_dir+'/*'+date12+lks+'.off'
@@ -171,6 +174,10 @@ def extract_metadata4interferogram(fname, sensor_name=None, geo_meta=None):
 
     # LAT/LON_REF1/2/3/4
     atr = get_lalo_ref(m_par_file, atr)
+
+    # DATA_TYPE
+    if file_ext == '.conncomp':
+        atr['DATA_TYPE'] = 'BYTE'
 
     # NCORRLOOKS
     if sensor_name:
@@ -380,7 +387,7 @@ def prep_gamma(inps):
     # loop for each file
     for fname in inps.file:
         # interferograms
-        if inps.file_ext in ['.unw', '.cor', '.int']:
+        if inps.file_ext in ['.unw', '.cor', '.int', '.conncomp']:
             extract_metadata4interferogram(fname, sensor_name=inps.sensor, geo_meta=geo_meta)
 
         # geometry - geo

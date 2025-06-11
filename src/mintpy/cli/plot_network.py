@@ -114,7 +114,7 @@ def cmd_line_parse(iargs=None):
     # save argv (to check the manually specified arguments)
     # use iargs        for python call
     # use sys.argv[1:] for command line call
-    inps.argv = iargs if iargs else sys.argv[1:]
+    inps.argv = iargs or sys.argv[1:]
 
     # check: input file type
     if inps.file.endswith(('.h5','.he5')):

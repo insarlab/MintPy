@@ -170,7 +170,7 @@ def run_asc_desc2horz_vert(inps):
     lon_step = float(atr_list[0]['X_STEP'])
     length = int(round((S - N) / lat_step))
     width  = int(round((E - W) / lon_step))
-    print(f'overlaping area in SNWE: {(S, N, W, E)}')
+    print(f'overlapping area in SNWE: {(S, N, W, E)}')
 
 
     ## 2. read LOS data and geometry
