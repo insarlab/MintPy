@@ -1315,7 +1315,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             elif 20 < num_subplot <= 50:
                 subplot_title = title_str.replace('_','\n').replace('-','\n')
             else:
-                subplot_title = f'{title_ind}'
+                subplot_title = f'{title_ind}\n{title_str}'
 
         # plot title
         if subplot_title:
