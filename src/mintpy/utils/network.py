@@ -532,18 +532,18 @@ def coherence_matrix(date12_list, coh_list, diag_value=np.nan, fill_triangle='bo
                       1.0 for diagonal elements
     """
     # Get date list
-    date12_list = ptime.yymmdd_date12(date12_list)
+    date12_list = ptime.yyyymmdd_date12(date12_list)
     if not date_list:
-        m_dates = [date12.split('-')[0] for date12 in date12_list]
-        s_dates = [date12.split('-')[1] for date12 in date12_list]
+        m_dates = [date12.split('_')[0] for date12 in date12_list]
+        s_dates = [date12.split('_')[1] for date12 in date12_list]
         date_list = sorted(list(set(m_dates + s_dates)))
-    date_list = ptime.yymmdd(date_list)
+    date_list = ptime.yyyymmdd(date_list)
     date_num = len(date_list)
 
     coh_mat = np.zeros([date_num, date_num])
     coh_mat[:] = np.nan
     for date12 in date12_list:
-        date1, date2 = date12.split('-')
+        date1, date2 = date12.split('_')
         idx1 = date_list.index(date1)
         idx2 = date_list.index(date2)
         coh = coh_list[date12_list.index(date12)]
