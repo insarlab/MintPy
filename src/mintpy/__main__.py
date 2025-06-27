@@ -413,6 +413,13 @@ def get_save_roipac_parser(subparsers=None):
     return parser
 
 
+def get_save_explorer_parser(subparsers=None):
+    from mintpy.cli import save_explorer
+    parser = save_explorer.create_parser(subparsers)
+    parser.set_defaults(func=save_explorer.main)
+    return parser
+
+
 def get_smallbaselineApp_parser(subparsers=None):
     from mintpy.cli import smallbaselineApp
     parser = smallbaselineApp.create_parser(subparsers)
@@ -660,6 +667,7 @@ def get_parser():
     get_save_kmz_parser(sp)
     get_save_qgis_parser(sp)
     get_save_roipac_parser(sp)
+    get_save_explorer_parser(sp)
 
     # visualization
     get_info_parser(sp)
