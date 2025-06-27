@@ -1788,9 +1788,11 @@ def read_gmtsar_prm(fname, delimiter='='):
     prmDict = {}
     for line in lines:
         c = [i.strip() for i in line.strip().replace('\t',' ').split(delimiter, 1)]
-        key = c[0]
-        value = c[1].replace('\n', '').strip()
-        prmDict[key] = value
+        # ignore lines with empty key values
+        if len(c) >= 2:
+            key = c[0]
+            value = c[1].replace('\n', '').strip()
+            prmDict[key] = value
 
     prmDict = _attribute_gmtsar2roipac(prmDict)
     prmDict = standardize_metadata(prmDict)
@@ -1838,12 +1840,18 @@ def _attribute_gmtsar2roipac(prm_dict_in):
         prm_dict['RANGE_PIXEL_SIZE'] = SPEED_OF_LIGHT / value / 2.0
 
     # SC_clock_start/stop -> CENTER_LINE_TUC
-    dt_center = (float(prm_dict['SC_clock_start']) + float(prm_dict['SC_clock_stop'])) / 2.0
-    t_center = dt_center - int(dt_center)
-    prm_dict['CENTER_LINE_UTC'] = str(t_center * 24. * 60. * 60.)
+    key = 'SC_clock_start'
+    if key in prm_dict_in.keys():
+        dt_start = float(prm_dict['SC_clock_start'])
+        dt_stop = float(prm_dict['SC_clock_stop'])
+        dt_center = (dt_start + dt_stop) / 2.0
+        t_center = dt_center - int(dt_center)
+        prm_dict['CENTER_LINE_UTC'] = str(t_center * 24. * 60. * 60.)
 
     # SC_identity -> PLATFORM
-    prm_dict['PLATFORM'] = GMTSAR_SENSOR_ID2NAME[int(prm_dict['SC_identity'])]
+    key = 'SC_identity'
+    if key in prm_dict_in.keys():
+        prm_dict['PLATFORM'] = GMTSAR_SENSOR_ID2NAME[int(prm_dict[key])]
 
     return prm_dict
 
