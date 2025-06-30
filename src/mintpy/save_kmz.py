@@ -480,7 +480,7 @@ def save_kmz(inps):
     inps.norm = colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
 
     # output filename
-    inps.fig_title = pp.auto_figure_title(inps.file, inps.dset, vars(inps))
+    inps.fig_title = pp.auto_figure_title(inps.file, inps.dset, vars(inps)).replace(' ', '')
     inps.outfile = inps.outfile if inps.outfile else f'{inps.fig_title}.kmz'
     inps.outfile = os.path.abspath(inps.outfile)
 

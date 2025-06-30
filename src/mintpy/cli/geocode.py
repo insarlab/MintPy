@@ -22,7 +22,8 @@ EXAMPLE = """example:
   geocode.py velocity.h5 timeseries.h5 -t smallbaselineApp.cfg --outdir ./geo --update
 
   # geocode file using ISCE-2 lat/lon.rdr file
-  geocode.py filt_fine.int --lat-file ../../geom_reference/lat.rdr --lon-file ../../geom_reference/lon.rdr
+  multilook.py lat.rdr.full.vrt lon.rdr.full.vrt -x 9 -y 3
+  geocode.py filt_fine.int --lat-file lat.rdr --lon-file lon.rdr
 
   # radar-code file in geo coordinates
   geocode.py swbdLat_S02_N01_Lon_W092_W090.wbd -l geometryRadar.h5 -o waterMask.rdr --geo2radar
