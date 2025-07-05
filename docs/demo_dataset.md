@@ -58,11 +58,11 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/templates/RidgecrestSenDT71.txt
 ### Sentinel-1 on San Francisco Bay with GMTSAR ###
 
 + Area: San Francisco Bay, California, USA
-+ Data: Sentinel-1 A/B descending track 42 during December 2014 - June 2024 (333 acquisitoins; [Zenodo](https://zenodo.org/records/12773014))
++ Data: Sentinel-1 A/B descending track 42 during December 2014 - June 2024 (333 acquisitions; [Zenodo](https://zenodo.org/records/15814132))
 + Size: ~2.3 GB
 
 ```bash
-wget https://zenodo.org/records/12773014/files/SanFranBaySenD42.tar.xz
+wget https://zenodo.org/records/15814132/files/SanFranBaySenD42.tar.xz
 tar -xvJf SanFranBaySenD42.tar.xz
 cd SanFranBaySenD42
 smallbaselineApp.py ${MINTPY_HOME}/docs/templates/SanFranBaySenD42.txt

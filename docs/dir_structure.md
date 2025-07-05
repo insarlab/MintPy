@@ -487,6 +487,7 @@ Below is a recipe to prepare a stack of interferograms from Sentinel-1:
 ```
 $DATA_DIR/SanFranBaySenD42
 ├── baseline_table.dat
+├── config.tops.txt             # configuration file for p2p_processing.csh
 ├── supermaster.PRM
 ├── geometry
 |   ├── dem.grd
