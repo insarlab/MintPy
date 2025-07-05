@@ -192,17 +192,21 @@ def extract_gmtsar_metadata(meta_file, unw_file, template_file, rsc_file=None, u
 
     # 1. read *.PRM file
     # prm_file = get_prm_files(ifg_dir)[0]
+    meta_file = os.path.abspath(meta_file)
     print(f'extract metadata from metadata file: {meta_file}')
     meta = readfile.read_gmtsar_prm(meta_file)
     meta['PROCESSOR'] = 'gmtsar'
 
     # 2. grab A/RLOOKS from config or template file
-    config_file = os.path.abspath(os.path.join(os.path.dirname(meta_file), 'config.tops.txt'))
+    # config file name convention: config.{SAT}.txt, where SAT can be ERS, ENVI, ALOS, ALOS_SLC,
+    # ALOS2, ALOS2_SCAN, S1_STRIP, S1_TOPS, CSK_RAW, CSK_SLC, CSG, TSX, RS2, GF3, LT1
     template = readfile.read_template(template_file)
+    config_file = os.path.join(os.path.dirname(meta_file), 'config.*.txt')
+    config_files = glob.glob(config_file)
 
-    if os.path.isfile(config_file):
+    if len(config_files) >= 1:
         # read config file
-        config = readfile.read_gmtsar_prm(config_file)
+        config = readfile.read_gmtsar_prm(config_files[0])
         filter_wvl = float(config.get('filter_wavelength', 200))
         # calc a/rlooks
         # Note from Xiaohua Xu: GMTSAR is applying Gaussian filtering, instead of multilooing,
@@ -212,7 +216,7 @@ def extract_gmtsar_metadata(meta_file, unw_file, template_file, rsc_file=None, u
         meta['RLOOKS'] = np.rint(0.3 * filter_wvl / meta['RANGE_PIXEL_SIZE']).astype(int)
 
     else:
-        print(f'WARNING: No config file found in {config_file}!')
+        print(f'WARNING: No config file found for {config_file}!')
         # read from template file
         for key in ['ALOOKS', 'RLOOKS']:
             if key in template.keys():
