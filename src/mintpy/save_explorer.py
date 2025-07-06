@@ -10,8 +10,8 @@ import os
 import numpy as np
 
 from mintpy.objects import timeseries
-from mintpy.utils import ptime, readfile
 from mintpy.save_gmt import write_grd_file
+from mintpy.utils import ptime, readfile
 
 
 ####################################################################################
