@@ -101,7 +101,7 @@ def get_geo_lat_lon(atr):
     return Y, X
 
 
-def write_grd_file(data, atr, out_file=None):
+def write_grd_file(data, atr, out_file=None, print_msg=True):
     """Write GMT .grd file for input data matrix, using giant._gmt module.
     Parameters: data     - 2D np.ndarray in int/float, data matrix to write
                 atr      - dict, attributes of input data matrix
@@ -112,7 +112,8 @@ def write_grd_file(data, atr, out_file=None):
     lats, lons = get_geo_lat_lon(atr)
 
     # writing
-    print('writing >>> '+out_file)
+    if print_msg:
+        print('writing >>> '+out_file)
     write_gmt_simple(
         lons=lons,
         lats=np.flipud(lats),
