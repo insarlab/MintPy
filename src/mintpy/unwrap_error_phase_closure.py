@@ -165,15 +165,13 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     if mask_file is not None:
         mask = readfile.read(mask_file)[0]
         num_nonzero_closure[mask == 0] = np.nan
-        num_nonzero_closure[np.isnan(mask)] = np.nan
-        print('mask out pixels with zero/nan in file:', mask_file)
+        print('mask out pixels with zero in file:', mask_file)
 
     coh_file = os.path.join(out_dir, 'avgSpatialCoh.h5')
     if os.path.isfile(coh_file):
         coh = readfile.read(coh_file)[0]
         num_nonzero_closure[coh == 0] = np.nan
-        num_nonzero_closure[np.isnan(coh)] = np.nan
-        print('mask out pixels with zero/nan in file:', coh_file)
+        print('mask out pixels with zero in file:', coh_file)
 
     num_nonzero_closure[num_nonzero_closure == C.shape[0]] = np.nan
     print('mask out invalid pixels (values == num of triplets)')
