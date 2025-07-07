@@ -173,6 +173,9 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
         num_nonzero_closure[coh == 0] = np.nan
         print('mask out pixels with zero in file:', coh_file)
 
+    num_nonzero_closure[num_nonzero_closure == C.shape[0]] = np.nan
+    print('mask out invalid pixels (values == num of triplets)')
+
     # write to disk
     print('write to file', out_file)
     meta = dict(stack_obj.metadata)
