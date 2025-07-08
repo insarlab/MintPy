@@ -2,14 +2,12 @@ The displacement time-series result can be exported as a QGIS-compatible format 
 
 ### 1. QGIS with [InSAR Explorer](https://insar-explorer.readthedocs.io/) ###
 
-The InSAR Explorer plugin supports both the GRD format and the shapefile format.
+The InSAR Explorer plugin supports both the GRD format and the shapefile format. For more details, please refer to the [InSAR Explorer documentation](https://insar-explorer.readthedocs.io/).
 
 #### a. Setup ####
 
 1. Download and install [QGIS](https://qgis.org/en/site/) if you have not done so.
-2. Install the plugin:
-  - Install within QGIS via "Plugins -> Manage and Install Plugins", then search for "InSAR Explorer".
-  - Alternatively, download the plugin as a *.zip file from [the plugin page](https://plugins.qgis.org/plugins/insar_explorer-dev/), and install it through "Plugins -> Manage and Install Plugins -> Install from ZIP".
+2. Install the plugin: Install within QGIS via "Plugins -> Manage and Install Plugins", then search for "InSAR Explorer". Alternatively, download the plugin as a *.zip file from [the plugin page](https://plugins.qgis.org/plugins/insar_explorer-dev/), and install it through "Plugins -> Manage and Install Plugins -> Install from ZIP".
 3. Launch the plugin: Access it from the toolbar or through "Plugins -> InSAR Explorer -> InSAR Explorer".
 
 #### b. Usage for GRD files ####
@@ -52,10 +50,6 @@ ramp_color('RdBu', scale_linear(VEL, -20, 20, 0, 1))
   <img width="1000" src="https://insarlab.github.io/figs/docs/mintpy/QGIS-InSAR-Explorer-point.png">
 </p>
 
-### d. More information ###
-
-For more details on using the plugin, please refer to the [InSAR Explorer documentation](https://insar-explorer.readthedocs.io/).
-
 ### 2. QGIS with [PS Time Series Viewer](https://plugins.qgis.org/plugins/pstimeseries/)
 
 The PS Time Series Viewer plugin supports the shapefile format only.
@@ -63,9 +57,7 @@ The PS Time Series Viewer plugin supports the shapefile format only.
 #### a. Setup
 
 1. Download and install [QGIS](https://qgis.org/en/site/) if you have not done so.
-2. Install the plugin:
-  - Install within QGIS via "Plugins -> Manage and Install Plugins", then search "PS Time Series Viewer".
-  - Alternatively, download the plugin as a *.zip file from [the plugin page](https://plugins.qgis.org/plugins/pstimeseries/), and install it through “Plugins -> Manage and Install Plugins -> Install from ZIP”.
+2. Install the plugin: Install within QGIS via "Plugins -> Manage and Install Plugins", then search "PS Time Series Viewer". Alternatively, download the plugin as a *.zip file from [the plugin page](https://plugins.qgis.org/plugins/pstimeseries/), and install it through “Plugins -> Manage and Install Plugins -> Install from ZIP”.
 
 #### b. Usage
 
