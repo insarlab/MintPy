@@ -135,6 +135,8 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
                 meta['relative_orbit'] = ((abs_orbit - 73) % 175) + 1
             elif ref_granule.startswith('S1B'):
                 meta['relative_orbit'] = ((abs_orbit - 202) % 175) + 1
+            elif ref_granule.startswith('S1C'):
+                meta['relative_orbit'] = ((abs_orbit - 172) % 175) + 1
             else:
                 # add equation for Sentinel-C/D in the future
                 raise ValueError('Un-recognized Sentinel-1 satellite from {ref_granule}!')
