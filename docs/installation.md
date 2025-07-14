@@ -73,7 +73,7 @@ Install <a href="https://github.com/conda-forge/miniforge">miniforge</a> if you 
 # for macOS, use Miniforge3-MacOSX-x86_64.sh instead.
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 bash Miniforge3-Linux-x86_64.sh -b -p ~/tools/miniforge
-~/tools/miniforge/bin/mamba init bash
+~/tools/miniforge/bin/mamba shell init
 ```
 
 Install dependencies into a new environment, e.g. named "insar":
