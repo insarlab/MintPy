@@ -164,7 +164,7 @@ def run_asc_desc2horz_vert(inps):
     """
 
     ## 1. calculate the overlapping area in lat/lon
-    atr_list = [readfile.read_attribute(fname, datasetName=inps.ds_name) for fname in inps.file]
+    atr_list = [readfile.read_attribute(fname, datasetName=inps.ds_name[0]) for fname in inps.file]
     S, N, W, E = get_overlap_lalo(atr_list)
     lat_step = float(atr_list[0]['Y_STEP'])
     lon_step = float(atr_list[0]['X_STEP'])
@@ -176,6 +176,7 @@ def run_asc_desc2horz_vert(inps):
     ## 2. read LOS data and geometry
     num_file = len(inps.file)
     dlos = np.zeros((num_file, length, width), dtype=np.float32)
+    dataset_order = len(inps.ds_name)
     if inps.geom_file:
         los_inc_angle = np.zeros((num_file, length, width), dtype=np.float32)
         los_az_angle  = np.zeros((num_file, length, width), dtype=np.float32)
@@ -190,7 +191,12 @@ def run_asc_desc2horz_vert(inps):
         box = (x0, y0, x0 + width, y0 + length)
 
         # read data
-        dlos[i, :] = readfile.read(fname, box=box, datasetName=inps.ds_name)[0]
+        if dataset_order > 1:
+            for i in range(dataset_order):
+                if inps.file.index(fname) == i:
+                    dlos[i, :] = readfile.read(fname, box=box, datasetName=inps.ds_name[i])[0]
+        else:
+            dlos[i, :] = readfile.read(fname, box=box, datasetName=inps.ds_name)[0]
         msg = f'{inps.ds_name} ' if inps.ds_name else ''
         print(f'read {msg} from file: {fname}')
 
