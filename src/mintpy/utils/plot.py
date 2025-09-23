@@ -388,9 +388,14 @@ def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=Tru
 
 
 def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_num_step=20, print_msg=True):
+    finite_values = np.ma.masked_invalid(data).compressed()
+    if finite_values.size == 0:
+        if print_msg:
+            print('WARNING: no finite pixels found; using neutral display limits.')
+        return 256, [0.0, 0.0], None
 
     # max step size / min step number for a uniform colormap
-    unique_values = np.unique(data[~np.isnan(data) * np.isfinite(data)])
+    unique_values = np.unique(finite_values)
     min_val = np.min(unique_values).astype(float)
     max_val = np.max(unique_values).astype(float)
 
