@@ -105,12 +105,9 @@ class progressBar:
             suffix = ' '+suffix
 
         # Figure out the new percent done (round to an integer)
-        diffFromMin = float(self.amount - self.min)
-        if self.span == 0:
-            percentDone = 100
-        else:
-            percentDone = (diffFromMin / float(self.span)) * 100.0
-        percentDone = int(np.round(percentDone))
+        diffFromMin = self.amount - self.min
+        percentDone = 100 if self.span == 0 else (diffFromMin / self.span) * 100
+        percentDone = round(percentDone)
         percentDone = max(0, min(100, percentDone))
 
         # Figure out how many hash bars the percentage should be
