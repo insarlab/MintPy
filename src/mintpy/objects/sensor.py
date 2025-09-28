@@ -24,6 +24,7 @@ SENSOR_NAME_VARIATION = {
     'ksat5' : ['ksat5', 'kompsat5', 'kompsat', 'kmps5'],
     'lt1'   : ['lt1', 'lt', 'lutan', 'lutan1'],
     'ni'    : ['ni', 'nisar'],
+    'saocom': ['saocom', 'sao', 'saocom1a', 'saocom1b'],
     'rs1'   : ['rs1', 'rsat', 'rsat1', 'radarsat', 'radarsat1'],
     'rs2'   : ['rs2', 'rsat2', 'radarsat2'],
     'rcm'   : ['rcm', 'rsatc', 'radarsat-constellation', 'radarsat-constellation-mission'],
@@ -129,7 +130,7 @@ def get_unavco_mission_name(meta_dict):
         return mission_name
 
     # Convert to UNAVCO Mission name
-    ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
+    ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2, SAOCOM
     if value.startswith(('alos', 'palsar')):
         if value.endswith('2'):
             mission_name = 'ALOS2'
@@ -160,6 +161,9 @@ def get_unavco_mission_name(meta_dict):
 
     elif value.startswith(('tsx', 'tdx', 'terra', 'tandem')):
         mission_name = 'TSX'
+
+    elif value.startswith(('saocom', 'sao')):
+        mission_name = 'SAOCOM'
 
     elif value.startswith('uav'):
         mission_name = 'UAV'
@@ -638,7 +642,7 @@ SAOCOM = {
     'orbit_inclination'          : 97.86,     # deg
     'repeat_cycle'               : 16,        # day, single satellite
     # sar / antenna
-    'carrrier_frequency'         : 1.27414e9, # Hz
+    'carrier_frequency'          : 1.27414e9, # Hz
     'antenna_length'             : 10,        # m
     'pulse_repetition_frequency' : 4545,      # Hz
     'sampling_frequency'         : 50.0e6,    # Hz
@@ -769,6 +773,7 @@ SENSOR_DICT = {
     'lt1'   : LT1,
     'uav'   : UAV_L,
     'ni'    : NISAR_L,
+    'saocom': SAOCOM,
     # P-band
     'bio'   : BIOMASS,
 }
