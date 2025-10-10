@@ -11,7 +11,8 @@ jobs:
     resource_class: large
 
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - run:
           name: Setting Up Environment with Miniforge
           command: |
