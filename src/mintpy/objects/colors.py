@@ -417,8 +417,8 @@ def save_cpt_file(colormap, cpt_file, cmap_lut=256, vmin=0, vmax=1, print_msg=Tr
             # Normalize to [0, 1] and get RGBA
             c1 = np.array(colormap(norm(values[i]))[:3]) * 255
             c2 = np.array(colormap(norm(values[i + 1]))[:3]) * 255
-            f.write(f"{values[i]:.6f} {int(c1[0])} {int(c1[1])} {int(c1[2])} "
-                    f"{values[i+1]:.6f} {int(c2[0])} {int(c2[1])} {int(c2[2])}\n")
+            f.write(f"{values[i]:.6f} {int(round(c1[0]))} {int(round(c1[1]))} {int(round(c1[2]))} "
+                    f"{values[i+1]:.6f} {int(round(c2[0]))} {int(round(c2[1]))} {int(round(c2[2]))}\n")
 
         # Optional: NaN color
         f.write("B 0 0 0\n")       # Background
