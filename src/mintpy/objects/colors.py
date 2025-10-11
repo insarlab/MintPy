@@ -396,6 +396,10 @@ def save_cpt_file(colormap, cpt_file, cmap_lut=256, vmin=0, vmax=1, print_msg=Tr
     Returns:    cpt_file - str, path to the output CPT file
     Examples:   save_cpt_file("viridis", "viridis.cpt", n=256, vmin=0, vmax=1)
     """
+    # check inputs
+    if vmin >= vmax:
+        raise ValueError(f"Invalid vmin/vmax: vmin ({vmin}) must be less than vmax ({vmax}).")
+
     # Get the colormap object
     colormap = plt.get_cmap(colormap) if isinstance(colormap, str) else colormap
 
