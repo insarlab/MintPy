@@ -305,12 +305,11 @@ def read_cpt_file(cpt_file, cmap_lut=256, print_msg=False):
     # list of string --> x/r/g/b
     x, r, g, b = [], [], [], []
     colorModel = "RGB"
-    for line in lines:
-        ls = re.split(' |\t|\n|/', line)
-
-        # skip empty lines
-        if not ls:
-            continue
+        for line in lines:
+            # skip lines containing only whitespace or tabs
+            if not line.strip():
+                continue
+            ls = re.split(' |\t|\n|/', line)
 
         # remove empty element
         ls = [i for i in ls if i]
