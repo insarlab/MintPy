@@ -325,7 +325,7 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
 
     # Calculate Distance along the line
     earth_radius = 6.3781e6    # in meter
-    dist_unit = 'm'
+    #dist_unit = 'm'
     if 'Y_FIRST' in atr.keys():
         y_step = float(atr['Y_STEP'])
         x_step = float(atr['X_STEP'])
@@ -341,7 +341,7 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
         except KeyError:
             x_step = 1
             y_step = 1
-            dist_unit = 'pixel'
+            #dist_unit = 'pixel'
     dist_line = np.hypot((xs - x0) * x_step,
                          (ys - y0) * y_step)
 
@@ -355,7 +355,7 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
     transect['X'] = xs[mask]
     transect['value'] = z_line[mask]
     transect['distance'] = dist_line[mask]
-    transect['distance_unit'] = dist_unit
+    #transect['distance_unit'] = dist_unit
 
     return transect
 
