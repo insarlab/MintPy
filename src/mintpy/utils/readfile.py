@@ -353,6 +353,8 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     if not box:
         box = (0, 0, width, length)
+    elif box[0] < 0 or box[1] < 0 or box[2] > width or box[3] > length:
+        raise ValueError(f'Input box {tuple(box)} is NOT within the data size range (0, 0, {width}, {length})!')
 
     # read data
     kwargs = dict(

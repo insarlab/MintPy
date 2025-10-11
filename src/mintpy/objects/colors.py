@@ -5,7 +5,7 @@
 # Author: Zhang Yunjun, 2019                               #
 ############################################################
 # Recommend import:
-#     from mintpy.objects.colors import ColormapExt
+#     from mintpy.objects.colors import ColormapExt, save_cpt_file
 #     from mintpy.utils import plot as pp
 #     cmap = pp.ColormapExt('cmy').colormap
 
@@ -18,7 +18,7 @@ import re
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import LinearSegmentedColormap, to_rgb
+from matplotlib.colors import LinearSegmentedColormap, Normalize, to_rgb
 
 import mintpy
 
@@ -200,8 +200,6 @@ class ColormapExt(ScalarMappable):
                      '#bf86f6', '#c67ff6', '#cc79f6', '#d273f6', '#d86df6', '#de67f6',
                      '#e561f6', '#e967ec', '#ed6de2', '#f173d7']
             colormap = LinearSegmentedColormap.from_list('dismph', clist, N=cmap_lut)
-            #colormap = self.cmap_map(lambda x: x/2 + 0.5, colormap)  # brighten colormap
-            #colormap = self.cmap_map(lambda x: x*0.75, colormap)     # darken colormap
             colormap.set_bad('w', 0.0)
 
         elif cmap_name == 'cmy':
@@ -273,143 +271,197 @@ class ColormapExt(ScalarMappable):
             if os.path.isfile(cpt_file):
                 break
 
-        colormap = self.read_cpt_file(cpt_file, cmap_lut=cmap_lut)
+        colormap = read_cpt_file(cpt_file, cmap_lut=cmap_lut)
 
         if reverse_colormap:
             colormap = colormap.reversed()
         return colormap
 
-
-    @staticmethod
-    def read_cpt_file(cpt_file, cmap_lut=256):
-        """Read *.cpt file into colorDict
-        Modified from Scipy Cookbook originally written by James Boyle.
-        Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_Loading_a_colormap_dynamically.html
-        """
-        if not os.path.isfile(cpt_file):
-            raise FileNotFoundError(f"file {cpt_file} not found")
-
-        # read file into list of strings
-        with open(cpt_file) as f:
-            lines = f.readlines()
-
-        # list of string --> x/r/g/b
-        x, r, g, b = [], [], [], []
-        colorModel = "RGB"
-        for line in lines:
-            ls = re.split(' |\t|\n|/', line)
-
-            # skip empty lines
-            if not ls:
-                continue
-
-            # remove empty element
-            ls = [i for i in ls if i]
-
-            # parse header info
-            if line[0] == "#":
-                if ls[-1] == "HSV":
-                    colorModel = "HSV"
-                    continue
-                else:
-                    continue
-
-            # skip BFN info
-            if ls[0] in ["B", "F", "N"]:
-                continue
-
-            # convert color name (in GMT cpt file sometimes) to rgb values
-            if not isnumber(ls[1]):
-                ls0 = list(ls) + [0,0]
-                ls0[1:4] = [i*255. for i in to_rgb(ls[1])]
-                ls0[4:] = ls[2:]
-                ls = list(ls0)
-
-            if not isnumber(ls[5]):
-                ls0 = list(ls) + [0,0]
-                ls0[5:8] = [i*255. for i in to_rgb(ls[5])]
-                ls = list(ls0)
-
-            # convert str to float
-            ls = [float(i) for i in ls]
-
-            # parse color vectors
-            x.append(ls[0])
-            r.append(ls[1])
-            g.append(ls[2])
-            b.append(ls[3])
-
-            # save last row
-            xtemp = ls[4]
-            rtemp = ls[5]
-            gtemp = ls[6]
-            btemp = ls[7]
-        x.append(xtemp)
-        r.append(rtemp)
-        g.append(gtemp)
-        b.append(btemp)
-
-        x = np.array(x, np.float32)
-        r = np.array(r, np.float32)
-        g = np.array(g, np.float32)
-        b = np.array(b, np.float32)
-
-        if colorModel == "HSV":
-            # convert HSV to RGB
-            for i in range(r.shape[0]):
-                r[i], g[i], b[i] = colorsys.hsv_to_rgb(r[i]/360., g[i], b[i])
-        elif colorModel == "RGB":
-            r /= 255.
-            g /= 255.
-            b /= 255.
-
-        # x/r/g/b --> colorDict
-        red, blue, green = [], [], []
-        xNorm = (x - x[0]) / (x[-1] - x[0])
-        for i in range(len(x)):
-            red.append((xNorm[i], r[i], r[i]))
-            green.append((xNorm[i], g[i], g[i]))
-            blue.append((xNorm[i], b[i], b[i]))
-
-        # return colormap
-        cmap_name = os.path.splitext(os.path.basename(cpt_file))[0]
-        colorDict = {"red":tuple(red), "green":tuple(green), "blue":tuple(blue)}
-        colormap = LinearSegmentedColormap(cmap_name, colorDict, N=cmap_lut)
-        return colormap
-
-
-    @staticmethod
-    def cmap_map(function, cmap):
-        """ Applies function (which should operate on vectors of shape 3: [r, g, b]), on colormap cmap.
-        This routine will break any discontinuous points in a colormap.
-        Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_ColormapTransformations.html
-        """
-        cdict = cmap._segmentdata
-        step_dict = {}
-
-        # First get the list of points where the segments start or end
-        for key in ('red', 'green', 'blue'):
-            step_dict[key] = list(map(lambda x: x[0], cdict[key]))
-        step_list = sum(step_dict.values(), [])
-        step_list = np.array(list(set(step_list)))
-
-        # Then compute the LUT, and apply the function to the LUT
-        reduced_cmap = lambda step : np.array(cmap(step)[0:3])
-        old_LUT = np.array(list(map(reduced_cmap, step_list)))
-        new_LUT = np.array(list(map(function, old_LUT)))
-
-        # Now try to make a minimal segment definition of the new LUT
-        cdict = {}
-        for i, key in enumerate(['red','green','blue']):
-            this_cdict = {}
-            for j, step in enumerate(step_list):
-                if step in step_dict[key]:
-                    this_cdict[step] = new_LUT[j, i]
-                elif new_LUT[j,i] != old_LUT[j, i]:
-                    this_cdict[step] = new_LUT[j, i]
-            colorvector = list(map(lambda x: x + (x[1], ), this_cdict.items()))
-            colorvector.sort()
-            cdict[key] = colorvector
-        return LinearSegmentedColormap('colormap',cdict,1024)
-
 ################################## ColormapExt class end ########################################
+
+
+
+################################## Utility Functions ############################################
+
+def read_cpt_file(cpt_file, cmap_lut=256, print_msg=False):
+    """Read *.cpt file into matplotlib colormap object.
+    Modified from Scipy Cookbook originally written by James Boyle.
+    Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_Loading_a_colormap_dynamically.html
+
+    Parameters: cpt_file - str, path to the GMT-compatible CPT file
+                cmap_lut - int, number of color steps
+    Returns:    colormap - matplotlib colormap object
+    """
+
+    if not os.path.isfile(cpt_file):
+        raise FileNotFoundError(f"file {cpt_file} not found")
+
+    # read file into list of strings
+    if print_msg:
+        print(f'read CPT file: {cpt_file}')
+    with open(cpt_file) as f:
+        lines = f.readlines()
+
+    # list of string --> x/r/g/b
+    x, r, g, b = [], [], [], []
+    colorModel = "RGB"
+    for line in lines:
+        # skip lines containing only whitespace or tabs
+        if not line.strip():
+            continue
+        ls = re.split(' |\t|\n|/', line)
+
+        # remove empty element
+        ls = [i for i in ls if i]
+
+        # parse header info
+        if line[0] == "#":
+            if ls[-1] == "HSV":
+                colorModel = "HSV"
+                continue
+            else:
+                continue
+
+        # skip BFN info
+        if ls[0] in ["B", "F", "N"]:
+            continue
+
+        # convert color name (in GMT cpt file sometimes) to rgb values
+        if not isnumber(ls[1]):
+            ls0 = list(ls) + [0,0]
+            ls0[1:4] = [i*255. for i in to_rgb(ls[1])]
+            ls0[4:] = ls[2:]
+            ls = list(ls0)
+        if not isnumber(ls[5]):
+            ls0 = list(ls) + [0,0]
+            ls0[5:8] = [i*255. for i in to_rgb(ls[5])]
+            ls = list(ls0)
+
+        # convert str to float
+        ls = [float(i) for i in ls]
+
+        # parse color vectors
+        x.append(ls[0])
+        r.append(ls[1])
+        g.append(ls[2])
+        b.append(ls[3])
+
+        # save last row
+        xtemp = ls[4]
+        rtemp = ls[5]
+        gtemp = ls[6]
+        btemp = ls[7]
+
+    x.append(xtemp)
+    r.append(rtemp)
+    g.append(gtemp)
+    b.append(btemp)
+    x = np.array(x, np.float32)
+    r = np.array(r, np.float32)
+    g = np.array(g, np.float32)
+    b = np.array(b, np.float32)
+
+    if colorModel == "HSV":
+        # convert HSV to RGB
+        for i in range(r.shape[0]):
+            r[i], g[i], b[i] = colorsys.hsv_to_rgb(r[i]/360., g[i], b[i])
+    elif colorModel == "RGB":
+        r /= 255.
+        g /= 255.
+        b /= 255.
+
+    # x/r/g/b --> color_dict
+    red, blue, green = [], [], []
+    xNorm = (x - x[0]) / (x[-1] - x[0])
+    for i in range(len(x)):
+        red.append((xNorm[i], r[i], r[i]))
+        green.append((xNorm[i], g[i], g[i]))
+        blue.append((xNorm[i], b[i], b[i]))
+
+    # return colormap
+    cmap_name = os.path.splitext(os.path.basename(cpt_file))[0]
+    color_dict = {"red":tuple(red), "green":tuple(green), "blue":tuple(blue)}
+    colormap = LinearSegmentedColormap(cmap_name, color_dict, N=cmap_lut)
+
+    return colormap
+
+
+def save_cpt_file(colormap, cpt_file, cmap_lut=256, vmin=0, vmax=1, print_msg=True):
+    """Save matplotlib colormap object into GMT-compatible CPT file.
+
+    Parameters: colormap - matplotlib colormap object
+                cpt_file - str, path to the output CPT file
+                cmap_lut - int, number of color steps
+                vmin/max - float, data range for the CPT file
+    Returns:    cpt_file - str, path to the output CPT file
+    Examples:   save_cpt_file("viridis", "viridis.cpt", n=256, vmin=0, vmax=1)
+    """
+    # check inputs
+    if vmin >= vmax:
+        raise ValueError(f"Invalid vmin/vmax: vmin ({vmin}) must be less than vmax ({vmax}).")
+
+    # Get the colormap object
+    colormap = plt.get_cmap(colormap) if isinstance(colormap, str) else colormap
+
+    # Sample values evenly between vmin and vmax
+    values = np.linspace(vmin, vmax, cmap_lut)
+    norm = Normalize(vmin=vmin, vmax=vmax)
+
+    cpt_file = os.path.abspath(cpt_file)
+    if print_msg:
+        print(f'save colormap to CPT file: {cpt_file}')
+
+    with open(cpt_file, 'w') as f:
+        f.write("# COLOR_MODEL = RGB\n")
+        for i in range(cmap_lut - 1):
+            # Normalize to [0, 1] and get RGBA
+            c1 = np.array(colormap(norm(values[i]))[:3]) * 255
+            c2 = np.array(colormap(norm(values[i + 1]))[:3]) * 255
+            f.write(f"{values[i]:.6f} {int(round(c1[0]))} {int(round(c1[1]))} {int(round(c1[2]))} "
+                    f"{values[i+1]:.6f} {int(round(c2[0]))} {int(round(c2[1]))} {int(round(c2[2]))}\n")
+
+        # Optional: NaN color
+        f.write("B 0 0 0\n")       # Background
+        f.write("F 255 255 255\n") # Foreground
+        f.write("N 128 128 128\n") # NaN color
+
+    return cpt_file
+
+
+def cmap_map(function, cmap):
+    """ Applies function (which should operate on vectors of shape 3: [r, g, b]), on colormap cmap.
+    This routine will break any discontinuous points in a colormap.
+    Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_ColormapTransformations.html
+
+    Examples:
+        colormap = self.cmap_map(lambda x: x/2 + 0.5, colormap)  # brighten colormap
+        colormap = self.cmap_map(lambda x: x*0.75, colormap)     # darken   colormap
+    """
+    cdict = cmap._segmentdata
+    step_dict = {}
+
+    # First get the list of points where the segments start or end
+    for key in ('red', 'green', 'blue'):
+        step_dict[key] = list(map(lambda x: x[0], cdict[key]))
+    step_list = sum(step_dict.values(), [])
+    step_list = np.array(list(set(step_list)))
+
+    # Then compute the LUT, and apply the function to the LUT
+    reduced_cmap = lambda step : np.array(cmap(step)[0:3])
+    old_LUT = np.array(list(map(reduced_cmap, step_list)))
+    new_LUT = np.array(list(map(function, old_LUT)))
+
+    # Now try to make a minimal segment definition of the new LUT
+    cdict = {}
+    for i, key in enumerate(['red','green','blue']):
+        this_cdict = {}
+        for j, step in enumerate(step_list):
+            if step in step_dict[key]:
+                this_cdict[step] = new_LUT[j, i]
+            elif new_LUT[j,i] != old_LUT[j, i]:
+                this_cdict[step] = new_LUT[j, i]
+        colorvector = list(map(lambda x: x + (x[1], ), this_cdict.items()))
+        colorvector.sort()
+        cdict[key] = colorvector
+
+    return LinearSegmentedColormap('colormap',cdict,1024)
