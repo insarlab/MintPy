@@ -120,7 +120,8 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
 
         if prod_type == 'isce2_burst':
             # burst-wide product using ISCE2
-            meta['beam_swath'] = job_id.split('_')[2][2:]
+            swath_tokens = job_id.split('_')[1].split('-')[1:]
+            meta['beam_swath'] = ''.join(s[7] for s in swath_tokens if not s.startswith('000000s'))
 
             # relative_orbit [to be added]
             # first/last_frame [to be added]
