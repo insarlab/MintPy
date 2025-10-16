@@ -1,0 +1,34 @@
+Reference Granule: S1_056072_IW2_20220814T125829_VV_67BC-BURST
+Secondary Granule: S1_056072_IW2_20220907T125830_VV_97A5-BURST
+Reference Pass Direction: ASCENDING
+Reference Orbit Number: 44549
+Secondary Pass Direction: ASCENDING
+Secondary Orbit Number: 44899
+Baseline: 158.57439820410497
+UTC time: 46709.112304
+Heading: -13.3101122688203
+Spacecraft height: 693000.0
+Earth radius at nadir: 6337286.638938101
+Slant range near: 846099.1914484155
+Slant range center: 875670.6529326118
+Slant range far: 905242.1144168081
+Range looks: 20
+Azimuth looks: 4
+INSAR phase filter: yes
+Phase filter parameter: 0.5
+Range bandpass filter: no
+Azimuth bandpass filter: no
+DEM source: GLO_30
+DEM resolution (m): 30
+Unwrapping type: snaphu_mcf
+Speckle filter: yes
+Water mask: yes
+Radar n lines: 376
+Radar n samples: 1269
+Radar first valid line: 7
+Radar n valid lines: 363
+Radar first valid sample: 23
+Radar n valid samples: 1218
+Multilook azimuth time interval: 0.008222225199999992
+Multilook range pixel size: 46.59124229430646
+Radar sensing stop: 2022-08-14T12:58:32.201805

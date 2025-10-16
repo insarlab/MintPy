@@ -1,0 +1,33 @@
+Reference Granule: S1A_IW_SLC__1SDH_20251001T204513_20251001T204540_061237_07A332_A16A
+Secondary Granule: S1C_IW_SLC__1SDH_20251007T204359_20251007T204426_004461_008D5C_0C40
+Reference Pass Direction: ASCENDING
+Reference Orbit Number: 61237
+Secondary Pass Direction: ASCENDING
+Secondary Orbit Number: 4461
+Baseline: 48.0195
+UTC time: 74714.869576
+Heading: -18.1505111
+Spacecraft height: 705239.4029000001
+Earth radius at nadir: 6362008.3766
+Slant range near: 803591.1723
+Slant range center: 882714.7457
+Slant range far: 961838.3190
+Range looks: 10
+Azimuth looks: 2
+INSAR phase filter: none
+Phase filter parameter: 0.0
+Resolution of output (m): 40
+Range bandpass filter: no
+Azimuth bandpass filter: no
+DEM source: GLO-30
+DEM resolution (m): 80
+Unwrapping type: mcf
+Phase at reference point: 3.32844
+Azimuth line of the reference point in SAR space: 497
+Range pixel of the reference point in SAR space: 5724
+Y coordinate of the reference point in the map projection: 6703535.9184
+X coordinate of the reference point in the map projection: 515679.7018
+Latitude of the reference point (WGS84): 60.46772014
+Longitude of the reference point (WGS84): -44.7148542
+Unwrapping threshold: none
+Speckle filter: no
