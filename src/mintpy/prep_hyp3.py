@@ -14,6 +14,29 @@ from mintpy.utils import readfile, utils1 as ut, writefile
 
 
 #########################################################################
+
+def _get_product_name_and_type(filename: str) -> tuple[str, str]:
+    # TODO: tests
+    parts = filename.split('_')
+    if len(parts[0]) == 4:
+        name = '_'.join(parts[:8])
+        job_type = 'INSAR_GAMMA'
+    elif len(parts[0]) == 3:
+        raise ValueError(
+            'Product appears to be of type INSAR_ISCE_MULTI_BURST using the older naming convention, '
+            'which is not supported'
+        )
+    elif len(parts[1]) == 3:  # TODO: assumes we're separating relative orbit from swaths
+        name = '_'.join(parts[:9])  # TODO: adjust for final number of parts
+        job_type = 'INSAR_ISCE_MULTI_BURST'
+    elif len(parts[1]) == 6:
+        name = '_'.join(parts[:8])
+        job_type = 'INSAR_ISCE_BURST'
+    else:
+        raise ValueError('Failed to parse product name')
+    return name, job_type
+
+
 def add_hyp3_metadata(fname, meta, is_ifg=True):
     '''Read/extract metadata from HyP3 metadata file and add to metadata dictionary.
 
@@ -36,20 +59,18 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
                 is_ifg - bool, is the data file interferogram (unw/corr) or geometry (dem/angles)
     Returns:    meta   - dict, return metadata
     '''
+    product_name, job_type = _get_product_name_and_type(fname)
 
-    # job_id -> prod_type and date1/2 objects
-    job_id = '_'.join(os.path.basename(fname).split('_')[:8])
-    if job_id.split('_')[2].startswith('IW'):
-        # burst-wide product using ISCE2
-        prod_type = 'isce2_burst'
-        date1, date2 = (dt.datetime.strptime(x,'%Y%m%d') for x in job_id.split('_')[3:5])
-    else:
-        # scene-wide product using Gamma
-        prod_type = 'gamma_scene'
-        date1, date2 = (dt.datetime.strptime(x,'%Y%m%dT%H%M%S') for x in job_id.split('_')[1:3])
+    if job_type == 'INSAR_ISCE_BURST':
+        date1, date2 = (dt.datetime.strptime(x,'%Y%m%d') for x in product_name.split('_')[3:5])
+    elif job_type == 'INSAR_ISCE_MULTI_BURST':
+        # TODO
+        pass
+    elif job_type == 'INSAR_GAMMA':
+        date1, date2 = (dt.datetime.strptime(x,'%Y%m%dT%H%M%S') for x in product_name.split('_')[1:3])
 
     # read hyp3 metadata file
-    meta_file = os.path.join(os.path.dirname(fname), f'{job_id}.txt')
+    meta_file = os.path.join(os.path.dirname(fname), f'{product_name}.txt')
     hyp3_meta = {}
     with open(meta_file) as f:
         for line in f:
@@ -118,9 +139,13 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         # beam_mode
         meta['beam_mode'] = 'IW'
 
-        if prod_type == 'isce2_burst':
+        if job_type == 'INSAR_ISCE_BURST':
+            # TODO
+            pass
+
+        elif job_type == 'INSAR_ISCE_MULTI_BURST':
             # burst-wide product using ISCE2
-            swath_tokens = job_id.split('_')[1].split('-')[1:]
+            swath_tokens = product_name.split('_')[1].split('-')[1:]
             meta['beam_swath'] = ''.join(s[7] for s in swath_tokens if not s.startswith('000000s'))
 
             # relative_orbit [to be added]
@@ -128,6 +153,8 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
 
         else:
             # scene-wide product using Gamma
+            assert job_type == 'INSAR_GAMMA'
+
             meta['beam_swath'] = '123'
 
             # relative_orbit
