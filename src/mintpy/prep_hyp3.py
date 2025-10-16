@@ -17,7 +17,7 @@ from mintpy.utils import readfile, utils1 as ut, writefile
 
 def _get_product_name_and_type(filename: str) -> tuple[str, str]:
     # TODO: tests
-    parts = filename.split('_')
+    parts = os.path.basename(filename).split('_')
     if len(parts[0]) == 4:
         name = '_'.join(parts[:8])
         job_type = 'INSAR_GAMMA'
@@ -26,8 +26,8 @@ def _get_product_name_and_type(filename: str) -> tuple[str, str]:
             'Product appears to be of type INSAR_ISCE_MULTI_BURST using the older naming convention, '
             'which is not supported'
         )
-    elif len(parts[1]) == 3:  # TODO: assumes we're separating relative orbit from swaths
-        name = '_'.join(parts[:9])  # TODO: adjust for final number of parts
+    elif len(parts[1]) == 39:  # TODO: assumes we're not separating relative orbit from swaths
+        name = '_'.join(parts[:8])  # TODO: adjust for final number of parts
         job_type = 'INSAR_ISCE_MULTI_BURST'
     elif len(parts[1]) == 6:
         name = '_'.join(parts[:8])
