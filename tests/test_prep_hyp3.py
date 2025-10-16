@@ -3,7 +3,7 @@ from mintpy.prep_hyp3 import add_hyp3_metadata
 
 def test_add_hyp3_metadata_new_burst():
     assert add_hyp3_metadata(
-        fname='/home/asjohnston/src/MintPy/tests/data/S1_044-000000s1n00-093117s2n01-093118s3n01_IW_20250718_20250730_VV_INT80_B4FA_unw_phase.tif',
+        fname='tests/data/S1_044-000000s1n00-093117s2n01-093118s3n01_IW_20250718_20250730_VV_INT80_B4FA_unw_phase.tif',
         meta={
             'WIDTH': 2314,
             'LENGTH': 718,
@@ -53,7 +53,7 @@ def test_add_hyp3_metadata_new_burst():
 
 def test_add_hyp3_metadata_gamma():
     assert add_hyp3_metadata(
-        fname='/home/asjohnston/src/MintPy/tests/data/S1AC_20251001T204513_20251007T204359_HHR006_INT40_G_ueF_1DBE_dem.tif',
+        fname='tests/data/S1AC_20251001T204513_20251007T204359_HHR006_INT40_G_ueF_1DBE_dem.tif',
         meta={
             'WIDTH': 6829,
             'LENGTH': 3735,
@@ -103,7 +103,7 @@ def test_add_hyp3_metadata_gamma():
 
 def test_add_hyp3_metadata_old_burst():
     assert add_hyp3_metadata(
-        fname='/home/asjohnston/Downloads/S1_056072_IW2_20220814_20220907_VV_INT80_E09B/S1_056072_IW2_20220814_20220907_VV_INT80_E09B_corr.tif',
+        fname='tests/data/S1_056072_IW2_20220814_20220907_VV_INT80_E09B_corr.tif',
         meta={
             'WIDTH': 1335,
             'LENGTH': 485,
