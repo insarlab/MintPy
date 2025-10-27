@@ -61,7 +61,6 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
     '''
     product_name, job_type = _get_product_name_and_type(fname)
 
-    # read hyp3 metadata file
     meta_file = os.path.join(os.path.dirname(fname), f'{product_name}.txt')
     hyp3_meta = {}
     with open(meta_file) as f:
@@ -117,21 +116,19 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
     if any(x in os.path.basename(fname) for x in ['lv_theta', 'lv_phi']):
         meta['UNIT'] = 'radian'
 
-    # [optional] HDF-EOS5 metadata, including:
+    # HDF-EOS5 metadata, including:
     # beam_mode/swath, relative_orbit, first/last_frame, unwrap_method
 
-    # beam_mode
     meta['beam_mode'] = 'IW'
+    meta['unwrap_method'] = hyp3_meta['Unwrappingtype']
 
     if job_type == 'INSAR_ISCE_BURST':
         date1, date2 = (dt.datetime.strptime(x,'%Y%m%d') for x in product_name.split('_')[3:5])
         # TODO
-        pass
 
     elif job_type == 'INSAR_ISCE_MULTI_BURST':
         # TODO: parse date1, date2
 
-        # burst-wide product using ISCE2
         swath_tokens = product_name.split('_')[1].split('-')[1:]
         meta['beam_swath'] = ''.join(s[7] for s in swath_tokens if not s.startswith('000000s'))
 
@@ -139,19 +136,15 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         # first/last_frame [to be added]
 
     else:
-        # scene-wide product using Gamma
         assert job_type == 'INSAR_GAMMA'
 
         date1, date2 = (dt.datetime.strptime(x,'%Y%m%dT%H%M%S') for x in product_name.split('_')[1:3])
-
         meta['beam_swath'] = '123'
-
-        # relative_orbit
-        abs_orbit = int(hyp3_meta['ReferenceOrbitNumber'])
 
         ref_granule = hyp3_meta['ReferenceGranule']
         assert ref_granule.startswith('S1')
 
+        abs_orbit = int(hyp3_meta['ReferenceOrbitNumber'])
         if ref_granule.startswith('S1A'):
             meta['relative_orbit'] = ((abs_orbit - 73) % 175) + 1
         elif ref_granule.startswith('S1B'):
@@ -167,9 +160,6 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         meta['startUTC'] = dt.datetime.strptime(t0, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
         meta['stopUTC']  = dt.datetime.strptime(t1, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
         # ascendingNodeTime [to be added]
-
-    # unwrap_method
-    meta['unwrap_method'] = hyp3_meta['Unwrappingtype']
 
     # interferogram related metadata
     if is_ifg:
