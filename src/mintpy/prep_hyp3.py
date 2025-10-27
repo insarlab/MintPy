@@ -115,6 +115,7 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         meta['LON_REF4'] = str(W)
 
     # hard-coded metadata for Sentinel-1
+    # TODO: for which job types is this not true?
     if ref_granule.startswith('S1'):
         meta['PLATFORM'] = 'Sen'
         meta['ANTENNA_SIDE'] = -1
@@ -135,7 +136,7 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
 
     # [optional] HDF-EOS5 metadata, including:
     # beam_mode/swath, relative_orbit, first/last_frame, unwrap_method
-    # TODO: why would this be optional?
+    # TODO: for which job types is this not true?
     if ref_granule.startswith('S1'):
         # beam_mode
         meta['beam_mode'] = 'IW'
