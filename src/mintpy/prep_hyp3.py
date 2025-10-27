@@ -61,14 +61,6 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
     '''
     product_name, job_type = _get_product_name_and_type(fname)
 
-    if job_type == 'INSAR_ISCE_BURST':
-        date1, date2 = (dt.datetime.strptime(x,'%Y%m%d') for x in product_name.split('_')[3:5])
-    elif job_type == 'INSAR_ISCE_MULTI_BURST':
-        # TODO
-        pass
-    elif job_type == 'INSAR_GAMMA':
-        date1, date2 = (dt.datetime.strptime(x,'%Y%m%dT%H%M%S') for x in product_name.split('_')[1:3])
-
     # read hyp3 metadata file
     meta_file = os.path.join(os.path.dirname(fname), f'{product_name}.txt')
     hyp3_meta = {}
@@ -76,7 +68,6 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         for line in f:
             key, value = line.strip().replace(' ','').split(':')[:2]
             hyp3_meta[key] = value
-    ref_granule = hyp3_meta['ReferenceGranule']
 
     # add universal hyp3 metadata
     meta['PROCESSOR'] = 'hyp3'
@@ -115,70 +106,76 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         meta['LON_REF4'] = str(W)
 
     # hard-coded metadata for Sentinel-1
-    # TODO: for which job types is this not true?
-    if ref_granule.startswith('S1'):
-        meta['PLATFORM'] = 'Sen'
-        meta['ANTENNA_SIDE'] = -1
-        meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
-        meta['RANGE_PIXEL_SIZE'] = sensor.SEN['range_pixel_size'] * int(meta['RLOOKS'])
-        meta['AZIMUTH_PIXEL_SIZE'] = sensor.SEN['azimuth_pixel_size'] * int(meta['ALOOKS'])
+    meta['PLATFORM'] = 'Sen'
+    meta['ANTENNA_SIDE'] = -1
+    meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
+    meta['RANGE_PIXEL_SIZE'] = sensor.SEN['range_pixel_size'] * int(meta['RLOOKS'])
+    meta['AZIMUTH_PIXEL_SIZE'] = sensor.SEN['azimuth_pixel_size'] * int(meta['ALOOKS'])
 
     # HyP3 (incidence, azimuth) angle datasets are in the unit of radian,
     # which is different from the isce-2 convention of degree
     if any(x in os.path.basename(fname) for x in ['lv_theta', 'lv_phi']):
         meta['UNIT'] = 'radian'
 
+    # [optional] HDF-EOS5 metadata, including:
+    # beam_mode/swath, relative_orbit, first/last_frame, unwrap_method
+
+    # beam_mode
+    meta['beam_mode'] = 'IW'
+
+    if job_type == 'INSAR_ISCE_BURST':
+        date1, date2 = (dt.datetime.strptime(x,'%Y%m%d') for x in product_name.split('_')[3:5])
+        # TODO
+        pass
+
+    elif job_type == 'INSAR_ISCE_MULTI_BURST':
+        # TODO: parse date1, date2
+
+        # burst-wide product using ISCE2
+        swath_tokens = product_name.split('_')[1].split('-')[1:]
+        meta['beam_swath'] = ''.join(s[7] for s in swath_tokens if not s.startswith('000000s'))
+
+        # relative_orbit [to be added]
+        # first/last_frame [to be added]
+
+    else:
+        # scene-wide product using Gamma
+        assert job_type == 'INSAR_GAMMA'
+
+        date1, date2 = (dt.datetime.strptime(x,'%Y%m%dT%H%M%S') for x in product_name.split('_')[1:3])
+
+        meta['beam_swath'] = '123'
+
+        # relative_orbit
+        abs_orbit = int(hyp3_meta['ReferenceOrbitNumber'])
+
+        ref_granule = hyp3_meta['ReferenceGranule']
+        assert ref_granule.startswith('S1')
+
+        if ref_granule.startswith('S1A'):
+            meta['relative_orbit'] = ((abs_orbit - 73) % 175) + 1
+        elif ref_granule.startswith('S1B'):
+            meta['relative_orbit'] = ((abs_orbit - 202) % 175) + 1
+        elif ref_granule.startswith('S1C'):
+            meta['relative_orbit'] = ((abs_orbit - 172) % 175) + 1
+        else:
+            # add equation for Sentinel-D in the future
+            raise ValueError(f'Un-recognized Sentinel-1 satellite from {ref_granule}!')
+
+        # first/last_frame [to be completed]
+        t0, t1 = ref_granule.split('_')[-5:-3]
+        meta['startUTC'] = dt.datetime.strptime(t0, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
+        meta['stopUTC']  = dt.datetime.strptime(t1, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
+        # ascendingNodeTime [to be added]
+
+    # unwrap_method
+    meta['unwrap_method'] = hyp3_meta['Unwrappingtype']
+
     # interferogram related metadata
     if is_ifg:
         meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
         meta['P_BASELINE_TOP_HDR'] = hyp3_meta['Baseline']
         meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
-
-    # [optional] HDF-EOS5 metadata, including:
-    # beam_mode/swath, relative_orbit, first/last_frame, unwrap_method
-    # TODO: for which job types is this not true?
-    if ref_granule.startswith('S1'):
-        # beam_mode
-        meta['beam_mode'] = 'IW'
-
-        if job_type == 'INSAR_ISCE_BURST':
-            # TODO
-            pass
-
-        elif job_type == 'INSAR_ISCE_MULTI_BURST':
-            # burst-wide product using ISCE2
-            swath_tokens = product_name.split('_')[1].split('-')[1:]
-            meta['beam_swath'] = ''.join(s[7] for s in swath_tokens if not s.startswith('000000s'))
-
-            # relative_orbit [to be added]
-            # first/last_frame [to be added]
-
-        else:
-            # scene-wide product using Gamma
-            assert job_type == 'INSAR_GAMMA'
-
-            meta['beam_swath'] = '123'
-
-            # relative_orbit
-            abs_orbit = int(hyp3_meta['ReferenceOrbitNumber'])
-            if ref_granule.startswith('S1A'):
-                meta['relative_orbit'] = ((abs_orbit - 73) % 175) + 1
-            elif ref_granule.startswith('S1B'):
-                meta['relative_orbit'] = ((abs_orbit - 202) % 175) + 1
-            elif ref_granule.startswith('S1C'):
-                meta['relative_orbit'] = ((abs_orbit - 172) % 175) + 1
-            else:
-                # add equation for Sentinel-C/D in the future
-                raise ValueError('Un-recognized Sentinel-1 satellite from {ref_granule}!')
-
-            # first/last_frame [to be completed]
-            t0, t1 = ref_granule.split('_')[-5:-3]
-            meta['startUTC'] = dt.datetime.strptime(t0, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
-            meta['stopUTC']  = dt.datetime.strptime(t1, '%Y%m%dT%H%M%S').strftime('%Y-%m-%d %H:%M:%S.%f')
-            # ascendingNodeTime [to be added]
-
-    # unwrap_method
-    meta['unwrap_method'] = hyp3_meta['Unwrappingtype']
 
     return meta
 
