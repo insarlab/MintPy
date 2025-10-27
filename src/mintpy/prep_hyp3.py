@@ -38,6 +38,7 @@ def _get_product_name_and_type(filename: str) -> tuple[str, str]:
 
 
 def add_hyp3_metadata(fname, meta, is_ifg=True):
+    # TODO: update docstring
     """Read/extract metadata from HyP3 metadata file and add to metadata dictionary.
 
     Two types of ASF HyP3 products are supported: isce2_burst, gamma_scene
