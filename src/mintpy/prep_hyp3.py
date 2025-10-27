@@ -135,6 +135,7 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
 
     # [optional] HDF-EOS5 metadata, including:
     # beam_mode/swath, relative_orbit, first/last_frame, unwrap_method
+    # TODO: why would this be optional?
     if ref_granule.startswith('S1'):
         # beam_mode
         meta['beam_mode'] = 'IW'
