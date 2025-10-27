@@ -38,7 +38,7 @@ def _get_product_name_and_type(filename: str) -> tuple[str, str]:
 
 
 def add_hyp3_metadata(fname, meta, is_ifg=True):
-    '''Read/extract metadata from HyP3 metadata file and add to metadata dictionary.
+    """Read/extract metadata from HyP3 metadata file and add to metadata dictionary.
 
     Two types of ASF HyP3 products are supported: isce2_burst, gamma_scene
     1. isce2_burst (burst-wide product using ISCE2) metadata file:
@@ -58,7 +58,7 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
                 meta   - dict, existing metadata
                 is_ifg - bool, is the data file interferogram (unw/corr) or geometry (dem/angles)
     Returns:    meta   - dict, return metadata
-    '''
+    """
     product_name, job_type = _get_product_name_and_type(fname)
 
     meta_file = os.path.join(os.path.dirname(fname), f'{product_name}.txt')
