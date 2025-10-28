@@ -16,30 +16,33 @@ from mintpy.utils import readfile, utils1 as ut, writefile
 
 #########################################################################
 
+# TODO: tests
 def _get_product_name_and_type(filename: str) -> tuple[str, str]:
-    # TODO: tests
-    # TODO: match on regex instead
-    parts = filename.split('_')
     if match := re.match(
-        # https://hyp3-docs.asf.alaska.edu/guides/insar_product_guide/#naming-convention
-        r'S1[ABC]{2}(_\d{8}T\d{6}){2}_(VV|HH)[PRO]\d{3}_INT\d{2}_G_[uw][ec][123F]_[0-9A-F]{4}',
-        filename,
-    ):
-        name = match.group()
-        job_type = 'INSAR_GAMMA'
-    elif len(parts[1]) == 3:
-        name = '_'.join(parts[:9])
-        job_type = 'INSAR_ISCE_MULTI_BURST'
-    elif match := re.match(
         # https://hyp3-docs.asf.alaska.edu/guides/burst_insar_product_guide/#naming-convention-insar_isce_burst
         r'S1_\d{6}_IW[123](_\d{8}){2}_(VV|HH)_INT\d{2}_[0-9A-F]{4}',
         filename,
     ):
-        name = match.group()
         job_type = 'INSAR_ISCE_BURST'
+
+    elif match := re.match(
+        # https://hyp3-docs.asf.alaska.edu/guides/burst_insar_product_guide/#naming-convention-insar_isce_multi_burst
+        r'S1_\d{3}_\d{6}s1n\d{2}-\d{6}s2n\d{2}-\d{6}s3n\d{2}_IW(_\d{8}){2}_(VV|HH)_INT\d{2}_[0-9A-F]{4}',
+        filename,
+    ):
+        job_type = 'INSAR_ISCE_MULTI_BURST'
+
+    elif match := re.match(
+        # https://hyp3-docs.asf.alaska.edu/guides/insar_product_guide/#naming-convention
+        r'S1[ABC]{2}(_\d{8}T\d{6}){2}_(VV|HH)[PRO]\d{3}_INT\d{2}_G_[uw][ec][123F]_[0-9A-F]{4}',
+        filename,
+    ):
+        job_type = 'INSAR_GAMMA'
+
     else:
-        raise ValueError('Failed to parse product name')
-    return name, job_type
+        raise ValueError(f'Failed to parse product name from filename: {filename}')
+
+    return match.group(), job_type
 
 
 def add_hyp3_metadata(fname, meta, is_ifg=True):
