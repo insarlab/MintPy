@@ -126,16 +126,15 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
 
     if job_type == 'INSAR_ISCE_BURST':
         date1, date2 = (dt.datetime.strptime(x,'%Y%m%d') for x in product_name.split('_')[3:5])
-        # TODO
-
-    elif job_type == 'INSAR_ISCE_MULTI_BURST':
-        date1, date2 = (dt.datetime.strptime(x, '%Y%m%d') for x in product_name.split('_')[4:6])
-
-        swath_tokens = product_name.split('_')[2].split('-')
-        meta['beam_swath'] = ''.join(s[7] for s in swath_tokens if not s.startswith('000000s'))
+        meta['beam_swath'] = product_name.split('_')[2][2]
 
         # relative_orbit [to be added]
         # first/last_frame [to be added]
+
+    elif job_type == 'INSAR_ISCE_MULTI_BURST':
+        date1, date2 = (dt.datetime.strptime(x, '%Y%m%d') for x in product_name.split('_')[4:6])
+        swath_tokens = product_name.split('_')[2].split('-')
+        meta['beam_swath'] = ''.join(s[7] for s in swath_tokens if not s.startswith('000000s'))
 
     else:
         assert job_type == 'INSAR_GAMMA'
