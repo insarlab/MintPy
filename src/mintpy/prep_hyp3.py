@@ -17,6 +17,7 @@ from mintpy.utils import readfile, utils1 as ut, writefile
 
 def _get_product_name_and_type(filename: str) -> tuple[str, str]:
     # TODO: tests
+    # TODO: match on regex instead?
     parts = os.path.basename(filename).split('_')
     if len(parts[0]) == 4:
         name = '_'.join(parts[:8])
@@ -26,8 +27,8 @@ def _get_product_name_and_type(filename: str) -> tuple[str, str]:
             'Product appears to be of type INSAR_ISCE_MULTI_BURST using the older naming convention, '
             'which is not supported'
         )
-    elif len(parts[1]) == 39:  # TODO: assumes we're not separating relative orbit from swaths
-        name = '_'.join(parts[:8])  # TODO: adjust for final number of parts
+    elif len(parts[1]) == 3:
+        name = '_'.join(parts[:9])
         job_type = 'INSAR_ISCE_MULTI_BURST'
     elif len(parts[1]) == 6:
         name = '_'.join(parts[:8])
@@ -128,9 +129,9 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         # TODO
 
     elif job_type == 'INSAR_ISCE_MULTI_BURST':
-        # TODO: parse date1, date2
+        date1, date2 = (dt.datetime.strptime(x, '%Y%m%d') for x in product_name.split('_')[4:6])
 
-        swath_tokens = product_name.split('_')[1].split('-')[1:]
+        swath_tokens = product_name.split('_')[2].split('-')
         meta['beam_swath'] = ''.join(s[7] for s in swath_tokens if not s.startswith('000000s'))
 
         # relative_orbit [to be added]

@@ -3,7 +3,7 @@ from mintpy.prep_hyp3 import add_hyp3_metadata
 
 def test_add_hyp3_metadata_new_burst():
     assert add_hyp3_metadata(
-        fname='tests/data/S1_044-000000s1n00-093117s2n01-093118s3n01_IW_20250718_20250730_VV_INT80_B4FA_unw_phase.tif',
+        fname='tests/data/S1_044_000000s1n00-093117s2n01-093118s3n01_IW_20250718_20250730_VV_INT80_B4FA_unw_phase.tif',
         meta={
             'WIDTH': 2314,
             'LENGTH': 718,
