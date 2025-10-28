@@ -30,8 +30,12 @@ def _get_product_name_and_type(filename: str) -> tuple[str, str]:
     elif len(parts[1]) == 3:
         name = '_'.join(parts[:9])
         job_type = 'INSAR_ISCE_MULTI_BURST'
-    elif len(parts[1]) == 6:
-        name = '_'.join(parts[:8])
+    elif match := re.match(
+        # https://hyp3-docs.asf.alaska.edu/guides/burst_insar_product_guide/#naming-convention-insar_isce_burst
+        r'S1_\d{6}_IW[123](_\d{8}){2}_(VV|HH)_INT\d{2}_[0-9A-F]{4}',
+        filename,
+    ):
+        name = match.group()
         job_type = 'INSAR_ISCE_BURST'
     else:
         raise ValueError('Failed to parse product name')
