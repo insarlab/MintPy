@@ -1,3 +1,5 @@
+import pytest
+
 from mintpy.prep_hyp3 import add_hyp3_metadata, _get_product_name_and_type
 
 
@@ -13,6 +15,19 @@ def test_get_product_name_and_type():
     assert _get_product_name_and_type(
         'S1AA_20150504T120217_20150621T120220_VVP048_INT80_G_ueF_5CED_foo.tif'
     ) == ('S1AA_20150504T120217_20150621T120220_VVP048_INT80_G_ueF_5CED', 'INSAR_GAMMA')
+
+    # Old INSAR_ISCE_MULTI_BURST naming convention
+    with pytest.raises(
+        ValueError,
+        match=r'^Failed to parse product name from filename: '
+              r'S1A_064_E053_1_N27_3_E054_1_N27_8_20200604_20200616_VV_INT80_3FBF_foo\.tif$',
+    ):
+        _get_product_name_and_type(
+            'S1A_064_E053_1_N27_3_E054_1_N27_8_20200604_20200616_VV_INT80_3FBF_foo.tif'
+        )
+
+    with pytest.raises(ValueError, match=r'^Failed to parse product name from filename: foo$'):
+        _get_product_name_and_type('foo')
 
 
 def test_add_hyp3_metadata_new_burst():
