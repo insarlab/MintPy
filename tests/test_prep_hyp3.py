@@ -1,4 +1,18 @@
-from mintpy.prep_hyp3 import add_hyp3_metadata
+from mintpy.prep_hyp3 import add_hyp3_metadata, _get_product_name_and_type
+
+
+def test_get_product_name_and_type():
+    assert _get_product_name_and_type(
+        'S1_136231_IW2_20200604_20200616_VV_INT80_10C1_foo.tif'
+    ) == ('S1_136231_IW2_20200604_20200616_VV_INT80_10C1', 'INSAR_ISCE_BURST')
+
+    assert _get_product_name_and_type(
+        'S1_064_000000s1n00-136231s2n02-000000s3n00_IW_20200604_20200616_VV_INT80_77F1_foo.tif'
+    ) == ('S1_064_000000s1n00-136231s2n02-000000s3n00_IW_20200604_20200616_VV_INT80_77F1', 'INSAR_ISCE_MULTI_BURST')
+
+    assert _get_product_name_and_type(
+        'S1AA_20150504T120217_20150621T120220_VVP048_INT80_G_ueF_5CED_foo.tif'
+    ) == ('S1AA_20150504T120217_20150621T120220_VVP048_INT80_G_ueF_5CED', 'INSAR_GAMMA')
 
 
 def test_add_hyp3_metadata_new_burst():
