@@ -18,21 +18,18 @@ from mintpy.utils import readfile, utils1 as ut, writefile
 
 def _get_product_name_and_type(filename: str) -> tuple[str, str]:
     if match := re.match(
-        # https://hyp3-docs.asf.alaska.edu/guides/burst_insar_product_guide/#naming-convention-insar_isce_burst
         r'S1_\d{6}_IW[123](_\d{8}){2}_(VV|HH)_INT\d{2}_[0-9A-F]{4}',
         filename,
     ):
         job_type = 'INSAR_ISCE_BURST'
 
     elif match := re.match(
-        # https://hyp3-docs.asf.alaska.edu/guides/burst_insar_product_guide/#naming-convention-insar_isce_multi_burst
         r'S1_\d{3}_\d{6}s1n\d{2}-\d{6}s2n\d{2}-\d{6}s3n\d{2}_IW(_\d{8}){2}_(VV|HH)_INT\d{2}_[0-9A-F]{4}',
         filename,
     ):
         job_type = 'INSAR_ISCE_MULTI_BURST'
 
     elif match := re.match(
-        # https://hyp3-docs.asf.alaska.edu/guides/insar_product_guide/#naming-convention
         r'S1[ABC]{2}(_\d{8}T\d{6}){2}_(VV|HH)[PRO]\d{3}_INT\d{2}_G_[uw][ec][123F]_[0-9A-F]{4}',
         filename,
     ):
@@ -45,26 +42,26 @@ def _get_product_name_and_type(filename: str) -> tuple[str, str]:
 
 
 def add_hyp3_metadata(fname, meta, is_ifg=True):
-    # TODO: update docstring
     """Read/extract metadata from HyP3 metadata file and add to metadata dictionary.
 
-    Two types of ASF HyP3 products are supported: isce2_burst, gamma_scene
-    1. isce2_burst (burst-wide product using ISCE2) metadata file:
-        format: {SAT}_{FRAME}_{SUBSWATH}_{DATE1}_{DATE2}_{POL}_{RES}_{IDS}.txt
+    Three types of ASF HyP3 products are supported:
+
+    1. INSAR_ISCE_BURST (legacy single-burst product using ISCE2) metadata file:
+        format: https://hyp3-docs.asf.alaska.edu/guides/burst_insar_product_guide/#naming-convention-insar_isce_burst
         example: S1_213524_IW1_20170411_20170517_VV_INT80_8E81.txt
-        content:
-            Reference Granule: S1_213524_IW1_20170411T133605_VV_BD30-BURST
-            ...
-    2. gamma_scene (scene-wide product using Gamma) metadata file:
-        format: {SAT}_{DATE1}_{DATE2}_{POL}_{RES}_{SOFT}_{PROC}_{IDS}.txt
+
+    2. INSAR_ISCE_MULTI_BURST (multi-burst product using ISCE2) metadata file:
+        format: https://hyp3-docs.asf.alaska.edu/guides/burst_insar_product_guide/#naming-convention-insar_isce_multi_burst
+        example: S1_064_000000s1n00-136231s2n02-000000s3n00_IW_20200604_20200616_VV_INT80_77F1
+
+    3. INSAR_GAMMA (scene-wide product using GAMMA) metadata file:
+        format: https://hyp3-docs.asf.alaska.edu/guides/insar_product_guide/#naming-convention
         example: S1AA_20190610T135156_20190622T135157_VVP012_INT80_G_ueF_F8BF.txt
-        content:
-            Reference Granule: S1A_IW_SLC__1SDV_20190704T135158_20190704T135225_027968_032877_1C4D
-            ...
 
     Parameters: fname  - str, path to the hyp3 data file, e.g. *unw_phase_clip*.tif, *dem_clip*.tif
                 meta   - dict, existing metadata
                 is_ifg - bool, is the data file interferogram (unw/corr) or geometry (dem/angles)
+
     Returns:    meta   - dict, return metadata
     """
     product_name, job_type = _get_product_name_and_type(os.path.basename(fname))
