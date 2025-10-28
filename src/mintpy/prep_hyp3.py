@@ -7,6 +7,7 @@
 
 import datetime as dt
 import os
+import re
 
 from mintpy.constants import SPEED_OF_LIGHT
 from mintpy.objects import sensor
@@ -17,16 +18,15 @@ from mintpy.utils import readfile, utils1 as ut, writefile
 
 def _get_product_name_and_type(filename: str) -> tuple[str, str]:
     # TODO: tests
-    # TODO: match on regex instead?
-    parts = os.path.basename(filename).split('_')
-    if len(parts[0]) == 4:
-        name = '_'.join(parts[:8])
+    # TODO: match on regex instead
+    parts = filename.split('_')
+    if match := re.match(
+        # https://hyp3-docs.asf.alaska.edu/guides/insar_product_guide/#naming-convention
+        r'S1[ABC]{2}(_\d{8}T\d{6}){2}_(VV|HH)[PRO]\d{3}_INT\d{2}_G_[uw][ec][123F]_[0-9A-F]{4}',
+        filename,
+    ):
+        name = match.group()
         job_type = 'INSAR_GAMMA'
-    elif len(parts[0]) == 3:
-        raise ValueError(
-            'Product appears to be of type INSAR_ISCE_MULTI_BURST using the older naming convention, '
-            'which is not supported'
-        )
     elif len(parts[1]) == 3:
         name = '_'.join(parts[:9])
         job_type = 'INSAR_ISCE_MULTI_BURST'
@@ -61,7 +61,7 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
                 is_ifg - bool, is the data file interferogram (unw/corr) or geometry (dem/angles)
     Returns:    meta   - dict, return metadata
     """
-    product_name, job_type = _get_product_name_and_type(fname)
+    product_name, job_type = _get_product_name_and_type(os.path.basename(fname))
 
     meta_file = os.path.join(os.path.dirname(fname), f'{product_name}.txt')
     hyp3_meta = {}
