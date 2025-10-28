@@ -16,7 +16,6 @@ from mintpy.utils import readfile, utils1 as ut, writefile
 
 #########################################################################
 
-# TODO: tests
 def _get_product_name_and_type(filename: str) -> tuple[str, str]:
     if match := re.match(
         # https://hyp3-docs.asf.alaska.edu/guides/burst_insar_product_guide/#naming-convention-insar_isce_burst
@@ -182,8 +181,6 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
 def prep_hyp3(inps):
     """Prepare ASF HyP3 metadata files"""
 
-    # TODO: how is the input given? can we parse the product name and job type from the product directory name
-    #  and then pass that info into add_hyp3_metadata, rather than having to parse it for each individual filename?
     inps.file = ut.get_file_list(inps.file, abspath=True)
 
     # for each filename, generate metadata rsc file
