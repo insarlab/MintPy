@@ -49,6 +49,7 @@ jobs:
             ${MINTPY_HOME}/tests/objects/ionex.py
             ${MINTPY_HOME}/tests/asc_desc2horz_vert.py
             ${MINTPY_HOME}/tests/dem_error.py
+            # TODO: get pytest working with circleci
             pytest ${MINTPY_HOME}/tests/test_prep_hyp3.py
 
       - run:
