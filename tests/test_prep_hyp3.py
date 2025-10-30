@@ -30,9 +30,9 @@ def test_get_product_name_and_type():
         _get_product_name_and_type('foo')
 
 
-def test_add_hyp3_metadata_insar_isce_burst():
+def test_add_hyp3_metadata_insar_isce_burst(test_data_dir):
     assert add_hyp3_metadata(
-        fname='tests/data/S1_056072_IW2_20220814_20220907_VV_INT80_E09B_corr.tif',
+        fname=str(test_data_dir / 'S1_056072_IW2_20220814_20220907_VV_INT80_E09B_corr.tif'),
         meta={
             'WIDTH': 1335,
             'LENGTH': 485,
@@ -80,9 +80,9 @@ def test_add_hyp3_metadata_insar_isce_burst():
    }
 
 
-def test_add_hyp3_metadata_insar_isce_multi_burst():
+def test_add_hyp3_metadata_insar_isce_multi_burst(test_data_dir):
     assert add_hyp3_metadata(
-        fname='tests/data/S1_044_000000s1n00-093117s2n01-093118s3n01_IW_20250718_20250730_VV_INT80_B4FA_unw_phase.tif',
+        fname=str(test_data_dir / 'S1_044_000000s1n00-093117s2n01-093118s3n01_IW_20250718_20250730_VV_INT80_B4FA_unw_phase.tif'),
         meta={
             'WIDTH': 2314,
             'LENGTH': 718,
@@ -130,9 +130,9 @@ def test_add_hyp3_metadata_insar_isce_multi_burst():
    }
 
 
-def test_add_hyp3_metadata_insar_gamma():
+def test_add_hyp3_metadata_insar_gamma(test_data_dir):
     assert add_hyp3_metadata(
-        fname='tests/data/S1AC_20251001T204513_20251007T204359_HHR006_INT40_G_ueF_1DBE_dem.tif',
+        fname=str(test_data_dir / 'S1AC_20251001T204513_20251007T204359_HHR006_INT40_G_ueF_1DBE_dem.tif'),
         meta={
             'WIDTH': 6829,
             'LENGTH': 3735,
