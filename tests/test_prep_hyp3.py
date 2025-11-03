@@ -1,6 +1,6 @@
 import pytest
 
-from mintpy.prep_hyp3 import add_hyp3_metadata, _get_product_name_and_type
+from mintpy.prep_hyp3 import _get_product_name_and_type, add_hyp3_metadata
 
 
 def test_get_product_name_and_type():

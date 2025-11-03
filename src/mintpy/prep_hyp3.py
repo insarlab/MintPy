@@ -11,8 +11,9 @@ import re
 
 from mintpy.constants import SPEED_OF_LIGHT
 from mintpy.objects import sensor
-from mintpy.utils import readfile, utils1 as ut, writefile
-
+from mintpy.utils import readfile
+from mintpy.utils import utils1 as ut
+from mintpy.utils import writefile
 
 #########################################################################
 
