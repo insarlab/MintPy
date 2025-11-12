@@ -1524,7 +1524,7 @@ def plot_shape(ax, shp_files, SNWE, color='k', linewidth=0.5, min_dist=0.1, prin
     Returns:    ax        - matplotlib.axes object
     """
     num_file = len(shp_files)
-    kwargs = dict(color=color, linewidth=linewidth)
+    kwargs = dict(color=color, linewidth=linewidth, print_msg=print_msg)
 
     for i, shp_file in enumerate(shp_files):
         if print_msg:
@@ -1534,7 +1534,7 @@ def plot_shape(ax, shp_files, SNWE, color='k', linewidth=0.5, min_dist=0.1, prin
             plot_shapefile(ax, shp_file, **kwargs)
 
         elif shp_file.endswith('.lonlat'):
-            plot_gmt_lonlat_file(ax, shp_file, SNWE, min_dist=0.1, print_msg=print_msg, **kwargs)
+            plot_gmt_lonlat_file(ax, shp_file, SNWE, min_dist=min_dist, **kwargs)
 
     # keep the same axis limit
     S, N, W, E = SNWE
@@ -1619,7 +1619,7 @@ def plot_shapefile(ax, shp_file, color='k', linewidth=0.5, print_msg=True):
             ax.plot(geom.GetX(), geom.GetY(), "o", **kwargs)
 
         else:
-            warning.warn(f'Un-recognized geometry type: {geom_type}! Ignore and continue.')
+            warnings.warn(f'Un-recognized geometry type: {geom_type}! Ignore and continue.')
 
     return ax
 
