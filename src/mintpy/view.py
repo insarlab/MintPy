@@ -574,14 +574,15 @@ def plot_slice(ax, data, metadata, inps):
         else:
             raise ValueError(f'Un-recognized plotting style: {inps.style}!')
 
-        # Draw faultline using GMT lonlat file
-        if inps.faultline_file:
-            pp.plot_faultline(
+        # Draw shapes (line, polygon) from ESRI shapefile or GMT lonlat file
+        if inps.shp_file:
+            pp.plot_shape(
                 ax=ax,
-                faultline_file=inps.faultline_file,
+                shp_files=inps.shp_file,
                 SNWE=SNWE,
-                linewidth=inps.faultline_linewidth,
-                min_dist=inps.faultline_min_dist,
+                color=inps.shp_color,
+                linewidth=inps.shp_linewidth,
+                min_dist=inps.shp_min_dist,
                 print_msg=inps.print_msg,
             )
 

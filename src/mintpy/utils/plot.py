@@ -1512,47 +1512,150 @@ def plot_colorbar(inps, im, cax):
     return inps, cbar
 
 
-def plot_faultline(ax, faultline_file, SNWE, linewidth=0.5, min_dist=0.1, print_msg=True):
-    """Plot fault lines.
+def plot_shape(ax, shp_files, SNWE, color='k', linewidth=0.5, min_dist=0.1, print_msg=True):
+    """Plot shapes (line, polygon) in ESRI shapefile or GMT lonlat format.
 
-    Parameters: ax             - matplotlib.axes object
-                faultline_file - str, path to the fault line file in GMT lonlat format
-                SNWE           - tuple of 4 float, for south, north, west and east
-    Returns:    ax             - matplotlib.axes object
-                faults         - list of 2D np.ndarray in size of [num_point, 2] in float32
-                                 with each row for one point in [lon, lat] in degrees
+    Parameters: ax        - matplotlib.axes object
+                shp_files - list(str), path(s) to the shape file in ESRI or GMT format
+                SNWE      - tuple of 4 float, for south, north, west and east
+                color     - str, line color
+                linewidth - float, linewidth in points
+                min_dist  - float, minimum segment distance (for GMT format only)
+    Returns:    ax        - matplotlib.axes object
     """
+    num_file = len(shp_files)
+    kwargs = dict(color=color, linewidth=linewidth, print_msg=print_msg)
 
-    if print_msg:
-        print(f'plot fault lines from GMT lonlat file: {faultline_file}')
+    for i, shp_file in enumerate(shp_files):
+        if print_msg:
+            print(f'plotting shapes from {i+1}/{num_file} files: {shp_file}')
 
-    # read faults
-    faults = readfile.read_gmt_lonlat_file(
-        faultline_file,
-        SNWE=SNWE,
-        min_dist=min_dist,
-        print_msg=print_msg,
-    )
+        if shp_file.endswith('.shp'):
+            plot_shapefile(ax, shp_file, **kwargs)
 
-    if len(faults) == 0:
-        warnings.warn(f'No fault lines found within {SNWE} with length >= {min_dist} km!')
-        print('  continue without fault lines.')
-        return ax, faults
-
-    # plot
-    print_msg = False if len(faults) < 1000 else print_msg
-    prog_bar = ptime.progressBar(maxValue=len(faults), print_msg=print_msg)
-    for i, fault in enumerate(faults):
-        ax.plot(fault[:,0], fault[:,1], 'k-', lw=linewidth)
-        prog_bar.update(i+1, every=10)
-    prog_bar.close()
+        elif shp_file.endswith('.lonlat'):
+            plot_gmt_lonlat_file(ax, shp_file, SNWE, min_dist=min_dist, **kwargs)
 
     # keep the same axis limit
     S, N, W, E = SNWE
     ax.set_xlim(W, E)
     ax.set_ylim(S, N)
 
-    return ax, faults
+    return ax
+
+
+def plot_shapefile(ax, shp_file, color='k', linewidth=0.5, print_msg=True):
+    """Plot shapes (line or polygon) in ESRI shapefile format.
+
+    Parameters: ax        - matplotlib.axes object
+                shp_file  - str, path to the fault line file in GMT lonlat format
+                color     - str, line color
+                linewidth - float, linewidth in points
+    Returns:    ax       - matplotlib.axes object
+    """
+
+    from osgeo import ogr, osr
+
+    # read shapefile using GDAL
+    driver = ogr.GetDriverByName("ESRI Shapefile")
+    ds = driver.Open(shp_file, 0)
+    if ds is None:
+        raise RuntimeError(f"Could not open {shp_file} using GDAL/OGR!")
+    layer = ds.GetLayer()
+
+    # convert to lat/lon
+    source_srs = layer.GetSpatialRef()
+    if source_srs is None:
+        if print_msg:
+            print("⚠️ No CRS found in shapefile (.prj missing). Assuming WGS84.")
+        source_srs = osr.SpatialReference()
+        source_srs.ImportFromEPSG(4326)
+
+    target_srs = osr.SpatialReference()
+    target_srs.ImportFromEPSG(4326)   # WGS84 (lat/lon)
+    target_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)   # set to lon/lat order
+
+    transform = osr.CoordinateTransformation(source_srs, target_srs)
+
+    # plot: loop through each feature
+    kwargs = dict(color=color, linewidth=linewidth)
+    for feature in layer:
+        geom = feature.GetGeometryRef()
+        if not source_srs.IsGeographic():
+            if print_msg:
+                print("The shapefile is projected (e.g. UTM). Converting to lat/lon...")
+            geom.Transform(transform)  # convert to lat/lon
+        geom_type = geom.GetGeometryType()
+
+        def draw_polygon(polygon):
+            """Helper to draw single polygon."""
+            for i in range(polygon.GetGeometryCount()):
+                ring = polygon.GetGeometryRef(i)
+                x = [ring.GetX(j) for j in range(ring.GetPointCount())]
+                y = [ring.GetY(j) for j in range(ring.GetPointCount())]
+                ax.plot(x, y, **kwargs)
+
+        # handle different geometry types
+        if geom_type in (ogr.wkbPolygon, ogr.wkbPolygon25D):
+            draw_polygon(geom)
+
+        elif geom_type in (ogr.wkbMultiPolygon, ogr.wkbMultiPolygon25D):
+            for i in range(geom.GetGeometryCount()):
+                draw_polygon(geom.GetGeometryRef(i))
+
+        elif geom_type in (ogr.wkbLineString, ogr.wkbLineString25D):
+            x = [geom.GetX(i) for i in range(geom.GetPointCount())]
+            y = [geom.GetY(i) for i in range(geom.GetPointCount())]
+            ax.plot(x, y, **kwargs)
+
+        elif geom_type in (ogr.wkbMultiLineString, ogr.wkbMultiLineString25D):
+            for i in range(geom.GetGeometryCount()):
+                line = geom.GetGeometryRef(i)
+                x = [line.GetX(j) for j in range(line.GetPointCount())]
+                y = [line.GetY(j) for j in range(line.GetPointCount())]
+                ax.plot(x, y, **kwargs)
+
+        elif geom_type == ogr.wkbPoint:
+            ax.plot(geom.GetX(), geom.GetY(), "o", **kwargs)
+
+        else:
+            warnings.warn(f'Un-recognized geometry type: {geom_type}! Ignore and continue.')
+
+    return ax
+
+
+def plot_gmt_lonlat_file(ax, shp_file, SNWE, min_dist=0.1, color='k', linewidth=0.5, print_msg=True):
+    """Plot lines in GMT lonlat format.
+
+    Parameters: ax        - matplotlib.axes object
+                shp_file  - str, path to the fault line file in GMT lonlat format
+                SNWE      - tuple of 4 float, for south, north, west and east
+                min_dist  - float, minimum segment distance (for GMT format only)
+                color     - str, line color
+                linewidth - float, linewidth in points
+    Returns:    ax       - matplotlib.axes object
+    """
+    # read
+    faults = readfile.read_gmt_lonlat_file(
+        shp_file,
+        SNWE=SNWE,
+        min_dist=min_dist,
+        print_msg=print_msg,
+    )
+
+    if len(faults) == 0:
+        warnings.warn(f'No lines found within {SNWE} with length >= {min_dist} km! Skip plotting.')
+        return ax, faults
+
+    # plot
+    print_msg = False if len(faults) < 1000 else print_msg
+    prog_bar = ptime.progressBar(maxValue=len(faults), print_msg=print_msg)
+    for i, fault in enumerate(faults):
+        ax.plot(fault[:,0], fault[:,1], color=color, linewidth=linewidth)
+        prog_bar.update(i+1, every=10)
+    prog_bar.close()
+
+    return ax
 
 
 def add_arrow(line, position=None, direction='right', size=15, color=None):

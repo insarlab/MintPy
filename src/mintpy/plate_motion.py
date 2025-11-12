@@ -10,6 +10,8 @@
 #   Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P. and Xu, X., (2022),
 #     The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields,
 #     Geophys. Res. Lett. 49, e2022GL099835, doi:10.1029/2022GL099835.
+#   Liu, Y.-K., Yunjun, Z., & Simons, M. (2025). Inferring Tectonic Plate Rotations From
+#     InSAR Time Series. Geophys. Res. Lett., 52(12), e2025GL115137, doi:10.1029/2025GL115137.
 
 
 import numpy as np

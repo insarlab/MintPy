@@ -22,18 +22,14 @@ REFERENCE = """reference:
   Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P. and Xu, X., (2022),
     The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields,
     Geophys. Res. Lett. 49, e2022GL099835, doi:10.1029/2022GL099835.
+  Liu, Y.-K., Yunjun, Z., & Simons, M. (2025). Inferring Tectonic Plate Rotations From
+    InSAR Time Series. Geophys. Res. Lett., 52(12), e2025GL115137, doi:10.1029/2025GL115137.
 
   # list of no-net-rotation (NNR) plate motion models (PMMs):
   # ONLY ITRF14 should be used, as Sentinel-1's orbit is in ITRF2014 reference frame.
   # Other values, e.g. MORVEL56, should be converted into ITR2014 before use.
-  ITRF14 - Table 1 of Altamimi et al. (2017) - 11 plates
-    Altamimi, Z., Métivier, L., Rebischung, P., Rouby, H., & Collilieux, X. (2017).
-    ITRF2014 plate motion model. Geophysical Journal International, 209(3), 1906-1912.
-    doi:10.1093/gji/ggx136
-  MORVEL - Table 1 of Argus et al. (2011) - 56 plates
-    Argus, D. F., Gordon, R. G., & DeMets, C. (2011). Geologically current motion of 56
-    plates relative to the no-net-rotation reference frame. Geochemistry, Geophysics,
-    Geosystems, 12(11). doi:10.1029/2011GC003751
+  ITRF14 - Table 1 of Altamimi et al. (2017, GJI) - 11 plates
+  MORVEL - Table 1 of Argus et al. (2011, G3) - 56 plates
 """
 
 EXAMPLE = """example:
