@@ -40,8 +40,9 @@ EXAMPLE = """example:
   view.py geo_velocity_msk.h5 velocity --show-gnss --gnss-comp enu2los --ref-gnss GV01 --gnss-source ESESES
   view.py geo_timeseries_ERA5_ramp_demErr.h5 20180619 --ref-date 20141213 --show-gnss --gnss-comp enu2los --ref-gnss GV01
 
-  # Faults
-  view.py filt_dense_offsets.bil range --faultline simple_fault_confident.lonlat
+  # Polygon/lines, e.g. faults
+  view.py geo_velocity.h5 velocity --shp-file highway.shp ringroad.shp
+  view.py filt_dense_offsets.bil range --shp-file simple_fault_confident.lonlat
 
   # Save and Output
   view.py velocity.h5 --save
@@ -89,6 +90,7 @@ def create_parser(subparsers=None):
     parser = arg_utils.add_map_argument(parser)
     parser = arg_utils.add_memory_argument(parser)
     parser = arg_utils.add_point_argument(parser)
+    parser = arg_utils.add_shape_argument(parser)
     parser = arg_utils.add_reference_argument(parser)
     parser = arg_utils.add_save_argument(parser)
     parser = arg_utils.add_subset_argument(parser)
@@ -155,7 +157,7 @@ def cmd_line_parse(iargs=None):
             print('WARNING: --cbar-ext is NOT compatible with --dem-blend, ignore --cbar-ext and continue.')
 
     # check: conflicted options (geo-only options if inpput file is in radar-coordinates)
-    geo_opt_names = ['--coord', '--show-gnss', '--coastline', '--lalo-label', '--lalo-step', '--scalebar', '--faultline']
+    geo_opt_names = ['--coord', '--show-gnss', '--coastline', '--lalo-label', '--lalo-step', '--scalebar', '--shp-file']
     geo_opt_names = list(set(geo_opt_names) & set(inps.argv))
     if geo_opt_names and 'Y_FIRST' not in readfile.read_attribute(inps.file).keys():
         for opt_name in geo_opt_names:
