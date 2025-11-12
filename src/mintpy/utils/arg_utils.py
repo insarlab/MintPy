@@ -483,7 +483,7 @@ def add_shape_argument(parser):
                      help='Shape color (default: %(default)s).')
     shp.add_argument('--shp-lw','--shp-linewidth','--faultline-lw', dest='shp_linewidth',
                      default=0.5, type=float, metavar='NUM',
-                     help='Shpae linewidth (default: %(default)s).')
+                     help='Shape linewidth (default: %(default)s).')
     shp.add_argument('--shp-min-dist','--faultline-min-dist', dest='shp_min_dist', type=float,
                      default=0.1, metavar='NUM',
                      help='Do NOT plot line segments with length < X km (default: %(default)s).')
