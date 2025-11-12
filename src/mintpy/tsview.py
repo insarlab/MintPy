@@ -185,11 +185,11 @@ def read_init_info(inps):
 
     # do not plot native reference point if it's out of the coverage due to subset
     if (inps.ref_yx and 'Y_FIRST' in atr.keys()
-        and inps.ref_yx == (int(atr.get('REF_Y',-999)), int(atr.get('REF_X',-999)))
+        and is_native_reference_point(inps.ref_yx, atr)
         and not (    inps.pix_box[0] <= inps.ref_yx[1] < inps.pix_box[2]
                  and inps.pix_box[1] <= inps.ref_yx[0] < inps.pix_box[3])):
         inps.disp_ref_pixel = False
-        vprint('the native REF_Y/X is out of subset box, thus do not display')
+        vprint('WARNING: the native REF_Y/X is out of subset box, thus do not display')
 
     ## initial pixel coord
     if inps.lalo:
@@ -260,6 +260,28 @@ def subset_and_multilook_yx(yx, pix_box=None, multilook_num=1):
     return (y, x)
 
 
+def is_native_reference_point(ref_yx, atr, max_err=2):
+    """Check if the given ref_yx is the native reference point or not.
+
+    Parameters: ref_yx  - list of int, input reference point in row/col
+                atr     - dict, attributes, to retrieve the native REF_Y/X
+                max_err - int, maximum allowable error to account for
+                          potential geo2radar coordinate conversion error
+    """
+    if 'REF_Y' not in atr.keys():
+        return False
+
+    ref_x = int(atr['REF_X'])
+    ref_y = int(atr['REF_Y'])
+    x0, x1 = ref_x - max_err, ref_x + max_err
+    y0, y1 = ref_y - max_err, ref_y + max_err
+
+    if (x0 <= ref_yx[1] < x1 and y0 <= ref_yx[0] < y1):
+        return True
+    else:
+        return False
+
+
 def read_exclude_date(input_ex_date, dateListAll):
     """Read exclude list of dates
     Parameters: input_ex_date : list of string in YYYYMMDD or filenames for excluded dates
@@ -308,7 +330,7 @@ def read_timeseries_data(inps):
             vprint('input data is complex, calculate its amplitude and continue')
             data = np.abs(data)
 
-        if inps.ref_yx and inps.ref_yx != (int(atr.get('REF_Y', -1)), int(atr.get('REF_X', -1))):
+        if inps.ref_yx and not is_native_reference_point(inps.ref_yx, atr):
             (ry, rx) = subset_and_multilook_yx(inps.ref_yx, inps.pix_box, inps.multilook_num)
             ref_phase = data[:, ry, rx]
             data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
