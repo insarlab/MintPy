@@ -11,7 +11,8 @@ jobs:
     resource_class: large
 
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - run:
           name: Setting Up Environment with Miniforge
           command: |
@@ -34,7 +35,7 @@ jobs:
           command: |
             export PYTHONUNBUFFERED=1
             # install dependencies and source code
-            mamba install --verbose --yes --file ${MINTPY_HOME}/requirements.txt gdal libgdal-netcdf
+            mamba install --verbose --yes --file ${MINTPY_HOME}/requirements.txt gdal libgdal-netcdf pytest
             python -m pip install ${MINTPY_HOME}
             # test installation
             smallbaselineApp.py -h
@@ -48,6 +49,7 @@ jobs:
             ${MINTPY_HOME}/tests/objects/ionex.py
             ${MINTPY_HOME}/tests/asc_desc2horz_vert.py
             ${MINTPY_HOME}/tests/dem_error.py
+            pytest ${MINTPY_HOME}/tests/
 
       - run:
           name: Integration Test 1/6 - FernandinaSenDT128 (ISCE2/topsStack)

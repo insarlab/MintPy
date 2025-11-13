@@ -520,30 +520,30 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
 
 
 def coherence_matrix(date12_list, coh_list, diag_value=np.nan, fill_triangle='both', date_list=None):
-    """Return coherence matrix based on input date12 list and its coherence
-    Inputs:
-        date12_list - list of string in YYMMDD-YYMMDD format
-        coh_list    - list of float, average coherence for each interferograms
-        diag_value  - number, value to be filled in the diagonal
-        fill_triangle - str, 'both', 'upper', 'lower'
-    Output:
-        coh_matrix  - 2D np.array with dimension length = date num
-                      np.nan value for interferograms non-existed.
-                      1.0 for diagonal elements
+    """Return coherence matrix based on input date12 list and their coherence.
+
+    Parameters: date12_list   - list(str) in YYMMDD-YYMMDD or YYYYMMDD_YYYYMMDD format
+                coh_list      - list(float), average coherence for each interferogram
+                diag_value    - number, value to be filled in the diagonal
+                fill_triangle - str, 'both', 'upper', 'lower'
+    Returns:    coh_mat       - 2D np.ndarray in size of (num_date, num_date)
+                                np.nan for interferograms non-existent.
+                                1.0    for diagonal elements
     """
-    # Get date list
-    date12_list = ptime.yymmdd_date12(date12_list)
+    # get date list
+    # Use YYYYMMDD format instead of YYMMDD to ensure a correctly sorted list for dates before & after 2000
+    date12_list = ptime.yyyymmdd_date12(date12_list)
     if not date_list:
-        m_dates = [date12.split('-')[0] for date12 in date12_list]
-        s_dates = [date12.split('-')[1] for date12 in date12_list]
+        m_dates = [date12.split('_')[0] for date12 in date12_list]
+        s_dates = [date12.split('_')[1] for date12 in date12_list]
         date_list = sorted(list(set(m_dates + s_dates)))
-    date_list = ptime.yymmdd(date_list)
+    date_list = ptime.yyyymmdd(date_list)
     date_num = len(date_list)
 
     coh_mat = np.zeros([date_num, date_num])
     coh_mat[:] = np.nan
     for date12 in date12_list:
-        date1, date2 = date12.split('-')
+        date1, date2 = date12.split('_')
         idx1 = date_list.index(date1)
         idx2 = date_list.index(date2)
         coh = coh_list[date12_list.index(date12)]

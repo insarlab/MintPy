@@ -3,4 +3,5 @@ libgdal-netcdf  # for users of GMTSAR users
 isce2           # for users of ISCE-2 users
 pre-commit      # for developers
 pyfftw
+pytest
 setuptools_scm

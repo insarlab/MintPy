@@ -34,7 +34,7 @@ All GMT cpt files, e.g. the 20 built-in colormaps shown below, can be recognized
   <img width="600" src="https://docs.generic-mapping-tools.org/5.4/_images/GMT_App_M_1b.png">
 </p>
 
-### Colormaps from [cpt-city](http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html) ###
+### Colormaps from [cpt-city](http://seaviewsensing.com/pub/cpt-city/views/totp-cpt.html) ###
 
 The following colormaps is included by default:
 
@@ -49,7 +49,7 @@ The following colormaps is included by default:
 + wiki-2.0
 + wiki-schwarzwald-d050
 + wiki-scotland
-+ More at [cpt-city](http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html)
++ More at [cpt-city](http://seaviewsensing.com/pub/cpt-city/views/totp-cpt.html)
 
 ### Colormaps from [Scientific Color-Maps](http://www.fabiocrameri.ch/colourmaps.php) by Fabio Crameri ###
 

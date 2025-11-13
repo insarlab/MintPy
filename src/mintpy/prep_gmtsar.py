@@ -90,6 +90,7 @@ def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwra
         return prm_dict
 
     # read corners lat/lon info
+    print(f'grab LAT/LON_REF1/2/3/4 from file: {geo_file}')
     ds = gdal.Open(geo_file, gdal.GA_ReadOnly)
     transform = ds.GetGeoTransform()
     x_step = abs(transform[1])
@@ -138,6 +139,7 @@ def get_slant_range_distance(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasef
         raise ValueError(f'No radar-coord files found in {ifg_dir} with suffix: {fbases}')
 
     # read width from rdr_file
+    print(f'grab SLANT_RANGE_DISTANCE, INCIDENCE_ANGLE from file: {geo_file}')
     ds = gdal.Open(geo_file, gdal.GA_ReadOnly)
     width = ds.RasterXSize
 
@@ -189,20 +191,53 @@ def extract_gmtsar_metadata(meta_file, unw_file, template_file, rsc_file=None, u
     ifg_dir = os.path.dirname(unw_file)
 
     # 1. read *.PRM file
-    #prm_file = get_prm_files(ifg_dir)[0]
+    # prm_file = get_prm_files(ifg_dir)[0]
+    meta_file = os.path.abspath(meta_file)
+    print(f'extract metadata from metadata file: {meta_file}')
     meta = readfile.read_gmtsar_prm(meta_file)
     meta['PROCESSOR'] = 'gmtsar'
 
-    # 2. read template file: HEADING, ORBIT_DIRECTION
+    # 2. grab A/RLOOKS from config or template file
+    # config file name convention: config.{SAT}.txt, where SAT can be ERS, ENVI, ALOS, ALOS_SLC,
+    # ALOS2, ALOS2_SCAN, S1_STRIP, S1_TOPS, CSK_RAW, CSK_SLC, CSG, TSX, RS2, GF3, LT1
     template = readfile.read_template(template_file)
-    for key in ['HEADING', 'ALOOKS', 'RLOOKS']:
+    config_file = os.path.join(os.path.dirname(meta_file), 'config.*.txt')
+    config_files = glob.glob(config_file)
+
+    if len(config_files) >= 1:
+        # read config file
+        config = readfile.read_gmtsar_prm(config_files[0])
+        filter_wvl = float(config.get('filter_wavelength', 200))
+        # calc a/rlooks
+        # Note from Xiaohua Xu: GMTSAR is applying Gaussian filtering, instead of multilooing,
+        # thus, the equivalent value is ~0.3 times the mainlobe response of the boxcar filtering.
+        print(f'grab A/RLOOKS from config file: {config_file}')
+        meta['ALOOKS'] = np.rint(0.3 * filter_wvl / meta['AZIMUTH_PIXEL_SIZE']).astype(int)
+        meta['RLOOKS'] = np.rint(0.3 * filter_wvl / meta['RANGE_PIXEL_SIZE']).astype(int)
+
+    else:
+        print(f'WARNING: No config file found for {config_file}!')
+        # read from template file
+        for key in ['ALOOKS', 'RLOOKS']:
+            if key in template.keys():
+                print(f'grab {key} from template file: {template_file}')
+                meta[key] = int(template[key])
+            else:
+                msg = f'Attribute {key} is missing! '
+                msg += f'Please manually specify it in the template file: {template_file}'
+                raise ValueError(msg)
+
+    # 2. grab HEADING from template file
+    for key in ['HEADING']:
         if key in template.keys():
+            print(f'grab {key} from template file: {template_file}')
             meta[key] = template[key].lower()
         else:
-            raise ValueError(f'Attribute {key} is missing! Please manually specify it in the template file.')
+            msg = f'Attribute {key} is missing! '
+            msg += f'Please manually specify it in the template file: {template_file}'
+            raise ValueError(msg)
 
-    # 3. grab A/RLOOKS from radar-coord data file
-    #meta['ALOOKS'], meta['RLOOKS'] = get_multilook_number(ifg_dir)
+    # 3. update AZIMUTH/RANGE_PIXEL_SIZE
     meta['AZIMUTH_PIXEL_SIZE'] *= int(meta['ALOOKS'])
     meta['RANGE_PIXEL_SIZE'] *= int(meta['RLOOKS'])
 
@@ -215,6 +250,7 @@ def extract_gmtsar_metadata(meta_file, unw_file, template_file, rsc_file=None, u
     x_step = abs(transform[1])
     y_step = abs(transform[5]) * -1.
     if 1e-7 < x_step < 1.:
+        print(f'grab Y/X_FIRST/STEP from {unw_file}')
         meta['X_STEP'] = x_step
         meta['Y_STEP'] = y_step
         meta['X_FIRST'] = transform[0] - x_step / 2.

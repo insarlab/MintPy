@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64.0", "setuptools_scm[toml]>=8"]
+requires = ["setuptools>=77.0", "setuptools_scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -12,12 +12,11 @@ authors = [
 requires-python = ">=3.8"
 
 keywords = ["InSAR", "deformation", "time-series", "volcano", "tectonics", "geodesy", "geophysics", "remote-sensing"]
-license = {text = "GPL-3.0-or-later"}
+license = "GPL-3.0-or-later"
 classifiers=[
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
 ]
@@ -85,6 +84,7 @@ Issues = "https://github.com/insarlab/MintPy/issues"
 "save_kmz_timeseries.py" = "mintpy.cli.save_kmz_timeseries:main"
 "save_qgis.py" = "mintpy.cli.save_qgis:main"
 "save_roipac.py" = "mintpy.cli.save_roipac:main"
+"save_explorer.py" = "mintpy.cli.save_explorer:main"
 "smallbaselineApp.py" = "mintpy.cli.smallbaselineApp:main"
 "solid_earth_tides.py" = "mintpy.cli.solid_earth_tides:main"
 "spatial_average.py" = "mintpy.cli.spatial_average:main"

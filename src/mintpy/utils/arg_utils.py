@@ -347,16 +347,6 @@ def add_map_argument(parser):
                       metavar='NUM', type=float, default=1,
                       help='Coastline linewidth (default: %(default)s).')
 
-    # faultline
-    mapg.add_argument('--faultline', dest='faultline_file', type=str,
-                      help='Draw fault line using specified GMT lonlat file.')
-    mapg.add_argument('--faultline-lw', '--faultline-linewidth', dest='faultline_linewidth',
-                      metavar='NUM', type=float, default=0.5,
-                      help='Faultline linewidth (default: %(default)s).')
-    mapg.add_argument('--faultline-min-dist','--faultline-min-len', dest='faultline_min_dist',
-                      metavar='NUM', type=float, default=0.1,
-                      help='Show fault segments with length >= X km (default: %(default)s).')
-
     # lalo label
     mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',
                       help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
@@ -481,6 +471,22 @@ def add_save_argument(parser):
                       help='enable update mode for save figure: skip running if\n'+
                            '\t1) output file already exists AND\n'+
                            '\t2) output file is newer than input file.')
+    return parser
+
+
+def add_shape_argument(parser):
+    """Argument group parser to plot shapes (line, polygon) in ESRI shapefile or GMT lonlat format."""
+    shp = parser.add_argument_group('Shapes', 'Plot various shapes (line, polygon) in ESRI or GMT format.')
+    shp.add_argument('--shp-file','--faultline', dest='shp_file', type=str, nargs='*',
+                     help='Shape files in ESRI shapefile or GMT lonlat format.')
+    shp.add_argument('--shp-color', dest='shp_color', type=str, default='k',
+                     help='Shape color (default: %(default)s).')
+    shp.add_argument('--shp-lw','--shp-linewidth','--faultline-lw', dest='shp_linewidth',
+                     default=0.5, type=float, metavar='NUM',
+                     help='Shape linewidth (default: %(default)s).')
+    shp.add_argument('--shp-min-dist','--faultline-min-dist', dest='shp_min_dist', type=float,
+                     default=0.1, metavar='NUM',
+                     help='Do NOT plot line segments with length < X km (default: %(default)s).')
     return parser
 
 
