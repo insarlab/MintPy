@@ -477,9 +477,9 @@ def add_save_argument(parser):
 def add_shape_argument(parser):
     """Argument group parser to plot shapes (line, polygon) in ESRI shapefile or GMT lonlat format."""
     shp = parser.add_argument_group('Shapes', 'Plot various shapes (line, polygon) in ESRI or GMT format.')
-    shp.add_argument('--shp-file','--faultline', dest='shp_file', type=str, nargs='*',
+    shp.add_argument('--shp-file','--faultline', dest='shp_file', type=str, nargs='*', metavar='FILE',
                      help='Shape files in ESRI shapefile or GMT lonlat format.')
-    shp.add_argument('--shp-color', dest='shp_color', type=str, default='k',
+    shp.add_argument('--shp-color', dest='shp_color', type=str, default='k', metavar='COLOR',
                      help='Shape color (default: %(default)s).')
     shp.add_argument('--shp-lw','--shp-linewidth','--faultline-lw', dest='shp_linewidth',
                      default=0.5, type=float, metavar='NUM',

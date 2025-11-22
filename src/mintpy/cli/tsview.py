@@ -108,6 +108,7 @@ def create_parser(subparsers=None):
     parser = arg_utils.add_map_argument(parser)
     parser = arg_utils.add_memory_argument(parser)
     parser = arg_utils.add_reference_argument(parser)
+    parser = arg_utils.add_shape_argument(parser)
     parser = arg_utils.add_save_argument(parser)
     parser = arg_utils.add_subset_argument(parser)
 
