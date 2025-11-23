@@ -10,7 +10,7 @@ MintPy is available on the <a href="https://anaconda.org/conda-forge/mintpy">con
 conda install -c conda-forge mintpy
 ```
 
-or via <code>mamba</code> as:
+or via <code>mamba</code> [recommended] as:
 
 ```bash
 mamba install -c conda-forge mintpy
@@ -73,7 +73,7 @@ Install <a href="https://github.com/conda-forge/miniforge">miniforge</a> if you 
 # for macOS, use Miniforge3-MacOSX-x86_64.sh instead.
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 bash Miniforge3-Linux-x86_64.sh -b -p ~/tools/miniforge
-~/tools/miniforge/bin/mamba shell init
+~/tools/miniforge/bin/conda init bash
 ```
 
 Install dependencies into a new environment, e.g. named "insar":
