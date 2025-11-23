@@ -397,11 +397,10 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
                 vlim                  - list(float), min/max value for display
                 unique_values         - np.ndarray, unique values of the given data
     """
-
+    # prevent empty input data
     finite_values = np.ma.masked_invalid(data).compressed()
     if finite_values.size == 0:
-        if print_msg:
-            print('WARNING: no finite pixels found; using neutral display limits.')
+        warnings.warn('NO pixel with finite value found!')
         return 256, [0.0, 0.0], None
 
     # max step size / min step number for a uniform colormap
