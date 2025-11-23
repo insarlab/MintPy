@@ -388,6 +388,16 @@ def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=Tru
 
 
 def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_num_step=20, print_msg=True):
+    """Auto adjust the colormap lookup table and display limit for the given 2D/3D matrix.
+
+    Parameters: data                  - 2D/3D np.ndarray, data to be dispalyed
+                num_multilook         - int, number of looks applied to avoid occansional large values
+                max_discrete_num_step - int, maximum number of color steps allowed for discrete colormaps
+    Returns:    cmap_lut              - int, number of colors in the colormap lookup table
+                vlim                  - list(float), min/max value for display
+                unique_values         - np.ndarray, unique values of the given data
+    """
+
     finite_values = np.ma.masked_invalid(data).compressed()
     if finite_values.size == 0:
         if print_msg:
