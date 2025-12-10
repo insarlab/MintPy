@@ -1212,7 +1212,7 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
         vprint('-'*30)
         msg = 'plotting GNSS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += f' in IGS14 reference frame in {inps.gnss_component} direction'
+        msg += f' in {inps.gnss_component} direction'
         msg += f' with respect to {inps.ref_gnss_site} ...' if inps.ref_gnss_site else ' ...'
         vprint(msg)
         vprint(f'number of available GNSS stations: {len(site_names)}')
