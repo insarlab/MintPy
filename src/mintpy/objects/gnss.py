@@ -278,9 +278,6 @@ def get_los_obs(meta, obs_type, site_names, start_date, end_date, source='UNR', 
 
         # get url_prefix [to speed up downloading for ESESES]
         url_prefix = get_ESESES_url_prefix() if source == 'ESESES' else None
-        gnss_obj = get_gnss_class(source)(site_names[0], url_prefix=url_prefix)
-        vprint(f'GNSS source: {gnss_obj.source}')
-        vprint(f'GNSS reference frame: {gnss_obj.version}')
 
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
@@ -826,7 +823,7 @@ class GNSS_UNR(GNSS):
             if version in ['IGS08', 'IGS14']:
                 self.url_prefix = f'https://geodesy.unr.edu/gps_timeseries/tenv3/{self.version}'
             if version == 'IGS20':
-                self.url_prefix = f'https://geodesy.unr.edu/gps_timeseries/IGS20/tenv3/IGS20'
+                self.url_prefix = 'https://geodesy.unr.edu/gps_timeseries/IGS20/tenv3/IGS20'
 
         self.url = os.path.join(self.url_prefix, os.path.basename(self.file))
 
