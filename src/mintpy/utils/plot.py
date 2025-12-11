@@ -1160,10 +1160,11 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
         start_date=start_date,
         end_date=end_date,
         source=inps.gnss_source,
+        print_msg=print_msg,
     )
     if site_names.size == 0:
         warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
-        print('  continue without GNSS plots.')
+        vprint('  continue without GNSS plots.')
         return ax
 
     # print the nearest GNSS to the current reference point
@@ -1178,7 +1179,12 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
         n_ind = np.argmin(site_dist)
         msg = 'nearest GNSS site (potential --ref-gnss choice): '
         msg += f'{site_names[n_ind]} at [{site_lats[n_ind]}, {site_lons[n_ind]}]'
-        print(msg)
+        vprint(msg)
+
+    # print the GNSS solution reference frame
+    gnss_obj = gnss.get_gnss_class(inps.gnss_source)(site_names[0])
+    vprint(f'GNSS source: {gnss_obj.source}')
+    vprint(f'GNSS reference frame: {gnss_obj.version}')
 
     # post-query: convert lat/lon to UTM for plotting
     if 'UTM_ZONE' in metadata.keys():
@@ -1212,7 +1218,7 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
         vprint('-'*30)
         msg = 'plotting GNSS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += f' in IGS14 reference frame in {inps.gnss_component} direction'
+        msg += f' in {inps.gnss_component} direction'
         msg += f' with respect to {inps.ref_gnss_site} ...' if inps.ref_gnss_site else ' ...'
         vprint(msg)
         vprint(f'number of available GNSS stations: {len(site_names)}')
