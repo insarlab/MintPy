@@ -262,15 +262,16 @@ class TimeSeriesAnalysis:
 
     def generate_ifgram_aux_file(self):
         """Generate auxiliary files from ifgramStack file"""
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[0]
+        stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[:2]
         dsNames = readfile.get_dataset_list(stack_file)
-        mask_file = os.path.join(self.workDir, 'maskConnComp.h5')
+        mask_cc_file = os.path.join(self.workDir, 'maskConnComp.h5')
+        mask_obs_file = os.path.join(self.workDir, 'maskObs.h5')
         coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
         snr_file = os.path.join(self.workDir, 'avgSpatialSNR.h5')
 
         # 1) generate mask file from the common connected components
         if any('phase' in i.lower() for i in dsNames):
-            iargs = [stack_file, '--nonzero', '-o', mask_file, '--update']
+            iargs = [stack_file, '--nonzero', '-o', mask_cc_file, '--update']
             print('\ngenerate_mask.py', ' '.join(iargs))
             import mintpy.cli.generate_mask
             mintpy.cli.generate_mask.main(iargs)
@@ -283,6 +284,13 @@ class TimeSeriesAnalysis:
         print('\ntemporal_average.py', ' '.join(iargs))
         import mintpy.cli.temporal_average
         mintpy.cli.temporal_average.main(iargs)
+
+        # 3) generate mask of observations from incidence angle
+        # to better plot files such as geometry
+        iargs = [geom_file, 'incidenceAngle', '--nonzero', '-o', mask_obs_file, '--update']
+        print('\ngenerate_mask.py', ' '.join(iargs))
+        import mintpy.cli.generate_mask
+        mintpy.cli.generate_mask.main(iargs)
 
 
     def run_reference_point(self, step_name):
@@ -973,16 +981,18 @@ class TimeSeriesAnalysis:
             self.workDir,
             print_msg=False)[:4]
         mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
+        mask_obs_file = os.path.join(self.workDir, 'maskObs.h5')
         geo_dir = os.path.join(self.workDir, 'geo')
         pic_dir = os.path.join(self.workDir, 'pic')
 
         # use relative path for shorter and cleaner printout view command
-        stack_file  = os.path.relpath(stack_file)  if stack_file  else stack_file
-        ion_file    = os.path.relpath(ion_file)    if ion_file    else ion_file
-        geom_file   = os.path.relpath(geom_file)   if geom_file   else geom_file
-        lookup_file = os.path.relpath(lookup_file) if lookup_file else lookup_file
-        mask_file   = os.path.relpath(mask_file)   if mask_file   else mask_file
-        geo_dir     = os.path.relpath(geo_dir)     if geo_dir     else geo_dir
+        stack_file    = os.path.relpath(stack_file)    if stack_file    else stack_file
+        ion_file      = os.path.relpath(ion_file)      if ion_file      else ion_file
+        geom_file     = os.path.relpath(geom_file)     if geom_file     else geom_file
+        lookup_file   = os.path.relpath(lookup_file)   if lookup_file   else lookup_file
+        mask_file     = os.path.relpath(mask_file)     if mask_file     else mask_file
+        mask_obs_file = os.path.relpath(mask_obs_file) if mask_obs_file else mask_obs_file
+        geo_dir       = os.path.relpath(geo_dir)       if geo_dir       else geo_dir
 
         # view options
         # for each element list:
@@ -996,7 +1006,7 @@ class TimeSeriesAnalysis:
             ['maskTempCoh.h5',       '-c', 'gray', '-v', '0', '1'],
 
             # geometry
-            [geom_file],
+            [geom_file, '-m', mask_obs_file],
             [lookup_file],
 
             # ifgramStack
