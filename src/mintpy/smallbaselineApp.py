@@ -262,15 +262,16 @@ class TimeSeriesAnalysis:
 
     def generate_ifgram_aux_file(self):
         """Generate auxiliary files from ifgramStack file"""
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[0]
+        stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[:2]
         dsNames = readfile.get_dataset_list(stack_file)
-        mask_file = os.path.join(self.workDir, 'maskConnComp.h5')
+        mask_cc_file = os.path.join(self.workDir, 'maskConnComp.h5')
+        mask_obs_file = os.path.join(self.workDir, 'maskObs.h5')
         coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
         snr_file = os.path.join(self.workDir, 'avgSpatialSNR.h5')
 
         # 1) generate mask file from the common connected components
         if any('phase' in i.lower() for i in dsNames):
-            iargs = [stack_file, '--nonzero', '-o', mask_file, '--update']
+            iargs = [stack_file, '--nonzero', '-o', mask_cc_file, '--update']
             print('\ngenerate_mask.py', ' '.join(iargs))
             import mintpy.cli.generate_mask
             mintpy.cli.generate_mask.main(iargs)
@@ -283,6 +284,14 @@ class TimeSeriesAnalysis:
         print('\ntemporal_average.py', ' '.join(iargs))
         import mintpy.cli.temporal_average
         mintpy.cli.temporal_average.main(iargs)
+
+        # 3) generate mask of observations from incidence angle
+        # to better plot files such as geometry
+        if geom_file is not None:
+            iargs = [geom_file, 'incidenceAngle', '--nonzero', '-o', mask_obs_file, '--update']
+            print('\ngenerate_mask.py', ' '.join(iargs))
+            import mintpy.cli.generate_mask
+            mintpy.cli.generate_mask.main(iargs)
 
 
     def run_reference_point(self, step_name):
@@ -1030,6 +1039,11 @@ class TimeSeriesAnalysis:
             [f'velocity{tropo_model}.h5', '--mask', 'no'],
             ['numInvIfgram.h5',           '--mask', 'no'],
         ]
+
+        # mask geometry without observations
+        mask_obs_file = os.path.join(self.workDir, 'maskObs.h5')
+        if os.path.isfile(mask_obs_file):
+            iargs_list0[4] += ['-m', mask_obs_file]
 
         if ion_file:
             iargs_list0 += [
