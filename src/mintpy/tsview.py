@@ -1008,7 +1008,7 @@ class timeseriesViewer():
 
         # Print to terminal
         vprint('\n---------------------------------------')
-        vprint(title)
+        vprint(title.replace(',',''))    # remove "," in the print out msg for easy reuse in cmd
         float_formatter = lambda x: [float(f'{i:.2f}') for i in x]
         if self.num_date <= 1e3:
             vprint(float_formatter(ts_dis))
