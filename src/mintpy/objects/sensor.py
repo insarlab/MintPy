@@ -30,7 +30,8 @@ SENSOR_NAME_VARIATION = {
     'rcm'   : ['rcm', 'rsatc', 'radarsat-constellation', 'radarsat-constellation-mission'],
     'sen'   : ['sen', 's1', 's1a', 's1b', 'sent1', 'sentinel1', 'sentinel1a', 'sentinel1b'],
     'tsx'   : ['tsx', 'terra', 'terrasar', 'terrasarx', 'tdx', 'tandemx'],
-    'uav'   : ['uav', 'uavsar'],
+    'uav'   : ['uav', 'uavsar'],,
+    'fc1'   : ['fc1','fucheng', 'FuCheng-1', 'FuCheng'],
 }
 
 # duplicated in mintpy.cli.prep_gamma
@@ -478,6 +479,27 @@ SEN = {
     'noise_equivalent_sigma_zero': -22,       # dB
 }
 
+# Fucheng-1
+# reference:
+#   1. Table1 in <High Resolution Sparse Imaging and Doppler Parameter Estimation of Fucheng‑1 SAR Satellite> Cai et al. (2025)
+#   2. manual corrected parameters against par file from GAMMA
+#   3. table from https://cn.spacety.com/SARDevelopment
+FC1 = {
+    'altitude'                   : 505e3,     # m
+    'orbit_inclination'          : 97.3,      # deg
+    'repeat_cycle'               : 11,        # day
+    # sar / antenna
+    'carrier_frequency'          : 5.4000001e+09,  # Hz
+    'antenna_length'             : 4.56,      # m
+    'antenna_width'              : 0.8,       # m
+    'chirp_bandwidth'            : 1.0e+08,   # Hz
+    'sampling_frequency'         : 1.20e+08,  # Hz
+    'azimuth_pixel_size'         : 13.96,     # m, this is the ground azimuth pixel spacing, NOT on orbits!
+    'range_pixel_size'           : 1.24,      # m
+    # 'ground_range_pixel_size'    : ?,       # m
+}
+
+
 
 ##--------------------  S-band  --------------------##
 
@@ -786,6 +808,7 @@ SENSOR_DICT = {
     'rsat2' : RSAT2,
     'rcm'   : RCM,
     'gf3'   : GF3,
+    'fc1'   :FC1,
     # S-band
     'hj1c'  : HJ1C,
     # L-band
