@@ -30,7 +30,7 @@ SENSOR_NAME_VARIATION = {
     'rcm'   : ['rcm', 'rsatc', 'radarsat-constellation', 'radarsat-constellation-mission'],
     'sen'   : ['sen', 's1', 's1a', 's1b', 'sent1', 'sentinel1', 'sentinel1a', 'sentinel1b'],
     'tsx'   : ['tsx', 'terra', 'terrasar', 'terrasarx', 'tdx', 'tandemx'],
-    'uav'   : ['uav', 'uavsar'],,
+    'uav'   : ['uav', 'uavsar'],
     'fc1'   : ['fc1','fucheng', 'FuCheng-1', 'FuCheng'],
 }
 
