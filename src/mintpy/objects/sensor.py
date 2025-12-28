@@ -808,7 +808,7 @@ SENSOR_DICT = {
     'rsat2' : RSAT2,
     'rcm'   : RCM,
     'gf3'   : GF3,
-    'fc1'   :FC1,
+    'fc1'   : FC1,
     # S-band
     'hj1c'  : HJ1C,
     # L-band
