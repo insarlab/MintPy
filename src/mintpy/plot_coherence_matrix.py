@@ -316,7 +316,24 @@ class coherenceMatrixViewer():
                     Z[idx2, idx1] = cor
                 # Otherwise, Z[i, j] remains NaN (blank)
 
-        # Plot using pcolormesh
+        # Create diagonal matrix for black diagonal cells (like in original implementation)
+        # The diagonal should be black to distinguish from un-selected interferograms
+        # In timeaxis mode, diagonal corresponds to same date pairs (idx1 == idx2)
+        diag_Z = np.full_like(Z, np.nan)
+        num_cells = len(grid_points) - 1
+        for i in range(min(num_cells, Z.shape[0], Z.shape[1])):
+            diag_Z[i, i] = 1.0
+        
+        # Plot diagonal as black first (using gray_r colormap, where 1.0 = black)
+        if np.any(~np.isnan(diag_Z)):
+            self.ax_mat.pcolormesh(X, Y, diag_Z,
+                                 cmap='gray_r',
+                                 vmin=0.0,
+                                 vmax=1.0,
+                                 shading='auto',
+                                 zorder=1)
+        
+        # Plot using pcolormesh for coherence values
         cmap = self.colormap.copy()
         cmap.set_bad('white')  # NaN values will be white
         
@@ -324,15 +341,8 @@ class coherenceMatrixViewer():
                                      cmap=cmap,
                                      vmin=self.cmap_vlist[0],
                                      vmax=self.cmap_vlist[-1],
-                                     shading='auto')
-        
-        # Add black grid lines manually
-        # Draw vertical grid lines
-        for x_pos in days_grid:
-            self.ax_mat.axvline(x=x_pos, color='black', linewidth=0.5, alpha=0.8, zorder=2)
-        # Draw horizontal grid lines
-        for y_pos in days_grid:
-            self.ax_mat.axhline(y=y_pos, color='black', linewidth=0.5, alpha=0.8, zorder=2)
+                                     shading='auto',
+                                     zorder=0)
 
         # Generate month ticks
         min_date = min(date_list)
