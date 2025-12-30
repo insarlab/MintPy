@@ -325,6 +325,14 @@ class coherenceMatrixViewer():
                                      vmin=self.cmap_vlist[0],
                                      vmax=self.cmap_vlist[-1],
                                      shading='auto')
+        
+        # Add black grid lines manually
+        # Draw vertical grid lines
+        for x_pos in days_grid:
+            self.ax_mat.axvline(x=x_pos, color='black', linewidth=0.5, alpha=0.8, zorder=2)
+        # Draw horizontal grid lines
+        for y_pos in days_grid:
+            self.ax_mat.axhline(y=y_pos, color='black', linewidth=0.5, alpha=0.8, zorder=2)
 
         # Generate month ticks
         min_date = min(date_list)
@@ -412,9 +420,6 @@ class coherenceMatrixViewer():
                                bottom=True, top=True, left=True, right=True)
         self.ax_mat.tick_params(which='minor', direction='out', length=3, width=1,
                                bottom=True, top=True, left=True, right=True)
-
-        # Add diagonal grid lines in black
-        self.ax_mat.grid(True, which='both', color='black', linestyle='-', linewidth=0.5, alpha=0.3)
 
         # Add year labels (below month labels)
         years = []
