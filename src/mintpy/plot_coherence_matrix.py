@@ -113,15 +113,12 @@ class coherenceMatrixViewer():
             vprint(f'create matrix figure in size of {self.figsize_mat} inches')
 
         if not hasattr(self, 'cmap_name'):
-            # Default colormap: use 'RdBu' for timeaxis mode, 'viridis' for normal mode
+            # Default colormap: use 'RdBu_truncate' for both timeaxis and normal mode (from CLI default)
+            # This matches the CLI default value
             if self.time_axis:
-                self.cmap_name = 'RdBu'
+                self.cmap_name = 'RdBu_truncate'
             else:
                 self.cmap_name = 'viridis'
-        elif self.time_axis and self.cmap_name == 'RdBu_truncate':
-            # If using timeaxis mode and user didn't specify colormap (using default 'RdBu_truncate'),
-            # change to 'RdBu' for timeaxis mode
-            self.cmap_name = 'RdBu'
         if not hasattr(self, 'cmap_vlist'):
             self.cmap_vlist = [0.0, 1.0]
         self.colormap = pp.ColormapExt(self.cmap_name, vlist=self.cmap_vlist).colormap
@@ -212,7 +209,11 @@ class coherenceMatrixViewer():
             tcoh = self.tcoh[yx[0], yx[1]]
             plotDict['fig_title'] += f', tcoh = {tcoh:.2f}'
         plotDict['colormap'] = self.colormap
-        plotDict['vlim'] = self.cmap_vlist
+        # cmap_vlist is [start, jump, end] for truncated colormap, but vlim needs [vmin, vmax]
+        if len(self.cmap_vlist) >= 2:
+            plotDict['vlim'] = [self.cmap_vlist[0], self.cmap_vlist[-1]]
+        else:
+            plotDict['vlim'] = [0.0, 1.0]
         plotDict['cbar_label'] = 'Coherence'
         plotDict['disp_legend'] = False
 

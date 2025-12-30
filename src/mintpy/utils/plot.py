@@ -978,9 +978,9 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
     if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
     if 'fig_title'   not in p_dict.keys():   p_dict['fig_title']   = '{} Matrix'.format(p_dict['ds_name'])
-    if 'colormap'    not in p_dict.keys():   p_dict['colormap']    = 'RdBu'
+    if 'colormap'    not in p_dict.keys():   p_dict['colormap']    = 'RdBu_truncate'
     if 'cbar_label'  not in p_dict.keys():   p_dict['cbar_label']  = p_dict['ds_name']
-    if 'vlim'        not in p_dict.keys():   p_dict['vlim']        = (0.0, 1.0)
+    if 'vlim'        not in p_dict.keys():   p_dict['vlim']        = (0.2, 1.0)
     if 'disp_cbar'   not in p_dict.keys():   p_dict['disp_cbar']   = True
 
     # support input colormap: string for colormap name, or colormap object directly
@@ -1015,7 +1015,9 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
                 raise
     
     # Create coherence dictionary
+    # Store both the normalized pair (for lookup) and the original order (for upper/lower triangle)
     coh_dict = {}
+    coh_dict_ordered = {}  # Store with original date order to determine upper/lower triangle
     excluded_pairs = set()
     for date12, coh_val in zip(date12List, cohList):
         date1_str, date2_str = date12.split('_')
@@ -1038,6 +1040,11 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
         # Store as tuple (date1, date2) where date1 <= date2 for consistency
         pair = (min(date1, date2), max(date1, date2))
         coh_dict[pair] = float(coh_val)
+        
+        # Store with original order to determine upper/lower triangle
+        # In date12 format, date1_str is master (earlier) and date2_str is slave (later)
+        # So if date1 < date2, it's upper triangle (idx1 < idx2)
+        coh_dict_ordered[(date1, date2)] = float(coh_val)
         
         # Mark excluded pairs
         if date12 in date12List_drop:
@@ -1089,17 +1096,32 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
                     break
 
     # Fill value matrix directly from coherence dictionary
-    for (d1, d2), cor in coh_dict.items():
+    # Upper triangle (idx1 < idx2): only kept pairs (not in excluded_pairs), same as normal mode
+    # Lower triangle (idx1 > idx2): all pairs (including dropped ones), same as normal mode
+    # In date12 format, date1_str is master (earlier) and date2_str is slave (later)
+    # So typically d1 < d2, which means idx1 < idx2 (upper triangle)
+    for (d1, d2), cor in coh_dict_ordered.items():
         # Find grid indices for both dates
         idx1 = date_to_grid_idx.get(d1)
         idx2 = date_to_grid_idx.get(d2)
         
         # Only fill if both dates are in valid grid cells
         if idx1 is not None and idx2 is not None:
-            # Fill both upper and lower triangle (symmetric)
-            Z[idx1, idx2] = cor
-            if idx1 != idx2:
+            # Check if this pair is excluded (using normalized pair)
+            pair_normalized = (min(d1, d2), max(d1, d2))
+            is_excluded = pair_normalized in excluded_pairs
+            
+            if idx1 < idx2:
+                # Upper triangle: only fill if not excluded (i.e., kept pairs)
+                # This matches normal mode: coh_mat[idx1, idx2] = np.nan for dropped pairs
+                if not is_excluded:
+                    Z[idx1, idx2] = cor
+                # Lower triangle: fill all pairs (including excluded ones)
                 Z[idx2, idx1] = cor
+            elif idx1 > idx2:
+                # Lower triangle: fill all pairs (including excluded ones)
+                Z[idx1, idx2] = cor
+            # else: diagonal is already handled by diag_Z
 
     # Create diagonal matrix for black diagonal cells
     diag_Z = np.full_like(Z, np.nan)
