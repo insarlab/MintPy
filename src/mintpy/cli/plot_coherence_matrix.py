@@ -61,6 +61,9 @@ def create_parser(subparsers=None):
     parser.add_argument('-t','--template', dest='template_file',
                         help='temporal file.')
 
+    parser.add_argument('--time-axis', dest='time_axis', action='store_true',
+                       help='Use continuous time axis instead of date indices for coherence matrix')
+
     parser.add_argument('--save', dest='save_fig',
                         action='store_true', help='save the figure')
     parser.add_argument('--nodisplay', dest='disp_fig',
