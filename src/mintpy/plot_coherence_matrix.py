@@ -218,7 +218,7 @@ class coherenceMatrixViewer():
         plotDict['disp_legend'] = False
 
         # plot using the utility function
-        _, mesh = pp.plot_coherence_matrix_time_axis(
+        _, _ = pp.plot_coherence_matrix_time_axis(
             self.ax_mat,
             date12List=self.date12_list,
             cohList=coh.tolist(),
