@@ -971,8 +971,6 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
                 Z : 2D np.array, coherence value matrix in time grid
                 mesh : matplotlib.collections.QuadMesh object
     """
-    from datetime import datetime, timedelta
-    
     # Figure Setting
     if 'ds_name'     not in p_dict.keys():   p_dict['ds_name']     = 'Coherence'
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
@@ -996,7 +994,7 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     # Normalize date12 format
     date12List = ptime.yyyymmdd_date12(date12List)
     date12List_drop = ptime.yyyymmdd_date12(date12List_drop) if date12List_drop else []
-    
+
     # Convert date strings to datetime objects
     date_list_normalized = []
     for date12 in date12List:
@@ -1004,7 +1002,7 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
         date_list_normalized.extend([date1_str, date2_str])
     date_list_normalized = sorted(list(set(date_list_normalized)))
     date_list_normalized = ptime.yyyymmdd(date_list_normalized)
-    
+
     date_objs = {}
     for date_str in date_list_normalized:
         try:
@@ -1015,7 +1013,7 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
                 date_objs[date_str] = datetime.strptime('20' + date_str, '%Y%m%d')
             else:
                 raise
-    
+
     # Create coherence dictionary
     # Store both the normalized pair (for lookup) and the original order (for upper/lower triangle)
     coh_dict = {}
@@ -1028,26 +1026,26 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
             date1_str = ptime.yyyymmdd([date1_str])[0]
         if date2_str not in date_objs:
             date2_str = ptime.yyyymmdd([date2_str])[0]
-        
+
         date1 = date_objs.get(date1_str)
         date2 = date_objs.get(date2_str)
-        
+
         if date1 is None:
             date1 = datetime.strptime(date1_str, '%Y%m%d')
             date_objs[date1_str] = date1
         if date2 is None:
             date2 = datetime.strptime(date2_str, '%Y%m%d')
             date_objs[date2_str] = date2
-        
+
         # Store as tuple (date1, date2) where date1 <= date2 for consistency
         pair = (min(date1, date2), max(date1, date2))
         coh_dict[pair] = float(coh_val)
-        
+
         # Store with original order to determine upper/lower triangle
         # In date12 format, date1_str is master (earlier) and date2_str is slave (later)
         # So if date1 < date2, it's upper triangle (idx1 < idx2)
         coh_dict_ordered[(date1, date2)] = float(coh_val)
-        
+
         # Mark excluded pairs
         if date12 in date12List_drop:
             excluded_pairs.add(pair)
@@ -1065,17 +1063,17 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     for i in range(len(date_list)-1):
         width = (date_list[i+1] - date_list[i]).days
         internal_widths.append(width)
-    
+
     # Calculate average internal cell width for expansion
     if len(internal_widths) > 0:
         avg_width = sum(internal_widths) / len(internal_widths)
     else:
         avg_width = 30  # fallback to 30 days if no internal cells
-    
+
     # Expand first and last cells outward by half the average width
     first_expansion = timedelta(days=avg_width / 2)
     last_expansion = timedelta(days=avg_width / 2)
-    
+
     grid_points = [date_list[0] - first_expansion]  # starting point (expanded outward)
     for i in range(len(date_list)-1):
         mid_point = date_list[i] + (date_list[i+1] - date_list[i])/2
@@ -1122,13 +1120,13 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
         # Find grid indices for both dates
         idx1 = date_to_grid_idx.get(d1)
         idx2 = date_to_grid_idx.get(d2)
-        
+
         # Only fill if both dates are in valid grid cells
         if idx1 is not None and idx2 is not None:
             # Check if this pair is excluded (using normalized pair)
             pair_normalized = (min(d1, d2), max(d1, d2))
             is_excluded = pair_normalized in excluded_pairs
-            
+
             if idx1 < idx2:
                 # Upper triangle: only fill if not excluded (i.e., kept pairs)
                 # This matches normal mode: coh_mat[idx1, idx2] = np.nan for dropped pairs
@@ -1146,7 +1144,7 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     num_cells = len(grid_points) - 1
     for i in range(min(num_cells, Z.shape[0], Z.shape[1])):
         diag_Z[i, i] = 1.0
-    
+
     # Plot diagonal as black first (using gray_r colormap, where 1.0 = black)
     if np.any(~np.isnan(diag_Z)):
         ax.pcolormesh(X, Y, diag_Z,
@@ -1155,11 +1153,11 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
                      vmax=1.0,
                      shading='auto',
                      zorder=1)
-    
+
     # Plot using pcolormesh for coherence values
     cmap_plot = cmap.copy()
     cmap_plot.set_bad('white')  # NaN values will be white
-    
+
     mesh = ax.pcolormesh(X, Y, Z,
                          cmap=cmap_plot,
                          vmin=p_dict['vlim'][0],
@@ -1260,7 +1258,7 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     year_groups = defaultdict(list)
     for i, d in enumerate(tick_dates):
         year_groups[d.year].append((i, tick_positions[i]))
-    
+
     years = []
     year_positions = []
     for year in sorted(year_groups.keys()):
@@ -1305,28 +1303,28 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     def format_coord(x, y):
         x_idx = np.argmin(np.abs(np.array(days_grid) - x))
         y_idx = np.argmin(np.abs(np.array(days_grid) - y))
-        
+
         # Clamp indices to valid range
         x_idx = min(max(0, x_idx), len(grid_points) - 1)
         y_idx = min(max(0, y_idx), len(grid_points) - 1)
-        
+
         if x_idx < len(grid_points) and y_idx < len(grid_points):
             date1 = grid_points[x_idx]
             date2 = grid_points[y_idx]
             date1_str = date1.strftime('%Y-%m-%d')
             date2_str = date2.strftime('%Y-%m-%d')
-            
+
             # Find coherence value (Z has shape (len(grid_points)-1, len(grid_points)-1))
             coh_val = np.nan
             if x_idx < len(grid_points) - 1 and y_idx < len(grid_points) - 1:
                 coh_val = Z[y_idx, x_idx]
-            
+
             if not np.isnan(coh_val):
                 return f'x={date1_str}, y={date2_str}, v={coh_val:.3f}'
             else:
                 return f'x={date1_str}, y={date2_str}, v=NaN'
         return ''
-    
+
     ax.format_coord = format_coord
 
     return ax, Z, mesh

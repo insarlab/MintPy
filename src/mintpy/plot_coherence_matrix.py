@@ -12,7 +12,7 @@ import numpy as np
 
 from mintpy import view
 from mintpy.objects import ifgramStack
-from mintpy.utils import plot as pp, readfile, utils as ut, ptime
+from mintpy.utils import plot as pp, readfile, utils as ut
 
 
 ###########################  Sub Function  #############################
@@ -101,7 +101,7 @@ class coherenceMatrixViewer():
             ds_shape = readfile.read(self.img_file)[0].shape
             self.figsize_img = pp.auto_figure_size(ds_shape, disp_cbar=True, scale=0.7)
             vprint(f'create image figure in size of {self.figsize_img} inches')
-        
+
         if not self.figsize_mat:
             num_ifg = len(self.date12_list)
             if num_ifg <= 50:
@@ -139,11 +139,11 @@ class coherenceMatrixViewer():
 
 
     def plot(self):
-        
+
         # Figure 1 - Image
         self.fig_img, self.ax_img = plt.subplots(num=self.figname_img, figsize=self.figsize_img)
         self.plot_init_image()
-        
+
         # Figure 2 - Coherence Matrix
         self.fig_mat, self.ax_mat = plt.subplots(num=self.figname_mat, figsize=self.figsize_mat)
         if all(i is not None for i in self.yx):
@@ -152,7 +152,7 @@ class coherenceMatrixViewer():
         # Link the canvas to the plots.
         self.cid_img = self.fig_img.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
         self.cid_mat = self.fig_mat.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
-        
+
         if self.disp_fig:
             plt.show()
         return
@@ -180,7 +180,7 @@ class coherenceMatrixViewer():
         view_inps.print_msg = self.print_msg
         self.ax_img = view.plot_slice(self.ax_img, d_img, atr, view_inps)[0]
         self.fig_coord = view_inps.fig_coord
-        
+
 
         self.fig_img.canvas.manager.set_window_title(self.figname_img)
         self.fig_img.tight_layout()
@@ -218,7 +218,7 @@ class coherenceMatrixViewer():
         plotDict['disp_legend'] = False
 
         # plot using the utility function
-        Z, mesh = pp.plot_coherence_matrix_time_axis(
+        _, mesh = pp.plot_coherence_matrix_time_axis(
             self.ax_mat,
             date12List=self.date12_list,
             cohList=coh.tolist(),
@@ -252,7 +252,7 @@ class coherenceMatrixViewer():
         # Use time axis mode if enabled
         if self.time_axis:
             return self.plot_coherence_matrix4pixel_time_axis(yx)
-        
+
         self.ax_mat.cla()
 
         # read coherence
@@ -320,7 +320,7 @@ class coherenceMatrixViewer():
                 yx = [int(event.ydata+0.5),
                       int(event.xdata+0.5)]
             self.plot_coherence_matrix4pixel(yx)
-            
+
             self.update_image_marker(yx)
         elif event.inaxes == self.ax_mat:
             pass
@@ -331,6 +331,6 @@ class coherenceMatrixViewer():
             for artist in self.ax_img.get_children():
                 if hasattr(artist, 'get_marker') and artist.get_marker() == '^':
                     artist.remove()
-            
+
             self.ax_img.plot(yx[1], yx[0], 'r^', markersize=10, markeredgecolor='black')
             self.fig_img.canvas.draw_idle()
