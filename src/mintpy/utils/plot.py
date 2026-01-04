@@ -982,6 +982,8 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     if 'cbar_label'  not in p_dict.keys():   p_dict['cbar_label']  = p_dict['ds_name']
     if 'vlim'        not in p_dict.keys():   p_dict['vlim']        = (0.2, 1.0)
     if 'disp_cbar'   not in p_dict.keys():   p_dict['disp_cbar']   = True
+    if 'legend_loc'  not in p_dict.keys():   p_dict['legend_loc']  = 'best'
+    if 'disp_legend' not in p_dict.keys():   p_dict['disp_legend'] = True
 
     # support input colormap: string for colormap name, or colormap object directly
     if isinstance(p_dict['colormap'], str):
@@ -1058,11 +1060,27 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     date_list = sorted(list(all_dates))
 
     # Create continuous time grid (based on actual data points)
-    grid_points = [date_list[0]]  # starting point
+    # First, calculate internal cell widths to determine expansion width
+    internal_widths = []
+    for i in range(len(date_list)-1):
+        width = (date_list[i+1] - date_list[i]).days
+        internal_widths.append(width)
+    
+    # Calculate average internal cell width for expansion
+    if len(internal_widths) > 0:
+        avg_width = sum(internal_widths) / len(internal_widths)
+    else:
+        avg_width = 30  # fallback to 30 days if no internal cells
+    
+    # Expand first and last cells outward by half the average width
+    first_expansion = timedelta(days=avg_width / 2)
+    last_expansion = timedelta(days=avg_width / 2)
+    
+    grid_points = [date_list[0] - first_expansion]  # starting point (expanded outward)
     for i in range(len(date_list)-1):
         mid_point = date_list[i] + (date_list[i+1] - date_list[i])/2
         grid_points.append(mid_point)
-    grid_points.append(date_list[-1])  # ending point
+    grid_points.append(date_list[-1] + last_expansion)  # ending point (expanded outward)
 
     # Convert to days for plotting
     base_date = min(date_list)
@@ -1236,24 +1254,34 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     ax.tick_params(which='minor', direction='out', length=3, width=1,
                    bottom=True, top=True, left=True, right=True)
 
-    # Add year labels (below month labels)
+    # Add year labels (at middle month of each year)
+    # Group tick_dates by year
+    from collections import defaultdict
+    year_groups = defaultdict(list)
+    for i, d in enumerate(tick_dates):
+        year_groups[d.year].append((i, tick_positions[i]))
+    
     years = []
     year_positions = []
-    prev_year = None
-    for i, d in enumerate(tick_dates):
-        if prev_year != d.year:
-            years.append(str(d.year))
-            year_positions.append(tick_positions[i])
-            prev_year = d.year
+    for year in sorted(year_groups.keys()):
+        year_indices = year_groups[year]
+        if len(year_indices) > 0:
+            # Calculate middle position: average of first and last month positions
+            first_pos = year_indices[0][1]
+            last_pos = year_indices[-1][1]
+            middle_pos = (first_pos + last_pos) / 2
+            years.append(str(year))
+            year_positions.append(middle_pos)
 
     # Display year labels
     for pos, year in zip(year_positions, years):
         # X-axis: year labels at bottom (below month labels)
         ax.text(pos, ax.get_ylim()[1] + year_offset, year,
                 horizontalalignment='center', verticalalignment='top', fontsize=10)
-        # Y-axis: year labels at left (below month labels)
+        # Y-axis: year labels at left (below month labels), rotated 90 degrees counterclockwise
         ax.text(ax.get_xlim()[0] - year_offset, pos, year,
-                horizontalalignment='right', verticalalignment='center', fontsize=10)
+                horizontalalignment='right', verticalalignment='center', fontsize=10,
+                rotation=90)
     # Invert Y axis
     ax.invert_yaxis()
 
@@ -1266,6 +1294,12 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
 
     if p_dict['disp_title']:
         ax.set_title(p_dict['fig_title'], fontsize=p_dict['fontsize'])
+
+    # Legend
+    if date12List_drop and p_dict['disp_legend']:
+        ax.plot([], [], label='Upper: Ifgrams used')
+        ax.plot([], [], label='Lower: Ifgrams all')
+        ax.legend(loc=p_dict['legend_loc'], handlelength=0)
 
     # Status bar - format coordinate display
     def format_coord(x, y):
