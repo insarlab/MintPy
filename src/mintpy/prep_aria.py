@@ -455,7 +455,7 @@ def write_timeseries(outfile, corrStack, box=None,
 
     # Get the wavelength. need to convert radians to meters
     wavelength = np.float64(dsCor.GetRasterBand(1).GetMetadata(layer)["Wavelength (m)"])
-    phase2range = -wavelength / (4.*np.pi)
+    phase2range = wavelength / (4.*np.pi)
 
     # get model dates and time
     nDate = dsCor.RasterCount
