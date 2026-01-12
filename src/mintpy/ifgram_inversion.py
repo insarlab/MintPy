@@ -841,7 +841,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
                 # save result to output matrices
                 ts[:, idx] = tsi.flatten()
-                inv_quality[idx] = inv_quali
+                inv_quality[idx] = np.atleast_1d(inv_quali)[0]
                 num_inv_obs[idx] = num_obsi
 
                 prog_bar.update(i+1, every=200, suffix=f'{i+1}/{num_pixel2inv_part} pixels')
@@ -862,7 +862,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
             # save result to output matrices
             ts[:, idx] = tsi.flatten()
-            inv_quality[idx] = inv_quali
+            inv_quality[idx] = np.atleast_1d(inv_quali)[0]
             num_inv_obs[idx] = num_obsi
 
             prog_bar.update(i+1, every=200, suffix=f'{i+1}/{num_pixel2inv} pixels')
