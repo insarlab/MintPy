@@ -388,9 +388,23 @@ def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=Tru
 
 
 def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_num_step=20, print_msg=True):
+    """Auto adjust the colormap lookup table and display limit for the given 2D/3D matrix.
+
+    Parameters: data                  - 2D/3D np.ndarray, data to be dispalyed
+                num_multilook         - int, number of looks applied to avoid occansional large values
+                max_discrete_num_step - int, maximum number of color steps allowed for discrete colormaps
+    Returns:    cmap_lut              - int, number of colors in the colormap lookup table
+                vlim                  - list(float), min/max value for display
+                unique_values         - np.ndarray, unique values of the given data
+    """
+    # prevent empty input data
+    finite_values = np.ma.masked_invalid(data).compressed()
+    if finite_values.size == 0:
+        warnings.warn('NO pixel with finite value found!')
+        return 256, [0.0, 0.0], None
 
     # max step size / min step number for a uniform colormap
-    unique_values = np.unique(data[~np.isnan(data) * np.isfinite(data)])
+    unique_values = np.unique(finite_values)
     min_val = np.min(unique_values).astype(float)
     max_val = np.max(unique_values).astype(float)
 
@@ -1146,10 +1160,11 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
         start_date=start_date,
         end_date=end_date,
         source=inps.gnss_source,
+        print_msg=print_msg,
     )
     if site_names.size == 0:
         warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
-        print('  continue without GNSS plots.')
+        vprint('  continue without GNSS plots.')
         return ax
 
     # print the nearest GNSS to the current reference point
@@ -1164,7 +1179,12 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
         n_ind = np.argmin(site_dist)
         msg = 'nearest GNSS site (potential --ref-gnss choice): '
         msg += f'{site_names[n_ind]} at [{site_lats[n_ind]}, {site_lons[n_ind]}]'
-        print(msg)
+        vprint(msg)
+
+    # print the GNSS solution reference frame
+    gnss_obj = gnss.get_gnss_class(inps.gnss_source)(site_names[0])
+    vprint(f'GNSS source: {gnss_obj.source}')
+    vprint(f'GNSS reference frame: {gnss_obj.version}')
 
     # post-query: convert lat/lon to UTM for plotting
     if 'UTM_ZONE' in metadata.keys():
@@ -1198,7 +1218,7 @@ def plot_gnss(ax, SNWE, inps, metadata=dict(), print_msg=True):
         vprint('-'*30)
         msg = 'plotting GNSS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += f' in IGS14 reference frame in {inps.gnss_component} direction'
+        msg += f' in {inps.gnss_component} direction'
         msg += f' with respect to {inps.ref_gnss_site} ...' if inps.ref_gnss_site else ' ...'
         vprint(msg)
         vprint(f'number of available GNSS stations: {len(site_names)}')
