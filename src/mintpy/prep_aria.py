@@ -651,8 +651,8 @@ def load_aria(inps):
 
         layer_name, _ = get_correction_layer(inps.ionoFile)
 
-        if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[0]) == 'run':
-            outname = f'{out_dir}/ionStack.h5'
+        outname = f'{out_dir}/ionStack.h5'
+        if run_or_skip(inps, ds_name_dict, out_file=outname) == 'run':
 
             writefile.layout_hdf5(
                 outname,
