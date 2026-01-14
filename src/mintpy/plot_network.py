@@ -173,7 +173,7 @@ def plot_network(inps):
     # figure names
     ext = 'Ion.pdf' if os.path.basename(inps.file).startswith('ion') else '.pdf'
     fig_names = {
-        'coherence' : [i+ext for i in ['pbaseHistory',  'coherenceHistory', 'coherenceMatrix', 'network']],
+        'coherence' : [i+ext for i in ['pbaseHistory',  'coherenceHistory', 'coherenceMatrix', 'coherenceMatrixTimeAxis', 'network']],
         'offsetSNR' : [i+ext for i in ['pbaseHistory',        'SNRHistory',       'SNRMatrix', 'network']],
         'tbase'     : [i+ext for i in ['pbaseHistory',      'tbaseHistory',     'tbaseMatrix', 'network']],
         'pbase'     : [i+ext for i in ['pbaseHistory', 'pbaseRangeHistory',     'pbaseMatrix', 'network']],
@@ -204,7 +204,7 @@ def plot_network(inps):
         )
         if inps.save_fig:
             fig.savefig(fig_names[1], **kwargs)
-            print(f'save figure to {fig_names[2]}')
+            print(f'save figure to {fig_names[1]}')
 
         # Fig 3 - Coherence Matrix
         fig_size3 = np.mean(inps.fig_size)
@@ -218,9 +218,24 @@ def plot_network(inps):
         )[0]
         if inps.save_fig:
             fig.savefig(fig_names[2], **kwargs)
-            print(f'save figure to {fig_names[1]}')
+            print(f'save figure to {fig_names[2]}')
 
-    # Fig 4 - Interferogram Network
+        # Fig 4 - Coherence Matrix with Time Axis
+        fig_size4 = np.mean(inps.fig_size)
+        fig, ax = plt.subplots(figsize=[fig_size4, fig_size4])
+        ax = pp.plot_coherence_matrix_time_axis(
+            ax,
+            inps.date12List,
+            inps.cohList,
+            inps.date12List_drop,
+            p_dict=vars(inps),
+        )[0]
+        if inps.save_fig:
+            fig.savefig(fig_names[3], **kwargs)
+            print(f'save figure to {fig_names[3]}')
+
+    # Fig 5 - Interferogram Network (or Fig 4 if cohList is None)
+    fig_idx = 4 if inps.cohList is not None else 3
     fig, ax = plt.subplots(figsize=inps.fig_size)
     ax = pp.plot_network(
         ax,
@@ -231,8 +246,8 @@ def plot_network(inps):
         inps.date12List_drop,
     )
     if inps.save_fig:
-        fig.savefig(fig_names[3], **kwargs)
-        print(f'save figure to {fig_names[3]}')
+        fig.savefig(fig_names[fig_idx], **kwargs)
+        print(f'save figure to {fig_names[fig_idx]}')
 
     if inps.disp_fig:
         print('showing ...')

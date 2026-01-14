@@ -62,11 +62,19 @@ class coherenceMatrixViewer():
 
     def __init__(self, inps):
         # figure variables
-        self.figname = 'Coherence matrix'
-        self.fig_size = None
-        self.fig = None
+        self.figname_img = 'Image'
+        self.figsize_img = None
+        self.fig_img = None
         self.ax_img = None
+        self.cbar_img = None
+        self.img = None
+
+        self.figname_mat = 'Coherence Matrix'
+        self.figsize_mat = None
+        self.fig_mat = None
         self.ax_mat = None
+
+        self.time_axis = getattr(inps, 'time_axis', False)
 
         # copy inps to self object
         for key, value in inps.__dict__.items():
@@ -89,11 +97,31 @@ class coherenceMatrixViewer():
         self = read_network_info(self)
 
         # auto figure size
-        if not self.fig_size:
+        if not self.figsize_img:
             ds_shape = readfile.read(self.img_file)[0].shape
-            fig_size = pp.auto_figure_size(ds_shape, disp_cbar=True, scale=0.7)
-            self.fig_size = [fig_size[0]+fig_size[1], fig_size[1]]
-            vprint(f'create figure in size of {self.fig_size} inches')
+            self.figsize_img = pp.auto_figure_size(ds_shape, disp_cbar=True, scale=0.7)
+            vprint(f'create image figure in size of {self.figsize_img} inches')
+
+        if not self.figsize_mat:
+            num_ifg = len(self.date12_list)
+            if num_ifg <= 50:
+                self.figsize_mat = [6, 5]
+            elif num_ifg <= 100:
+                self.figsize_mat = [8, 6]
+            else:
+                self.figsize_mat = [10, 8]
+            vprint(f'create matrix figure in size of {self.figsize_mat} inches')
+
+        if not hasattr(self, 'cmap_name'):
+            # Default colormap: use 'RdBu_truncate' for both timeaxis and normal mode (from CLI default)
+            # This matches the CLI default value
+            if self.time_axis:
+                self.cmap_name = 'RdBu_truncate'
+            else:
+                self.cmap_name = 'viridis'
+        if not hasattr(self, 'cmap_vlist'):
+            self.cmap_vlist = [0.0, 1.0]
+        self.colormap = pp.ColormapExt(self.cmap_name, vlist=self.cmap_vlist).colormap
 
         # read aux data
         # 1. temporal coherence value
@@ -111,11 +139,27 @@ class coherenceMatrixViewer():
 
 
     def plot(self):
-        # Figure 1
-        self.fig = plt.figure(self.figname, figsize=self.fig_size)
 
-        # Axes 1 - Image
-        self.ax_img = self.fig.add_axes([0.05, 0.1, 0.4, 0.8])
+        # Figure 1 - Image
+        self.fig_img, self.ax_img = plt.subplots(num=self.figname_img, figsize=self.figsize_img)
+        self.plot_init_image()
+
+        # Figure 2 - Coherence Matrix
+        self.fig_mat, self.ax_mat = plt.subplots(num=self.figname_mat, figsize=self.figsize_mat)
+        if all(i is not None for i in self.yx):
+            self.plot_coherence_matrix4pixel(self.yx)
+
+        # Link the canvas to the plots.
+        self.cid_img = self.fig_img.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
+        self.cid_mat = self.fig_mat.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
+
+        if self.disp_fig:
+            plt.show()
+        return
+
+    def plot_init_image(self):
+        """Plot the initial image"""
+
         view_cmd = self.view_cmd.format(self.img_file)
         d_img, atr, view_inps = view.prep_slice(view_cmd)
         self.coord = ut.coordinate(atr)
@@ -137,22 +181,78 @@ class coherenceMatrixViewer():
         self.ax_img = view.plot_slice(self.ax_img, d_img, atr, view_inps)[0]
         self.fig_coord = view_inps.fig_coord
 
-        # Axes 2 - coherence matrix
-        self.ax_mat = self.fig.add_axes([0.55, 0.125, 0.40, 0.75])
-        self.colormap = pp.ColormapExt(self.cmap_name, vlist=self.cmap_vlist).colormap
-        if all(i is not None for i in self.yx):
-            self.plot_coherence_matrix4pixel(self.yx)
 
-        # Link the canvas to the plots.
-        self.cid = self.fig.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
-        if self.disp_fig:
-            plt.show()
+        self.fig_img.canvas.manager.set_window_title(self.figname_img)
+        self.fig_img.tight_layout()
+
+    def plot_coherence_matrix4pixel_time_axis(self, yx):
+        """Plot coherence matrix with continuous time axis for one pixel
+        Parameters: yx : list of 2 int
+        """
+        self.ax_mat.cla()
+
+        # read coherence
+        box = (yx[1], yx[0], yx[1]+1, yx[0]+1)
+        coh = readfile.read(self.ifgram_file, datasetName='coherence', box=box)[0]
+
+        # ex_date for pixel-wise masking during network inversion
+        ex_date12_list = self.ex_date12_list[:]   #local copy
+        if self.min_coh_used > 0.:
+            ex_date12_list += np.array(self.date12_list)[coh < self.min_coh_used].tolist()
+            ex_date12_list = sorted(list(set(ex_date12_list)))
+
+        # prep metadata
+        plotDict = {}
+        plotDict['fig_title'] = f'Y = {yx[0]}, X = {yx[1]}'
+        # display temporal coherence value of the pixel
+        if self.tcoh_file:
+            tcoh = self.tcoh[yx[0], yx[1]]
+            plotDict['fig_title'] += f', tcoh = {tcoh:.2f}'
+        plotDict['colormap'] = self.colormap
+        # cmap_vlist is [start, jump, end] for truncated colormap, but vlim needs [vmin, vmax]
+        if len(self.cmap_vlist) >= 2:
+            plotDict['vlim'] = [self.cmap_vlist[0], self.cmap_vlist[-1]]
+        else:
+            plotDict['vlim'] = [0.0, 1.0]
+        plotDict['cbar_label'] = 'Coherence'
+        plotDict['disp_legend'] = False
+
+        # plot using the utility function
+        _, _ = pp.plot_coherence_matrix_time_axis(
+            self.ax_mat,
+            date12List=self.date12_list,
+            cohList=coh.tolist(),
+            date12List_drop=ex_date12_list,
+            p_dict=plotDict,
+        )[1:3]
+
+        # Info
+        msg = f'pixel in yx = {tuple(yx)}, '
+        msg += f'min/max spatial coherence: {np.nanmin(coh):.2f} / {np.nanmax(coh):.2f}, '
+        if self.tcoh_file:
+            tcoh = self.tcoh[yx[0], yx[1]]
+            msg += f'temporal coherence: {tcoh:.2f}'
+        vprint(msg)
+
+        self.ax_mat.annotate('ifgrams\navailable', xy=(0.05, 0.05), xycoords='axes fraction', fontsize=12)
+        self.ax_mat.annotate('ifgrams\nused', ha='right', xy=(0.95, 0.85), xycoords='axes fraction', fontsize=12)
+
+        self.fig_mat.canvas.manager.set_window_title(self.figname_mat)
+        self.fig_mat.tight_layout()
+
+        # Update figure
+        self.fig_mat.canvas.draw_idle()
+        self.fig_mat.canvas.flush_events()
         return
 
     def plot_coherence_matrix4pixel(self, yx):
         """Plot coherence matrix for one pixel
         Parameters: yx : list of 2 int
         """
+        # Use time axis mode if enabled
+        if self.time_axis:
+            return self.plot_coherence_matrix4pixel_time_axis(yx)
+
         self.ax_mat.cla()
 
         # read coherence
@@ -203,12 +303,16 @@ class coherenceMatrixViewer():
             msg += f'temporal coherence: {tcoh:.2f}'
         vprint(msg)
 
+        self.fig_mat.canvas.manager.set_window_title(self.figname_mat)
+        self.fig_mat.tight_layout()
+
         # update figure
-        self.fig.canvas.draw_idle()
-        self.fig.canvas.flush_events()
+        self.fig_mat.canvas.draw_idle()
+        self.fig_mat.canvas.flush_events()
         return
 
     def update_coherence_matrix(self, event):
+        """Update coherence matrix when clicking on either window"""
         if event.inaxes == self.ax_img:
             if self.fig_coord == 'geo':
                 yx = self.coord.lalo2yx(event.ydata, event.xdata)
@@ -216,3 +320,17 @@ class coherenceMatrixViewer():
                 yx = [int(event.ydata+0.5),
                       int(event.xdata+0.5)]
             self.plot_coherence_matrix4pixel(yx)
+
+            self.update_image_marker(yx)
+        elif event.inaxes == self.ax_mat:
+            pass
+
+    def update_image_marker(self, yx):
+        """Update the marker point in the image window"""
+        if hasattr(self, 'pts_yx'):
+            for artist in self.ax_img.get_children():
+                if hasattr(artist, 'get_marker') and artist.get_marker() == '^':
+                    artist.remove()
+
+            self.ax_img.plot(yx[1], yx[0], 'r^', markersize=10, markeredgecolor='black')
+            self.fig_img.canvas.draw_idle()
