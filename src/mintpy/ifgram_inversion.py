@@ -136,8 +136,8 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                                     residual          for offset
                                     no to turn OFF the calculation
     Returns:    ts                - 2D np.ndarray in size of (num_date, num_pixel), phase time-series
-                inv_quality       - 1D np.ndarray in size of (num_pixel), temporal coherence (for phase) or residual (for offset)
-                num_inv_obs       - 1D np.ndarray in size of (num_pixel), number of observations (ifgrams / offsets)
+                inv_quality       - 1D np.ndarray in size of (num_pixel) or float, temporal coherence (for phase) or residual (for offset)
+                num_inv_obs       - 1D np.ndarray in size of (num_pixel) or int, number of observations (ifgrams / offsets)
                                     used during the inversion
     """
 
@@ -220,7 +220,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
     # number of observations used for inversion
     num_inv_obs = A.shape[0]
 
-    # ensure inv_quality is scalar when num_pixel == 1
+    # ensure inv_quality is scalar when num_pixel is 1
     if num_pixel == 1:
         inv_quality = np.atleast_1d(inv_quality)[0]
 
