@@ -220,6 +220,10 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
     # number of observations used for inversion
     num_inv_obs = A.shape[0]
 
+    # ensure inv_quality is scalar when num_pixel == 1
+    if num_pixel == 1:
+        inv_quality = np.atleast_1d(inv_quality)[0]
+
     return ts, inv_quality, num_inv_obs
 
 
@@ -841,7 +845,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
                 # save result to output matrices
                 ts[:, idx] = tsi.flatten()
-                inv_quality[idx] = np.atleast_1d(inv_quali)[0]
+                inv_quality[idx] = inv_quali
                 num_inv_obs[idx] = num_obsi
 
                 prog_bar.update(i+1, every=200, suffix=f'{i+1}/{num_pixel2inv_part} pixels')
@@ -862,7 +866,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
             # save result to output matrices
             ts[:, idx] = tsi.flatten()
-            inv_quality[idx] = np.atleast_1d(inv_quali)[0]
+            inv_quality[idx] = inv_quali
             num_inv_obs[idx] = num_obsi
 
             prog_bar.update(i+1, every=200, suffix=f'{i+1}/{num_pixel2inv} pixels')
