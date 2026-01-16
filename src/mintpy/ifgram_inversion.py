@@ -909,7 +909,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
     if obs_ds_name.startswith(('unwrapPhase','ion')):
         phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
         ts *= phase2range
-        ts_cov = ts_cov * np.abs(phase2range) if calc_cov else ts_cov
+        ts_cov = ts_cov * np.abs(phase2range)**2 if calc_cov else ts_cov
         print('converting LOS phase unit from radian to meter')
 
     elif (obs_ds_name == 'azimuthOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
