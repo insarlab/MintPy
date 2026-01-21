@@ -1099,19 +1099,26 @@ def flatten_for_resample(data):
     data = data.reshape(rows, cols, -1)
     return data
 
-def restore_from_resample(data, rows, cols, non_spatial_shape):
+def restore_from_resample(data, non_spatial_shape):
     """
-    Restore non-spatial dimensions after pyresample. 
+    Restore non-spatial dimensions after pyresample.
     This assumes spatial dimensions are the first two dimensions.
 
-    Parameters: data              - np.ndarray, input data with spatial dimensions at the front
-                rows              - int, number of rows in spatial dimensions
-                cols              - int, number of columns in spatial dimensions
-                non_spatial_shape - tuple, original shape of non-spatial dimensions
-    Returns:    data              - np.ndarray, reshaped data with original non-spatial dimensions
-    """
+    Parameters
+    ----------
+    data : np.ndarray
+        Input data with spatial dimensions at the front.
+    non_spatial_shape : tuple
+        Original shape of non-spatial dimensions.
 
-    if len(non_spatial_shape) > 0:
+    Returns
+    -------
+    np.ndarray
+        Reshaped data with original non-spatial dimensions restored.
+    """
+    rows, cols = data.shape[:2]
+
+    if non_spatial_shape:
         data = data.reshape(rows, cols, *non_spatial_shape)
     else:
         data = data.reshape(rows, cols)

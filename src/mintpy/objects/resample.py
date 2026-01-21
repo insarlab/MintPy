@@ -227,11 +227,9 @@ class resample:
                 nprocs=self.nprocs,
                 **kwargs,
             )
-
-            rows, cols = dest_data.shape[:2]
             
             # Restore original non-spatial dimensions
-            dest_data = ut.restore_from_resample(dest_data, rows, cols, non_spatial_shape)
+            dest_data = ut.restore_from_resample(dest_data, non_spatial_shape)
 
             # Move spatial dimensions (row, col) from the front back to the end
             # Restores (..., rows, cols) for any number of leading dimensions

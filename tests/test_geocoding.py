@@ -4,22 +4,6 @@ import numpy as np
 # from mintpy.objects.resample import resample
 from mintpy.utils.utils0 import move_spatial_dimension, flatten_for_resample, restore_from_resample
 
-def test_geocode_3d():
-    pass
-
-def test_geocode_4d():
-    pass
-    # res_obj = resample(lut_file=lookupFile,
-    #                 src_file=file,
-    #                 SNWE=None,
-    #                 lalo_step=None)
-    # res_obj.open()
-    # res_obj.prepare()
-
-    # data = np.random.rand(3, 4, 20, 30)
-
-    # res_obj.run_resample(src_data=data, box_ind=0)
-
 def test_flatten_for_resample_2d():
     data = np.random.rand(20, 30)
 
