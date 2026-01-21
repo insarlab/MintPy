@@ -853,3 +853,4 @@ class resample:
         geo_data[self.interp_mask] = interp_func(self.dest_pts)
 
         return geo_data
+    
