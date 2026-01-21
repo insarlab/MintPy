@@ -34,8 +34,6 @@ def test_restore_from_resample_2d():
 
     out = restore_from_resample(
         data,
-        rows=rows,
-        cols=cols,
         non_spatial_shape=()
     )
 
@@ -49,8 +47,6 @@ def test_restore_from_resample_3d():
 
     out = restore_from_resample(
         data,
-        rows=rows,
-        cols=cols,
         non_spatial_shape=non_spatial_shape
     )
 
@@ -64,8 +60,6 @@ def test_restore_from_resample_4d():
 
     out = restore_from_resample(
         data,
-        rows=rows,
-        cols=cols,
         non_spatial_shape=non_spatial_shape
     )
 
@@ -83,14 +77,11 @@ def test_restore_from_resample_4d():
 )
 def test_flatten_restore_roundtrip(shape):
     data = np.random.rand(*shape)
-    rows, cols = shape[:2]
     non_spatial_shape = shape[2:]
 
     flat = flatten_for_resample(data)
     restored = restore_from_resample(
         flat,
-        rows=rows,
-        cols=cols,
         non_spatial_shape=non_spatial_shape
     )
 
@@ -103,8 +94,6 @@ def test_restore_from_resample_invalid_shape():
     with pytest.raises(ValueError):
         restore_from_resample(
             data,
-            rows=rows,
-            cols=cols,
             non_spatial_shape=(3, 4)  # 12 != 10
         )
 
