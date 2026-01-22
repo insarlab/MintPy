@@ -7,6 +7,7 @@ from mintpy.utils.utils0 import (
     restore_from_resample,
 )
 
+
 def test_flatten_for_resample_2d():
     data = np.random.rand(20, 30)
 
