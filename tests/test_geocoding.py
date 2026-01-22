@@ -1,8 +1,7 @@
 import pytest
 
-import numpy as np
-# from mintpy.objects.resample import resample
 from mintpy.utils.utils0 import move_spatial_dimension, flatten_for_resample, restore_from_resample
+import numpy as np
 
 def test_flatten_for_resample_2d():
     data = np.random.rand(20, 30)
