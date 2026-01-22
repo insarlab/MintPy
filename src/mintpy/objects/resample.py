@@ -209,7 +209,7 @@ class resample:
             # Move spatial dimensions (row, col) from the end to the front
             # so that rows/cols axis are the first, as required by pyresample
             src_data = ut.move_spatial_dimension(src_data, to_front=True)
-            
+
             # save non-spatial shape for restoring later
             # () for 2d data
             non_spatial_shape = src_data.shape[2:]
