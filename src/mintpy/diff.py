@@ -213,7 +213,7 @@ def diff_timeseries_and_velocity(file1, file2, out_file, max_num_pixel=2e8):
         velo = readfile.read(file2, datasetName='velocity', box=box)[0]
 
         if ref_val is not None:
-            print(f'* referencing velocity to y/x: {ref_y}/{ref_x} with value of {ref_val*100:.2f} cm/year')
+            print(f'* referencing velocity to y/x: {ref_y}/{ref_x} with value of {np.squeeze(ref_val)*100:.2f} cm/year')
             velo -= ref_val
 
         # calculate design matrix from the time-func file
