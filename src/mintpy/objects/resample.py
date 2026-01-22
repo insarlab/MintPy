@@ -227,7 +227,7 @@ class resample:
                 nprocs=self.nprocs,
                 **kwargs,
             )
-            
+
             # Restore original non-spatial dimensions
             dest_data = ut.restore_from_resample(dest_data, non_spatial_shape)
 

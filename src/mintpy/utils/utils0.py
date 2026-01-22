@@ -1082,11 +1082,11 @@ def move_spatial_dimension(data, to_front=True):
 
 def flatten_for_resample(data):
     """
-    Flatten non-spatial dimensions for pyresample. 
+    Flatten non-spatial dimensions for pyresample.
     This assumes spatial dimensions are the first two dimensions.
 
     Parameters: data         - np.ndarray, input data with spatial dimensions at the front
-    
+
     Returns:    src_data    - np.ndarray, reshaped data with spatial dimensions at the
                                         front and non-spatial dimensions flattened
     """
