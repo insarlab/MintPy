@@ -277,6 +277,11 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False,
             ax.set_title(title)
         plt.show()
 
+    # ensure delta_z is scalar when num_pixel is 1
+    num_pixel = ts0.shape[1]
+    if num_pixel == 1:
+        delta_z = np.atleast_1d(delta_z)[0]
+
     return delta_z, ts_cor, ts_res
 
 
