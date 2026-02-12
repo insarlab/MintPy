@@ -277,11 +277,6 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False,
             ax.set_title(title)
         plt.show()
 
-    # ensure delta_z is scalar when num_pixel is 1
-    num_pixel = ts0.shape[1]
-    if num_pixel == 1:
-        delta_z = np.atleast_1d(delta_z)[0]
-
     return delta_z, ts_cor, ts_res
 
 
@@ -416,7 +411,7 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
             )
 
             # assemble
-            delta_z[idx] = delta_z_i
+            delta_z[idx] = np.asarray(delta_z_i).reshape(-1)[0]
             ts_cor[:, idx] = ts_cor_i.flatten()
             ts_res[:, idx] = ts_res_i.flatten()
 
