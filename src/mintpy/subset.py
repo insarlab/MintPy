@@ -187,7 +187,7 @@ def subset_input_dict2box(subset_dict, meta_dict):
     if subset_dict.get('subset_lat', None):
         if 'UTM_ZONE' in meta_dict:
             # lat/lon --> UTM --> y/x conversion
-            if 'subset_lon' in subset_dict:
+            if subset_dict.get('subset_lon', None):
                 sub_y = coord.lalo2yx(subset_dict['subset_lat'], subset_dict['subset_lon'])[0]
             else:
                 raise TypeError('Both --lat/lon are required for WGS84-UTM coordinates conversion.')
@@ -202,7 +202,7 @@ def subset_input_dict2box(subset_dict, meta_dict):
     if subset_dict.get('subset_lon', None):
         if 'UTM_ZONE' in meta_dict:
             # lat/lon --> UTM --> y/x conversion
-            if 'subset_lat' in subset_dict:
+            if subset_dict.get('subset_lat', None):
                 sub_x = coord.lalo2yx(subset_dict['subset_lat'], subset_dict['subset_lon'])[1]
             else:
                 raise TypeError('Both --lat/lon are required for WGS84-UTM coordinates conversion.')
