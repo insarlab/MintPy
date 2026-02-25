@@ -737,6 +737,7 @@ def prepare_metadata(iDict):
             '--incidence-angle'     : 'mintpy.load.incAngleFile',
             '--azimuth-angle'       : 'mintpy.load.azAngleFile',
             '--water-mask'          : 'mintpy.load.waterMaskFile',
+            '--iono'                : 'mintpy.load.ionUnwFile',
         }
 
         for arg_name, opt_name in ARG2OPT_DICT.items():
