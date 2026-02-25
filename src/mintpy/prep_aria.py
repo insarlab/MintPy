@@ -297,6 +297,10 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
             # write
             f['waterMask'][:,:] = water_mask
 
+            # apply mask to azimuthAngle after conversion factor
+            if azAngleFile is not None:
+                f['azimuthAngle'][:,:] *= water_mask
+
     print(f'finished writing to HD5 file: {outfile}\n')
     return outfile
 
