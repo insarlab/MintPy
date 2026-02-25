@@ -480,7 +480,7 @@ SEN = {
 }
 
 # Fucheng-1
-# launch date: 2023-06
+# launch date: 2023-06-07
 # end    date: operational
 # Table 1 in Cai et al. (2025), https://doi.org/10.16356/j.1005‑1120.2025.04.005
 # Table 1-2 in Han et al. (2025), https://doi.org/10.1016/j.measurement.2025.116876
