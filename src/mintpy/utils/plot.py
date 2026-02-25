@@ -1360,7 +1360,9 @@ def plot_insar_vs_gnss_scatter(vel_file, csv_file='gnss_enu2los_UNR.csv', msk_fi
         x, y = xs[i], ys[i]
         if (0 <= x < width) and (0 <= y < length) and msk[y, x]:
             box = (x, y, x+1, y+1)
-            insar_obs[i] = readfile.read(vel_file, datasetName='velocity', box=box)[0] * unit_fac
+            val = readfile.read(vel_file, datasetName='velocity', box=box)[0]
+            insar_obs[i] = float(np.squeeze(val)) * unit_fac
+
         prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {sites[i]}')
     prog_bar.close()
 
