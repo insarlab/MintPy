@@ -57,7 +57,7 @@ def create_parser(subparsers=None):
     parser.add_argument('-l', '--lat', '--sub-lat', '--subset-lat', dest='subset_lat',
                         type=float, nargs=2, help='subset range in latitude')
     parser.add_argument('-L', '--lon', '--sub-lon', '--subset-lon', dest='subset_lon',
-                        type=float, nargs=2, help='subset range in column\n\n')
+                        type=float, nargs=2, help='subset range in longitude\n\n')
 
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with subset setting.  i.e. \n'

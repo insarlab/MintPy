@@ -161,12 +161,13 @@ def subset_input_dict2box(subset_dict, meta_dict):
                               subset_lat : list of 2 float, subset in lat direction, default=None
                               subset_lon : list of 2 float, subset in lon direction, default=None
                 meta_dict   - dict, including the following items:
-                              'WIDTH'      : int
-                              'LENGTH': int
-                              'X_FIRST'    : float, optional
-                              'Y_FIRST'    : float, optional
-                              'X_STEP'     : float, optional
-                              'Y_STEP'     : float, optional
+                              'WIDTH'    : int
+                              'LENGTH'   : int
+                              'X_FIRST'  : float, optional
+                              'Y_FIRST'  : float, optional
+                              'X_STEP'   : float, optional
+                              'Y_STEP'   : float, optional
+                              'UTM_ZONE' : str, optional
     Returns:    pix_box     - 4-tuple of int, in pixel unit of 1, in (x0, y0, x1, y1)
                 geo_box     - 4-tuple of float, in lat/lon unit (degree)
                               None if file is in radar coordinate.
@@ -184,14 +185,30 @@ def subset_input_dict2box(subset_dict, meta_dict):
     # Use subset_lat/lon input if existed,  priority: lat/lon > y/x > len/wid
     coord = ut.coordinate(meta_dict)
     if subset_dict.get('subset_lat', None):
-        sub_y = coord.lalo2yx(subset_dict['subset_lat'], None)[0]
+        if 'UTM_ZONE' in meta_dict:
+            # lat/lon --> UTM --> y/x conversion
+            if subset_dict.get('subset_lon', None):
+                sub_y = coord.lalo2yx(subset_dict['subset_lat'], subset_dict['subset_lon'])[0]
+            else:
+                raise TypeError('Both --lat/lon are required for WGS84-UTM coordinates conversion.')
+        else:
+            # lat/lon --> y/x conversion
+            sub_y = coord.lalo2yx(subset_dict['subset_lat'], None)[0]
     elif subset_dict['subset_y']:
         sub_y = subset_dict['subset_y']
     else:
         sub_y = [0, length]
 
     if subset_dict.get('subset_lon', None):
-        sub_x = coord.lalo2yx(None, subset_dict['subset_lon'])[1]
+        if 'UTM_ZONE' in meta_dict:
+            # lat/lon --> UTM --> y/x conversion
+            if subset_dict.get('subset_lat', None):
+                sub_x = coord.lalo2yx(subset_dict['subset_lat'], subset_dict['subset_lon'])[1]
+            else:
+                raise TypeError('Both --lat/lon are required for WGS84-UTM coordinates conversion.')
+        else:
+            # lat/lon --> y/x conversion
+            sub_x = coord.lalo2yx(None, subset_dict['subset_lon'])[0]
     elif subset_dict['subset_x']:
         sub_x = subset_dict['subset_x']
     else:
