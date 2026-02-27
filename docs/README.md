@@ -84,15 +84,15 @@ ts_data, meta = readfile.read('timeseries_ERA5_ramp_demErr.h5')
 
 Algorithms implemented in the software are described in details at [Yunjun et al. (2019)](https://doi.org/10.1016/j.cageo.2019.104331).
 
-- [Quick start with example datasets](./demo_dataset.md)
-- [Example data directory](./dir_structure.md)
-- [Example template files](./templates/README.md)
-- [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
++ [Quick start with example datasets](./demo_dataset.md)
++ [Example data directory](./dir_structure.md)
++ [Example template files](./templates/README.md)
++ [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
 
 ### 4. Contact us
 
-- Most development discussion happens on GitHub. Feel free to [open an issue](https://github.com/insarlab/MintPy/issues) or comment on any open issue or pull request.
-- Join our [user forum on Google Groups](https://groups.google.com/g/mintpy) or use [GitHub Discussions](https://github.com/insarlab/MintPy/discussions) to ask questions or leave comments.
++ Most development discussion happens on GitHub. Feel free to [open an issue](https://github.com/insarlab/MintPy/issues) or comment on any open issue or pull request.
++ Join our [user forum on Google Groups](https://groups.google.com/g/mintpy) or use [GitHub Discussions](https://github.com/insarlab/MintPy/discussions) to ask questions or leave comments.
 
 ### 5. Contributing
 
