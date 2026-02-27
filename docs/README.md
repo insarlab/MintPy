@@ -69,11 +69,11 @@ save_kmz_timeseries.py     # generate Google Earth KMZ file in points for time-s
 
 #### 2.2 Customized processing recipe
 
-MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! [Here](https://github.com/insarlab/MintPy/blob/main/scripts/compare_velocity_with_diff_tropo.sh) is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections.
+MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, and you can build your own customized processing recipe! [Here](https://github.com/insarlab/MintPy/blob/main/scripts/compare_velocity_with_diff_tropo.sh) is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections.
 
 #### 2.3 Build on top of `mintpy` module
 
-MintPy is modulized in Python with utilities classes and functions and well commented in the code level. Users who are familiar with Python could build their own functions and modules on top of [`mintpy.objects`](https://github.com/insarlab/MintPy/tree/main/src/mintpy/objects) and [`mintpy.utils`](https://github.com/insarlab/MintPy/tree/main/src/mintpy/utils). However, we don't have a complete API document website yet (maybe you can contribute this!). Below is an example of reading the 3D matrix of displacement time-series from an HDF5 file.
+MintPy is modularized in Python with utility classes and functions, and is well-commented at the code level. Users who are familiar with Python could build their own functions and modules on top of [`mintpy.objects`](https://github.com/insarlab/MintPy/tree/main/src/mintpy/objects) and [`mintpy.utils`](https://github.com/insarlab/MintPy/tree/main/src/mintpy/utils). However, we don't have a complete API document website yet (maybe you can contribute this!). Below is an example of reading the 3D matrix of displacement time-series from an HDF5 file.
 
 ```python
 from mintpy.utils import readfile
@@ -92,7 +92,7 @@ Algorithms implemented in the software are described in details at [Yunjun et al
 ### 4. Contact us
 
 - Most development discussion happens on GitHub. Feel free to [open an issue](https://github.com/insarlab/MintPy/issues) or comment on any open issue or pull request.
-- Join our [user forum on google groups](https://groups.google.com/g/mintpy) or use [github discussions](https://github.com/insarlab/MintPy/discussions) to ask questions or leave comments.
+- Join our [user forum on Google Groups](https://groups.google.com/g/mintpy) or use [GitHub Discussions](https://github.com/insarlab/MintPy/discussions) to ask questions or leave comments.
 
 ### 5. Contributing
 
