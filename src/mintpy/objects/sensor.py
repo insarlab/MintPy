@@ -31,6 +31,7 @@ SENSOR_NAME_VARIATION = {
     'sen'   : ['sen', 's1', 's1a', 's1b', 'sent1', 'sentinel1', 'sentinel1a', 'sentinel1b'],
     'tsx'   : ['tsx', 'terra', 'terrasar', 'terrasarx', 'tdx', 'tandemx'],
     'uav'   : ['uav', 'uavsar'],
+    'fc1'   : ['fc1', 'fucheng', 'fucheng1'],
 }
 
 # duplicated in mintpy.cli.prep_gamma
@@ -478,6 +479,28 @@ SEN = {
     'noise_equivalent_sigma_zero': -22,       # dB
 }
 
+# Fucheng-1
+# launch date: 2023-06-07
+# end    date: operational
+# Table 1 in Cai et al. (2025), https://doi.org/10.16356/j.1005‑1120.2025.04.005
+# Table 1-2 in Han et al. (2025), https://doi.org/10.1016/j.measurement.2025.116876
+# Tables in https://cn.spacety.com/SARDevelopment
+FC1 = {
+    'altitude'                   : 505e3,     # m
+    'orbit_inclination'          : 97.3,      # deg
+    'repeat_cycle'               : 11,        # day
+    # sar / antenna
+    'carrier_frequency'          : 5.4e9,     # Hz
+    'antenna_length'             : 4.56,      # m
+    'antenna_width'              : 0.8,       # m
+    'chirp_bandwidth'            : 100e6,     # Hz
+    'sampling_frequency'         : 120e6,     # Hz
+    'azimuth_pixel_size'         : 13.96,     # m, this is the ground azimuth pixel spacing, NOT on orbits!
+    'range_pixel_size'           : 1.25,      # m
+    'noise_equivalent_sigma_zero': -22,       # dB
+}
+
+
 
 ##--------------------  S-band  --------------------##
 
@@ -786,6 +809,7 @@ SENSOR_DICT = {
     'rsat2' : RSAT2,
     'rcm'   : RCM,
     'gf3'   : GF3,
+    'fc1'   : FC1,
     # S-band
     'hj1c'  : HJ1C,
     # L-band
