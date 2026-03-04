@@ -497,6 +497,13 @@ def get_tropo_gacos_parser(subparsers=None):
     return parser
 
 
+def get_tropo_opera_parser(subparsers=None):
+    from mintpy.cli import tropo_opera
+    parser = tropo_opera.create_parser(subparsers)
+    parser.set_defaults(func=tropo_opera.main)
+    return parser
+
+
 def get_tropo_phase_elevation_parser(subparsers=None):
     from mintpy.cli import tropo_phase_elevation
     parser = tropo_phase_elevation.create_parser(subparsers)
@@ -629,6 +636,7 @@ def get_parser():
     get_s1ab_range_bias_parser(sp)
     get_solid_earth_tides_parser(sp)
     get_tropo_gacos_parser(sp)
+    get_tropo_opera_parser(sp)
     get_tropo_phase_elevation_parser(sp)
     get_tropo_pyaps3_parser(sp)
     get_unwrap_error_bridging_parser(sp)
