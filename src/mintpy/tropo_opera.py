@@ -189,9 +189,8 @@ def calc_zenith_delay_from_opera_file(opera_file, geom_file, pad_cells=3):
     ])
     ztd = interp(points).reshape(dem.shape).astype(np.float32)
 
-    # mask invalid pixels from geometry
+    # mask invalid pixels from DEM (NaN/Inf); preserve valid zero-elevation pixels
     ztd[~np.isfinite(dem)] = np.nan
-    ztd[dem == 0] = np.nan
 
     return ztd, cube
 
