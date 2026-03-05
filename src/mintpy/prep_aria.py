@@ -143,7 +143,6 @@ def extract_metadata(stack):
     meta["FILE_LENGTH"] = ds.RasterYSize
     meta["LENGTH"] = ds.RasterYSize
     meta["ORBIT_DIRECTION"] = meta["orbitDirection"].upper()
-    meta["PLATFORM"] = "Sen"
     meta["WAVELENGTH"] = float(meta["Wavelength (m)"])
     meta["WIDTH"] = ds.RasterXSize
     meta["NUMBER_OF_PAIRS"] = ds.RasterCount
