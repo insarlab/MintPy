@@ -143,6 +143,7 @@ def extract_metadata(stack):
     meta["FILE_LENGTH"] = ds.RasterYSize
     meta["LENGTH"] = ds.RasterYSize
     meta["ORBIT_DIRECTION"] = meta["orbitDirection"].upper()
+    meta['PLATFORM'] = meta.get('PLATFORM', 'Sen')              # provided by ARIA-tools since version 1.4.3 on Mar 2026
     meta["WAVELENGTH"] = float(meta["Wavelength (m)"])
     meta["WIDTH"] = ds.RasterXSize
     meta["NUMBER_OF_PAIRS"] = ds.RasterCount
