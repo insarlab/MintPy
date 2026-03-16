@@ -12,6 +12,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 from osgeo import gdal
+gdal.UseExceptions()
 from pyproj.transformer import Transformer
 from scipy.interpolate import RegularGridInterpolator
 
@@ -44,7 +45,7 @@ PROCESSINFO = {
     'end_time'       : f"{IDENTIFICATION}/referenceZeroDopplerEndTime",
     'rdr_xcoord'     : f"{RADARGRID_ROOT}/xCoordinates",
     'rdr_ycoord'     : f"{RADARGRID_ROOT}/yCoordinates",
-    'rdr_slant_range': f"{RADARGRID_ROOT}/slantRange",
+    'rdr_slant_range': f"{RADARGRID_ROOT}/referenceSlantRange",
     'rdr_height'     : f"{RADARGRID_ROOT}/heightAboveEllipsoid",
     'rdr_incidence'  : f"{RADARGRID_ROOT}/incidenceAngle",
     'bperp'          : f"{RADARGRID_ROOT}/perpendicularBaseline",
@@ -58,6 +59,7 @@ def load_nisar(inps):
     print(f'update mode: {inps.update_mode}')
 
     input_files = sorted(glob.glob(inps.input_glob))
+    print(inps.input_glob)
     print(f"Found {len(input_files)} unwrapped files")
 
     if inps.subset_lat:
@@ -246,7 +248,8 @@ def read_subset(inp_file, bbox, geometry=False):
 def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
     """Read the DEM and mask, change projection and interpolate to data grid,
        interpolate slant range and incidence angle to data grid"""
-    dem_dataset = gdal.Open(dem_file, gdal.GA_ReadOnly)
+    dem_path = list(Path.cwd().rglob(dem_file))[0].resolve()
+    dem_dataset = gdal.Open(dem_path, gdal.GA_ReadOnly)
     proj = gdal.osr.SpatialReference(wkt=dem_dataset.GetProjection())
     dem_src_epsg = int(proj.GetAttrValue('AUTHORITY', 1))
     del dem_dataset
@@ -257,7 +260,6 @@ def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
         dst_epsg = ds[DATASETS['epsg']][()]
         xcoord = ds[DATASETS['xcoord']][xybbox[0]:xybbox[2]]
         ycoord = ds[DATASETS['ycoord']][xybbox[1]:xybbox[3]]
-
         rdr_coords['xcoord_radar_grid'] = ds[PROCESSINFO['rdr_xcoord']][()]
         rdr_coords['ycoord_radar_grid'] = ds[PROCESSINFO['rdr_ycoord']][()]
         rdr_coords['height_radar_grid'] = ds[PROCESSINFO['rdr_height']][()]
@@ -271,17 +273,17 @@ def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
     Y_2d, X_2d = np.meshgrid(ycoord, xcoord, indexing='ij')
     bounds = (min(xcoord), min(ycoord), max(xcoord), max(ycoord))
     output_projection = f"EPSG:{dst_epsg}"
-
+    
     # Warp DEM to the interferograms grid
     input_projection = f"EPSG:{dem_src_epsg}"
-    output_dem = os.path.join(os.path.dirname(dem_file), 'dem_transformed.tif' )
-    gdal.Warp(output_dem, dem_file, outputBounds=bounds, format='GTiff',
+    output_dem = os.path.join(os.path.dirname(dem_path), 'dem_transformed.tif' )
+    gdal.Warp(str(output_dem), str(dem_path), outputBounds=bounds, format='GTiff',
               srcSRS=input_projection, dstSRS=output_projection, resampleAlg=gdal.GRA_Bilinear,
               width=subset_cols, height=subset_rows,
-              options=['COMPRESS=DEFLATE'])
-
-    dem_subset_array =  gdal.Open(output_dem, gdal.GA_ReadOnly).ReadAsArray()
-
+              creationOptions=['COMPRESS=DEFLATE'])
+    
+    dem_subset_array =  gdal.Open(str(output_dem), gdal.GA_ReadOnly).ReadAsArray()
+    
     # Interpolate slant_range and incidence_angle
     slant_range, incidence_angle = interpolate_geometry(X_2d, Y_2d, dem_subset_array, rdr_coords)
 
@@ -308,6 +310,7 @@ def read_and_interpolate_geometry(gunw_file, dem_file, xybbox, mask_file=None):
 
         except:
             raise OSError('*** Mask is not gdal readable ***')
+
 
 
     return dem_subset_array, slant_range, incidence_angle, mask_subset_array
@@ -361,10 +364,12 @@ def prepare_geometry(
 
     # Read waterMask, LayoverShadowMask, xybbox:
     geo_ds = read_subset(metaFile, bbox, geometry=True)
+    print(Path.cwd())
     dem_subset_array, slant_range, incidence_angle, mask = read_and_interpolate_geometry(metaFile, demFile,
                                                                                    geo_ds['xybbox'], mask_file=maskFile)
 
     length, width = dem_subset_array.shape
+    print(length)
 
     ds_name_dict = {
         "height": [np.float32, (length, width), dem_subset_array],
