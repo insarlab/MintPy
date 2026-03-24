@@ -29,7 +29,7 @@ def _get_product_name_and_type(filename: str) -> tuple[str, str]:
         job_type = 'INSAR_ISCE_MULTI_BURST'
 
     elif match := re.match(
-        r'S1[ABC]{2}(_\d{8}T\d{6}){2}_(VV|HH)[PRO]\d{3}_INT\d{2}_G_[uw][ec][123F]_[0-9A-F]{4}',
+        r'S1[ABC]{2}(_\d{8}T\d{6}){2}_(VV|HH)[PRO]\d{3,4}_INT\d{2}_G_[uw][ec][123F]_[0-9A-F]{4}',
         filename,
     ):
         job_type = 'INSAR_GAMMA'
