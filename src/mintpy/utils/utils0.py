@@ -1062,7 +1062,67 @@ def circle_index(atr, circle_par):
 
     return idx
 
+def move_spatial_dimension(data, to_front=True):
+    """Move spatial dimensions (row, col) to front or back for pyresample
 
+    Parameters:
+        data     - np.ndarray, shape (..., rows, cols) or (rows, cols)
+        to_front - bool
+            True  -> move spatial dims (row, col) to axes (0, 1)
+            False -> move spatial dims (row, col) back to the end
+    Returns:    data      - 2D/3D np.array, output data with moved spatial dimensions
+    """
+    if data.ndim <= 2:
+        return data
+
+    if to_front:
+        return np.moveaxis(data, [-2, -1], [0, 1])
+    else:
+        return np.moveaxis(data, [0, 1], [-2, -1])
+
+def flatten_for_resample(data):
+    """
+    Flatten non-spatial dimensions for pyresample.
+    This assumes spatial dimensions are the first two dimensions.
+
+    Parameters: data         - np.ndarray, input data with spatial dimensions at the front
+
+    Returns:    src_data    - np.ndarray, reshaped data with spatial dimensions at the
+                                        front and non-spatial dimensions flattened
+    """
+    if data.ndim <= 2:
+        return data
+
+    rows, cols = data.shape[:2]
+
+    # multiple dimensions. We now need to ravel all non-spatial dimensions
+    data = data.reshape(rows, cols, -1)
+    return data
+
+def restore_from_resample(data, non_spatial_shape):
+    """
+    Restore non-spatial dimensions after pyresample.
+    This assumes spatial dimensions are the first two dimensions.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Input data with spatial dimensions at the front.
+    non_spatial_shape : tuple
+        Original shape of non-spatial dimensions.
+
+    Returns
+    -------
+    np.ndarray
+        Reshaped data with original non-spatial dimensions restored.
+    """
+    rows, cols = data.shape[:2]
+
+    if non_spatial_shape:
+        data = data.reshape(rows, cols, *non_spatial_shape)
+    else:
+        data = data.reshape(rows, cols)
+    return data
 
 #################################### User Interaction #####################################
 def yes_or_no(question):
