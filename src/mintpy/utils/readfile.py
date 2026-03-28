@@ -138,6 +138,7 @@ DATA_TYPE_GDAL2NUMPY = {
     12: 'uint64',
     13: 'int64',
     14: 'int8',         # GDAL >= 3.7
+    15: 'float16',      # GDAL >= 3.11
 }
 
 DATA_TYPE_NUMPY2GDAL = {
@@ -155,6 +156,7 @@ DATA_TYPE_NUMPY2GDAL = {
     "uint64"    : 12,   # GDT_UInt64 (GDAL >= 3.5)
     "int64"     : 13,   # GDT_Int64  (GDAL >= 3.5)
     "int8"      : 14,   # GDT_Int8   (GDAL >= 3.7)
+    "float16"   : 15,   # GDT_Float16 (GDAL >= 3.11)
 }
 
 # 3 - ISCE
