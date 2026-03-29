@@ -208,7 +208,7 @@ def subset_input_dict2box(subset_dict, meta_dict):
                 raise TypeError('Both --lat/lon are required for WGS84-UTM coordinates conversion.')
         else:
             # lat/lon --> y/x conversion
-            sub_x = coord.lalo2yx(None, subset_dict['subset_lon'])[0]
+            sub_x = coord.lalo2yx(None, subset_dict['subset_lon'])[1]
     elif subset_dict['subset_x']:
         sub_x = subset_dict['subset_x']
     else:
