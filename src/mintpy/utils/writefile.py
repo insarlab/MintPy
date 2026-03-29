@@ -209,7 +209,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
         elif fext == '.msk':
             meta['DATA_TYPE'] = 'int8'
 
-        data_types = ['bool', 'int8', 'uint8', 'int16', 'float32', 'float64', 'complex32', 'complex64', 'complex128']
+        data_types = ['bool', 'int8', 'uint8', 'int16', 'float16', 'float32',
+                      'float64', 'complex32', 'complex64', 'complex128']
         if meta['DATA_TYPE'] not in data_types:
             msg = 'Un-supported file type "{}" with data type "{}"!'.format(fext, meta['DATA_TYPE'])
             msg += f'\nSupported data type list: {data_types}'
