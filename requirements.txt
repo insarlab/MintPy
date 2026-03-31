@@ -1,5 +1,6 @@
 pip
 argcomplete
+asf_search
 cartopy
 cvxopt
 dask>=1.0

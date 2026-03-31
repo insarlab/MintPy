@@ -800,8 +800,8 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, opera_dir):
 
     supported_dates, unsupported_dates = _split_supported_dates(date_list, min_date=OPERA_MIN_ACQ_DATE)
     if len(unsupported_dates) > 0:
-        print((f'WARNING: {len(unsupported_dates)} acquisition date(s) are earlier than '
-               f'OPERA availability ({OPERA_MIN_ACQ_DATE}) and will be skipped.'))
+        print(f'WARNING: {len(unsupported_dates)} acquisition date(s) are earlier than '
+               f'OPERA availability ({OPERA_MIN_ACQ_DATE}) and will be skipped.')
         for d in unsupported_dates:
             print(f'  {d}')
 
@@ -880,8 +880,8 @@ def run_tropo_opera(inps):
     date_list, utc_sec = read_inps2date_time(inps)
     supported_dates, unsupported_dates = _split_supported_dates(date_list, min_date=OPERA_MIN_ACQ_DATE)
     if len(unsupported_dates) > 0:
-        print((f'WARNING: {len(unsupported_dates)} acquisition date(s) are earlier than '
-               f'OPERA availability ({OPERA_MIN_ACQ_DATE}) and will be skipped.'))
+        print(f'WARNING: {len(unsupported_dates)} acquisition date(s) are earlier than '
+               f'OPERA availability ({OPERA_MIN_ACQ_DATE}) and will be skipped.')
         for d in unsupported_dates:
             print(f'  {d}')
 
