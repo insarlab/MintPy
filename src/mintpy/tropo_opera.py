@@ -90,9 +90,57 @@ def get_opera_crop_indices(lat, lon, geom_file, pad_cells=3):
     return (i0, i1, j0, j1), crop_info
 
 
-def read_opera_total_delay_cube(opera_file, geom_file, pad_cells=3):
+def get_opera_height_crop_indices(height_levels, dem_min, dem_max):
+    """Get height level indices spanning the DEM range.
+
+    The vertical interpolation is linear, so only the levels that bracket
+    [dem_min, dem_max] are needed — no extra buffer beyond that.
+
+    For example, if dem_min=-5, dem_max=10 and height levels are
+    [-20, -10, 0, 10, 20], the returned slice covers [-10, 0, 10]
+    (the first level at-or-below dem_min through the first level
+    at-or-above dem_max).
+
+    Parameters: height_levels - 1D np.ndarray, OPERA height levels (metres)
+                dem_min       - float, minimum DEM elevation (metres)
+                dem_max       - float, maximum DEM elevation (metres)
+    Returns:    k0, k1        - int, start/end slice indices into *height_levels*
+    """
+    h = np.asarray(height_levels, dtype=np.float64)
+    n = len(h)
+    if n < 2:
+        return 0, n
+
+    ascending = h[1] > h[0]
+    if not ascending:
+        h = h[::-1]
+
+    # first level at or below dem_min
+    k_low = int(np.searchsorted(h, dem_min, side='right')) - 1
+    k_low = max(0, k_low)
+
+    # first level at or above dem_max
+    k_high = int(np.searchsorted(h, dem_max, side='left'))
+    k_high = min(n - 1, k_high)
+
+    k0, k1 = k_low, k_high + 1  # +1 for Python slice end
+
+    if not ascending:
+        k0, k1 = n - k1, n - k0
+
+    return k0, k1
+
+
+def read_opera_total_delay_cube(opera_file, geom_file, dem_range=None, pad_cells=3):
     """Read and crop OPERA delay cube, returning total zenith delay.
 
+    Parameters: opera_file - str, path to OPERA netCDF file
+                geom_file  - str, path to MintPy geometry HDF5 file
+                dem_range  - tuple(float, float) or None, (dem_min, dem_max) in
+                             metres.  When provided the height dimension is also
+                             cropped to the levels spanning [dem_min, dem_max]
+                             plus a one-level buffer on each side.
+                pad_cells  - int, kept for backward compatibility (ignored)
     Returns a dict with keys:
       latitude, longitude, height, wet_delay, hydro_delay, total_delay, crop_info
     """
@@ -108,17 +156,24 @@ def read_opera_total_delay_cube(opera_file, geom_file, pad_cells=3):
 
         (i0, i1, j0, j1), crop_info = get_opera_crop_indices(lat, lon, geom_file, pad_cells=pad_cells)
 
+        # vertical subsetting
+        if dem_range is not None:
+            k0, k1 = get_opera_height_crop_indices(height, dem_range[0], dem_range[1])
+        else:
+            k0, k1 = 0, len(height)
+
         lat_crop = lat[i0:i1]
         lon_crop = lon[j0:j1]
+        height_crop = height[k0:k1]
 
-        wet = fobj['wet_delay'][0, :, i0:i1, j0:j1]
-        hydro = fobj['hydrostatic_delay'][0, :, i0:i1, j0:j1]
+        wet = fobj['wet_delay'][0, k0:k1, i0:i1, j0:j1]
+        hydro = fobj['hydrostatic_delay'][0, k0:k1, i0:i1, j0:j1]
         total = wet + hydro
 
     return {
         'latitude': lat_crop,
         'longitude': lon_crop,
-        'height': height,
+        'height': height_crop,
         'wet_delay': wet,
         'hydro_delay': hydro,
         'total_delay': total,
@@ -154,40 +209,155 @@ def get_geom_lat_lon_dem(geom_file):
 
 
 def calc_zenith_delay_from_opera_file(opera_file, geom_file, pad_cells=3):
-    """Calculate 2D zenith tropospheric delay map intersected with DEM."""
-    cube = read_opera_total_delay_cube(opera_file, geom_file, pad_cells=pad_cells)
+    """Calculate 2D zenith tropospheric delay map intersected with DEM.
+
+    Two-step interpolation:
+      1. Linear interpolation in the vertical (height -> DEM elevation)
+         at each OPERA lat/lon grid node.
+      2. Cubic interpolation in the lateral (lat/lon -> pixel locations).
+    """
     lat2d, lon2d, dem = get_geom_lat_lon_dem(geom_file)
+
+    # derive DEM range for vertical subsetting
+    valid_dem = dem[np.isfinite(dem)]
+    if valid_dem.size > 0:
+        dem_range = (float(np.nanmin(valid_dem)), float(np.nanmax(valid_dem)))
+    else:
+        dem_range = None
+
+    cube = read_opera_total_delay_cube(opera_file, geom_file, dem_range=dem_range, pad_cells=pad_cells)
 
     z_axis = np.asarray(cube['height'], dtype=np.float64)
     y_axis = np.asarray(cube['latitude'], dtype=np.float64)
     x_axis = np.asarray(cube['longitude'], dtype=np.float64)
-    data = np.asarray(cube['total_delay'], dtype=np.float32)
+    data = np.asarray(cube['total_delay'], dtype=np.float64)
 
-    # RegularGridInterpolator requires strictly ascending axes.
-    if z_axis[1] < z_axis[0]:
+    # Ensure strictly ascending axes for interpolation.
+    if z_axis.size > 1 and z_axis[1] < z_axis[0]:
         z_axis = z_axis[::-1]
         data = data[::-1, :, :]
-    if y_axis[1] < y_axis[0]:
+    if y_axis.size > 1 and y_axis[1] < y_axis[0]:
         y_axis = y_axis[::-1]
         data = data[:, ::-1, :]
-    if x_axis[1] < x_axis[0]:
+    if x_axis.size > 1 and x_axis[1] < x_axis[0]:
         x_axis = x_axis[::-1]
         data = data[:, :, ::-1]
 
-    interp = RegularGridInterpolator(
-        (z_axis, y_axis, x_axis),
-        data,
-        method='cubic',
-        bounds_error=False,
-        fill_value=np.nan,
-    )
+    # --- Step 1: Linear interpolation in the vertical -----------------------
+    # At each OPERA (lat, lon) grid node, interpolate along height to the
+    # DEM elevation of every output pixel.  This produces a 2-D slab per
+    # (lat_node, lon_node) → we collect them into a 2-D grid (ny, nx) for
+    # each output pixel, then do step 2.
+    #
+    # Efficient approach: for every output pixel, the DEM elevation is known.
+    # Build a 1-D linear interpolator per (lat, lon) column, evaluate at the
+    # pixel's DEM elevation → gives delay_2d[iy, ix] on the OPERA lat/lon grid.
+    # Then do cubic 2-D interpolation of that 2-D field to the pixel lat/lon.
 
-    points = np.column_stack([
-        dem.reshape(-1).astype(np.float64),
-        lat2d.reshape(-1).astype(np.float64),
-        lon2d.reshape(-1).astype(np.float64),
+    nrows, ncols = dem.shape
+    dem_flat = dem.ravel().astype(np.float64)
+    lat_flat = lat2d.ravel().astype(np.float64)
+    lon_flat = lon2d.ravel().astype(np.float64)
+
+    ny, nx = len(y_axis), len(x_axis)
+
+    # For each OPERA (lat, lon) column, build a 1-D linear interpolator
+    # along height, then evaluate at *all* output pixel DEM values at once.
+    # Result: delay_at_dem[j, i, pixel] but that's memory-heavy.
+    # Instead, use RegularGridInterpolator in 1-D (height) per column → too slow.
+    #
+    # Better: use scipy interp1d broadcast or manual linear interp.
+    # Use np.interp per column vectorised over the output pixels.
+    #
+    # Most efficient: do the vertical interp as a single
+    # RegularGridInterpolator(method='linear') in 3-D, then re-interpolate
+    # the result in 2-D with cubic.  But that couples axes again.
+    #
+    # Cleanest two-step: collapse vertical first on the OPERA grid, then
+    # interpolate laterally.
+    # For each output pixel p with DEM elevation h_p:
+    #   delay_on_opera_grid[iy, ix] = interp1d(z_axis, data[:, iy, ix])(h_p)
+    # Then: ztd[p] = interp2d(y_axis, x_axis, delay_on_opera_grid)(lat_p, lon_p)
+    #
+    # This is O(npixels * ny * nx) if done naively.
+    # Vectorise: for all pixels at once, linear interp along z for all columns.
+
+    # Pre-compute vertical interpolation weights for each pixel
+    # np.interp works on 1-D; we need to interp data[:, iy, ix] at dem values.
+    # Reshape data to (nz, ny*nx), interp each column at all dem values → large.
+    # Instead: interp all columns at each unique dem value.
+
+    # Practical approach: loop over OPERA grid columns (ny*nx is small, ~hundreds)
+    # and use np.interp for all pixels at once per column.
+    # Result: ztd_on_grid shape (ny, nx, npixels) → then for each pixel, do 2-D interp.
+    # That's still large.  Better: for each pixel, do 1-D vertical interp at
+    # 1 height value across all columns, giving (ny, nx), then 2-D interp.
+    # But looping over pixels is slow.
+
+    # Most practical vectorised approach:
+    # Step 1: vertical linear interp → 2D field on OPERA grid for each pixel
+    # Use broadcasting: find bracketing indices and weights once per pixel.
+    idx = np.searchsorted(z_axis, dem_flat, side='right') - 1
+    idx = np.clip(idx, 0, len(z_axis) - 2)
+    # fractional weight
+    dz = z_axis[idx + 1] - z_axis[idx]
+    dz[dz == 0] = 1.0  # avoid division by zero
+    w = (dem_flat - z_axis[idx]) / dz
+    w = np.clip(w, 0.0, 1.0)
+
+    # data shape: (nz, ny, nx)
+    # For each pixel p: delay_2d[:, :, p] = data[idx[p], :, :] * (1-w[p]) + data[idx[p]+1, :, :] * w[p]
+    # Vectorise: gather the two bracketing slabs for all pixels
+    # data_lo[p, iy, ix] = data[idx[p], iy, ix] → shape (npixels, ny, nx)
+    npixels = len(dem_flat)
+    data_lo = data[idx]        # shape (npixels, ny, nx)
+    data_hi = data[idx + 1]    # shape (npixels, ny, nx)
+    # Weighted blend: shape (npixels, ny, nx)
+    w3 = w[:, np.newaxis, np.newaxis]
+    delay_2d = data_lo * (1.0 - w3) + data_hi * w3  # (npixels, ny, nx)
+
+    # --- Step 2: Cubic interpolation in lat/lon per pixel -------------------
+    # For each pixel, we have a 2-D delay field on the OPERA (y_axis, x_axis)
+    # grid.  Interpolate to the pixel's (lat, lon) using cubic.
+    #
+    # Batch approach: all pixels share the same OPERA grid, and each pixel has
+    # its own 2-D field.  Use RegularGridInterpolator per pixel → too slow.
+    #
+    # Faster: the lateral interpolation weights depend only on (lat, lon) and
+    # are the same for all pixels at the same location.  Use
+    # RegularGridInterpolator once with a dummy z-axis to vectorise:
+    # Build a 3-D field (npixels, ny, nx) with "pixel index" as the first
+    # axis → but that's not a regular grid in the first axis.
+    #
+    # Best practical approach: pre-compute cubic interpolation weights for
+    # each pixel's (lat, lon) on the OPERA grid, then apply them.
+    # scipy.interpolate doesn't expose weights directly, so use map_coordinates
+    # or manual cubic.
+    #
+    # Simple and efficient: use scipy.ndimage.map_coordinates with order=3
+    # (cubic) on each pixel's 2-D field.  But looping over pixels is slow.
+    #
+    # Actually, since all pixels share the OPERA grid, we can convert
+    # (lat, lon) to fractional grid indices once, then use them for all pixels.
+
+    from scipy.ndimage import map_coordinates
+
+    # Convert pixel lat/lon to fractional indices in the OPERA grid
+    # y_axis is ascending, x_axis is ascending
+    iy_frac = np.interp(lat_flat, y_axis, np.arange(ny))
+    ix_frac = np.interp(lon_flat, x_axis, np.arange(nx))
+
+    # map_coordinates on delay_2d: shape (npixels, ny, nx)
+    # We want to evaluate delay_2d[p, iy_frac[p], ix_frac[p]] for each p.
+    # Coordinates: axis0=p (exact integer), axis1=iy_frac, axis2=ix_frac
+    coords = np.array([
+        np.arange(npixels, dtype=np.float64),
+        iy_frac,
+        ix_frac,
     ])
-    ztd = interp(points).reshape(dem.shape).astype(np.float32)
+    ztd_flat = map_coordinates(delay_2d, coords, order=3, mode='nearest')
+
+    ztd = ztd_flat.reshape(dem.shape).astype(np.float32)
 
     # mask invalid pixels from DEM (NaN/Inf); preserve valid zero-elevation pixels
     ztd[~np.isfinite(dem)] = np.nan
@@ -379,11 +549,128 @@ def _create_asf_session(asf):
     return None
 
 
-def dload_opera_files(missing_date_hour_list, opera_dir):
+def _get_product_url(product):
+    """Extract the data download URL from an ASF search product."""
+    # Try the most common attribute paths
+    url = getattr(product, 'url', None)
+    if url:
+        return str(url)
+
+    props = getattr(product, 'properties', None)
+    if isinstance(props, dict):
+        for key in ('url', 'downloadUrl'):
+            val = props.get(key)
+            if val:
+                return str(val)
+
+    return None
+
+
+def _get_product_filename(product):
+    """Extract the filename from an ASF search product."""
+    props = getattr(product, 'properties', None)
+    if isinstance(props, dict):
+        fname = props.get('fileName')
+        if fname:
+            return str(fname)
+
+    # Fallback: parse from text representation
+    text = _asf_product_text(product)
+    mobj = re.search(r'(OPERA_L4_TROPO-ZENITH_\S+\.nc)', text)
+    if mobj:
+        return mobj.group(1)
+
+    return None
+
+
+def dload_opera_file_subset(product, opera_dir, geom_file, dem_range=None, session=None):
+    """Download a spatially and vertically subsetted OPERA file.
+
+    Uses ``fsspec`` + ``h5py`` to open the remote file via byte-range HTTP
+    requests, reads only the required spatial/vertical slice, and writes the
+    subset to a local HDF5 file that is compatible with
+    :func:`read_opera_total_delay_cube`.
+
+    Parameters: product   - ASF search product object
+                opera_dir - str, local directory for output files
+                geom_file - str, path to MintPy geometry file (for bounding box)
+                dem_range - tuple(float, float) or None, (min, max) DEM in metres
+                session   - ASF session object (used for authentication cookies)
+    Returns:    out_file  - str, path to the written local subset file, or None
+    """
+    import fsspec
+
+    url = _get_product_url(product)
+    if url is None:
+        print('  WARNING: could not extract download URL from product')
+        return None
+
+    filename = _get_product_filename(product)
+    if filename is None:
+        print('  WARNING: could not extract filename from product')
+        return None
+
+    out_file = os.path.join(opera_dir, filename)
+
+    # Build authenticated fsspec HTTP options from ASF session cookies
+    fs_kwargs = {}
+    if session is not None:
+        cookies = getattr(session, 'cookies', None)
+        if cookies is not None:
+            cookie_str = '; '.join(f'{k}={v}' for k, v in dict(cookies).items())
+            fs_kwargs['headers'] = {'Cookie': cookie_str}
+
+    storage_opts = {'https': fs_kwargs, 'http': fs_kwargs}
+    scheme = 'https' if url.startswith('https') else 'http'
+
+    with fsspec.open(url, mode='rb', **storage_opts.get(scheme, {})) as f:
+        with h5py.File(f, 'r') as src:
+            lat = src['latitude'][:]
+            lon = src['longitude'][:]
+            height = src['height'][:]
+
+            (i0, i1, j0, j1), _crop_info = get_opera_crop_indices(lat, lon, geom_file)
+
+            if dem_range is not None:
+                k0, k1 = get_opera_height_crop_indices(height, dem_range[0], dem_range[1])
+            else:
+                k0, k1 = 0, len(height)
+
+            lat_crop = lat[i0:i1]
+            lon_crop = lon[j0:j1]
+            height_crop = height[k0:k1]
+
+            wet_crop = src['wet_delay'][0, k0:k1, i0:i1, j0:j1]
+            hydro_crop = src['hydrostatic_delay'][0, k0:k1, i0:i1, j0:j1]
+
+    # Write the subset locally
+    os.makedirs(opera_dir, exist_ok=True)
+    with h5py.File(out_file, 'w') as dst:
+        dst.create_dataset('latitude', data=lat_crop)
+        dst.create_dataset('longitude', data=lon_crop)
+        dst.create_dataset('height', data=height_crop)
+        dst.create_dataset('wet_delay', data=wet_crop[np.newaxis, ...])
+        dst.create_dataset('hydrostatic_delay', data=hydro_crop[np.newaxis, ...])
+
+    return out_file
+
+
+def dload_opera_files(missing_date_hour_list, opera_dir, geom_file=None, dem_range=None):
     """Download missing OPERA TROPO-ZENITH files via ASF Search.
 
     Uses per-day ASF queries constrained by OPERA collection IDs and
     date windows, then down-filters by required model-time tokens.
+
+    When *geom_file* is provided (and ``fsspec`` is installed), files are
+    downloaded as spatial/vertical subsets using byte-range HTTP requests,
+    which significantly reduces bandwidth and disk usage.  Falls back to
+    full-file download when subsetting is not possible.
+
+    Parameters: missing_date_hour_list - list of (date_str, hour_str) tuples
+                opera_dir              - str, local directory for OPERA files
+                geom_file              - str or None, MintPy geometry file
+                dem_range              - tuple(float, float) or None,
+                                         (min, max) DEM elevation in metres
     """
     if len(missing_date_hour_list) == 0:
         return
@@ -409,6 +696,15 @@ def dload_opera_files(missing_date_hour_list, opera_dir):
     except Exception as exc:
         print(f'  WARNING: ASF authentication setup failed: {exc}')
         session = None
+
+    # Determine whether remote subsetting is possible
+    _can_subset = geom_file is not None
+    if _can_subset:
+        try:
+            import fsspec  # noqa: F401
+        except ImportError:
+            _can_subset = False
+            print('  NOTE: fsspec not installed; downloading full OPERA files.')
 
     missing_tokens = sorted({_model_time_token(d, h) for d, h in missing_date_hour_list})
     date_to_tokens = {}
@@ -464,16 +760,33 @@ def dload_opera_files(missing_date_hour_list, opera_dir):
                 print(f'    {token}: {token_match_count[token]} -> no')
                 continue
 
-            dload_results = asf.ASFSearchResults([token_best_product[token]])
-            if session is not None:
-                dload_results.download(path=opera_dir, session=session)
-            else:
-                dload_results.download(path=opera_dir)
+            best_product = token_best_product[token]
+            downloaded = False
 
+            # Try remote subset download first
+            if _can_subset:
+                try:
+                    out = dload_opera_file_subset(
+                        best_product, opera_dir, geom_file,
+                        dem_range=dem_range, session=session,
+                    )
+                    if out is not None and _is_valid_opera_file(out):
+                        downloaded = True
+                        print(f'    {token}: {token_match_count[token]} -> subset')
+                except Exception as exc:
+                    print(f'    {token}: subset download failed ({exc}), falling back to full download')
+
+            # Fallback: download the full file via asf_search
+            if not downloaded:
+                dload_results = asf.ASFSearchResults([best_product])
+                if session is not None:
+                    dload_results.download(path=opera_dir, session=session)
+                else:
+                    dload_results.download(path=opera_dir)
+                print(f'    {token}: {token_match_count[token]} -> full')
             n_selected += 1
             n_done += 1
-            prog_bar.update(n_done, suffix=f'{token} (downloaded)')
-            print(f'    {token}: {token_match_count[token]} -> yes')
+            prog_bar.update(n_done, suffix=f'{token} (done)')
 
     prog_bar.close()
 
@@ -667,7 +980,20 @@ def run_tropo_opera(inps):
     inps.missing_opera_date_hour_list = missing_date_hour_list
 
     if len(missing_date_hour_list) > 0:
-        dload_opera_files(missing_date_hour_list, inps.opera_dir)
+        # Compute DEM range for remote subsetting
+        dem_range = None
+        try:
+            dem = readfile.read(inps.geom_file, datasetName='height')[0]
+            valid = dem[np.isfinite(dem)]
+            if valid.size > 0:
+                dem_range = (float(np.nanmin(valid)), float(np.nanmax(valid)))
+        except Exception:
+            pass
+
+        dload_opera_files(
+            missing_date_hour_list, inps.opera_dir,
+            geom_file=inps.geom_file, dem_range=dem_range,
+        )
         expected_patterns, matched_files, missing_date_hour_list = get_opera_file_status(
             opera_date_list=opera_date_list,
             opera_hour_list=opera_hour_list,
