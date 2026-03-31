@@ -13,12 +13,10 @@ from datetime import datetime, timedelta
 
 import h5py
 import numpy as np
-from scipy.interpolate import RegularGridInterpolator
 
 import mintpy.cli.diff
 from mintpy.objects import timeseries
 from mintpy.utils import ptime, readfile, utils as ut, writefile
-
 
 OPERA_MODEL_HOURS = (0, 6, 12, 18)
 OPERA_MIN_ACQ_DATE = '20160101'
@@ -138,8 +136,7 @@ def read_opera_total_delay_cube(opera_file, geom_file, dem_range=None, pad_cells
                 geom_file  - str, path to MintPy geometry HDF5 file
                 dem_range  - tuple(float, float) or None, (dem_min, dem_max) in
                              metres.  When provided the height dimension is also
-                             cropped to the levels spanning [dem_min, dem_max]
-                             plus a one-level buffer on each side.
+                             cropped to the levels bracketing [dem_min, dem_max].
                 pad_cells  - int, kept for backward compatibility (ignored)
     Returns a dict with keys:
       latitude, longitude, height, wet_delay, hydro_delay, total_delay, crop_info
@@ -208,14 +205,30 @@ def get_geom_lat_lon_dem(geom_file):
     return lat2d, lon2d, dem
 
 
+def _ensure_ascending(axis, data, dim):
+    """Reverse axis and corresponding data dimension if descending."""
+    if axis.size > 1 and axis[1] < axis[0]:
+        axis = axis[::-1]
+        slices = [slice(None)] * data.ndim
+        slices[dim] = slice(None, None, -1)
+        data = data[tuple(slices)]
+    return axis, data
+
+
 def calc_zenith_delay_from_opera_file(opera_file, geom_file, pad_cells=3):
     """Calculate 2D zenith tropospheric delay map intersected with DEM.
 
-    Two-step interpolation:
-      1. Linear interpolation in the vertical (height -> DEM elevation)
-         at each OPERA lat/lon grid node.
-      2. Cubic interpolation in the lateral (lat/lon -> pixel locations).
+    Two-step interpolation (cubic lateral, linear vertical):
+      1. At each OPERA height level, interpolate the 2D delay field from the
+         OPERA (lat, lon) grid to the pixel (lat, lon) locations using cubic
+         interpolation.  This yields delay values at the pixel locations for
+         every height level — shape (nz, npixels).
+      2. At each pixel, linearly interpolate along height to the DEM elevation.
+
+    Memory usage is O(nz * npixels), where nz is typically 20–80 levels.
     """
+    from scipy.interpolate import RegularGridInterpolator
+
     lat2d, lon2d, dem = get_geom_lat_lon_dem(geom_file)
 
     # derive DEM range for vertical subsetting
@@ -230,136 +243,44 @@ def calc_zenith_delay_from_opera_file(opera_file, geom_file, pad_cells=3):
     z_axis = np.asarray(cube['height'], dtype=np.float64)
     y_axis = np.asarray(cube['latitude'], dtype=np.float64)
     x_axis = np.asarray(cube['longitude'], dtype=np.float64)
-    data = np.asarray(cube['total_delay'], dtype=np.float64)
+    data = np.asarray(cube['total_delay'], dtype=np.float64)  # (nz, ny, nx)
 
-    # Ensure strictly ascending axes for interpolation.
-    if z_axis.size > 1 and z_axis[1] < z_axis[0]:
-        z_axis = z_axis[::-1]
-        data = data[::-1, :, :]
-    if y_axis.size > 1 and y_axis[1] < y_axis[0]:
-        y_axis = y_axis[::-1]
-        data = data[:, ::-1, :]
-    if x_axis.size > 1 and x_axis[1] < x_axis[0]:
-        x_axis = x_axis[::-1]
-        data = data[:, :, ::-1]
+    # ensure strictly ascending axes
+    z_axis, data = _ensure_ascending(z_axis, data, 0)
+    y_axis, data = _ensure_ascending(y_axis, data, 1)
+    x_axis, data = _ensure_ascending(x_axis, data, 2)
 
-    # --- Step 1: Linear interpolation in the vertical -----------------------
-    # At each OPERA (lat, lon) grid node, interpolate along height to the
-    # DEM elevation of every output pixel.  This produces a 2-D slab per
-    # (lat_node, lon_node) → we collect them into a 2-D grid (ny, nx) for
-    # each output pixel, then do step 2.
-    #
-    # Efficient approach: for every output pixel, the DEM elevation is known.
-    # Build a 1-D linear interpolator per (lat, lon) column, evaluate at the
-    # pixel's DEM elevation → gives delay_2d[iy, ix] on the OPERA lat/lon grid.
-    # Then do cubic 2-D interpolation of that 2-D field to the pixel lat/lon.
-
-    nrows, ncols = dem.shape
+    nz = len(z_axis)
     dem_flat = dem.ravel().astype(np.float64)
     lat_flat = lat2d.ravel().astype(np.float64)
     lon_flat = lon2d.ravel().astype(np.float64)
-
-    ny, nx = len(y_axis), len(x_axis)
-
-    # For each OPERA (lat, lon) column, build a 1-D linear interpolator
-    # along height, then evaluate at *all* output pixel DEM values at once.
-    # Result: delay_at_dem[j, i, pixel] but that's memory-heavy.
-    # Instead, use RegularGridInterpolator in 1-D (height) per column → too slow.
-    #
-    # Better: use scipy interp1d broadcast or manual linear interp.
-    # Use np.interp per column vectorised over the output pixels.
-    #
-    # Most efficient: do the vertical interp as a single
-    # RegularGridInterpolator(method='linear') in 3-D, then re-interpolate
-    # the result in 2-D with cubic.  But that couples axes again.
-    #
-    # Cleanest two-step: collapse vertical first on the OPERA grid, then
-    # interpolate laterally.
-    # For each output pixel p with DEM elevation h_p:
-    #   delay_on_opera_grid[iy, ix] = interp1d(z_axis, data[:, iy, ix])(h_p)
-    # Then: ztd[p] = interp2d(y_axis, x_axis, delay_on_opera_grid)(lat_p, lon_p)
-    #
-    # This is O(npixels * ny * nx) if done naively.
-    # Vectorise: for all pixels at once, linear interp along z for all columns.
-
-    # Pre-compute vertical interpolation weights for each pixel
-    # np.interp works on 1-D; we need to interp data[:, iy, ix] at dem values.
-    # Reshape data to (nz, ny*nx), interp each column at all dem values → large.
-    # Instead: interp all columns at each unique dem value.
-
-    # Practical approach: loop over OPERA grid columns (ny*nx is small, ~hundreds)
-    # and use np.interp for all pixels at once per column.
-    # Result: ztd_on_grid shape (ny, nx, npixels) → then for each pixel, do 2-D interp.
-    # That's still large.  Better: for each pixel, do 1-D vertical interp at
-    # 1 height value across all columns, giving (ny, nx), then 2-D interp.
-    # But looping over pixels is slow.
-
-    # Most practical vectorised approach:
-    # Step 1: vertical linear interp → 2D field on OPERA grid for each pixel
-    # Use broadcasting: find bracketing indices and weights once per pixel.
-    idx = np.searchsorted(z_axis, dem_flat, side='right') - 1
-    idx = np.clip(idx, 0, len(z_axis) - 2)
-    # fractional weight
-    dz = z_axis[idx + 1] - z_axis[idx]
-    dz[dz == 0] = 1.0  # avoid division by zero
-    w = (dem_flat - z_axis[idx]) / dz
-    w = np.clip(w, 0.0, 1.0)
-
-    # data shape: (nz, ny, nx)
-    # For each pixel p: delay_2d[:, :, p] = data[idx[p], :, :] * (1-w[p]) + data[idx[p]+1, :, :] * w[p]
-    # Vectorise: gather the two bracketing slabs for all pixels
-    # data_lo[p, iy, ix] = data[idx[p], iy, ix] → shape (npixels, ny, nx)
     npixels = len(dem_flat)
-    data_lo = data[idx]        # shape (npixels, ny, nx)
-    data_hi = data[idx + 1]    # shape (npixels, ny, nx)
-    # Weighted blend: shape (npixels, ny, nx)
-    w3 = w[:, np.newaxis, np.newaxis]
-    delay_2d = data_lo * (1.0 - w3) + data_hi * w3  # (npixels, ny, nx)
 
-    # --- Step 2: Cubic interpolation in lat/lon per pixel -------------------
-    # For each pixel, we have a 2-D delay field on the OPERA (y_axis, x_axis)
-    # grid.  Interpolate to the pixel's (lat, lon) using cubic.
-    #
-    # Batch approach: all pixels share the same OPERA grid, and each pixel has
-    # its own 2-D field.  Use RegularGridInterpolator per pixel → too slow.
-    #
-    # Faster: the lateral interpolation weights depend only on (lat, lon) and
-    # are the same for all pixels at the same location.  Use
-    # RegularGridInterpolator once with a dummy z-axis to vectorise:
-    # Build a 3-D field (npixels, ny, nx) with "pixel index" as the first
-    # axis → but that's not a regular grid in the first axis.
-    #
-    # Best practical approach: pre-compute cubic interpolation weights for
-    # each pixel's (lat, lon) on the OPERA grid, then apply them.
-    # scipy.interpolate doesn't expose weights directly, so use map_coordinates
-    # or manual cubic.
-    #
-    # Simple and efficient: use scipy.ndimage.map_coordinates with order=3
-    # (cubic) on each pixel's 2-D field.  But looping over pixels is slow.
-    #
-    # Actually, since all pixels share the OPERA grid, we can convert
-    # (lat, lon) to fractional grid indices once, then use them for all pixels.
+    # Step 1: cubic lateral interpolation at each height level
+    # Evaluate the 2D (lat, lon) field at pixel locations → (nz, npixels)
+    pts_2d = np.column_stack([lat_flat, lon_flat])
+    delay_at_pixels = np.empty((nz, npixels), dtype=np.float64)
+    for k in range(nz):
+        interp_2d = RegularGridInterpolator(
+            (y_axis, x_axis), data[k, :, :],
+            method='cubic', bounds_error=False, fill_value=np.nan,
+        )
+        delay_at_pixels[k, :] = interp_2d(pts_2d)
 
-    from scipy.ndimage import map_coordinates
+    # Step 2: linear vertical interpolation at each pixel
+    # Find bracketing height indices and fractional weights
+    idx = np.searchsorted(z_axis, dem_flat, side='right') - 1
+    idx = np.clip(idx, 0, nz - 2)
+    dz = z_axis[idx + 1] - z_axis[idx]
+    dz[dz == 0] = 1.0
+    w = np.clip((dem_flat - z_axis[idx]) / dz, 0.0, 1.0)
 
-    # Convert pixel lat/lon to fractional indices in the OPERA grid
-    # y_axis is ascending, x_axis is ascending
-    iy_frac = np.interp(lat_flat, y_axis, np.arange(ny))
-    ix_frac = np.interp(lon_flat, x_axis, np.arange(nx))
-
-    # map_coordinates on delay_2d: shape (npixels, ny, nx)
-    # We want to evaluate delay_2d[p, iy_frac[p], ix_frac[p]] for each p.
-    # Coordinates: axis0=p (exact integer), axis1=iy_frac, axis2=ix_frac
-    coords = np.array([
-        np.arange(npixels, dtype=np.float64),
-        iy_frac,
-        ix_frac,
-    ])
-    ztd_flat = map_coordinates(delay_2d, coords, order=3, mode='nearest')
+    # linear blend between bracketing levels
+    val_lo = delay_at_pixels[idx, np.arange(npixels)]
+    val_hi = delay_at_pixels[idx + 1, np.arange(npixels)]
+    ztd_flat = val_lo * (1.0 - w) + val_hi * w
 
     ztd = ztd_flat.reshape(dem.shape).astype(np.float32)
-
-    # mask invalid pixels from DEM (NaN/Inf); preserve valid zero-elevation pixels
     ztd[~np.isfinite(dem)] = np.nan
 
     return ztd, cube
@@ -701,9 +622,11 @@ def dload_opera_files(missing_date_hour_list, opera_dir, geom_file=None, dem_ran
     _can_subset = geom_file is not None
     if _can_subset:
         try:
-            import fsspec  # noqa: F401
-        except ImportError:
+            from importlib.util import find_spec
+            _can_subset = find_spec('fsspec') is not None
+        except Exception:
             _can_subset = False
+        if not _can_subset:
             print('  NOTE: fsspec not installed; downloading full OPERA files.')
 
     missing_tokens = sorted({_model_time_token(d, h) for d, h in missing_date_hour_list})
@@ -987,8 +910,8 @@ def run_tropo_opera(inps):
             valid = dem[np.isfinite(dem)]
             if valid.size > 0:
                 dem_range = (float(np.nanmin(valid)), float(np.nanmax(valid)))
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f'  WARNING: could not read DEM for subsetting: {exc}')
 
         dload_opera_files(
             missing_date_hour_list, inps.opera_dir,

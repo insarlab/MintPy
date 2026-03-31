@@ -13,12 +13,13 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ############################################################################
 REFERENCE = """references:
-  in  prerp to be added.
+  Bekaert, D. et al., OPERA L4 Tropospheric Zenith Delay products
+  derived from ECMWF HRES model (https://www.earthdata.nasa.gov/data/catalog/asf-opera-l4-tropo-zenith-v1-1).
 """
 
 DIR_DEMO = """--dir ./OPERA
-  To be added
-  ...
+  Path to the directory for downloading and storing OPERA tropospheric delay
+  products.  Files are automatically downloaded from ASF on demand.
 """
 
 EXAMPLE = """example:
@@ -28,7 +29,7 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    synopsis = 'Tropospheric correction using OPERA computed Zenith Tropopsheric Delays from ECMWF HRES data (https://www.earthdata.nasa.gov/data/catalog/asf-opera-l4-tropo-zenith-v1-1)'
+    synopsis = 'Tropospheric correction using OPERA Zenith Tropospheric Delays from ECMWF HRES data (https://www.earthdata.nasa.gov/data/catalog/asf-opera-l4-tropo-zenith-v1-1)'
     epilog = REFERENCE + '\n' + DIR_DEMO + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
@@ -40,7 +41,7 @@ def create_parser(subparsers=None):
     parser.add_argument('--dir','--opera-dir', dest='opera_dir', default='./OPERA',
                         help='directory to store downloaded OPERA delays data (default: %(default)s).')
     parser.add_argument('-o', dest='cor_dis_file',
-                        help='Output file name for trospheric corrected timeseries.')
+                        help='Output file name for tropospheric corrected timeseries.')
 
     return parser
 
