@@ -227,8 +227,8 @@ def calc_zenith_delay_from_opera_file(opera_file, geom_file, pad_cells=3):
 
     Memory usage is O(nz * npixels), where nz is typically 20–80 levels.
     """
-    from scipy.interpolate import RegularGridInterpolator
     from pyproj import Transformer
+    from scipy.interpolate import RegularGridInterpolator
 
     lat2d, lon2d, dem = get_geom_lat_lon_dem(geom_file)
 
