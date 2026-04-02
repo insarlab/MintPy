@@ -229,22 +229,21 @@ def calc_zenith_delay_from_opera_file(opera_file, geom_file, pad_cells=3):
     """
     from scipy.interpolate import RegularGridInterpolator
     from pyproj import Transformer
-    from mintpy.utils import readfile
 
     lat2d, lon2d, dem = get_geom_lat_lon_dem(geom_file)
 
     # Reprojection block
     atr = readfile.read_attribute(geom_file)
     epsg = atr.get('EPSG', '4326')
-    
+
     if str(epsg) != '4326':
         print(f"Reprojecting geometry grids from EPSG:{epsg} to EPSG:4326 (degrees)...")
         # always_xy=True ensures the order is (X, Y) -> (Longitude, Latitude)
         transformer = Transformer.from_crs(f"EPSG:{epsg}", "EPSG:4326", always_xy=True)
-        
+
         # lon2d is X (Easting), lat2d is Y (Northing)
         lon2d_deg, lat2d_deg = transformer.transform(lon2d, lat2d)
-        
+
         # Replace the meter arrays with the degree arrays for the interpolator
         lat2d = lat2d_deg
         lon2d = lon2d_deg
