@@ -215,7 +215,9 @@ def _ensure_ascending(axis, data, dim):
     return axis, data
 
 
-def calc_zenith_delay_from_opera_file(opera_file, geom_file, pad_cells=3):
+def calc_zenith_delay_from_opera_file(
+    opera_file, geom_file, lat2d, lon2d, dem, pad_cells=3
+):
     """Calculate 2D zenith tropospheric delay map intersected with DEM.
 
     Two-step interpolation (cubic lateral, linear vertical):
@@ -227,26 +229,7 @@ def calc_zenith_delay_from_opera_file(opera_file, geom_file, pad_cells=3):
 
     Memory usage is O(nz * npixels), where nz is typically 20–80 levels.
     """
-    from pyproj import Transformer
     from scipy.interpolate import RegularGridInterpolator
-
-    lat2d, lon2d, dem = get_geom_lat_lon_dem(geom_file)
-
-    # Reprojection block
-    atr = readfile.read_attribute(geom_file)
-    epsg = atr.get('EPSG', '4326')
-
-    if str(epsg) != '4326':
-        print(f"Reprojecting geometry grids from EPSG:{epsg} to EPSG:4326 (degrees)...")
-        # always_xy=True ensures the order is (X, Y) -> (Longitude, Latitude)
-        transformer = Transformer.from_crs(f"EPSG:{epsg}", "EPSG:4326", always_xy=True)
-
-        # lon2d is X (Easting), lat2d is Y (Northing)
-        lon2d_deg, lat2d_deg = transformer.transform(lon2d, lat2d)
-
-        # Replace the meter arrays with the degree arrays for the interpolator
-        lat2d = lat2d_deg
-        lon2d = lon2d_deg
 
     # derive DEM range for vertical subsetting
     valid_dem = dem[np.isfinite(dem)]
@@ -800,6 +783,8 @@ def _run_or_skip_opera(opera_files, used_dates, tropo_file, geom_file):
 ############################################################################
 def calculate_delay_timeseries(tropo_file, dis_file, geom_file, opera_dir):
     """Calculate OPERA delay time-series and write to HDF5 file."""
+    from pyproj import Transformer
+
     atr = readfile.read_attribute(dis_file)
     ftype = atr['FILE_TYPE']
 
@@ -864,9 +849,23 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, opera_dir):
     print(f'read incidenceAngle from file: {geom_file}')
     inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0].astype(np.float32)
 
+    # Read geometry once
+    print(f'Reading and preparing geometry grids from {geom_file}...')
+    lat2d, lon2d, dem = get_geom_lat_lon_dem(geom_file)
+    
+    atr_geom = readfile.read_attribute(geom_file)
+    epsg = atr_geom.get('EPSG', '4326')
+
+    if str(epsg) != '4326':
+        print(f"Reprojecting geometry grids from EPSG:{epsg} to EPSG:4326 (degrees)...")
+        transformer = Transformer.from_crs(f"EPSG:{epsg}", "EPSG:4326", always_xy=True)
+        lon2d, lat2d = transformer.transform(lon2d, lat2d)
+
     prog_bar = ptime.progressBar(maxValue=num_date)
     for i in range(num_date):
-        ztd, _ = calc_zenith_delay_from_opera_file(opera_files[i], geom_file, pad_cells=3)
+        ztd, _ = calc_zenith_delay_from_opera_file(
+            opera_files[i], geom_file, lat2d, lon2d, dem, pad_cells=3
+        )
         delay_los = _project_zenith_to_los(ztd, inc_angle)
 
         block = [i, i + 1, 0, length, 0, width]
