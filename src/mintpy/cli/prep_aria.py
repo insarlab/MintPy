@@ -49,7 +49,7 @@ EXAMPLE = """example:
   prep_aria.py -t SanFranSenDT42.txt
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt'
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' -a '../azimuthAngle/*.vrt' -w ../mask/watermask.msk
-  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' --set '../stack/setStack.vrt' --tropo '../stack/troposphereTotal/HRRR_stack.vrt' --iono '../stack/ionStack.vrt'
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' --set '../stack/setStack.vrt' --tropo '../stack/troposphereTotal/HRRRStack.vrt' --iono '../stack/ionStack.vrt'
 
   # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
   ariaDownload.py --track 71 --bbox "34.21 34.31 -118.60 -118.43" --start 20240101 --end 20240301

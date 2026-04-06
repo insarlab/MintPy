@@ -174,6 +174,11 @@ def print_aux_info(fname):
         print('file type: '+atr['FILE_TYPE'])
         if 'Y_FIRST' in atr.keys():
             print('coordinates : GEO')
+            n = float(atr['Y_FIRST'])
+            w = float(atr['X_FIRST'])
+            s = n + float(atr['Y_STEP']) * int(atr['LENGTH'])
+            e = w + float(atr['X_STEP']) * int(atr['WIDTH'])
+            print(f'SNWE: {s}, {n}, {w}, {e}.')
         else:
             print('coordinates : RADAR')
         if k in ['timeseries']:

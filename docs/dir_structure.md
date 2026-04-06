@@ -3,7 +3,7 @@
 ### ISCE / [topsStack](https://github.com/isce-framework/isce2/blob/main/contrib/stack/topsStack/README.md) ###
 
 ```
-$DATA_DIR/GalapagosSenDT128
+$DATA_DIR/Galapagos/S1_D128
 ├── baselines
 │   ├── 20141213_20141225
 │   │   └── 20141213_20141225.txt
@@ -111,7 +111,7 @@ mintpy.load.shadowMaskFile   = $DATA_DIR/GalapagosSenDT128/merged/geom_reference
 ### ISCE / [stripmapStack](https://github.com/isce-framework/isce2/blob/main/contrib/stack/stripmapStack/README.md) ###
 
 ```
-$DATA_DIR/KirishimaAlosAT424F620_630
+$DATA_DIR/Kirishima/Alos_A424_F620_630
 ├── baselines
 │   ├── 20060624_20060924.txt
 │   ├── 20060624_20061225.txt
@@ -222,7 +222,7 @@ mintpy.load.shadowMaskFile   = $DATA_DIR/KirishimaAlosAT424/geom_reference/shado
 ### ISCE / [alosStack](https://github.com/isce-framework/isce2/blob/main/contrib/stack/alosStack/alosStack_tutorial.txt) ###
 
 ```
-$DATA_DIR/NCalAlos2DT169
+$DATA_DIR/California/Alos2_D169
 ├── alosStack.xml
 ├── baseline
 │   ├── baseline_center.txt

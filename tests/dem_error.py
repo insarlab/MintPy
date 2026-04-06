@@ -5,7 +5,6 @@
 
 import argparse
 import datetime
-import math
 import sys
 
 import numpy as np
@@ -134,9 +133,10 @@ def test_dem_error_with_linear_defo(date_list, tbase, rel_tol=0.05, plot=False):
         plot_result(date_list, ts_sim, ts_obs, ts_cor, model)
 
     # validate
+    # use np.allclose(), instead of math.isclose(), to better handle scalar/array types
     print(f'Specified DEM error: {delta_z_sim:.2f} m')
     print(f'Estimated DEM error: {delta_z_est[0]:.2f} m')
-    assert math.isclose(delta_z_sim, delta_z_est, rel_tol=rel_tol)
+    assert np.allclose(delta_z_sim, delta_z_est, rtol=rel_tol)
     print('Pass.')
 
 
@@ -194,7 +194,7 @@ def test_dem_error_with_complex_defo(date_list, tbase, rel_tol=0.05, plot=False)
     # validate
     print(f'Specified DEM error: {delta_z_sim:.2f} m')
     print(f'Estimated DEM error: {delta_z_est[0]:.2f} m')
-    assert math.isclose(delta_z_sim, delta_z_est, rel_tol=rel_tol)
+    assert np.allclose(delta_z_sim, delta_z_est, rtol=rel_tol)
     print('Pass.')
 
 

@@ -310,8 +310,8 @@ def extract_alosStack_metadata(meta_file, geom_dir):
     meta['startingRange']   = track.startingRange + (rlooks-1.0)/2.0*track.rangePixelSize
     meta['passDirection']   = track.passDirection.upper()
     meta['polarization']    = track.frames[0].swaths[0].polarization
-    #meta['trackNumber']     = track.trackNumber
-    #meta['orbitNumber']     = track.orbitNumber
+    #meta['trackNumber']     = track.trackNumber     # not provided in SLC XML
+    #meta['orbitNumber']     = track.orbitNumber     # not provided in SLC XML
 
     meta['PLATFORM'] = sensor.standardize_sensor_name('alos2')
 
