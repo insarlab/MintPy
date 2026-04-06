@@ -151,7 +151,9 @@ def read_opera_total_delay_cube(opera_file, geom_file, dem_range=None, pad_cells
         lon = fobj['longitude'][:]
         height = fobj['height'][:]
 
-        (i0, i1, j0, j1), crop_info = get_opera_crop_indices(lat, lon, geom_file, pad_cells=pad_cells)
+        (i0, i1, j0, j1), crop_info = get_opera_crop_indices(
+            lat, lon, geom_file, pad_cells=pad_cells
+        )
 
         # vertical subsetting
         if dem_range is not None:
@@ -229,7 +231,7 @@ def calc_zenith_delay_from_opera_file(
 
     Memory usage is O(nz * npixels), where nz is typically 20–80 levels.
     """
-    from scipy.interpolate import RegularGridInterpolator
+    from scipy.ndimage import map_coordinates
 
     # derive DEM range for vertical subsetting
     valid_dem = dem[np.isfinite(dem)]
@@ -238,7 +240,9 @@ def calc_zenith_delay_from_opera_file(
     else:
         dem_range = None
 
-    cube = read_opera_total_delay_cube(opera_file, geom_file, dem_range=dem_range, pad_cells=pad_cells)
+    cube = read_opera_total_delay_cube(opera_file, geom_file,
+                                       dem_range=dem_range,
+                                       pad_cells=pad_cells)
 
     z_axis = np.asarray(cube['height'], dtype=np.float64)
     y_axis = np.asarray(cube['latitude'], dtype=np.float64)
@@ -256,16 +260,25 @@ def calc_zenith_delay_from_opera_file(
     lon_flat = lon2d.ravel().astype(np.float64)
     npixels = len(dem_flat)
 
-    # Step 1: cubic lateral interpolation at each height level
-    # Evaluate the 2D (lat, lon) field at pixel locations → (nz, npixels)
-    pts_2d = np.column_stack([lat_flat, lon_flat])
+    # Calculate the fixed grid spacing of the OPERA cube
+    dy = y_axis[1] - y_axis[0]
+    dx = x_axis[1] - x_axis[0]
+
+    # Convert geographical lat/lon into fractional array indices for the C-engine
+    y_idx = (lat_flat - y_axis[0]) / dy
+    x_idx = (lon_flat - x_axis[0]) / dx
+    coords = np.vstack([y_idx, x_idx])
+
+    # Step 1: cubic lateral interpolation at each height level using map_coordinates
     delay_at_pixels = np.empty((nz, npixels), dtype=np.float64)
     for k in range(nz):
-        interp_2d = RegularGridInterpolator(
-            (y_axis, x_axis), data[k, :, :],
-            method='cubic', bounds_error=False, fill_value=np.nan,
+        delay_at_pixels[k, :] = map_coordinates(
+            data[k, :, :],
+            coords,
+            order=3,             # order=3 means cubic interpolation
+            mode='constant',     # If a pixel is outside the padded bounds...
+            cval=np.nan          # ...fill it with NaN
         )
-        delay_at_pixels[k, :] = interp_2d(pts_2d)
 
     # Step 2: linear vertical interpolation at each pixel
     # Find bracketing height indices and fractional weights
@@ -800,7 +813,9 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, opera_dir):
         raise ValueError(f'CENTER_LINE_UTC is missing in metadata of file: {dis_file}')
     utc_sec = float(atr['CENTER_LINE_UTC'])
 
-    supported_dates, unsupported_dates = _split_supported_dates(date_list, min_date=OPERA_MIN_ACQ_DATE)
+    supported_dates, unsupported_dates = _split_supported_dates(
+        date_list, min_date=OPERA_MIN_ACQ_DATE
+    )
     if len(unsupported_dates) > 0:
         print(f'WARNING: {len(unsupported_dates)} acquisition date(s) are earlier than '
                f'OPERA availability ({OPERA_MIN_ACQ_DATE}) and will be skipped.')
@@ -819,13 +834,18 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, opera_dir):
     for acq_date, model_date, model_hour in zip(supported_dates, model_dates, model_hours):
         fname = _get_best_local_opera_file(model_date, model_hour, opera_dir)
         if fname is None:
-            print(f'WARNING: NO OPERA file found for acquisition {acq_date} -> {model_date} {model_hour}:00')
+            print(f'WARNING: NO OPERA file found '
+                  f'for acquisition {acq_date} -> {model_date} '
+                  f'{model_hour}:00')
             continue
         used_dates.append(acq_date)
         opera_files.append(fname)
 
     if len(opera_files) == 0:
-        raise RuntimeError('No OPERA files found for requested acquisitions. Cannot create delay time-series.')
+        raise RuntimeError(
+            'No OPERA files found for requested '
+            'acquisitions. Cannot create delay time-series.'
+        )
 
     if _run_or_skip_opera(opera_files, used_dates, tropo_file, geom_file) == 'skip':
         return tropo_file
@@ -894,7 +914,9 @@ def run_tropo_opera(inps):
     print(f'output corrected file   : {inps.cor_dis_file}')
 
     date_list, utc_sec = read_inps2date_time(inps)
-    supported_dates, unsupported_dates = _split_supported_dates(date_list, min_date=OPERA_MIN_ACQ_DATE)
+    supported_dates, unsupported_dates = _split_supported_dates(
+        date_list, min_date=OPERA_MIN_ACQ_DATE
+    )
     if len(unsupported_dates) > 0:
         print(f'WARNING: {len(unsupported_dates)} acquisition date(s) are earlier than '
                f'OPERA availability ({OPERA_MIN_ACQ_DATE}) and will be skipped.')
