@@ -852,7 +852,7 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, opera_dir):
     # Read geometry once
     print(f'Reading and preparing geometry grids from {geom_file}...')
     lat2d, lon2d, dem = get_geom_lat_lon_dem(geom_file)
-    
+
     atr_geom = readfile.read_attribute(geom_file)
     epsg = atr_geom.get('EPSG', '4326')
 
