@@ -1065,4 +1065,3 @@ def prepare_stack(
 
     print(f"finished writing to HDF5 file: {outfile}")
     return outfile
-    return outfile
