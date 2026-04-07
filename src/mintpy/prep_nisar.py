@@ -229,6 +229,26 @@ def _read_valid_unw_mask(gunw_file: str, xybbox, pol: str):
     return valid
 
 
+def _read_perpendicular_baseline(gunw_file: str) -> np.float32:
+    """Read the NISAR perpendicular baseline as one finite mean value."""
+    with h5py.File(gunw_file, "r") as ds:
+        dset = ds[PROCESSINFO["bperp"]]
+        bperp = np.asarray(dset[()], dtype=np.float64).reshape(-1)
+        fill = dset.attrs.get("_FillValue", None)
+
+    if fill is not None:
+        bperp = np.where(bperp == fill, np.nan, bperp)
+
+    bperp = bperp[np.isfinite(bperp)]
+    if bperp.size == 0:
+        raise ValueError(
+            f"No finite perpendicular baseline values found in {gunw_file}"
+        )
+
+    pbase = np.mean(bperp)
+    return np.float32(pbase)
+
+
 def _read_target_grid(gunw_file: str, xybbox, polarization: str):
     """Read the destination EPSG and subset grid axes from a GUNW file."""
     datasets = _datasets_for_pol(polarization)
@@ -344,6 +364,8 @@ def _resolve_stack_type(stack_type, outfile):
 
 def _read_stack_observation(file, stack_type, bbox, dem_file, polarization):
     """Read one observation for the requested stack type."""
+    pbase = _read_perpendicular_baseline(file)
+
     if stack_type in {"ifgram", "ion"}:
         dataset = read_subset(file, bbox, polarization=polarization)
         unwrap_key = "unw_data" if stack_type == "ifgram" else "ion_data"
@@ -351,7 +373,7 @@ def _read_stack_observation(file, stack_type, bbox, dem_file, polarization):
             "unwrap_phase": dataset[unwrap_key],
             "coherence": dataset["cor_data"],
             "connect_component": dataset["conn_comp"],
-            "pbase": dataset["pbase"],
+            "pbase": pbase,
         }
 
     geo_ds = read_subset(file, bbox, polarization=polarization, geometry=True)
@@ -364,7 +386,7 @@ def _read_stack_observation(file, stack_type, bbox, dem_file, polarization):
             file, dem_file, geo_ds["xybbox"], polarization=polarization
         )
 
-    return {"unwrap_phase": unwrap_phase}
+    return {"unwrap_phase": unwrap_phase, "pbase": pbase}
 
 
 # ---------------------------------------------------------------------
@@ -748,15 +770,11 @@ def read_subset(gunw_file, bbox, polarization="HH", geometry=False):
     if fill_ion is not None:
         ion_data[ion_data == fill_ion] = np.nan
 
-    # perpendicular baseline (kept placeholder: zeros)
-    pbase = 0.0
-
     return {
         "unw_data": unw_data,
         "cor_data": cor_data,
         "conn_comp": conn_comp,
         "ion_data": ion_data,
-        "pbase": pbase,
         "xybbox": xybbox,
     }
 
@@ -1058,11 +1076,12 @@ def prepare_stack(
             if "coherence" in obs:
                 f["coherence"][i] = obs["coherence"]
                 f["connectComponent"][i] = obs["connect_component"]
+
+            if "pbase" in obs:
                 f["bperp"][i] = obs["pbase"]
 
             prog_bar.update(i + 1, suffix=date12_list[i])
         prog_bar.close()
 
     print(f"finished writing to HDF5 file: {outfile}")
-    return outfile
     return outfile
