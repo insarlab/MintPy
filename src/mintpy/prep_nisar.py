@@ -13,7 +13,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-from osgeo import gdal
+from osgeo import gdal, osr
 from pyproj import Transformer
 from scipy.interpolate import RegularGridInterpolator
 
@@ -147,7 +147,7 @@ def _read_raster_epsg(path: str) -> int:
     if not projection:
         raise ValueError(f"Raster has no projection metadata: {path}")
 
-    srs = gdal.osr.SpatialReference()
+    srs = osr.SpatialReference()
     if srs.ImportFromWkt(projection) != 0:
         raise ValueError(
             f"Could not parse raster projection WKT for {path}: {projection!r}"
