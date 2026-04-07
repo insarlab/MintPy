@@ -458,16 +458,17 @@ def save_kmz(inps):
         data[data == 0] = np.nan
     del mask
 
-    # Data Operation - Display Unit & Rewrapping
-    data, inps.disp_unit, inps.disp_scale, inps.wrap = pp.scale_data4disp_unit_and_rewrap(
-        data,
-        metadata=atr,
-        disp_unit=inps.disp_unit,
-        wrap=inps.wrap,
-        wrap_range=inps.wrap_range,
-    )
-    if inps.wrap:
-        inps.vlim = inps.wrap_range
+    # Data Operation - Display Unit & Rewrapping [but not for wrapped phase]
+    if ftype not in ['.flat', '.int']:
+        data, inps.disp_unit, inps.disp_scale, inps.wrap = pp.scale_data4disp_unit_and_rewrap(
+            data,
+            metadata=atr,
+            disp_unit=inps.disp_unit,
+            wrap=inps.wrap,
+            wrap_range=inps.wrap_range,
+        )
+        if inps.wrap:
+            inps.vlim = inps.wrap_range
 
 
     ## 2. Generate Google Earth KMZ
