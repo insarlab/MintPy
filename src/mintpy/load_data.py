@@ -642,12 +642,11 @@ def prepare_metadata(iDict):
                 'mintpy.load.demFile is required for processor=nisar. '
                 'Please set it to a real DEM path in the template.'
             )
-        dem_files = glob.glob(str(dem_file))
-        if len(dem_files) == 0:
+        dem_file = os.path.expanduser(str(dem_file))
+        if not os.path.isfile(dem_file):
             raise FileNotFoundError(
                 f'No DEM file found for mintpy.load.demFile: {dem_file}'
             )
-        dem_file = dem_files[0]
 
         if len(glob.glob(str(gunw_files))) == 0:
             raise FileNotFoundError(
