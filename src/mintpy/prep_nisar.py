@@ -35,6 +35,7 @@ DATASETS = {
     "xcoord": f"{DATASET_ROOT_UNW}/POL/xCoordinates",
     "ycoord": f"{DATASET_ROOT_UNW}/POL/yCoordinates",
     "unw": f"{DATASET_ROOT_UNW}/POL/unwrappedPhase",
+    "mask": f"{DATASET_ROOT_UNW}/mask",
     "cor": f"{DATASET_ROOT_UNW}/POL/coherenceMagnitude",
     "connComp": f"{DATASET_ROOT_UNW}/POL/connectedComponents",
     "ion": f"{DATASET_ROOT_UNW}/POL/ionospherePhaseScreen",
@@ -211,13 +212,10 @@ def _coerce_subset_metadata_types(meta):
     return meta
 
 
-def _read_valid_unw_mask(gunw_file: str, xybbox, pol: str):
-    """
-    Validity mask is ALWAYS based on finite unwrappedPhase (+ _FillValue check),
-    using:
-      /science/LSAR/GUNW/grids/frequencyA/unwrappedInterferogram/{pol}/unwrappedPhase
-    """
-    path = f"{DATASET_ROOT_UNW}/{pol}/unwrappedPhase"
+def _read_unwrapped_phase_valid_mask(gunw_file: str, xybbox, pol: str):
+    """Fallback validity mask based on finite unwrappedPhase (+ _FillValue check)."""
+    datasets = _datasets_for_pol(pol)
+    path = datasets["unw"]
     with h5py.File(gunw_file, "r") as ds:
         dset = ds[path]
         unw = dset[xybbox[1] : xybbox[3], xybbox[0] : xybbox[2]]
@@ -227,6 +225,36 @@ def _read_valid_unw_mask(gunw_file: str, xybbox, pol: str):
     if fill is not None:
         valid &= unw != fill
     return valid
+
+
+def _read_is_land_and_valid_mask(gunw_file: str, xybbox, pol: str):
+    """
+    Decode the native GUNW mask into MintPy's keep-mask convention.
+
+    Returns True for land pixels with valid reference and secondary subswaths.
+    Falls back to finite/unfilled unwrappedPhase if the native mask is absent.
+    """
+    datasets = _datasets_for_pol(pol)
+    path = datasets["mask"]
+
+    with h5py.File(gunw_file, "r") as ds:
+        if path not in ds:
+            return _read_unwrapped_phase_valid_mask(gunw_file, xybbox, pol)
+
+        dset = ds[path]
+        mask = dset[xybbox[1] : xybbox[3], xybbox[0] : xybbox[2]]
+        fill = dset.attrs.get("_FillValue", None)
+
+    valid_samples = np.isfinite(mask)
+    if fill is not None:
+        valid_samples &= mask != fill
+
+    mask = np.where(valid_samples, mask, 0).astype(np.int64, copy=False)
+    water_mask = (mask // 100) == 1
+    ref_subswath = (mask // 10) % 10
+    sec_subswath = mask % 10
+    is_valid = valid_samples & (ref_subswath > 0) & (sec_subswath > 0)
+    return is_valid & ~water_mask
 
 
 def _read_perpendicular_baseline(gunw_file: str) -> np.float32:
@@ -290,7 +318,7 @@ def _prepare_radar_grid_interpolation(
     )
 
     y_2d, x_2d = np.meshgrid(ycoord, xcoord, indexing="ij")
-    valid_mask = _read_valid_unw_mask(gunw_file, xybbox, polarization)
+    valid_mask = _read_is_land_and_valid_mask(gunw_file, xybbox, polarization)
 
     return {
         "dst_epsg": dst_epsg,
@@ -442,21 +470,20 @@ def load_nisar(inps):
         bbox=bounds,
         metadata=metadata,
         demFile=inps.dem_file,
-        maskFile=inps.mask_file,
+        externalMaskFile=inps.mask_file,
         polarization=pol,
     )
 
     # standalone water mask (MintPy format)
-    if getattr(inps, "mask_file", None) not in [None, "None", "auto"]:
-        water_mask_file = os.path.join(inps.out_dir, "waterMask.h5")
-        prepare_water_mask(
-            outfile=water_mask_file,
-            metaFile=input_files[0],
-            metadata=metadata,
-            bbox=bounds,
-            maskFile=inps.mask_file,
-            polarization=pol,
-        )
+    water_mask_file = os.path.join(inps.out_dir, "waterMask.h5")
+    prepare_water_mask(
+        outfile=water_mask_file,
+        metaFile=input_files[0],
+        metadata=metadata,
+        bbox=bounds,
+        externalMaskFile=inps.mask_file,
+        polarization=pol,
+    )
 
     # ifgram stack
     prepare_stack(
@@ -783,7 +810,7 @@ def read_subset(gunw_file, bbox, polarization="HH", geometry=False):
 # Geometry (DEM warp + 3D interpolation at valid pixels)
 # ---------------------------------------------------------------------
 def read_and_interpolate_geometry(
-    gunw_file, dem_file, xybbox, polarization="HH", mask_file=None
+    gunw_file, dem_file, xybbox, polarization="HH", external_mask_file=None
 ):
     """
     Warp DEM to the interferogram grid (aligned), then interpolate slant range & incidence.
@@ -809,19 +836,19 @@ def read_and_interpolate_geometry(
         interp_ctx["valid_mask"],
     )
 
-    # Mask handling (optional external mask warped to grid; otherwise ones)
-    if mask_file in ["auto", "None", None, "no", ""]:
-        mask_subset_array = np.ones(interp_ctx["dem"].shape, dtype="byte")
-    else:
-        mask_src_epsg = _read_raster_epsg(mask_file)
-        mask_subset_array = _warp_to_grid_mem(
-            src_path=mask_file,
+    # Base mask comes from the native GUNW mask; external masks only refine it.
+    mask_subset_array = interp_ctx["valid_mask"].astype(bool)
+    if external_mask_file not in ["auto", "None", None, "no", ""]:
+        mask_src_epsg = _read_raster_epsg(external_mask_file)
+        external_mask = _warp_to_grid_mem(
+            src_path=external_mask_file,
             src_epsg=mask_src_epsg,
             dst_epsg=interp_ctx["dst_epsg"],
             xcoord=interp_ctx["xcoord"],
             ycoord=interp_ctx["ycoord"],
             resample_alg="near",
-        ).astype("byte")
+        ).astype(bool)
+        mask_subset_array &= external_mask
 
     return (
         interp_ctx["dem"],
@@ -939,7 +966,7 @@ def _get_date_pairs(filenames):
 
 
 def prepare_geometry(
-    outfile, metaFile, metadata, bbox, demFile, maskFile, polarization="HH"
+    outfile, metaFile, metadata, bbox, demFile, externalMaskFile, polarization="HH"
 ):
     """Prepare the geometry file."""
     print("-" * 50)
@@ -954,7 +981,7 @@ def prepare_geometry(
             demFile,
             geo_ds["xybbox"],
             polarization=polarization,
-            mask_file=maskFile,
+            external_mask_file=externalMaskFile,
         )
     )
 
@@ -965,13 +992,11 @@ def prepare_geometry(
         "slantRangeDistance": [np.float32, (length, width), slant_range],
         "azimuthAngle": [np.float32, (length, width), azimuth_angle],
     }
-    if maskFile:
-        valid = _read_valid_unw_mask(metaFile, geo_ds["xybbox"], polarization)
-        ds_name_dict["waterMask"] = [
-            np.bool_,
-            (length, width),
-            mask.astype(bool) & valid,
-        ]
+    ds_name_dict["waterMask"] = [
+        np.bool_,
+        (length, width),
+        mask.astype(bool),
+    ]
 
     meta["FILE_TYPE"] = "geometry"
     meta["STARTING_RANGE"] = float(np.nanmin(slant_range))
@@ -979,13 +1004,12 @@ def prepare_geometry(
     return meta
 
 
-def prepare_water_mask(outfile, metaFile, metadata, bbox, maskFile, polarization="HH"):
-    """Prepare a standalone MintPy waterMask.h5 aligned to the NISAR grid."""
+def prepare_water_mask(
+    outfile, metaFile, metadata, bbox, externalMaskFile, polarization="HH"
+):
+    """Prepare a standalone MintPy waterMask.h5 from the GUNW mask."""
     print("-" * 50)
     print(f"preparing water mask file: {outfile}")
-
-    if not maskFile or maskFile in ["auto", "None", None]:
-        raise ValueError("maskFile must be a raster path (e.g., waterMask.msk)")
 
     meta = {key: value for key, value in metadata.items()}
 
@@ -993,26 +1017,20 @@ def prepare_water_mask(outfile, metaFile, metadata, bbox, maskFile, polarization
     geo_ds = read_subset(metaFile, bbox, polarization=polarization, geometry=True)
     xybbox = geo_ds["xybbox"]
 
-    # get target grid axes + EPSG from the NISAR file
-    dst_epsg, xcoord, ycoord = _read_target_grid(metaFile, xybbox, polarization)
+    water_mask_bool = _read_is_land_and_valid_mask(metaFile, xybbox, polarization)
 
-    # warp mask raster onto NISAR grid
-    mask_src_epsg = _read_raster_epsg(maskFile)
-    mask_arr = _warp_to_grid_mem(
-        src_path=maskFile,
-        src_epsg=mask_src_epsg,
-        dst_epsg=dst_epsg,
-        xcoord=xcoord,
-        ycoord=ycoord,
-        resample_alg="near",
-    ).astype("byte")
-
-    # Convention in this script: nonzero => True (valid), 0 => False (masked)
-    water_mask_bool = mask_arr.astype(bool)
-
-    # constrain to valid NISAR pixels (finite/unfilled unwrappedPhase)
-    valid = _read_valid_unw_mask(metaFile, xybbox, polarization)
-    water_mask_bool &= valid
+    if externalMaskFile not in ["auto", "None", None, "no", ""]:
+        dst_epsg, xcoord, ycoord = _read_target_grid(metaFile, xybbox, polarization)
+        mask_src_epsg = _read_raster_epsg(externalMaskFile)
+        external_mask = _warp_to_grid_mem(
+            src_path=externalMaskFile,
+            src_epsg=mask_src_epsg,
+            dst_epsg=dst_epsg,
+            xcoord=xcoord,
+            ycoord=ycoord,
+            resample_alg="near",
+        ).astype(bool)
+        water_mask_bool &= external_mask
 
     length, width = water_mask_bool.shape
     ds_name_dict = {"waterMask": [np.bool_, (length, width), water_mask_bool]}
