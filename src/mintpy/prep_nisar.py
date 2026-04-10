@@ -715,15 +715,7 @@ def extract_metadata(input_files, bbox=None, polarization="HH", frequency="frequ
 
 
 def get_rows_cols(xcoord, ycoord, bounds):
-    """
-    Get (col1, row1, col2, row2) for subsetting given bounds=(xmin,ymin,xmax,ymax).
-
-    Robust to:
-      - bounds slightly outside coordinate extent
-      - collapsed/invalid overlap bounds
-      - empty index selections
-    Returns indices suitable for Python slicing: arr[row1:row2, col1:col2]
-    """
+    """Get subset indices for bounds=(xmin, ymin, xmax, ymax)."""
     xcoord = np.asarray(xcoord)
     ycoord = np.asarray(ycoord)
 
@@ -905,10 +897,7 @@ def read_and_interpolate_geometry(
     frequency="frequencyA",
     external_mask_file=None,
 ):
-    """
-    Warp DEM to the interferogram grid (aligned), then interpolate slant range & incidence.
-    Interpolation is evaluated at valid pixels only (validity from unwrappedPhase finite + _FillValue).
-    """
+    """Warp DEM to the interferogram grid and interpolate geometry layers."""
     interp_ctx = _prepare_radar_grid_interpolation(
         gunw_file,
         dem_file,
