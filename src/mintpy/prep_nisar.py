@@ -270,12 +270,7 @@ def _read_unwrapped_phase_valid_mask(gunw_file: str, xybbox, pol: str, frequency
 
 
 def _read_is_land_and_valid_mask(gunw_file: str, xybbox, pol: str, frequency: str):
-    """
-    Decode the native GUNW mask into MintPy's keep-mask convention.
-
-    Returns True for land pixels with valid reference and secondary subswaths.
-    Falls back to finite/unfilled unwrappedPhase if the native mask is absent.
-    """
+    """Decode the native GUNW mask into MintPy's keep-mask convention."""
     datasets = _datasets_for_pol(pol, frequency)
     path = datasets["mask"]
 
@@ -849,10 +844,7 @@ def bbox_to_utm(bbox, dst_epsg, src_epsg=4326):
 
 
 def read_subset(gunw_file, bbox, polarization="HH", frequency="frequencyA", geometry=False):
-    """
-    Read subset for unwrapped interferogram products.
-    If geometry=True, returns bbox indices only (xybbox) without reading data arrays.
-    """
+    """Read subset arrays or only geometry bounds for unwrapped products."""
     datasets = _datasets_for_pol(polarization, frequency)
     with h5py.File(gunw_file, "r") as ds:
         xcoord = ds[datasets["xcoord"]][()]
