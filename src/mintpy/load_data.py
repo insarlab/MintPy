@@ -636,6 +636,7 @@ def prepare_metadata(iDict):
         dem_file = iDict['mintpy.load.demFile']
         gunw_files = iDict['mintpy.load.unwFile']
         water_mask = iDict['mintpy.load.waterMaskFile']
+        frequency = iDict.get('mintpy.load.frequency', 'auto')
 
         if str(dem_file).lower() in ['auto', 'none', 'no', '']:
             raise ValueError(
@@ -654,7 +655,7 @@ def prepare_metadata(iDict):
             )
 
         # run prep_*.py
-        iargs = ['-i', gunw_files, '-d', dem_file]
+        iargs = ['-i', gunw_files, '-d', dem_file, '--frequency', frequency]
 
         if str(water_mask).lower() not in ['auto', 'none', 'no', ''] and os.path.exists(water_mask):
             iargs = iargs + ['--mask', water_mask]

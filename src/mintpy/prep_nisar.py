@@ -21,34 +21,18 @@ from mintpy.constants import EARTH_RADIUS, SPEED_OF_LIGHT
 from mintpy.utils import attribute as attr, ptime, writefile
 
 # ---------------------------------------------------------------------
-# Constants / HDF5 paths (GUNW frequencyA, unwrappedInterferogram)
+# Constants / HDF5 paths
 # ---------------------------------------------------------------------
-DATASET_ROOT_UNW = "/science/LSAR/GUNW/grids/frequencyA/unwrappedInterferogram"
-PARAMETERS = (
-    "/science/LSAR/GUNW/metadata/processingInformation/parameters/"
-    "unwrappedInterferogram/frequencyA"
-)
+FREQUENCY_MAP = {
+    "A": "frequencyA",
+    "B": "frequencyB",
+    "frequencyA": "frequencyA",
+    "frequencyB": "frequencyB",
+}
 IDENTIFICATION = "/science/LSAR/identification"
 RADARGRID_ROOT = "science/LSAR/GUNW/metadata/radarGrid"
 
-DATASETS = {
-    "xcoord": f"{DATASET_ROOT_UNW}/POL/xCoordinates",
-    "ycoord": f"{DATASET_ROOT_UNW}/POL/yCoordinates",
-    "unw": f"{DATASET_ROOT_UNW}/POL/unwrappedPhase",
-    "mask": f"{DATASET_ROOT_UNW}/mask",
-    "cor": f"{DATASET_ROOT_UNW}/POL/coherenceMagnitude",
-    "connComp": f"{DATASET_ROOT_UNW}/POL/connectedComponents",
-    "ion": f"{DATASET_ROOT_UNW}/POL/ionospherePhaseScreen",
-    "epsg": f"{DATASET_ROOT_UNW}/POL/projection",
-    "xSpacing": f"{DATASET_ROOT_UNW}/POL/xCoordinateSpacing",
-    "ySpacing": f"{DATASET_ROOT_UNW}/POL/yCoordinateSpacing",
-    "polarization": "/science/LSAR/GUNW/grids/frequencyA/listOfPolarizations",
-    "range_look": f"{PARAMETERS}/numberOfRangeLooks",
-    "azimuth_look": f"{PARAMETERS}/numberOfAzimuthLooks",
-}
-
 PROCESSINFO = {
-    "centerFrequency": "/science/LSAR/GUNW/grids/frequencyA/centerFrequency",
     "orbit_direction": f"{IDENTIFICATION}/orbitPassDirection",
     "platform": f"{IDENTIFICATION}/missionId",
     "start_time": f"{IDENTIFICATION}/referenceZeroDopplerStartTime",
@@ -72,14 +56,83 @@ STACK_TYPES = {"ifgram", "ion", "tropo", "set"}
 # ---------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------
-def _datasets_for_pol(polarization: str) -> dict:
-    """Return a per-call datasets dict without mutating the global DATASETS."""
-    out = {}
-    for k, v in DATASETS.items():
-        out[k] = (
-            v.replace("POL", polarization) if isinstance(v, str) and "POL" in v else v
+def _normalize_frequency(frequency) -> str:
+    """Return the GUNW frequency group name for CLI values auto/A/B."""
+    if frequency is None or str(frequency).lower() == "auto":
+        return "frequencyA"
+
+    normalized = FREQUENCY_MAP.get(str(frequency))
+    if normalized is None:
+        raise ValueError("frequency must be one of: auto, A, B")
+    return normalized
+
+
+def _dataset_root_unw(frequency: str) -> str:
+    return f"/science/LSAR/GUNW/grids/{frequency}/unwrappedInterferogram"
+
+
+def _parameters_root(frequency: str) -> str:
+    return (
+        "/science/LSAR/GUNW/metadata/processingInformation/parameters/"
+        f"unwrappedInterferogram/{frequency}"
+    )
+
+
+def _center_frequency_path(frequency: str) -> str:
+    return f"/science/LSAR/GUNW/grids/{frequency}/centerFrequency"
+
+
+def _datasets_for_pol(polarization: str, frequency: str) -> dict:
+    """Return per-call dataset paths for the selected frequency/polarization."""
+    root = _dataset_root_unw(frequency)
+    parameters = _parameters_root(frequency)
+    return {
+        "xcoord": f"{root}/{polarization}/xCoordinates",
+        "ycoord": f"{root}/{polarization}/yCoordinates",
+        "unw": f"{root}/{polarization}/unwrappedPhase",
+        "mask": f"{root}/mask",
+        "cor": f"{root}/{polarization}/coherenceMagnitude",
+        "connComp": f"{root}/{polarization}/connectedComponents",
+        "ion": f"{root}/{polarization}/ionospherePhaseScreen",
+        "epsg": f"{root}/{polarization}/projection",
+        "xSpacing": f"{root}/{polarization}/xCoordinateSpacing",
+        "ySpacing": f"{root}/{polarization}/yCoordinateSpacing",
+        "polarization": f"/science/LSAR/GUNW/grids/{frequency}/listOfPolarizations",
+        "range_look": f"{parameters}/numberOfRangeLooks",
+        "azimuth_look": f"{parameters}/numberOfAzimuthLooks",
+    }
+
+
+def _resolve_frequency(gunw_file: str, frequency, polarization: str) -> str:
+    """Resolve and validate the requested NISAR frequency."""
+    resolved = _normalize_frequency(frequency)
+    datasets = _datasets_for_pol(polarization, resolved)
+
+    with h5py.File(gunw_file, "r") as ds:
+        required_paths = [
+            _dataset_root_unw(resolved),
+            datasets["unw"],
+            _center_frequency_path(resolved),
+        ]
+        missing = [path for path in required_paths if path not in ds]
+
+    if missing:
+        requested_frequency = "auto" if frequency is None else str(frequency)
+        requested = (
+            "auto (frequencyA)"
+            if requested_frequency.lower() == "auto"
+            else requested_frequency
         )
-    return out
+        if requested_frequency in ["auto", "A", "frequencyA"]:
+            hint = "Use --frequency B for frequencyB products."
+        else:
+            hint = "Check that the input file contains frequencyB for this polarization."
+        raise ValueError(
+            f"NISAR {requested} data for polarization {polarization!r} was not found "
+            f"in {gunw_file}. Missing path: {missing[0]}. {hint}"
+        )
+
+    return resolved
 
 
 def _grid_bounds_from_xy(xcoord: np.ndarray, ycoord: np.ndarray):
@@ -126,9 +179,8 @@ def _warp_to_grid_mem(
         outputBounds=bounds,
         srcSRS=f"EPSG:{src_epsg}",
         dstSRS=f"EPSG:{dst_epsg}",
-        xRes=abs(dx),
-        yRes=abs(dy),
-        targetAlignedPixels=True,
+        width=int(xcoord.size),
+        height=int(ycoord.size),
         resampleAlg=resample_alg,
     )
     dst = gdal.Warp("", src_path, options=warp_opts)
@@ -212,9 +264,9 @@ def _coerce_subset_metadata_types(meta):
     return meta
 
 
-def _read_unwrapped_phase_valid_mask(gunw_file: str, xybbox, pol: str):
+def _read_unwrapped_phase_valid_mask(gunw_file: str, xybbox, pol: str, frequency: str):
     """Fallback validity mask based on finite unwrappedPhase (+ _FillValue check)."""
-    datasets = _datasets_for_pol(pol)
+    datasets = _datasets_for_pol(pol, frequency)
     path = datasets["unw"]
     with h5py.File(gunw_file, "r") as ds:
         dset = ds[path]
@@ -227,19 +279,19 @@ def _read_unwrapped_phase_valid_mask(gunw_file: str, xybbox, pol: str):
     return valid
 
 
-def _read_is_land_and_valid_mask(gunw_file: str, xybbox, pol: str):
+def _read_is_land_and_valid_mask(gunw_file: str, xybbox, pol: str, frequency: str):
     """
     Decode the native GUNW mask into MintPy's keep-mask convention.
 
     Returns True for land pixels with valid reference and secondary subswaths.
     Falls back to finite/unfilled unwrappedPhase if the native mask is absent.
     """
-    datasets = _datasets_for_pol(pol)
+    datasets = _datasets_for_pol(pol, frequency)
     path = datasets["mask"]
 
     with h5py.File(gunw_file, "r") as ds:
         if path not in ds:
-            return _read_unwrapped_phase_valid_mask(gunw_file, xybbox, pol)
+            return _read_unwrapped_phase_valid_mask(gunw_file, xybbox, pol, frequency)
 
         dset = ds[path]
         mask = dset[xybbox[1] : xybbox[3], xybbox[0] : xybbox[2]]
@@ -277,9 +329,9 @@ def _read_perpendicular_baseline(gunw_file: str) -> np.float32:
     return np.float32(pbase)
 
 
-def _read_target_grid(gunw_file: str, xybbox, polarization: str):
+def _read_target_grid(gunw_file: str, xybbox, polarization: str, frequency: str):
     """Read the destination EPSG and subset grid axes from a GUNW file."""
-    datasets = _datasets_for_pol(polarization)
+    datasets = _datasets_for_pol(polarization, frequency)
     with h5py.File(gunw_file, "r") as ds:
         return (
             int(ds[datasets["epsg"]][()]),
@@ -301,11 +353,13 @@ def _read_radar_grid_fields(gunw_file: str, field_map: dict):
 
 
 def _prepare_radar_grid_interpolation(
-    gunw_file, dem_file, xybbox, polarization, field_map
+    gunw_file, dem_file, xybbox, polarization, frequency, field_map
 ):
     """Build the common DEM/grid/valid-mask context for radar-grid interpolation."""
     dem_src_epsg = _read_raster_epsg(dem_file)
-    dst_epsg, xcoord, ycoord = _read_target_grid(gunw_file, xybbox, polarization)
+    dst_epsg, xcoord, ycoord = _read_target_grid(
+        gunw_file, xybbox, polarization, frequency
+    )
     rdr_coords = _read_radar_grid_fields(gunw_file, field_map)
 
     dem_subset_array = _warp_to_grid_mem(
@@ -318,7 +372,9 @@ def _prepare_radar_grid_interpolation(
     )
 
     y_2d, x_2d = np.meshgrid(ycoord, xcoord, indexing="ij")
-    valid_mask = _read_is_land_and_valid_mask(gunw_file, xybbox, polarization)
+    valid_mask = _read_is_land_and_valid_mask(
+        gunw_file, xybbox, polarization, frequency
+    )
 
     return {
         "dst_epsg": dst_epsg,
@@ -390,12 +446,41 @@ def _resolve_stack_type(stack_type, outfile):
     )
 
 
-def _read_stack_observation(file, stack_type, bbox, dem_file, polarization):
+def _required_paths_for_stack_type(stack_type, polarization, frequency):
+    """Return HDF5 source datasets needed to build the requested stack."""
+    datasets = _datasets_for_pol(polarization, frequency)
+    if stack_type == "ifgram":
+        return [datasets["unw"], datasets["cor"], datasets["connComp"]]
+    if stack_type == "ion":
+        return [datasets["ion"], datasets["cor"], datasets["connComp"]]
+    if stack_type == "tropo":
+        return [PROCESSINFO["rdr_wet_tropo"], PROCESSINFO["rdr_hs_tropo"]]
+    if stack_type == "set":
+        return [PROCESSINFO["rdr_SET"]]
+
+    raise ValueError(
+        f"Unsupported stack_type {stack_type!r}; expected one of {sorted(STACK_TYPES)}"
+    )
+
+
+def _missing_required_paths(inp_files, stack_type, polarization, frequency):
+    """Return missing required HDF5 source paths as (file, path) pairs."""
+    required_paths = _required_paths_for_stack_type(stack_type, polarization, frequency)
+    missing = []
+
+    for file in inp_files:
+        with h5py.File(file, "r") as ds:
+            missing.extend((file, path) for path in required_paths if path not in ds)
+
+    return missing
+
+
+def _read_stack_observation(file, stack_type, bbox, dem_file, polarization, frequency):
     """Read one observation for the requested stack type."""
     pbase = _read_perpendicular_baseline(file)
 
     if stack_type in {"ifgram", "ion"}:
-        dataset = read_subset(file, bbox, polarization=polarization)
+        dataset = read_subset(file, bbox, polarization=polarization, frequency=frequency)
         unwrap_key = "unw_data" if stack_type == "ifgram" else "ion_data"
         return {
             "unwrap_phase": dataset[unwrap_key],
@@ -404,14 +489,24 @@ def _read_stack_observation(file, stack_type, bbox, dem_file, polarization):
             "pbase": pbase,
         }
 
-    geo_ds = read_subset(file, bbox, polarization=polarization, geometry=True)
+    geo_ds = read_subset(
+        file, bbox, polarization=polarization, frequency=frequency, geometry=True
+    )
     if stack_type == "tropo":
         unwrap_phase = read_and_interpolate_troposphere(
-            file, dem_file, geo_ds["xybbox"], polarization=polarization
+            file,
+            dem_file,
+            geo_ds["xybbox"],
+            polarization=polarization,
+            frequency=frequency,
         )
     else:
         unwrap_phase = read_and_interpolate_SET(
-            file, dem_file, geo_ds["xybbox"], polarization=polarization
+            file,
+            dem_file,
+            geo_ds["xybbox"],
+            polarization=polarization,
+            frequency=frequency,
         )
 
     return {"unwrap_phase": unwrap_phase, "pbase": pbase}
@@ -451,7 +546,11 @@ def load_nisar(inps):
 
     # extract metadata
     pol = getattr(inps, "polarization", "HH")
-    metadata, bounds = extract_metadata(input_files, bbox=bbox, polarization=pol)
+    frequency = _resolve_frequency(input_files[0], getattr(inps, "frequency", "auto"), pol)
+    print(f"Using NISAR {frequency}")
+    metadata, bounds = extract_metadata(
+        input_files, bbox=bbox, polarization=pol, frequency=frequency
+    )
 
     # output filename
     stack_file = os.path.join(inps.out_dir, "inputs/ifgramStack.h5")
@@ -472,6 +571,7 @@ def load_nisar(inps):
         demFile=inps.dem_file,
         externalMaskFile=inps.mask_file,
         polarization=pol,
+        frequency=frequency,
     )
 
     # standalone water mask (MintPy format)
@@ -483,6 +583,7 @@ def load_nisar(inps):
         bbox=bounds,
         externalMaskFile=inps.mask_file,
         polarization=pol,
+        frequency=frequency,
     )
 
     # ifgram stack
@@ -494,6 +595,7 @@ def load_nisar(inps):
         bbox=bounds,
         date12_list=date12_list,
         polarization=pol,
+        frequency=frequency,
         stack_type="ifgram",
     )
 
@@ -506,6 +608,7 @@ def load_nisar(inps):
         bbox=bounds,
         date12_list=date12_list,
         polarization=pol,
+        frequency=frequency,
         stack_type="ion",
     )
 
@@ -518,9 +621,9 @@ def load_nisar(inps):
         bbox=bounds,
         date12_list=date12_list,
         polarization=pol,
+        frequency=frequency,
         stack_type="tropo",
     )
-    print("Done.")
 
     # SET stack
     prepare_stack(
@@ -531,6 +634,7 @@ def load_nisar(inps):
         bbox=bounds,
         date12_list=date12_list,
         polarization=pol,
+        frequency=frequency,
         stack_type="set",
     )
     print("Done.")
@@ -540,12 +644,12 @@ def load_nisar(inps):
 # ---------------------------------------------------------------------
 # Metadata / subset utilities
 # ---------------------------------------------------------------------
-def extract_metadata(input_files, bbox=None, polarization="HH"):
+def extract_metadata(input_files, bbox=None, polarization="HH", frequency="frequencyA"):
     """Extract NISAR metadata for MintPy."""
     meta_file = input_files[0]
     meta = {}
 
-    datasets = _datasets_for_pol(polarization)
+    datasets = _datasets_for_pol(polarization, frequency)
 
     with h5py.File(meta_file, "r") as ds:
         pixel_height = ds[datasets["ySpacing"]][()]
@@ -555,7 +659,7 @@ def extract_metadata(input_files, bbox=None, polarization="HH"):
         xcoord = ds[datasets["xcoord"]][()]
         ycoord = ds[datasets["ycoord"]][()]
         meta["EPSG"] = int(ds[datasets["epsg"]][()])
-        meta["WAVELENGTH"] = SPEED_OF_LIGHT / ds[PROCESSINFO["centerFrequency"]][()]
+        meta["WAVELENGTH"] = SPEED_OF_LIGHT / ds[_center_frequency_path(frequency)][()]
         meta["ORBIT_DIRECTION"] = ds[PROCESSINFO["orbit_direction"]][()].decode("utf-8")
         meta["POLARIZATION"] = polarization
         meta["ALOOKS"] = ds[datasets["azimuth_look"]][()]
@@ -613,7 +717,9 @@ def extract_metadata(input_files, bbox=None, polarization="HH"):
     else:
         utm_bbox = None
 
-    bounds = common_raster_bound(input_files, utm_bbox, polarization=polarization)
+    bounds = common_raster_bound(
+        input_files, utm_bbox, polarization=polarization, frequency=frequency
+    )
     meta["bbox"] = ",".join([str(b) for b in bounds])
 
     col1, row1, col2, row2 = get_rows_cols(xcoord, ycoord, bounds)
@@ -683,9 +789,9 @@ def get_rows_cols(xcoord, ycoord, bounds):
     return col1, row1, col2, row2
 
 
-def get_raster_corners(input_file, polarization="HH"):
+def get_raster_corners(input_file, polarization="HH", frequency="frequencyA"):
     """Get the (west, south, east, north) bounds of the image."""
-    datasets = _datasets_for_pol(polarization)
+    datasets = _datasets_for_pol(polarization, frequency)
     with h5py.File(input_file, "r") as ds:
         xcoord = ds[datasets["xcoord"]][:]
         ycoord = ds[datasets["ycoord"]][:]
@@ -696,14 +802,18 @@ def get_raster_corners(input_file, polarization="HH"):
     return float(west), float(south), float(east), float(north)
 
 
-def common_raster_bound(input_files, utm_bbox=None, polarization="HH"):
+def common_raster_bound(
+    input_files, utm_bbox=None, polarization="HH", frequency="frequencyA"
+):
     """Get common bounds among all data in (xmin, ymin, xmax, ymax)."""
     wests = []
     souths = []
     easts = []
     norths = []
     for file in input_files:
-        west, south, east, north = get_raster_corners(file, polarization=polarization)
+        west, south, east, north = get_raster_corners(
+            file, polarization=polarization, frequency=frequency
+        )
         wests.append(west)
         souths.append(south)
         easts.append(east)
@@ -752,12 +862,12 @@ def bbox_to_utm(bbox, dst_epsg, src_epsg=4326):
     return transformer.transform_bounds(xmin, ymin, xmax, ymax, densify_pts=21)
 
 
-def read_subset(gunw_file, bbox, polarization="HH", geometry=False):
+def read_subset(gunw_file, bbox, polarization="HH", frequency="frequencyA", geometry=False):
     """
     Read subset for unwrapped interferogram products.
     If geometry=True, returns bbox indices only (xybbox) without reading data arrays.
     """
-    datasets = _datasets_for_pol(polarization)
+    datasets = _datasets_for_pol(polarization, frequency)
     with h5py.File(gunw_file, "r") as ds:
         xcoord = ds[datasets["xcoord"]][()]
         ycoord = ds[datasets["ycoord"]][()]
@@ -810,7 +920,12 @@ def read_subset(gunw_file, bbox, polarization="HH", geometry=False):
 # Geometry (DEM warp + 3D interpolation at valid pixels)
 # ---------------------------------------------------------------------
 def read_and_interpolate_geometry(
-    gunw_file, dem_file, xybbox, polarization="HH", external_mask_file=None
+    gunw_file,
+    dem_file,
+    xybbox,
+    polarization="HH",
+    frequency="frequencyA",
+    external_mask_file=None,
 ):
     """
     Warp DEM to the interferogram grid (aligned), then interpolate slant range & incidence.
@@ -821,6 +936,7 @@ def read_and_interpolate_geometry(
         dem_file,
         xybbox,
         polarization,
+        frequency,
         {
             "slant_range": "rdr_slant_range",
             "incidence_angle": "rdr_incidence",
@@ -883,13 +999,16 @@ def interpolate_geometry(X_2d, Y_2d, dem, rdr_coords, valid_mask):
     return out_slant, out_incid, out_az
 
 
-def read_and_interpolate_troposphere(gunw_file, dem_file, xybbox, polarization="HH"):
+def read_and_interpolate_troposphere(
+    gunw_file, dem_file, xybbox, polarization="HH", frequency="frequencyA"
+):
     """Warp DEM to aligned grid and interpolate combined tropo at valid pixels only."""
     interp_ctx = _prepare_radar_grid_interpolation(
         gunw_file,
         dem_file,
         xybbox,
         polarization,
+        frequency,
         {
             "wet_tropo": "rdr_wet_tropo",
             "hydrostatic_tropo": "rdr_hs_tropo",
@@ -922,13 +1041,16 @@ def interpolate_troposphere(X_2d, Y_2d, dem, rdr_coords, valid_mask):
     return out
 
 
-def read_and_interpolate_SET(gunw_file, dem_file, xybbox, polarization="HH"):
+def read_and_interpolate_SET(
+    gunw_file, dem_file, xybbox, polarization="HH", frequency="frequencyA"
+):
     """Warp DEM to aligned grid and interpolate SET phase at valid pixels only."""
     interp_ctx = _prepare_radar_grid_interpolation(
         gunw_file,
         dem_file,
         xybbox,
         polarization,
+        frequency,
         {"rdr_SET": "rdr_SET"},
     )
     set_phase = interpolate_set(
@@ -958,15 +1080,46 @@ def interpolate_set(X_2d, Y_2d, dem, rdr_coords, valid_mask):
 # MintPy file builders
 # ---------------------------------------------------------------------
 def _get_date_pairs(filenames):
-    str_list = [Path(f).stem for f in filenames]
-    return [
-        str(f.split("_")[11].split("T")[0]) + "_" + str(f.split("_")[13].split("T")[0])
-        for f in str_list
-    ]
+    """Return reference_secondary date pairs in YYYYMMDD_YYYYMMDD format."""
+    date12_list = []
+    for filename in filenames:
+        with h5py.File(filename, "r") as ds:
+            if (
+                f"{IDENTIFICATION}/referenceZeroDopplerStartTime" in ds
+                and f"{IDENTIFICATION}/secondaryZeroDopplerStartTime" in ds
+            ):
+                ref_time = ds[f"{IDENTIFICATION}/referenceZeroDopplerStartTime"][()]
+                sec_time = ds[f"{IDENTIFICATION}/secondaryZeroDopplerStartTime"][()]
+                ref_date = ref_time.decode("utf-8").split("T")[0].replace("-", "")
+                sec_date = sec_time.decode("utf-8").split("T")[0].replace("-", "")
+                date12_list.append(f"{ref_date}_{sec_date}")
+                continue
+
+        parts = Path(filename).stem.split("_")
+        if len(parts) > 13:
+            date12_list.append(
+                f"{parts[11].split('T')[0]}_{parts[13].split('T')[0]}"
+            )
+            continue
+
+        raise ValueError(
+            f"Could not determine reference/secondary dates from {filename}. "
+            "Expected NISAR identification zero-Doppler start times or an "
+            "OPERA-style filename."
+        )
+
+    return date12_list
 
 
 def prepare_geometry(
-    outfile, metaFile, metadata, bbox, demFile, externalMaskFile, polarization="HH"
+    outfile,
+    metaFile,
+    metadata,
+    bbox,
+    demFile,
+    externalMaskFile,
+    polarization="HH",
+    frequency="frequencyA",
 ):
     """Prepare the geometry file."""
     print("-" * 50)
@@ -974,13 +1127,16 @@ def prepare_geometry(
 
     meta = {key: value for key, value in metadata.items()}
 
-    geo_ds = read_subset(metaFile, bbox, polarization=polarization, geometry=True)
+    geo_ds = read_subset(
+        metaFile, bbox, polarization=polarization, frequency=frequency, geometry=True
+    )
     dem_subset_array, slant_range, incidence_angle, azimuth_angle, mask = (
         read_and_interpolate_geometry(
             metaFile,
             demFile,
             geo_ds["xybbox"],
             polarization=polarization,
+            frequency=frequency,
             external_mask_file=externalMaskFile,
         )
     )
@@ -1005,7 +1161,13 @@ def prepare_geometry(
 
 
 def prepare_water_mask(
-    outfile, metaFile, metadata, bbox, externalMaskFile, polarization="HH"
+    outfile,
+    metaFile,
+    metadata,
+    bbox,
+    externalMaskFile,
+    polarization="HH",
+    frequency="frequencyA",
 ):
     """Prepare a standalone MintPy waterMask.h5 from the GUNW mask."""
     print("-" * 50)
@@ -1014,13 +1176,19 @@ def prepare_water_mask(
     meta = {key: value for key, value in metadata.items()}
 
     # get subset indices
-    geo_ds = read_subset(metaFile, bbox, polarization=polarization, geometry=True)
+    geo_ds = read_subset(
+        metaFile, bbox, polarization=polarization, frequency=frequency, geometry=True
+    )
     xybbox = geo_ds["xybbox"]
 
-    water_mask_bool = _read_is_land_and_valid_mask(metaFile, xybbox, polarization)
+    water_mask_bool = _read_is_land_and_valid_mask(
+        metaFile, xybbox, polarization, frequency
+    )
 
     if externalMaskFile not in ["auto", "None", None, "no", ""]:
-        dst_epsg, xcoord, ycoord = _read_target_grid(metaFile, xybbox, polarization)
+        dst_epsg, xcoord, ycoord = _read_target_grid(
+            metaFile, xybbox, polarization, frequency
+        )
         mask_src_epsg = _read_raster_epsg(externalMaskFile)
         external_mask = _warp_to_grid_mem(
             src_path=externalMaskFile,
@@ -1051,6 +1219,7 @@ def prepare_stack(
     bbox,
     date12_list,
     polarization="HH",
+    frequency="frequencyA",
     stack_type=None,
 ):
     """Prepare the input stacks."""
@@ -1061,6 +1230,29 @@ def prepare_stack(
     meta = {key: value for key, value in metadata.items()}
     num_pair = len(inp_files)
     print(f"number of inputs/unwrapped interferograms: {num_pair}")
+
+    missing = _missing_required_paths(
+        inp_files, effective_stack_type, polarization, frequency
+    )
+    if missing:
+        first_file, first_path = missing[0]
+        message = (
+            f"required NISAR {effective_stack_type} layer is missing: "
+            f"{first_path} in {first_file}"
+        )
+        if effective_stack_type == "ifgram":
+            raise FileNotFoundError(message)
+
+        print(f"WARNING: skipping {effective_stack_type} stack because {message}")
+        for missing_file, missing_path in missing[1:]:
+            print(
+                f"WARNING: skipping {effective_stack_type} stack because "
+                f"required NISAR {effective_stack_type} layer is missing: "
+                f"{missing_path} in {missing_file}"
+            )
+        if os.path.exists(outfile):
+            print(f"WARNING: existing stack file was not updated: {outfile}")
+        return None
 
     pbase = np.zeros(num_pair, dtype=np.float32)
     cols = int(meta["WIDTH"])
@@ -1087,7 +1279,7 @@ def prepare_stack(
         prog_bar = ptime.progressBar(maxValue=num_pair)
         for i, file in enumerate(inp_files):
             obs = _read_stack_observation(
-                file, effective_stack_type, bbox, demFile, polarization
+                file, effective_stack_type, bbox, demFile, polarization, frequency
             )
             f["unwrapPhase"][i] = obs["unwrap_phase"]
 
