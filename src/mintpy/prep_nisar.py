@@ -136,10 +136,7 @@ def _resolve_frequency(gunw_file: str, frequency, polarization: str) -> str:
 
 
 def _grid_bounds_from_xy(xcoord: np.ndarray, ycoord: np.ndarray):
-    """
-    Compute pixel-edge bounds aligned to the xcoord/ycoord grid (pixel centers).
-    Returns bounds in (minx, miny, maxx, maxy) and dx, dy (signed spacings).
-    """
+    """Return pixel-edge bounds and signed spacing for x/y pixel centers."""
     if xcoord.size < 2 or ycoord.size < 2:
         raise ValueError(
             "xcoord/ycoord must have at least 2 elements to infer spacing."
@@ -168,11 +165,8 @@ def _warp_to_grid_mem(
     ycoord: np.ndarray,
     resample_alg: str,
 ):
-    """
-    Warp a raster to the exact xcoord/ycoord grid using MEM output.
-    Uses bounds derived from pixel-edge and xRes/yRes with targetAlignedPixels.
-    """
-    bounds, dx, dy = _grid_bounds_from_xy(xcoord, ycoord)
+    """Warp a raster to the exact xcoord/ycoord grid using MEM output."""
+    bounds, _, _ = _grid_bounds_from_xy(xcoord, ycoord)
 
     warp_opts = gdal.WarpOptions(
         format="MEM",
@@ -223,11 +217,7 @@ def _read_raster_epsg(path: str) -> int:
 
 
 def _make_rgi(grid_axes, values, method="linear"):
-    """
-    RegularGridInterpolator wrapper:
-      - flips decreasing axes (SciPy requires increasing)
-      - bounds_error=False + fill_value=np.nan to avoid crashing
-    """
+    """Wrap scipy interpolation with axis-order and out-of-bounds handling."""
     axes = [np.asarray(a) for a in grid_axes]
     vals = values
     for dim, ax in enumerate(axes):
@@ -843,13 +833,9 @@ def common_raster_bound(
 
 
 def bbox_to_utm(bbox, dst_epsg, src_epsg=4326):
-    """Convert a bounding box into the destination CRS.
-
-    Use transform_bounds instead of projecting only two diagonal corners.
-    For projected grids such as UTM, a lat/lon-aligned box is not guaranteed
-    to remain axis-aligned after reprojection, so the diagonal-corner approach
-    can clip valid data near the other two corners.
-    """
+    """Convert a bounding box into the destination CRS."""
+    # Use transform_bounds instead of projecting only two diagonal corners.
+    # Projected lat/lon-aligned boxes are not guaranteed to remain axis-aligned.
     xmin, xmax = sorted((float(bbox[0]), float(bbox[2])))
     ymin, ymax = sorted((float(bbox[1]), float(bbox[3])))
 
