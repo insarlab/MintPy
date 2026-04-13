@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: David Bekaert, Simran Sangha, March 2026                        #
+# Author: David Bekaert, March 2026                        #
 ############################################################
 
 
@@ -51,8 +51,7 @@ def get_geom_lat_lon_bounds(geom_file):
 
 
 def get_opera_crop_indices(lat, lon, geom_file, pad_cells=3):
-    """
-    Get OPERA cube crop indices from geometry bounds with fixed ±0.2 deg padding.
+    """Get OPERA cube crop indices from geometry bounds with fixed ±0.2 deg padding.
 
     The pad_cells argument is kept for backward compatibility and ignored.
     """
