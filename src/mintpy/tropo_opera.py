@@ -220,17 +220,7 @@ def _ensure_ascending(axis, data, dim):
 def calc_zenith_delay_from_opera_file(
     opera_file, geom_file, lat2d, lon2d, dem, pad_cells=3
 ):
-    """Calculate 2D zenith tropospheric delay map intersected with DEM.
-
-    Two-step interpolation (cubic lateral, linear vertical):
-      1. At each OPERA height level, interpolate the 2D delay field from the
-         OPERA (lat, lon) grid to the pixel (lat, lon) locations using cubic
-         interpolation.  This yields delay values at the pixel locations for
-         every height level — shape (nz, npixels).
-      2. At each pixel, linearly interpolate along height to the DEM elevation.
-
-    Memory usage is O(nz * npixels), where nz is typically 20–80 levels.
-    """
+    """Calculate 2D zenith tropospheric delay map intersected with DEM."""
     from scipy.ndimage import map_coordinates
 
     # derive DEM range for vertical subsetting
@@ -267,33 +257,48 @@ def calc_zenith_delay_from_opera_file(
     # Convert geographical lat/lon into fractional array indices for the C-engine
     y_idx = (lat_flat - y_axis[0]) / dy
     x_idx = (lon_flat - x_axis[0]) / dx
-    coords = np.vstack([y_idx, x_idx])
 
-    # Step 1: cubic lateral interpolation at each height level using map_coordinates
-    delay_at_pixels = np.empty((nz, npixels), dtype=np.float64)
-    for k in range(nz):
-        delay_at_pixels[k, :] = map_coordinates(
-            data[k, :, :],
-            coords,
-            order=3,             # order=3 means cubic interpolation
-            mode='constant',     # If a pixel is outside the padded bounds...
-            cval=np.nan          # ...fill it with NaN
-        )
-
-    # Step 2: linear vertical interpolation at each pixel
-    # Find bracketing height indices and fractional weights
+    # Memory efficient logic
+    # Find bracketing height indices and fractional weights FIRST
     idx = np.searchsorted(z_axis, dem_flat, side='right') - 1
     idx = np.clip(idx, 0, nz - 2)
     dz = z_axis[idx + 1] - z_axis[idx]
     dz[dz == 0] = 1.0
     w = np.clip((dem_flat - z_axis[idx]) / dz, 0.0, 1.0)
 
-    # linear blend between bracketing levels
-    val_lo = delay_at_pixels[idx, np.arange(npixels)]
-    val_hi = delay_at_pixels[idx + 1, np.arange(npixels)]
-    ztd_flat = val_lo * (1.0 - w) + val_hi * w
+    # Initialize final output array (only takes ~260 MB of RAM instead of 15.6 GB)
+    ztd_flat = np.zeros(npixels, dtype=np.float32)
 
-    ztd = ztd_flat.reshape(dem.shape).astype(np.float32)
+    for k in range(nz):
+        # Find ONLY the pixels that use layer 'k' as their lower or upper bracket
+        mask_lo = (idx == k)
+        mask_hi = (idx + 1 == k)
+        mask_any = mask_lo | mask_hi
+
+        # If no pixels in the entire image live at this altitude, skip the layer entirely!
+        if not np.any(mask_any):
+            continue
+
+        # Interpolate ONLY for the required pixels
+        coords_k = np.vstack([y_idx[mask_any], x_idx[mask_any]])
+        delay_k = map_coordinates(
+            data[k, :, :],
+            coords_k,
+            order=3,
+            mode='constant',
+            cval=np.nan
+        )
+
+        # Apply the weights directly to the final ZTD array
+        if np.any(mask_lo):
+            valid_lo = mask_lo[mask_any]
+            ztd_flat[mask_lo] += delay_k[valid_lo] * (1.0 - w[mask_lo])
+
+        if np.any(mask_hi):
+            valid_hi = mask_hi[mask_any]
+            ztd_flat[mask_hi] += delay_k[valid_hi] * w[mask_hi]
+
+    ztd = ztd_flat.reshape(dem.shape)
     ztd[~np.isfinite(dem)] = np.nan
 
     return ztd, cube
