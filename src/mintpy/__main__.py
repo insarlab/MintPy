@@ -5,8 +5,7 @@
 ############################################################
 
 
-"""
-Command line interface for MintPy.
+"""Command line interface for MintPy.
 
 The Miami INsar Time-series software in PYthon (MintPy as /mint pai/)
 is an open-source package for Interferometric Synthetic Aperture Radar
