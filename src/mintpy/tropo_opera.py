@@ -51,10 +51,7 @@ def get_geom_lat_lon_bounds(geom_file):
 
 
 def get_opera_crop_indices(lat, lon, geom_file, pad_cells=3):
-    """Get OPERA cube crop indices from geometry bounds with fixed ±0.2 deg padding.
-
-    The pad_cells argument is kept for backward compatibility and ignored.
-    """
+    """Get OPERA cube crop indices from geometry bounds with fixed ±0.2 deg padding."""
     if lat.size < 2 or lon.size < 2:
         raise ValueError('Invalid OPERA latitude/longitude arrays: size < 2')
 
@@ -89,8 +86,7 @@ def get_opera_crop_indices(lat, lon, geom_file, pad_cells=3):
 
 
 def get_opera_height_crop_indices(height_levels, dem_min, dem_max):
-    """
-    Get height level indices spanning the DEM range.
+    """Get height level indices spanning the DEM range.
 
     The vertical interpolation is linear, so only the levels that bracket
     [dem_min, dem_max] are needed — no extra buffer beyond that.
@@ -131,8 +127,7 @@ def get_opera_height_crop_indices(height_levels, dem_min, dem_max):
 
 
 def read_opera_total_delay_cube(opera_file, geom_file, dem_range=None, pad_cells=3):
-    """
-    Read and crop OPERA delay cube, returning total zenith delay.
+    """Read and crop OPERA delay cube, returning total zenith delay.
 
     Parameters: opera_file - str, path to OPERA netCDF file
                 geom_file  - str, path to MintPy geometry HDF5 file
@@ -183,8 +178,7 @@ def read_opera_total_delay_cube(opera_file, geom_file, dem_range=None, pad_cells
 
 
 def get_geom_lat_lon_dem(geom_file):
-    """
-    Read DEM and latitude/longitude grids from geometry file.
+    """Read DEM and latitude/longitude grids from geometry file.
 
     Returns: lat2d/lon2d/dem in 2D np.ndarray with same shape
     """
@@ -309,8 +303,7 @@ def calc_zenith_delay_from_opera_file(
 
 ############################################################################
 def read_inps2date_time(inps):
-    """
-    Read acquisition date/time info from input arguments.
+    """Read acquisition date/time info from input arguments.
 
     Parameters: inps      - Namespace for input arguments
     Returns:    date_list - list(str), acquisition dates in YYYYMMDD
@@ -342,8 +335,7 @@ def read_inps2date_time(inps):
 
 
 def nearest_opera_product_time(date_str, utc_sec):
-    """
-    Round one acquisition date/time to the nearest OPERA model datetime.
+    """Round one acquisition date/time to the nearest OPERA model datetime.
 
     Parameters: date_str   - str, acquisition date in YYYYMMDD
                 utc_sec    - float, acquisition UTC time in seconds
@@ -366,8 +358,7 @@ def nearest_opera_product_time(date_str, utc_sec):
 
 
 def get_opera_date_time_list(date_list, utc_sec):
-    """
-    Build required OPERA date/hour list for all acquisitions.
+    """Build required OPERA date/hour list for all acquisitions.
 
     Parameters: date_list       - list(str), acquisition dates in YYYYMMDD
                 utc_sec         - float, acquisition UTC time in seconds
@@ -385,8 +376,7 @@ def get_opera_date_time_list(date_list, utc_sec):
 
 
 def get_expected_opera_file_patterns(opera_date_list, opera_hour_list):
-    """
-    Create expected OPERA ZTD filename patterns for model times.
+    """Create expected OPERA ZTD filename patterns for model times.
 
     The production timestamp is left as wildcard.
 
@@ -401,8 +391,7 @@ def get_expected_opera_file_patterns(opera_date_list, opera_hour_list):
 
 
 def get_opera_file_status(opera_date_list, opera_hour_list, opera_dir):
-    """
-    Get matched OPERA files and missing model date/hour list.
+    """Get matched OPERA files and missing model date/hour list.
 
     Returns: expected_patterns      - list(str)
              matched_files          - dict(str, list(str))
@@ -531,8 +520,7 @@ def _get_product_filename(product):
 
 
 def dload_opera_file_subset(product, opera_dir, geom_file, dem_range=None, session=None):
-    """
-    Download a spatially and vertically subsetted OPERA file.
+    """Download a spatially and vertically subsetted OPERA file.
 
     Uses ``fsspec`` + ``h5py`` to open the remote file via byte-range HTTP
     requests, reads only the required spatial/vertical slice, and writes the
@@ -604,8 +592,7 @@ def dload_opera_file_subset(product, opera_dir, geom_file, dem_range=None, sessi
 
 
 def dload_opera_files(missing_date_hour_list, opera_dir, geom_file=None, dem_range=None):
-    """
-    Download missing OPERA TROPO-ZENITH files via ASF Search.
+    """Download missing OPERA TROPO-ZENITH files via ASF Search.
 
     Uses per-day ASF queries constrained by OPERA collection IDs and
     date windows, then down-filters by required model-time tokens.
