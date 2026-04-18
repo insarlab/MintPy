@@ -24,7 +24,7 @@ from mintpy.objects.stackDict import geometryDict, ifgramDict, ifgramStackDict
 from mintpy.utils import ptime, readfile, utils as ut
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr', 'nisar']
+PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr', 'nisar', 'isce3']
 
 # primary observation dataset names
 OBS_DSET_NAMES = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
@@ -675,6 +675,50 @@ def prepare_metadata(iDict):
             prep_module.main(iargs)
         except:
             warnings.warn('prep_nisar.py failed. Assuming its result exists and continue...')
+
+    elif processor == 'isce3':
+        from mintpy.utils import isce3_utils
+
+        meta_files = sorted(glob.glob(iDict['mintpy.load.metaFile']))
+        meta_file = meta_files[0] if meta_files else 'auto'
+
+        baseline_dir = iDict.get('mintpy.load.baselineDir', None)
+
+        # Geometry source directory (contains burst subdirs with HDF5)
+        geom_src_dir = iDict.get('mintpy.load.geomSrcDir', None)
+        if geom_src_dir is None:
+            dem_path = iDict.get('mintpy.load.demFile', '')
+            if dem_path and dem_path.lower() != 'auto':
+                geom_src_dir = os.path.dirname(dem_path)
+            else:
+                geom_src_dir = os.path.abspath('.')
+        geom_src_dir = os.path.abspath(geom_src_dir)
+
+        # Output directory for merged geometry (same as demFile's directory)
+        dem_file = iDict.get('mintpy.load.demFile', '')
+        if dem_file and dem_file.lower() != 'auto':
+            out_dir = os.path.dirname(os.path.abspath(dem_file))
+        else:
+            out_dir = os.path.join(os.path.dirname(geom_src_dir), 'merged_geom')
+
+        obs_keys = ['mintpy.load.unwFile', 'mintpy.load.corFile', 'mintpy.load.connCompFile']
+        obs_paths = [iDict[key] for key in obs_keys if iDict.get(key, 'auto').lower() != 'auto']
+        obs_paths = [x for x in obs_paths if glob.glob(x)]
+
+        iargs = ['-m', meta_file, '-g', geom_src_dir, '--out-dir', out_dir]
+        if baseline_dir:
+            iargs += ['-b', baseline_dir]
+        if obs_paths:
+            iargs += ['-f'] + obs_paths
+        if not iDict.get('updateMode', True):
+            iargs.append('--force')
+
+        ut.print_command_line('prep_isce3.py', iargs)
+        prep_module = importlib.import_module('mintpy.cli.prep_isce3')
+        try:
+            prep_module.main(iargs)
+        except Exception as e:
+            warnings.warn(f'prep_isce3.py failed: {e}. Assuming its result exists and continue...')
 
     elif processor == 'isce':
         from mintpy.utils import isce_utils, s1_utils

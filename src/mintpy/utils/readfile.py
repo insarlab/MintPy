@@ -1257,7 +1257,11 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         atr = {}
         # PROCESSOR
-        if fname.endswith('.img') and any(i.endswith('.hdr') for i in metafiles):
+        if fext in ['.tif', '.tiff'] and fbase.endswith('.int'):
+            atr = read_isce3_geotiff(fname)
+            return atr
+
+        elif fname.endswith('.img') and any(i.endswith('.hdr') for i in metafiles):
             atr['PROCESSOR'] = 'snap'
 
         elif any(i.endswith(('.xml', '.hdr', '.vrt')) for i in metafiles):
@@ -1377,6 +1381,67 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
     return atr
 
+from osgeo import gdal, osr
+def read_isce3_geotiff(fname):
+    """Read attributes from ISCE3/Dolphin GeoTIFF file (e.g., .int.tif)."""
+    ds = gdal.Open(fname, gdal.GA_ReadOnly)
+    if ds is None:
+        raise ValueError(f"Cannot open {fname} with GDAL")
+
+    meta = {}
+    # Image dimensions
+    meta['LENGTH'] = str(ds.RasterYSize)
+    meta['WIDTH'] = str(ds.RasterXSize)
+
+    # Geotransform
+    gt = ds.GetGeoTransform()
+    meta['X_FIRST'] = str(gt[0])
+    meta['Y_FIRST'] = str(gt[3])
+    meta['X_STEP'] = str(abs(gt[1]))
+    meta['Y_STEP'] = str(abs(gt[5]))
+    meta['X_UNIT'] = 'meters'
+    meta['Y_UNIT'] = 'meters'
+
+    # Projection
+    proj = ds.GetProjection()
+    if proj:
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(proj)
+        if srs.IsGeographic():
+            meta['X_UNIT'] = 'degrees'
+            meta['Y_UNIT'] = 'degrees'
+        epsg = srs.GetAuthorityCode(None)
+        if epsg:
+            meta['EPSG'] = epsg
+
+    # Data type
+    band = ds.GetRasterBand(1)
+    dtype = gdal.GetDataTypeName(band.DataType).lower()
+    if 'float' in dtype:
+        meta['DATA_TYPE'] = 'float32'
+    elif 'int' in dtype:
+        meta['DATA_TYPE'] = 'int16'
+    meta['NO_DATA_VALUE'] = str(band.GetNoDataValue())
+
+    # File type and processor
+    fbase = os.path.basename(fname).lower()
+    if fbase.endswith('.int.tif'):
+        meta['FILE_TYPE'] = '.int'
+    elif fbase.endswith('.cor.tif'):
+        meta['FILE_TYPE'] = '.cor'
+    elif 'unw' in fbase:
+        meta['FILE_TYPE'] = '.unw'
+    meta['PROCESSOR'] = 'isce3'
+
+    # Extract DATE12 from filename
+    # Pattern: YYYYMMDD_YYYYMMDD.int.tif
+    match = re.search(r'(\d{8})_(\d{8})', fname)
+    if match:
+        d1, d2 = match.groups()
+        meta['DATE12'] = f"{d1[2:]}-{d2[2:]}"
+
+    ds = None
+    return meta
 
 def auto_no_data_value(meta):
     """Get default no-data-value for the given file's metadata.
