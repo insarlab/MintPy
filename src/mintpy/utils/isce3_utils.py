@@ -1,21 +1,29 @@
 import os
 import re
 import json
+import math
 import tempfile
 import shutil
+import subprocess
 import xml.etree.ElementTree as ET
+import xml.dom.minidom
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, List, Optional, Union
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
 
 import h5py
-import subprocess
 import numpy as np
 from osgeo import gdal, osr
 
 from mintpy.utils import ptime, readfile
 from mintpy.objects import sensor
 
+try:
+    from scipy.interpolate import CubicHermiteSpline
+except ImportError:
+    CubicHermiteSpline = None
+    print("Warning: scipy not available. Hermite interpolation will fall back to linear.")
 
 
 def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
@@ -738,3 +746,454 @@ def extract_merge_geometry(
             print(f"Updated metadata with LENGTH={metadata['LENGTH']}, WIDTH={metadata['WIDTH']}")
 
     return merged
+
+###############################################################################
+# XML generation for ISCE3 burst metadata (optional)
+###############################################################################
+def _to_seconds(t_str: str, ref_epoch_str: str) -> float:
+    """Convert datetime string to seconds relative to reference epoch."""
+    t = datetime.strptime(t_str, '%Y-%m-%d %H:%M:%S.%f')
+    ref = datetime.strptime(ref_epoch_str, '%Y-%m-%d %H:%M:%S.%f')
+    return (t - ref).total_seconds()
+
+
+def _compute_heading(state_vector):
+    """
+    Calculate ENU heading angle from satellite state vectors
+    
+    Args:
+        state_vector: Tuple containing (position, velocity) in ECEF coordinates
+                     position: [x, y, z] in meters
+                     velocity: [vx, vy, vz] in m/s
+    
+    Returns:
+        heading: ENU heading angle in degrees (0-360), clockwise from North
+    """
+    # Unpack state vector
+    state_pos, state_vel = state_vector
+    
+    # Convert ECEF position to LLH
+    # Using WGS84 ellipsoid parameters
+    a = 6378137.0  # semi-major axis
+    f = 1.0 / 298.257223563  # flattening
+    b = a * (1 - f)  # semi-minor axis
+    e2 = 1 - (b**2 / a**2)  # eccentricity squared
+    
+    x, y, z = state_pos
+    
+    # Longitude
+    lon = np.arctan2(y, x)
+    
+    # Latitude using iterative method
+    p = np.sqrt(x**2 + y**2)
+    lat = np.arctan2(z, p * (1 - e2))
+    
+    # Iterate to improve latitude accuracy
+    for _ in range(10):
+        N = a / np.sqrt(1 - e2 * np.sin(lat)**2)
+        h = p / np.cos(lat) - N
+        lat_new = np.arctan2(z, p * (1 - e2 * N / (N + h)))
+        if np.abs(lat_new - lat) < 1e-12:
+            break
+        lat = lat_new
+    
+    # Altitude
+    N = a / np.sqrt(1 - e2 * np.sin(lat)**2)
+    alt = p / np.cos(lat) - N
+    
+    # Calculate ENU basis vectors at satellite position
+    sin_lat = np.sin(lat)
+    cos_lat = np.cos(lat)
+    sin_lon = np.sin(lon)
+    cos_lon = np.cos(lon)
+    
+    # ECEF to ENU rotation matrix
+    R = np.array([
+        [-sin_lon,           cos_lon,           0.0],
+        [-sin_lat * cos_lon, -sin_lat * sin_lon, cos_lat],
+        [cos_lat * cos_lon,  cos_lat * sin_lon, sin_lat]
+    ])
+    
+    # Rotate velocity from ECEF to ENU
+    vel_enu = np.dot(R, state_vel)
+    
+    # Extract East and North components
+    v_east = vel_enu[0]
+    v_north = vel_enu[1]
+    
+    # Calculate heading angle
+    heading_rad = np.arctan2(v_east, v_north)
+    heading_deg = np.degrees(heading_rad)
+    
+    # Normalize to 0-360
+    if heading_deg < 0:
+        heading_deg += 360.0
+    
+    return heading_deg
+
+
+def _orbit_interp_hermite(metadata, time):
+    """
+    Interpolate orbit state vectors at given time using Hermite interpolation.
+    
+    Parameters
+    ----------
+    metadata : dict
+        Dictionary containing orbit metadata with keys:
+        - 'time': array of times in seconds relative to reference_epoch
+        - 'position_x', 'position_y', 'position_z': arrays of position components
+        - 'velocity_x', 'velocity_y', 'velocity_z': arrays of velocity components
+        - 'reference_epoch': reference epoch datetime string
+    time : float or array_like
+        Time(s) in seconds relative to reference_epoch for interpolation
+    
+    Returns
+    -------
+    dict
+        Dictionary containing interpolated position and velocity at given time(s)
+    """
+    # Extract time array
+    t_array = np.array(metadata['time'])
+    
+    # Create Hermite interpolators for each component
+    # Position interpolation with velocity as derivatives
+    pos_x_interp = CubicHermiteSpline(t_array, metadata['position_x'], metadata['velocity_x'])
+    pos_y_interp = CubicHermiteSpline(t_array, metadata['position_y'], metadata['velocity_y'])
+    pos_z_interp = CubicHermiteSpline(t_array, metadata['position_z'], metadata['velocity_z'])
+    
+    # For velocity, we can either use the derivative of position interpolators
+    # or create separate velocity interpolators. Using derivative ensures consistency.
+    
+    # Calculate interpolated values
+    if np.isscalar(time):
+        position = np.array([
+            float(pos_x_interp(time)),
+            float(pos_y_interp(time)),
+            float(pos_z_interp(time))
+        ])
+        # Get velocity from derivative of position interpolators
+        velocity = np.array([
+            float(pos_x_interp.derivative()(time)),
+            float(pos_y_interp.derivative()(time)),
+            float(pos_z_interp.derivative()(time))
+        ])
+    else:
+        time_array = np.asarray(time)
+        position = np.column_stack([
+            pos_x_interp(time_array),
+            pos_y_interp(time_array),
+            pos_z_interp(time_array)
+        ])
+        # Get velocity from derivative of position interpolators
+        velocity = np.column_stack([
+            pos_x_interp.derivative()(time_array),
+            pos_y_interp.derivative()(time_array),
+            pos_z_interp.derivative()(time_array)
+        ])
+    
+    return position, velocity
+
+
+def read_burst_metadata_h5(
+    h5_file: Path,
+    layer_names: List[str] = None,
+    group_path: str = "/metadata/processing_information/input_burst_metadata/"
+) -> Dict[str, Any]:
+    """
+    Read metadata for burst attributes from an HDF5 file.
+    
+    Parameters
+    ----------
+    h5_file : Path
+        Path to the HDF5 file
+    layer_names : List[str], optional
+        List of burst metadata attribute names to read. 
+        If None, all datasets directly under the group will be read.
+        Defaults to None.
+    group_path : str, optional
+        Path to the burst metadata group in the HDF5 file.
+        Defaults to '/metadata/processing_information/input_burst_metadata/'
+    
+    Returns
+    -------
+    Dict[str, Any]
+        Metadata dictionary for the burst attributes
+    """
+    metadata = {}
+    
+    try:
+        with h5py.File(h5_file, 'r') as f:
+            # Check if group exists
+            if group_path not in f:
+                print(f"Group {group_path} not found in {h5_file}")
+                return metadata
+            
+            # Get the group object
+            group = f[group_path]
+            
+            # If layer_names is not provided, get all direct datasets in the group
+            if layer_names is None:
+                # Get all items in the group, filter only datasets (not subgroups)
+                layer_names = []
+                for name, item in group.items():
+                    if isinstance(item, h5py.Dataset):
+                        layer_names.append(name)
+
+            # Read each requested layer
+            for layer_name in layer_names:
+                dataset_path = f"{group_path.rstrip('/')}/{layer_name}"
+                
+                if dataset_path in f:
+                    # Get the dataset
+                    dataset = f[dataset_path]
+                    
+                    # Read the value
+                    value = dataset[()]
+                    
+                    # Handle different data types
+                    if isinstance(value, np.ndarray):
+                        # For string arrays, decode bytes to string
+                        if value.dtype.kind == 'S' or value.dtype.kind == 'O':
+                            if value.size == 1:
+                                metadata[layer_name] = value.item().decode('utf-8') if isinstance(value.item(), bytes) else value.item()
+                            else:
+                                metadata[layer_name] = [v.decode('utf-8') if isinstance(v, bytes) else v for v in value.tolist()]
+                        else:
+                            # For shape array, extract length and width
+                            if layer_name == 'shape' and value.shape == (2,):
+                                metadata['length'] = int(value[0])
+                                metadata['width'] = int(value[1])
+                                metadata['shape'] = value.tolist()
+                            else:
+                                metadata[layer_name] = value.tolist()
+                    elif isinstance(value, bytes):
+                        metadata[layer_name] = value.decode('utf-8')
+                    else:
+                        # Convert scalar numpy types to Python types
+                        metadata[layer_name] = value.item() if hasattr(value, 'item') else value
+                    
+                    # Optionally add dataset attributes if they exist
+                    if dataset.attrs:
+                        metadata[f"{layer_name}_attrs"] = {
+                            key: (val.tolist() if isinstance(val, np.ndarray) else val) 
+                            for key, val in dataset.attrs.items()
+                        }
+                else:
+                    print(f"Dataset {dataset_path} not found in {h5_file}")
+    
+    except Exception as e:
+        print(f"Failed to read burst metadata from {h5_file}: {e}")
+        return metadata
+    
+    # Calculate sensing_mid if we have sensing_start and sensing_stop
+    if 'sensing_start' in metadata and 'sensing_stop' in metadata:
+        try:
+            # Parse datetime strings
+            start_dt = datetime.strptime(metadata['sensing_start'], '%Y-%m-%d %H:%M:%S.%f')
+            stop_dt = datetime.strptime(metadata['sensing_stop'], '%Y-%m-%d %H:%M:%S.%f')
+            
+            # Calculate time difference and mid time
+            time_diff = stop_dt - start_dt
+            mid_dt = start_dt + (time_diff / 2)
+            
+            # Format back to string
+            metadata['sensing_mid'] = mid_dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+
+        except Exception as e:
+            print(f"Failed to calculate sensing_mid: {e}")
+            # If calculation fails, try to read it directly from file
+            try:
+                dataset_path = f"{group_path.rstrip('/')}/sensing_mid"
+                with h5py.File(h5_file, 'r') as f:
+                    if dataset_path in f:
+                        value = f[dataset_path][()]
+                        if isinstance(value, bytes):
+                            metadata['sensing_mid'] = value.decode('utf-8')
+                        elif hasattr(value, 'item'):
+                            metadata['sensing_mid'] = value.item()
+                        else:
+                            metadata['sensing_mid'] = value
+            except Exception as read_e:
+                print(f"Failed to read sensing_mid from file: {read_e}")
+    
+    # Calculate mid_range if we have starting_range, width, and range_pixel_spacing
+    if all(key in metadata for key in ['starting_range', 'width', 'range_pixel_spacing']):
+        try:
+            mid_range = (metadata['starting_range'] + 
+                        (metadata['width'] / 2) * 
+                        metadata['range_pixel_spacing'])
+            metadata['mid_range'] = mid_range
+        except Exception as e:
+            print(f"Failed to calculate mid_range: {e}")
+    
+    return metadata
+
+
+def prepare_mintpy_metadata(metafile: Path) -> Dict[str, Any]:
+    """
+    Prepare metadata dictionary from MintPy HDF5 file for processing.
+    
+    This function extracts specific metadata groups from a MintPy HDF5 file,
+    combines them into a single dictionary, and extracts additional derived
+    metadata fields such as swath number.
+    
+    Parameters
+    ----------
+    metafile : Path
+        Path to the MintPy HDF5 metadata file.
+        
+    Returns
+    -------
+    Dict[str, Any]
+        Combined metadata dictionary containing:
+        - All metadata from specified HDF5 groups
+        - Derived fields like 'swathNumber'
+        
+    Notes
+    -----
+    The function reads metadata from three predefined HDF5 group paths:
+    1. Processing information and input burst metadata
+    2. Orbit information
+    3. Identification information
+    
+    The swath number is extracted from the 'burst_id' field using regex
+    pattern matching for IW1, IW2, or IW3 swaths.
+    """
+    import re
+    
+    # Define HDF5 group paths to extract metadata from
+    group_path_list = [
+        '/metadata/processing_information/input_burst_metadata/',
+        '/metadata/orbit',
+        '/identification'
+    ]
+    
+    # Initialize empty metadata dictionary
+    metadata = {}
+    
+    # Iterate through each group path and read metadata
+    for group_path in group_path_list:
+        # Update metadata dictionary with contents from current group
+        metadata.update(read_burst_metadata_h5(metafile, group_path=group_path))
+    
+    # Extract swath number from burst_id using regex pattern matching
+    # Pattern matches iw0, iw1, or iw2 (case-insensitive) and extracts the digit
+    if re.search(r"iw([012])", metadata.get('burst_id', ''), re.IGNORECASE):
+        metadata['swathNumber'] = int(
+            re.search(r"iw([012])", metadata['burst_id'], re.IGNORECASE).group(1)
+        )
+    else:
+        metadata['swathNumber'] = None
+    
+    return metadata
+
+
+def extract_required_attributes(metadata):
+    """
+    Extract only the burst attributes needed by extract_tops_metadata.
+    """
+    import isce3
+
+    meta = {}
+    
+    # Direct burst attributes used in original function
+    meta['prf'] = metadata['prf_raw_data']
+    meta['burstStartUTC'] = metadata['sensing_start']
+    meta['burstStopUTC'] = metadata['sensing_stop']
+    meta['radarWavelength'] = metadata['wavelength']
+    meta['startingRange'] = metadata['starting_range']
+    meta['passDirection'] = metadata['orbit_direction']
+    meta['polarization'] = metadata['polarization']
+    meta['trackNumber'] = metadata['track_number']
+    meta['orbitNumber'] = metadata['absolute_orbit_number']
+    
+    # Additional attributes needed for calculations
+    meta['sensingMid'] = metadata['sensing_mid']
+    meta['azimuthTimeInterval'] = metadata['azimuth_time_interval']
+    meta['rangePixelSize'] = metadata['range_pixel_spacing']
+    meta['swathNumber'] = metadata['swathNumber']
+    meta['ascendingNodeTime'] = None
+    # Calculate satellite speed (Vs) from orbit.velocity
+
+    sensingMid = _to_seconds(metadata['sensing_mid'], metadata['reference_epoch'])
+    sv = _orbit_interp_hermite(metadata,sensingMid)
+    velocity = np.linalg.norm(sv[1])
+    position = sv[0]
+    ellipsoid = isce3.core.Ellipsoid()
+    
+    llh = ellipsoid.xyz_to_lon_lat(position)
+    heading = _compute_heading(sv)
+    meta['satelliteSpeed'] = velocity
+    meta['position'] = position
+    meta['HEADING'] = heading
+    meta['earthRadius'] = ellipsoid.r_dir(math.radians(heading),llh[1])
+    meta['altitude'] = llh[2]
+    # Calculate frame numbers
+    if meta['ascendingNodeTime'] is not None:
+        time_diff_start = (metadata['sensing_start'] - meta['ascendingNodeTime']).total_seconds()
+        time_diff_stop = (metadata['sensing_stop'] - meta['ascendingNodeTime']).total_seconds()
+        meta['firstFrameNumber'] = int(0.2 * time_diff_start)
+        meta['lastFrameNumber'] = int(0.2 * time_diff_stop)
+    else:
+        meta['firstFrameNumber'] = 0
+        meta['lastFrameNumber'] = 0
+    
+    return meta
+
+
+def save_burst_attributes_to_xml(burst_attrs: Dict[str, Any], output_path: Union[str, Path]) -> bool:
+    """Save burst attributes to XML file in MintPy-compatible format."""
+    root = ET.Element('burst_metadata')
+    info = ET.SubElement(root, 'info')
+    ET.SubElement(info, 'generation_time').text = datetime.now().isoformat() + 'Z'
+    ET.SubElement(info, 'source').text = 'static_layers extraction'
+
+    attrs_elem = ET.SubElement(root, 'burst_attributes')
+    attributes_to_save = [
+        'prf', 'burstStartUTC', 'burstStopUTC', 'radarWavelength',
+        'startingRange', 'passDirection', 'polarization', 'trackNumber',
+        'orbitNumber', 'sensingMid', 'azimuthTimeInterval', 'rangePixelSize',
+        'swathNumber', 'ascendingNodeTime', 'satelliteSpeed', 'position',
+        'HEADING', 'earthRadius', 'altitude', 'firstFrameNumber', 'lastFrameNumber'
+    ]
+    for key in attributes_to_save:
+        if key in burst_attrs:
+            elem = ET.SubElement(attrs_elem, key)
+            value = burst_attrs[key]
+            if value is None:
+                elem.text = 'None'
+                elem.set('type', 'NoneType')
+            elif isinstance(value, (int, np.integer)):
+                elem.text = str(int(value))
+                elem.set('type', 'int')
+            elif isinstance(value, (float, np.floating)):
+                elem.text = f"{value:.12f}"
+                elem.set('type', 'float')
+            elif isinstance(value, str):
+                elem.text = value
+                elem.set('type', 'str')
+            elif isinstance(value, np.ndarray):
+                elem.text = str(value)
+                elem.set('type', 'np.ndarray')
+            else:
+                elem.text = str(value)
+                elem.set('type', 'other')
+
+    xml_str = ET.tostring(root, encoding='utf-8')
+    dom = xml.dom.minidom.parseString(xml_str)
+    pretty_xml = dom.toprettyxml(indent='  ')
+    lines = [line for line in pretty_xml.split('\n') if line.strip()]
+    pretty_xml = '\n'.join(lines)
+    with open(output_path, 'w') as f:
+        f.write(pretty_xml)
+    return True
+
+
+def generate_burst_xml_from_static(static_h5_file: Union[str, Path], output_xml: Union[str, Path]) -> str:
+    """Generate burst XML file from a single static_layers HDF5."""
+    print(f'Generating burst XML from {static_h5_file}')
+    meta = prepare_mintpy_metadata(static_h5_file)
+    attrs = extract_required_attributes(meta)
+    save_burst_attributes_to_xml(attrs, output_xml)
+    print(f'Saved burst XML to {output_xml}')
+    return str(output_xml)

@@ -153,7 +153,33 @@ def prepare_stack_isce3(obs_file, metadata=None, baseline_dict=None, update_mode
 #########################################################################
 def prep_isce3(inps):
     """Prepare ISCE3/Dolphin metadata files."""
-    # Read common metadata from reference burst XML
+    # If no meta file is provided or it is 'auto', generate one from static_layers
+    if not inps.meta_file or inps.meta_file == 'auto':
+        print('No meta file provided. Generating burst XML from static_layers.h5...')
+        geom_path = Path(inps.geom_dir)
+        # Find all subdirectories containing static_layers*.h5
+        burst_dirs = sorted([d for d in geom_path.iterdir()
+                             if d.is_dir() and list(d.glob('static_layers*.h5'))])
+        if not burst_dirs:
+            raise FileNotFoundError(f'No static_layers HDF5 found in {inps.geom_dir}')
+
+        first_burst_dir = burst_dirs[0]
+        # Get the first HDF5 file in the first burst directory
+        h5_list = sorted(first_burst_dir.glob('static_layers*.h5'))
+        if not h5_list:
+            raise FileNotFoundError(f'No static_layers HDF5 found in {first_burst_dir}')
+        first_h5 = h5_list[0]
+
+        # Use the burst directory name as burst ID
+        burst_id = first_burst_dir.name
+        xml_out = Path(inps.out_dir) / f'{burst_id}.burst.xml'
+        xml_out.parent.mkdir(parents=True, exist_ok=True)
+
+        isce3_utils.generate_burst_xml_from_static(str(first_h5), str(xml_out))
+        inps.meta_file = str(xml_out)
+        print(f'Generated meta file: {inps.meta_file}')
+
+    # Read common metadata from reference burst XML (now guaranteed to exist)
     metadata = {}
     if inps.meta_file:
         metadata = isce3_utils.extract_isce3_metadata(

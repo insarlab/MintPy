@@ -22,15 +22,14 @@ GEOMETRY_FILENAMES = [
 ]
 
 EXAMPLE = """example:
-  ## Dolphin/ISCE-3 topsStack
-  prep_isce3.py -f "../../dolphin/unwrapped/*.unw.tif" -m ../reference/IW1.xml -b ../baselines -g ../merged/geom/
+  ## Dolphin/ISCE-3 topsStack (auto‑generate metadata)
+  prep_isce3.py -f "../../dolphin/unwrapped/*.unw.tif" -b ../baselines -g ../merged/geom/
 
-  ## multiple observation types (unwrapped + coherence)
-  prep_isce3.py -f "../../dolphin/unwrapped/*.unw.tif" "../../dolphin/interferograms/*.int.cor.tif" \\
-                -m ../reference/IW1.xml -g ../merged/geom/
+  ## with existing metadata file
+  prep_isce3.py -f "../../dolphin/unwrapped/*.unw.tif" -m ../reference/IW1.xml -g ../merged/geom/
 
   ## force overwrite existing .rsc files
-  prep_isce3.py -f "../../dolphin/unwrapped/*.unw.tif" -m ../reference/IW1.xml -g ../merged/geom/ --force
+  prep_isce3.py -f "../../dolphin/unwrapped/*.unw.tif" -g ../merged/geom/ --force
 """
 
 def create_parser(subparsers=None):
@@ -51,9 +50,10 @@ def create_parser(subparsers=None):
                              '      connected comp:   ../../dolphin/unwrapped/*.unw.conncomp.tif')
 
     # metadata
-    parser.add_argument('-m', '--meta-file', dest='meta_file', type=str, required=True,
+    parser.add_argument('-m', '--meta-file', dest='meta_file', type=str, default=None,
                         help='Metadata file to extract common metadata for the stack.\n'
-                             'E.g.: reference burst XML (e.g., reference/IW1.xml).')
+                             'E.g.: reference burst XML (e.g., reference/IW1.xml). '
+                             'If not provided, one will be generated from static_layers.h5.')
 
     # geometry and baseline
     parser.add_argument('-b', '--baseline-dir', dest='baseline_dir', type=str, default=None,
@@ -81,7 +81,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if '*' in inps.meta_file:
+    if inps.meta_file and '*' in inps.meta_file:
         fnames = glob.glob(inps.meta_file)
         if fnames:
             inps.meta_file = fnames[0]
