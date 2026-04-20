@@ -126,7 +126,9 @@ def _resolve_frequency(gunw_file: str, frequency, polarization: str) -> str:
         if requested_frequency in ["auto", "A", "frequencyA"]:
             hint = "Use --frequency B for frequencyB products."
         else:
-            hint = "Check that the input file contains frequencyB for this polarization."
+            hint = (
+                "Check that the input file contains frequencyB for this polarization."
+            )
         raise ValueError(
             f"NISAR {requested} data for polarization {polarization!r} was not found "
             f"in {gunw_file}. Missing path: {missing[0]}. {hint}"
@@ -279,19 +281,79 @@ def _read_is_land_and_valid_mask(gunw_file: str, xybbox, pol: str, frequency: st
             return _read_unwrapped_phase_valid_mask(gunw_file, xybbox, pol, frequency)
 
         dset = ds[path]
-        mask = dset[xybbox[1] : xybbox[3], xybbox[0] : xybbox[2]]
+        mask_bits = dset[xybbox[1] : xybbox[3], xybbox[0] : xybbox[2]]
         fill = dset.attrs.get("_FillValue", None)
 
-    valid_samples = np.isfinite(mask)
+    valid_samples = np.isfinite(mask_bits)
     if fill is not None:
-        valid_samples &= mask != fill
+        valid_samples &= mask_bits != fill
 
-    mask = np.where(valid_samples, mask, 0).astype(np.int64, copy=False)
+    # Bits 0-7: subswath and water encoding; higher bits carry other flags.
+    mask = np.where(valid_samples, mask_bits & 0xFF, 0).astype(np.int64, copy=False)
     water_mask = (mask // 100) == 1
     ref_subswath = (mask // 10) % 10
     sec_subswath = mask % 10
     is_valid = valid_samples & (ref_subswath > 0) & (sec_subswath > 0)
     return is_valid & ~water_mask
+
+
+def _read_common_is_land_and_valid_mask(input_files, bbox, pol: str, frequency: str):
+    """Return the common keep-mask across all input GUNW products."""
+    common_mask = None
+    for gunw_file in input_files:
+        geo_ds = read_subset(
+            gunw_file, bbox, polarization=pol, frequency=frequency, geometry=True
+        )
+        mask = _read_is_land_and_valid_mask(
+            gunw_file, geo_ds["xybbox"], pol, frequency
+        ).astype(bool, copy=False)
+
+        if common_mask is None:
+            common_mask = mask.copy()
+            continue
+
+        if mask.shape != common_mask.shape:
+            raise ValueError(
+                "Cannot combine NISAR masks with different subset shapes: "
+                f"{common_mask.shape} versus {mask.shape} in {gunw_file}"
+            )
+        common_mask &= mask
+
+    if common_mask is None:
+        raise ValueError("No NISAR input files found for common mask generation.")
+
+    return common_mask
+
+
+def _external_mask_is_set(external_mask_file):
+    return external_mask_file not in ["auto", "None", None, "no", ""]
+
+
+def _apply_external_mask(
+    keep_mask,
+    gunw_file: str,
+    xybbox,
+    external_mask_file,
+    polarization: str,
+    frequency: str,
+):
+    """Refine a keep-mask with an optional external raster mask."""
+    if not _external_mask_is_set(external_mask_file):
+        return keep_mask
+
+    dst_epsg, xcoord, ycoord = _read_target_grid(
+        gunw_file, xybbox, polarization, frequency
+    )
+    mask_src_epsg = _read_raster_epsg(external_mask_file)
+    external_mask = _warp_to_grid_mem(
+        src_path=external_mask_file,
+        src_epsg=mask_src_epsg,
+        dst_epsg=dst_epsg,
+        xcoord=xcoord,
+        ycoord=ycoord,
+        resample_alg="near",
+    ).astype(bool)
+    return keep_mask & external_mask
 
 
 def _read_perpendicular_baseline(gunw_file: str) -> np.float32:
@@ -338,7 +400,7 @@ def _read_radar_grid_fields(gunw_file: str, field_map: dict):
 
 
 def _prepare_radar_grid_interpolation(
-    gunw_file, dem_file, xybbox, polarization, frequency, field_map
+    gunw_file, dem_file, xybbox, polarization, frequency, field_map, valid_mask=None
 ):
     """Build the common DEM/grid/valid-mask context for radar-grid interpolation."""
     dem_src_epsg = _read_raster_epsg(dem_file)
@@ -357,9 +419,17 @@ def _prepare_radar_grid_interpolation(
     )
 
     y_2d, x_2d = np.meshgrid(ycoord, xcoord, indexing="ij")
-    valid_mask = _read_is_land_and_valid_mask(
-        gunw_file, xybbox, polarization, frequency
-    )
+    if valid_mask is None:
+        valid_mask = _read_is_land_and_valid_mask(
+            gunw_file, xybbox, polarization, frequency
+        )
+    else:
+        valid_mask = np.asarray(valid_mask, dtype=np.bool_)
+        if valid_mask.shape != x_2d.shape:
+            raise ValueError(
+                "Provided NISAR valid mask shape does not match the target grid: "
+                f"{valid_mask.shape} versus {x_2d.shape}"
+            )
 
     return {
         "dst_epsg": dst_epsg,
@@ -465,7 +535,9 @@ def _read_stack_observation(file, stack_type, bbox, dem_file, polarization, freq
     pbase = _read_perpendicular_baseline(file)
 
     if stack_type in {"ifgram", "ion"}:
-        dataset = read_subset(file, bbox, polarization=polarization, frequency=frequency)
+        dataset = read_subset(
+            file, bbox, polarization=polarization, frequency=frequency
+        )
         unwrap_key = "unw_data" if stack_type == "ifgram" else "ion_data"
         return {
             "unwrap_phase": dataset[unwrap_key],
@@ -495,6 +567,35 @@ def _read_stack_observation(file, stack_type, bbox, dem_file, polarization, freq
         )
 
     return {"unwrap_phase": unwrap_phase, "pbase": pbase}
+
+
+def _apply_common_mask_to_observation(obs, common_mask):
+    """Mask all 2D observation layers with the stack-wide common keep-mask."""
+    if common_mask is None:
+        return obs
+
+    common_mask = np.asarray(common_mask, dtype=np.bool_)
+    invalid = ~common_mask
+    masked = {}
+    for key, value in obs.items():
+        if not isinstance(value, np.ndarray):
+            masked[key] = value
+            continue
+
+        if value.shape != common_mask.shape:
+            raise ValueError(
+                f"Cannot apply NISAR common mask with shape {common_mask.shape} "
+                f"to {key} layer with shape {value.shape}"
+            )
+
+        data = value.copy()
+        if np.issubdtype(data.dtype, np.floating):
+            data[invalid] = np.nan
+        else:
+            data[invalid] = 0
+        masked[key] = data
+
+    return masked
 
 
 # ---------------------------------------------------------------------
@@ -531,10 +632,30 @@ def load_nisar(inps):
 
     # extract metadata
     pol = getattr(inps, "polarization", "HH")
-    frequency = _resolve_frequency(input_files[0], getattr(inps, "frequency", "auto"), pol)
+    frequency = _resolve_frequency(
+        input_files[0], getattr(inps, "frequency", "auto"), pol
+    )
     print(f"Using NISAR {frequency}")
     metadata, bounds = extract_metadata(
         input_files, bbox=bbox, polarization=pol, frequency=frequency
+    )
+    common_mask = _read_common_is_land_and_valid_mask(
+        input_files, bounds, pol=pol, frequency=frequency
+    )
+    first_geo_ds = read_subset(
+        input_files[0], bounds, polarization=pol, frequency=frequency, geometry=True
+    )
+    common_mask = _apply_external_mask(
+        common_mask,
+        input_files[0],
+        first_geo_ds["xybbox"],
+        inps.mask_file,
+        pol,
+        frequency,
+    )
+    print(
+        "Common valid land pixels from all NISAR masks: "
+        f"{np.sum(common_mask)} / {common_mask.size}"
     )
 
     # output filename
@@ -554,7 +675,8 @@ def load_nisar(inps):
         bbox=bounds,
         metadata=metadata,
         demFile=inps.dem_file,
-        externalMaskFile=inps.mask_file,
+        externalMaskFile=None,
+        commonMask=common_mask,
         polarization=pol,
         frequency=frequency,
     )
@@ -566,7 +688,8 @@ def load_nisar(inps):
         metaFile=input_files[0],
         metadata=metadata,
         bbox=bounds,
-        externalMaskFile=inps.mask_file,
+        externalMaskFile=None,
+        commonMask=common_mask,
         polarization=pol,
         frequency=frequency,
     )
@@ -582,6 +705,7 @@ def load_nisar(inps):
         polarization=pol,
         frequency=frequency,
         stack_type="ifgram",
+        commonMask=common_mask,
     )
 
     # ionosphere stack
@@ -595,6 +719,7 @@ def load_nisar(inps):
         polarization=pol,
         frequency=frequency,
         stack_type="ion",
+        commonMask=common_mask,
     )
 
     # troposphere stack
@@ -608,6 +733,7 @@ def load_nisar(inps):
         polarization=pol,
         frequency=frequency,
         stack_type="tropo",
+        commonMask=common_mask,
     )
 
     # SET stack
@@ -621,6 +747,7 @@ def load_nisar(inps):
         polarization=pol,
         frequency=frequency,
         stack_type="set",
+        commonMask=common_mask,
     )
     print("Done.")
     return
@@ -835,7 +962,9 @@ def bbox_to_utm(bbox, dst_epsg, src_epsg=4326):
     return transformer.transform_bounds(xmin, ymin, xmax, ymax, densify_pts=21)
 
 
-def read_subset(gunw_file, bbox, polarization="HH", frequency="frequencyA", geometry=False):
+def read_subset(
+    gunw_file, bbox, polarization="HH", frequency="frequencyA", geometry=False
+):
     """Read subset arrays or only geometry bounds for unwrapped products."""
     datasets = _datasets_for_pol(polarization, frequency)
     with h5py.File(gunw_file, "r") as ds:
@@ -896,6 +1025,7 @@ def read_and_interpolate_geometry(
     polarization="HH",
     frequency="frequencyA",
     external_mask_file=None,
+    valid_mask=None,
 ):
     """Warp DEM to the interferogram grid and interpolate geometry layers."""
     interp_ctx = _prepare_radar_grid_interpolation(
@@ -910,6 +1040,7 @@ def read_and_interpolate_geometry(
             "los_x": "rdr_los_x",
             "los_y": "rdr_los_y",
         },
+        valid_mask=valid_mask,
     )
     slant_range, incidence_angle, azimuth_angle = interpolate_geometry(
         interp_ctx["x_2d"],
@@ -919,19 +1050,17 @@ def read_and_interpolate_geometry(
         interp_ctx["valid_mask"],
     )
 
-    # Base mask comes from the native GUNW mask; external masks only refine it.
+    # Base mask comes from the native/common GUNW mask; external masks only refine it.
     mask_subset_array = interp_ctx["valid_mask"].astype(bool)
-    if external_mask_file not in ["auto", "None", None, "no", ""]:
-        mask_src_epsg = _read_raster_epsg(external_mask_file)
-        external_mask = _warp_to_grid_mem(
-            src_path=external_mask_file,
-            src_epsg=mask_src_epsg,
-            dst_epsg=interp_ctx["dst_epsg"],
-            xcoord=interp_ctx["xcoord"],
-            ycoord=interp_ctx["ycoord"],
-            resample_alg="near",
-        ).astype(bool)
-        mask_subset_array &= external_mask
+    if _external_mask_is_set(external_mask_file):
+        mask_subset_array = _apply_external_mask(
+            mask_subset_array,
+            gunw_file,
+            xybbox,
+            external_mask_file,
+            polarization,
+            frequency,
+        )
 
     return (
         interp_ctx["dem"],
@@ -1064,9 +1193,7 @@ def _get_date_pairs(filenames):
 
         parts = Path(filename).stem.split("_")
         if len(parts) > 13:
-            date12_list.append(
-                f"{parts[11].split('T')[0]}_{parts[13].split('T')[0]}"
-            )
+            date12_list.append(f"{parts[11].split('T')[0]}_{parts[13].split('T')[0]}")
             continue
 
         raise ValueError(
@@ -1087,6 +1214,7 @@ def prepare_geometry(
     externalMaskFile,
     polarization="HH",
     frequency="frequencyA",
+    commonMask=None,
 ):
     """Prepare the geometry file."""
     print("-" * 50)
@@ -1105,6 +1233,7 @@ def prepare_geometry(
             polarization=polarization,
             frequency=frequency,
             external_mask_file=externalMaskFile,
+            valid_mask=commonMask,
         )
     )
 
@@ -1135,6 +1264,7 @@ def prepare_water_mask(
     externalMaskFile,
     polarization="HH",
     frequency="frequencyA",
+    commonMask=None,
 ):
     """Prepare a standalone MintPy waterMask.h5 from the GUNW mask."""
     print("-" * 50)
@@ -1148,24 +1278,28 @@ def prepare_water_mask(
     )
     xybbox = geo_ds["xybbox"]
 
-    water_mask_bool = _read_is_land_and_valid_mask(
-        metaFile, xybbox, polarization, frequency
-    )
-
-    if externalMaskFile not in ["auto", "None", None, "no", ""]:
-        dst_epsg, xcoord, ycoord = _read_target_grid(
+    if commonMask is None:
+        water_mask_bool = _read_is_land_and_valid_mask(
             metaFile, xybbox, polarization, frequency
         )
-        mask_src_epsg = _read_raster_epsg(externalMaskFile)
-        external_mask = _warp_to_grid_mem(
-            src_path=externalMaskFile,
-            src_epsg=mask_src_epsg,
-            dst_epsg=dst_epsg,
-            xcoord=xcoord,
-            ycoord=ycoord,
-            resample_alg="near",
-        ).astype(bool)
-        water_mask_bool &= external_mask
+    else:
+        water_mask_bool = np.asarray(commonMask, dtype=np.bool_)
+        length = xybbox[3] - xybbox[1]
+        width = xybbox[2] - xybbox[0]
+        if water_mask_bool.shape != (length, width):
+            raise ValueError(
+                "Provided NISAR common mask shape does not match the water mask "
+                f"grid: {water_mask_bool.shape} versus {(length, width)}"
+            )
+
+    water_mask_bool = _apply_external_mask(
+        water_mask_bool,
+        metaFile,
+        xybbox,
+        externalMaskFile,
+        polarization,
+        frequency,
+    )
 
     length, width = water_mask_bool.shape
     ds_name_dict = {"waterMask": [np.bool_, (length, width), water_mask_bool]}
@@ -1188,6 +1322,7 @@ def prepare_stack(
     polarization="HH",
     frequency="frequencyA",
     stack_type=None,
+    commonMask=None,
 ):
     """Prepare the input stacks."""
     effective_stack_type = _resolve_stack_type(stack_type, outfile)
@@ -1248,6 +1383,7 @@ def prepare_stack(
             obs = _read_stack_observation(
                 file, effective_stack_type, bbox, demFile, polarization, frequency
             )
+            obs = _apply_common_mask_to_observation(obs, commonMask)
             f["unwrapPhase"][i] = obs["unwrap_phase"]
 
             if "coherence" in obs:
