@@ -1,10 +1,7 @@
 import glob
 import os
 import re
-import numpy as np
 from pathlib import Path
-
-import h5py
 
 from mintpy.utils import isce3_utils, ptime, readfile, writefile
 
@@ -52,36 +49,25 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
         geom_files = ['height.tif', 'los_east.tif', 'los_north.tif',
                       'layover_shadow_mask.tif', 'local_incidence_angle.tif']
 
-    # Step 0: Read burst count and full-resolution dimensions from static_layers.h5 BEFORE merge
-    burst_full_h = None
-    burst_full_w = None
+    # Step 0: Read burst count and info from static_layers.h5
     num_bursts = 0
     geom_path = Path(geom_dir)
     burst_subdirs = sorted([d for d in geom_path.iterdir()
                             if d.is_dir() and list(d.glob('static_layers*.h5'))])
     num_bursts = len(burst_subdirs)
     if burst_subdirs:
-        try:
-            with h5py.File(sorted(burst_subdirs[0].glob('static_layers*.h5'))[0], 'r') as h5:
-                y_coords = h5['/data/y_coordinates'][:]
-                x_coords = h5['/data/x_coordinates'][:]
-            burst_full_h = len(y_coords)
-            burst_full_w = len(x_coords)
-            print(f'Number of bursts: {num_bursts}')
-            print(f'Burst full-resolution dimensions: {burst_full_h} x {burst_full_w}')
-        except Exception as e:
-            print(f'WARNING: could not read burst dimensions: {e}')
+        print(f'Number of bursts: {num_bursts}')
 
-    # Step 1: Extract and merge full-resolution geometry
+    # Step 1: Merge full-resolution geometry WITHOUT cropping to interferogram extent
     geometry_dict = isce3_utils.extract_merge_geometry(
         geom_dir=geom_dir,
         output_dir=out_dir,
         geom_types=geom_files,
-        ref_int_file=ref_int_file,
+        ref_int_file=None,
         metadata=metadata
     )
 
-    # Step 2: Determine the final / target dimensions for the processing
+    # Step 2: Read merged full-resolution geometry dimensions
     height_file = geometry_dict.get('height.tif')
     if height_file and os.path.isfile(str(height_file)):
         geom_atr = readfile.read_attribute(str(height_file))
@@ -89,68 +75,36 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
     else:
         geom_shape = None
 
-    # Step 3: Multilook geometry to match interferogram resolution if needed
-    if target_shape is not None and geom_shape is not None:
-        if geom_shape != target_shape:
-            if (geom_shape[0] % target_shape[0] != 0 or
-                geom_shape[1] % target_shape[1] != 0):
-                raise ValueError(
-                    f'Geometry shape {geom_shape} is not an integer multiple of '
-                    f'target interferogram shape {target_shape}.'
-                    f' Cannot multilook.')
-            lks_y = geom_shape[0] // target_shape[0]
-            lks_x = geom_shape[1] // target_shape[1]
-            if lks_y > 1 or lks_x > 1:
-                print(f'Multilooking geometry from {geom_shape} to {target_shape} '
-                      f'(looks: {lks_y} x {lks_x}) and overwriting originals')
-                geometry_dict = isce3_utils.multilook_geometry_files(
-                    geometry_dict, lks_y, lks_x, output_dir=None, overwrite=True)
+    # Step 3: Multilook geometry to match interferogram resolution
+    lks_y = 1
+    lks_x = 1
+    if target_shape is not None and geom_shape is not None and geom_shape != target_shape:
+        if (geom_shape[0] % target_shape[0] != 0 or
+            geom_shape[1] % target_shape[1] != 0):
+            raise ValueError(
+                f'Geometry shape {geom_shape} is not an integer multiple of '
+                f'target interferogram shape {target_shape}.')
+        lks_y = geom_shape[0] // target_shape[0]
+        lks_x = geom_shape[1] // target_shape[1]
+        if lks_y > 1 or lks_x > 1:
+            print(f'Multilooking geometry from {geom_shape} to {target_shape} '
+                  f'(looks: {lks_y} x {lks_x}) and overwriting originals')
+            geometry_dict = isce3_utils.multilook_geometry_files(
+                geometry_dict, lks_y, lks_x, output_dir=None, overwrite=True)
 
-    # Step 4: Compute ALOOKS / RLOOKS
-    final_h = None
-    final_w = None
-    height_file = geometry_dict.get('height.tif')
-    if height_file and os.path.isfile(str(height_file)):
-        geom_atr = readfile.read_attribute(str(height_file))
-        final_h = int(geom_atr['LENGTH'])
-        final_w = int(geom_atr['WIDTH'])
+    # Step 4: Crop geometry to match interferogram extent
+    if ref_int_file and os.path.isfile(ref_int_file):
+        geometry_dict = isce3_utils.crop_geometry_to_reference(
+            geometry_dict, ref_int_file, output_dir=None, overwrite=True)
 
+    # Step 5: Set ALOOKS/RLOOKS from multilook factors
     if metadata is not None:
-        lks_y = None
-        lks_x = None
-
-        # Approach A: burst full-res dims -> multilook factor
-        if (burst_full_h is not None and burst_full_w is not None
-                and final_h is not None and final_w is not None
-                and final_h > 0 and final_w > 0):
-            # Range looks: single burst range samples / merged range samples
-            lks_x = max(1, int(round(burst_full_w / final_w)))
-            # Azimuth looks: total burst lines (multi-burst) / merged azimuth lines
-            if num_bursts > 0:
-                total_burst_h = burst_full_h * num_bursts
-                lks_y = max(1, int(round(total_burst_h / final_h)))
-            else:
-                lks_y = max(1, int(round(burst_full_h / final_h)))
-            print(f'Computed ALOOKS={lks_y}, RLOOKS={lks_x} '
-                  f'(burst {burst_full_h}x{burst_full_w} × {num_bursts} bursts '
-                  f'-> geom {final_h}x{final_w})')
-
-        # Approach B: fallback using sensor resolution and pixel sizes
-        if lks_y is None and lks_x is None:
-            az_res = float(metadata.get('azimuthResolution', 0))
-            rg_res = float(metadata.get('rangeResolution', 0))
-            az_ps = float(metadata.get('AZIMUTH_PIXEL_SIZE', 0))
-            rg_ps = float(metadata.get('RANGE_PIXEL_SIZE', 0))
-            if az_res > 0 and rg_res > 0 and az_ps > 0 and rg_ps > 0:
-                lks_y = max(1, int(round(az_ps / az_res)))
-                lks_x = max(1, int(round(rg_ps / rg_res)))
-                print(f'Computed ALOOKS={lks_y}, RLOOKS={lks_x} '
-                      f'(sensor res az={az_res} rg={rg_res} '
-                      f'pixel size az={az_ps} rg={rg_ps})')
-
-        if lks_y is not None and lks_x is not None:
-            metadata['ALOOKS'] = str(lks_y)
-            metadata['RLOOKS'] = str(lks_x)
+        metadata['ALOOKS'] = str(lks_y)
+        metadata['RLOOKS'] = str(lks_x)
+        msg = f'Set ALOOKS={lks_y}, RLOOKS={lks_x}'
+        if geom_shape is not None:
+            msg += f' (geom {geom_shape} -> target {target_shape})'
+        print(msg)
 
     # Write .rsc files (after possible multilook)
     for geom_name, geom_path in geometry_dict.items():

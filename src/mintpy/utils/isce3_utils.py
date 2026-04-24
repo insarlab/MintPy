@@ -277,6 +277,80 @@ def update_attribute4multilook(atr_in, ref_shape):
 
     return atr
 
+def crop_geometry_to_reference(geometry_dict, ref_file, output_dir=None, overwrite=True):
+    """Crop merged geometry GeoTIFF files to reference file extent and resolution.
+
+    Parameters
+    ----------
+    geometry_dict : dict
+        Dictionary mapping geometry type to file path.
+    ref_file : str or Path
+        Path to reference GeoTIFF for extent and resolution.
+    output_dir : str or Path, optional
+        Output directory. If None, files are overwritten in place.
+    overwrite : bool
+        If True, overwrite original files.
+
+    Returns
+    -------
+    dict
+        Updated dictionary with paths to cropped files.
+    """
+    from osgeo import gdal
+    from pathlib import Path
+
+    if output_dir is None:
+        output_dir = None
+    else:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Read reference extent and resolution
+    ds = gdal.Open(str(ref_file))
+    gt = ds.GetGeoTransform()
+    xmin = gt[0]
+    ymax = gt[3]
+    xmax = xmin + gt[1] * ds.RasterXSize
+    ymin = ymax + gt[5] * ds.RasterYSize
+    xres = abs(gt[1])
+    yres = abs(gt[5])
+    ds = None
+
+    cropped = {}
+    for gtype, src_file in geometry_dict.items():
+        if not src_file or not os.path.isfile(src_file):
+            continue
+
+        src_file = Path(src_file)
+        if output_dir is None:
+            out_file = src_file
+        else:
+            out_file = output_dir / src_file.name
+
+        # Crop via gdalwarp
+        if out_file == src_file:
+            temp_file = out_file.with_suffix('.tmp.tif')
+        else:
+            temp_file = out_file
+
+        cmd = [
+            'gdalwarp', '-overwrite', '-of', 'GTiff', '-co', 'COMPRESS=LZW',
+            '-te', str(xmin), str(ymin), str(xmax), str(ymax),
+            '-tr', str(xres), str(yres),
+            '-r', 'near',
+            str(src_file), str(temp_file),
+        ]
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+        if out_file == src_file:
+            temp_file.replace(src_file)
+            out_file = src_file
+
+        cropped[gtype] = out_file
+
+    return cropped
+
+
 def multilook_geometry_files(geometry_dict, lks_y, lks_x, output_dir=None, overwrite=True):
     """Multilook merged geometry GeoTIFF files to a coarser resolution.
 
