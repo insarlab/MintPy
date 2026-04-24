@@ -1,7 +1,10 @@
 import glob
 import os
+import re
 import numpy as np
 from pathlib import Path
+
+import h5py
 
 from mintpy.utils import isce3_utils, ptime, readfile, writefile
 
@@ -19,10 +22,11 @@ def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
     metadata['DATE12'] = f'{dates[0][2:]}-{dates[1][2:]}'
 
     if baseline_dict:
-        bperp_top = baseline_dict[dates[1]][0] - baseline_dict[dates[0]][0]
-        bperp_bottom = baseline_dict[dates[1]][1] - baseline_dict[dates[0]][1]
-        metadata['P_BASELINE_TOP_HDR'] = str(bperp_top)
-        metadata['P_BASELINE_BOTTOM_HDR'] = str(bperp_bottom)
+        if dates[0] in baseline_dict and dates[1] in baseline_dict:
+            bperp_top = baseline_dict[dates[1]][0] - baseline_dict[dates[0]][0]
+            bperp_bottom = baseline_dict[dates[1]][1] - baseline_dict[dates[0]][1]
+            metadata['P_BASELINE_TOP_HDR'] = str(bperp_top)
+            metadata['P_BASELINE_BOTTOM_HDR'] = str(bperp_bottom)
     return metadata
 
 
@@ -34,8 +38,8 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
     Parameters
     ----------
     target_shape : tuple of (length, width), optional
-        If provided, the merged geometry files will be multilooked to match
-        this shape (e.g., from interferogram dimensions).
+        Interferogram dimensions: used for multilooking geometry and
+        computing ALOOKS/RLOOKS from burst full-resolution dimensions.
     """
     from pathlib import Path
 
@@ -48,6 +52,26 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
         geom_files = ['height.tif', 'los_east.tif', 'los_north.tif',
                       'layover_shadow_mask.tif', 'local_incidence_angle.tif']
 
+    # Step 0: Read burst count and full-resolution dimensions from static_layers.h5 BEFORE merge
+    burst_full_h = None
+    burst_full_w = None
+    num_bursts = 0
+    geom_path = Path(geom_dir)
+    burst_subdirs = sorted([d for d in geom_path.iterdir()
+                            if d.is_dir() and list(d.glob('static_layers*.h5'))])
+    num_bursts = len(burst_subdirs)
+    if burst_subdirs:
+        try:
+            with h5py.File(sorted(burst_subdirs[0].glob('static_layers*.h5'))[0], 'r') as h5:
+                y_coords = h5['/data/y_coordinates'][:]
+                x_coords = h5['/data/x_coordinates'][:]
+            burst_full_h = len(y_coords)
+            burst_full_w = len(x_coords)
+            print(f'Number of bursts: {num_bursts}')
+            print(f'Burst full-resolution dimensions: {burst_full_h} x {burst_full_w}')
+        except Exception as e:
+            print(f'WARNING: could not read burst dimensions: {e}')
+
     # Step 1: Extract and merge full-resolution geometry
     geometry_dict = isce3_utils.extract_merge_geometry(
         geom_dir=geom_dir,
@@ -57,26 +81,76 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
         metadata=metadata
     )
 
-    # Step 2: If target shape is given and differs from merged geometry, multilook in place
-    if target_shape is not None:
-        height_file = geometry_dict.get('height.tif')
-        if height_file and os.path.isfile(height_file):
-            geom_atr = readfile.read_attribute(str(height_file))
-            geom_shape = (int(geom_atr['LENGTH']), int(geom_atr['WIDTH']))
-            if geom_shape != target_shape:
-                if (geom_shape[0] % target_shape[0] != 0 or
-                    geom_shape[1] % target_shape[1] != 0):
-                    raise ValueError(...)
-                lks_y = geom_shape[0] // target_shape[0]
-                lks_x = geom_shape[1] // target_shape[1]
-                if lks_y > 1 or lks_x > 1:
-                    print(f'Multilooking geometry from {geom_shape} to {target_shape} '
-                          f'(looks: {lks_y} x {lks_x}) and overwriting originals')
-                    geometry_dict = isce3_utils.multilook_geometry_files(
-                        geometry_dict, lks_y, lks_x, output_dir=None, overwrite=True)
+    # Step 2: Determine the final / target dimensions for the processing
+    height_file = geometry_dict.get('height.tif')
+    if height_file and os.path.isfile(str(height_file)):
+        geom_atr = readfile.read_attribute(str(height_file))
+        geom_shape = (int(geom_atr['LENGTH']), int(geom_atr['WIDTH']))
+    else:
+        geom_shape = None
 
-                    # Update metadata with multilook factors
-                    metadata = isce3_utils.update_metadata_for_multilook(metadata, lks_y, lks_x)
+    # Step 3: Multilook geometry to match interferogram resolution if needed
+    if target_shape is not None and geom_shape is not None:
+        if geom_shape != target_shape:
+            if (geom_shape[0] % target_shape[0] != 0 or
+                geom_shape[1] % target_shape[1] != 0):
+                raise ValueError(
+                    f'Geometry shape {geom_shape} is not an integer multiple of '
+                    f'target interferogram shape {target_shape}.'
+                    f' Cannot multilook.')
+            lks_y = geom_shape[0] // target_shape[0]
+            lks_x = geom_shape[1] // target_shape[1]
+            if lks_y > 1 or lks_x > 1:
+                print(f'Multilooking geometry from {geom_shape} to {target_shape} '
+                      f'(looks: {lks_y} x {lks_x}) and overwriting originals')
+                geometry_dict = isce3_utils.multilook_geometry_files(
+                    geometry_dict, lks_y, lks_x, output_dir=None, overwrite=True)
+
+    # Step 4: Compute ALOOKS / RLOOKS
+    final_h = None
+    final_w = None
+    height_file = geometry_dict.get('height.tif')
+    if height_file and os.path.isfile(str(height_file)):
+        geom_atr = readfile.read_attribute(str(height_file))
+        final_h = int(geom_atr['LENGTH'])
+        final_w = int(geom_atr['WIDTH'])
+
+    if metadata is not None:
+        lks_y = None
+        lks_x = None
+
+        # Approach A: burst full-res dims -> multilook factor
+        if (burst_full_h is not None and burst_full_w is not None
+                and final_h is not None and final_w is not None
+                and final_h > 0 and final_w > 0):
+            # Range looks: single burst range samples / merged range samples
+            lks_x = max(1, int(round(burst_full_w / final_w)))
+            # Azimuth looks: total burst lines (multi-burst) / merged azimuth lines
+            if num_bursts > 0:
+                total_burst_h = burst_full_h * num_bursts
+                lks_y = max(1, int(round(total_burst_h / final_h)))
+            else:
+                lks_y = max(1, int(round(burst_full_h / final_h)))
+            print(f'Computed ALOOKS={lks_y}, RLOOKS={lks_x} '
+                  f'(burst {burst_full_h}x{burst_full_w} × {num_bursts} bursts '
+                  f'-> geom {final_h}x{final_w})')
+
+        # Approach B: fallback using sensor resolution and pixel sizes
+        if lks_y is None and lks_x is None:
+            az_res = float(metadata.get('azimuthResolution', 0))
+            rg_res = float(metadata.get('rangeResolution', 0))
+            az_ps = float(metadata.get('AZIMUTH_PIXEL_SIZE', 0))
+            rg_ps = float(metadata.get('RANGE_PIXEL_SIZE', 0))
+            if az_res > 0 and rg_res > 0 and az_ps > 0 and rg_ps > 0:
+                lks_y = max(1, int(round(az_ps / az_res)))
+                lks_x = max(1, int(round(rg_ps / rg_res)))
+                print(f'Computed ALOOKS={lks_y}, RLOOKS={lks_x} '
+                      f'(sensor res az={az_res} rg={rg_res} '
+                      f'pixel size az={az_ps} rg={rg_ps})')
+
+        if lks_y is not None and lks_x is not None:
+            metadata['ALOOKS'] = str(lks_y)
+            metadata['RLOOKS'] = str(lks_x)
 
     # Write .rsc files (after possible multilook)
     for geom_name, geom_path in geometry_dict.items():
@@ -110,43 +184,50 @@ def prepare_stack_isce3(obs_file, metadata=None, baseline_dict=None, update_mode
     meta = metadata.copy() if metadata else {}
     num_file = len(tif_files)
 
-    # Ensure ALOOKS and RLOOKS are integer strings
+    # Normalize ALOOKS/RLOOKS to integer strings if present
     for key in ['ALOOKS', 'RLOOKS']:
         if key in meta:
-            meta[key] = str(int(float(meta[key])))
-        else:
-            meta[key] = '1'
-
-    # Check if resizing is needed based on the first file
-    if 'LENGTH' in meta and 'WIDTH' in meta:
-        first_atr = readfile.read_attribute(tif_files[0])
-        ref_shape = (int(meta['LENGTH']), int(meta['WIDTH']))
-        file_shape = (int(first_atr['LENGTH']), int(first_atr['WIDTH']))
-
-        if ref_shape != file_shape:
-            print(f'Resizing metadata from reference shape {ref_shape} to file shape {file_shape}')
-            meta = isce3_utils.update_attribute4multilook(meta, file_shape)
-            # Re-ensure integer strings after resize
-            for key in ['ALOOKS', 'RLOOKS']:
-                if key in meta:
-                    meta[key] = str(int(float(meta[key])))
+            try:
+                meta[key] = str(int(float(meta[key])))
+            except (ValueError, TypeError):
+                pass
 
     prog_bar = ptime.progressBar(maxValue=num_file, print_msg=(num_file > 5))
+    num_valid = 0
     for i, tif_file in enumerate(tif_files):
-        fbase = os.path.basename(tif_file)
-        date12_str = fbase.split('.')[0]
-        dates = ptime.yyyymmdd(date12_str.split('_'))
-        prog_bar.update(i+1, suffix=f'{dates[0]}_{dates[1]} {i+1}/{num_file}')
+        try:
+            fbase = os.path.basename(tif_file)
 
-        ifg_meta = meta.copy()
-        ifg_meta.update(readfile.read_attribute(tif_file))
-        ifg_meta = add_ifgram_metadata(ifg_meta, dates, baseline_dict)
+            # Extract date pair(s) from filename
+            date_nums = re.findall(r'\d{8}', fbase)
+            if len(date_nums) < 2:
+                prog_bar.update(i+1, suffix=f'skipped {i+1}/{num_file}')
+                continue
+            dates = sorted(set(date_nums))[:2]
 
-        rsc_file = tif_file + '.rsc'
-        writefile.write_roipac_rsc(ifg_meta, rsc_file,
-                                   update_mode=update_mode,
-                                   print_msg=False)
+            if not all(19000101 <= int(d) <= 20991231 for d in dates):
+                prog_bar.update(i+1, suffix=f'skipped {i+1}/{num_file}')
+                continue
+
+            num_valid += 1
+            prog_bar.update(i+1, suffix=f'{dates[0]}_{dates[1]} {i+1}/{num_file}')
+
+            ifg_meta = meta.copy()
+            ifg_meta.update(readfile.read_attribute(tif_file))
+            ifg_meta = add_ifgram_metadata(ifg_meta, dates, baseline_dict)
+
+            rsc_file = tif_file + '.rsc'
+            writefile.write_roipac_rsc(ifg_meta, rsc_file,
+                                       update_mode=update_mode,
+                                       print_msg=False)
+
+        except Exception as e:
+            prog_bar.update(i+1, suffix=f'error {i+1}/{num_file}')
+            continue
+
     prog_bar.close()
+    if num_valid == 0:
+        print(f'WARNING: no valid files processed for pattern: {obs_file}')
     return
 
 

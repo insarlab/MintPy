@@ -449,7 +449,7 @@ def read_inps_dict2geometry_dict_object(iDict, dset_name2template_key):
         # for processors with lookup table in geo-coordinates, remove latitude/longitude
         dset_name2template_key.pop('latitude')
         dset_name2template_key.pop('longitude')
-    elif iDict['processor'] in ['aria', 'gmtsar', 'hyp3', 'snap', 'cosicorr']:
+    elif iDict['processor'] in ['aria', 'gmtsar', 'hyp3', 'snap', 'cosicorr', 'isce3']:
         # for processors with geocoded products support only, do nothing for now.
         # check again when adding products support in radar-coordiantes
         pass

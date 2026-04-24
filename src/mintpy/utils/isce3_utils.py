@@ -138,7 +138,25 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
     # Processor
     meta['PROCESSOR'] = 'isce3'
 
-    # Initial looks
+    # Height / Earth radius (map from lowercase keys used in the XML)
+    if meta.get('altitude') and not meta.get('HEIGHT'):
+        meta['HEIGHT'] = meta['altitude']
+    if meta.get('earthRadius') and not meta.get('EARTH_RADIUS'):
+        meta['EARTH_RADIUS'] = meta['earthRadius']
+
+    # Compute center incidence angle if possible
+    if meta.get('HEIGHT') and meta.get('EARTH_RADIUS') and meta.get('startingRange'):
+        try:
+            H = float(meta['HEIGHT'])
+            R = float(meta['EARTH_RADIUS'])
+            sr = float(meta['startingRange'])
+            look_angle = np.arcsin(R / (R + H))
+            inc_angle = np.arcsin((R + H) / R * np.sin(look_angle))
+            meta['CENTER_INCIDENCE_ANGLE'] = str(np.rad2deg(inc_angle))
+        except (ValueError, TypeError):
+            pass
+
+    # Looks will be computed later from burst vs interferogram dimensions
     meta['ALOOKS'] = '1'
     meta['RLOOKS'] = '1'
 

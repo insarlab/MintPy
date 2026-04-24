@@ -1279,6 +1279,12 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         elif fext in GDAL_FILE_EXTS:
             atr['PROCESSOR'] = 'gdal'
+            # Recognize ISCE3/Dolphin geocoded products by naming pattern
+            if (fext in ['.tif', '.tiff']
+                    and (fbase.endswith('.unw') or fbase.endswith('.cor')
+                         or fbase.endswith('.int') or fbase.endswith('.unw.conncomp'))
+                    and re.search(r'\d{8}_\d{8}', fbase)):
+                atr['PROCESSOR'] = 'isce3'
 
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'mintpy'
@@ -1378,6 +1384,18 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
     atr['NO_DATA_VALUE'] = auto_no_data_value(atr)
 
     atr = standardize_metadata(atr)
+
+    # Fill in missing HEIGHT/EARTH_RADIUS for isce3 geocoded products
+    if atr.get('PROCESSOR', '').startswith('isce'):
+        # try altitude -> HEIGHT if standardization didn't catch it
+        if 'HEIGHT' not in atr or not atr['HEIGHT']:
+            for alt_key in ['altitude', 'SC_height']:
+                if alt_key in atr and atr[alt_key]:
+                    atr['HEIGHT'] = str(atr[alt_key])
+                    break
+        if ('EARTH_RADIUS' not in atr or not atr['EARTH_RADIUS']) and 'earthRadius' in atr:
+            if atr['earthRadius']:
+                atr['EARTH_RADIUS'] = str(atr['earthRadius'])
 
     return atr
 
