@@ -35,8 +35,7 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
     Parameters
     ----------
     target_shape : tuple of (length, width), optional
-        Interferogram dimensions: used for multilooking geometry and
-        computing ALOOKS/RLOOKS from burst full-resolution dimensions.
+        Interferogram dimensions.
     """
     from pathlib import Path
 
@@ -49,64 +48,58 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
         geom_files = ['height.tif', 'los_east.tif', 'los_north.tif',
                       'layover_shadow_mask.tif', 'local_incidence_angle.tif']
 
-    # Step 0: Read burst count and info from static_layers.h5
+    # Step 0: Read full-resolution pixel size from first static_layers.h5
+    burst_full_dx = None
+    burst_full_dy = None
     num_bursts = 0
     geom_path = Path(geom_dir)
     burst_subdirs = sorted([d for d in geom_path.iterdir()
                             if d.is_dir() and list(d.glob('static_layers*.h5'))])
     num_bursts = len(burst_subdirs)
     if burst_subdirs:
-        print(f'Number of bursts: {num_bursts}')
+        try:
+            import h5py
+            with h5py.File(sorted(burst_subdirs[0].glob('static_layers*.h5'))[0], 'r') as h5:
+                x_coords = h5['/data/x_coordinates'][:]
+                y_coords = h5['/data/y_coordinates'][:]
+            burst_full_dx = abs(x_coords[1] - x_coords[0])
+            burst_full_dy = abs(y_coords[1] - y_coords[0])
+            print(f'Number of bursts: {num_bursts}')
+            print(f'Full-resolution pixel size: dx={burst_full_dx}, dy={burst_full_dy}')
+        except Exception as e:
+            print(f'WARNING: could not read full-res pixel size: {e}')
 
-    # Step 1: Merge full-resolution geometry WITHOUT cropping to interferogram extent
+    # Step 1: Merge and crop geometry to interferogram extent and resolution
     geometry_dict = isce3_utils.extract_merge_geometry(
         geom_dir=geom_dir,
         output_dir=out_dir,
         geom_types=geom_files,
-        ref_int_file=None,
-        metadata=metadata
+        ref_int_file=ref_int_file,
+        metadata=None,
     )
 
-    # Step 2: Read merged full-resolution geometry dimensions
-    height_file = geometry_dict.get('height.tif')
-    if height_file and os.path.isfile(str(height_file)):
-        geom_atr = readfile.read_attribute(str(height_file))
-        geom_shape = (int(geom_atr['LENGTH']), int(geom_atr['WIDTH']))
-    else:
-        geom_shape = None
-
-    # Step 3: Multilook geometry to match interferogram resolution
-    lks_y = 1
-    lks_x = 1
-    if target_shape is not None and geom_shape is not None and geom_shape != target_shape:
-        if (geom_shape[0] % target_shape[0] != 0 or
-            geom_shape[1] % target_shape[1] != 0):
-            raise ValueError(
-                f'Geometry shape {geom_shape} is not an integer multiple of '
-                f'target interferogram shape {target_shape}.')
-        lks_y = geom_shape[0] // target_shape[0]
-        lks_x = geom_shape[1] // target_shape[1]
-        if lks_y > 1 or lks_x > 1:
-            print(f'Multilooking geometry from {geom_shape} to {target_shape} '
-                  f'(looks: {lks_y} x {lks_x}) and overwriting originals')
-            geometry_dict = isce3_utils.multilook_geometry_files(
-                geometry_dict, lks_y, lks_x, output_dir=None, overwrite=True)
-
-    # Step 4: Crop geometry to match interferogram extent
-    if ref_int_file and os.path.isfile(ref_int_file):
-        geometry_dict = isce3_utils.crop_geometry_to_reference(
-            geometry_dict, ref_int_file, output_dir=None, overwrite=True)
-
-    # Step 5: Set ALOOKS/RLOOKS from multilook factors
+    # Step 2: Compute ALOOKS/RLOOKS from full-res pixel size vs target pixel size
     if metadata is not None:
+        lks_y = 1
+        lks_x = 1
+
+        if burst_full_dx is not None and burst_full_dy is not None and ref_int_file:
+            from osgeo import gdal
+            ref_ds = gdal.Open(str(ref_int_file))
+            if ref_ds:
+                ref_gt = ref_ds.GetGeoTransform()
+                ref_dx = abs(ref_gt[1])
+                ref_dy = abs(ref_gt[5])
+                ref_ds = None
+                lks_x = max(1, int(round(ref_dx / burst_full_dx)))
+                lks_y = max(1, int(round(ref_dy / burst_full_dy)))
+
         metadata['ALOOKS'] = str(lks_y)
         metadata['RLOOKS'] = str(lks_x)
-        msg = f'Set ALOOKS={lks_y}, RLOOKS={lks_x}'
-        if geom_shape is not None:
-            msg += f' (geom {geom_shape} -> target {target_shape})'
-        print(msg)
+        print(f'Set ALOOKS={lks_y}, RLOOKS={lks_x} '
+              f'(full-res dx={burst_full_dx}, dy={burst_full_dy})')
 
-    # Write .rsc files (after possible multilook)
+    # Write .rsc files
     for geom_name, geom_path in geometry_dict.items():
         if geom_path and os.path.isfile(geom_path):
             geom_path = str(geom_path)

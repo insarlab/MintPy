@@ -391,8 +391,8 @@ class ifgramDict:
     def get_perp_baseline(self, family=IFGRAM_DSET_NAMES[0]):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
-        self.bperp_top = float(metadata['P_BASELINE_TOP_HDR'])
-        self.bperp_bottom = float(metadata['P_BASELINE_BOTTOM_HDR'])
+        self.bperp_top = float(metadata.get('P_BASELINE_TOP_HDR', 0))
+        self.bperp_bottom = float(metadata.get('P_BASELINE_BOTTOM_HDR', 0))
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
 
