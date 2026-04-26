@@ -993,6 +993,10 @@ class ifgramStack:
             for i in range(num2read):
                 prog_bar.update(i+1, suffix=f'{i+1}/{num2read}')
                 data = dset[idx2read[i], :, :]
+                if np.all(data == 0.) or np.all(np.isnan(data)):
+                    if print_msg:
+                        print(f'WARNING: ifgram {idx2read[i]} has all-zero/all-NaN {datasetName}, skipping')
+                    continue
                 mask[data == 0.] = 0
                 mask[np.isnan(data)] = 0
             prog_bar.close()
