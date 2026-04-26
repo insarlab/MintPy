@@ -228,19 +228,17 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
             continue
         date1, date2 = dates
         
-        # Parse file content
+        # Parse file content (robust: handles Bperp average (m), Bperp (m), bperp, etc.)
         bperp = 0.0
         with open(bFile, 'r') as f:
             for line in f:
                 line = line.strip()
-                if line.startswith('Bperp average'):
-                    # Extract numeric value after colon
-                    parts = line.split(':')
-                    if len(parts) >= 2:
-                        try:
-                            bperp = float(parts[1].strip())
-                        except ValueError:
-                            pass
+                match = re.match(r'[Bb]perp\b.*?:\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)', line)
+                if match:
+                    try:
+                        bperp = float(match.group(1))
+                    except ValueError:
+                        pass
                     break
         
         # For tops, top and bottom are assumed equal (average)
