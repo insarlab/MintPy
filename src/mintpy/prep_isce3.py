@@ -55,11 +55,17 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
     geom_path = Path(geom_dir)
     burst_subdirs = sorted([d for d in geom_path.iterdir()
                             if d.is_dir() and list(d.glob('static_layers*.h5'))])
-    num_bursts = len(burst_subdirs)
+    h5_files_root = sorted(geom_path.glob('static_layers*.h5'))
+    first_h5_path = None
     if burst_subdirs:
+        first_h5_path = sorted(burst_subdirs[0].glob('static_layers*.h5'))[0]
+    elif h5_files_root:
+        first_h5_path = h5_files_root[0]
+    num_bursts = len(burst_subdirs) if burst_subdirs else (1 if h5_files_root else 0)
+    if first_h5_path:
         try:
             import h5py
-            with h5py.File(sorted(burst_subdirs[0].glob('static_layers*.h5'))[0], 'r') as h5:
+            with h5py.File(first_h5_path, 'r') as h5:
                 x_coords = h5['/data/x_coordinates'][:]
                 y_coords = h5['/data/y_coordinates'][:]
             burst_full_dx = abs(x_coords[1] - x_coords[0])
@@ -188,18 +194,20 @@ def prep_isce3(inps):
         # Find all subdirectories containing static_layers*.h5
         burst_dirs = sorted([d for d in geom_path.iterdir()
                              if d.is_dir() and list(d.glob('static_layers*.h5'))])
-        if not burst_dirs:
+        # Also check for HDF5 files directly in geom_dir
+        h5_files_in_root = sorted(geom_path.glob('static_layers*.h5'))
+        if not burst_dirs and not h5_files_in_root:
             raise FileNotFoundError(f'No static_layers HDF5 found in {inps.geom_dir}')
 
-        first_burst_dir = burst_dirs[0]
-        # Get the first HDF5 file in the first burst directory
-        h5_list = sorted(first_burst_dir.glob('static_layers*.h5'))
-        if not h5_list:
-            raise FileNotFoundError(f'No static_layers HDF5 found in {first_burst_dir}')
-        first_h5 = h5_list[0]
+        if burst_dirs:
+            first_burst_dir = burst_dirs[0]
+            h5_list = sorted(first_burst_dir.glob('static_layers*.h5'))
+            first_h5 = h5_list[0]
+            burst_id = first_burst_dir.name
+        else:
+            first_h5 = h5_files_in_root[0]
+            burst_id = os.path.basename(geom_path)
 
-        # Use the burst directory name as burst ID
-        burst_id = first_burst_dir.name
         xml_out = Path(inps.out_dir) / f'{burst_id}.burst.xml'
         xml_out.parent.mkdir(parents=True, exist_ok=True)
 

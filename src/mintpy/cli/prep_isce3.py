@@ -88,6 +88,12 @@ def cmd_line_parse(iargs=None):
         else:
             raise FileNotFoundError(inps.meta_file)
 
+    # Expand glob patterns in geometry directory (e.g. "../../t124*/20210104/")
+    if inps.geom_dir and ('*' in inps.geom_dir or '?' in inps.geom_dir):
+        matches = sorted(glob.glob(inps.geom_dir))
+        if matches:
+            inps.geom_dir = matches[0]
+
     # Set default output directory if not provided
     if inps.out_dir is None:
         inps.out_dir = os.path.join(os.path.dirname(inps.geom_dir), 'merged_geom')

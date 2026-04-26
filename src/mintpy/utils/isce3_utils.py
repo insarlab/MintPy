@@ -311,6 +311,8 @@ def extract_h5_geometry(
                     srs.ImportFromWkt(wkt)
                     if srs.GetAuthorityCode(None):
                         epsg = int(srs.GetAuthorityCode(None))
+                elif proj_ds.shape == () and np.issubdtype(proj_ds.dtype, np.integer):
+                    epsg = int(proj_ds[()])
 
             # Read coordinates
             x_coords = data_group[x_coords_name][:] if x_coords_name in data_group else None
@@ -954,48 +956,93 @@ def extract_required_attributes(metadata):
     """
     Extract only the burst attributes needed by extract_tops_metadata.
     """
-    import isce3
+    isce3_available = True
+    try:
+        import isce3
+    except ImportError:
+        isce3_available = False
+        print("WARNING: isce3 not available. Some metadata fields will use defaults.")
 
     meta = {}
     
-    # Direct burst attributes used in original function
-    meta['prf'] = metadata['prf_raw_data']
-    meta['burstStartUTC'] = metadata['sensing_start']
-    meta['burstStopUTC'] = metadata['sensing_stop']
-    meta['radarWavelength'] = metadata['wavelength']
-    meta['startingRange'] = metadata['starting_range']
-    meta['passDirection'] = metadata['orbit_direction']
-    meta['polarization'] = metadata['polarization']
-    meta['trackNumber'] = metadata['track_number']
-    meta['orbitNumber'] = metadata['absolute_orbit_number']
+    # Direct burst attributes used in original function (with fallbacks)
+    meta['prf'] = metadata.get('prf_raw_data',
+                    metadata.get('prf', 1717.0))
+    meta['burstStartUTC'] = metadata.get('sensing_start',
+                             metadata.get('zero_doppler_start_time', ''))
+    meta['burstStopUTC'] = metadata.get('sensing_stop',
+                            metadata.get('zero_doppler_end_time', ''))
+    meta['radarWavelength'] = metadata.get('wavelength',
+                               metadata.get('radar_wavelength', 0.05546576))
+    meta['startingRange'] = metadata.get('starting_range',
+                             metadata.get('slant_range_time', 800000.0))
+    # Convert slant_range_time (seconds) to meters if needed
+    if isinstance(meta['startingRange'], (int, float)):
+        try:
+            if meta['startingRange'] < 1.0:
+                SPEED_OF_LIGHT = 299792458.0
+                meta['startingRange'] = meta['startingRange'] * SPEED_OF_LIGHT / 2.0
+        except Exception:
+            pass
+    meta['passDirection'] = metadata.get('orbit_direction',
+                             metadata.get('orbit_pass_direction', 'ascending'))
+    meta['polarization'] = metadata.get('polarization', 'VV')
+    meta['trackNumber'] = metadata.get('track_number', 0)
+    meta['orbitNumber'] = metadata.get('absolute_orbit_number', 0)
     
     # Additional attributes needed for calculations
-    meta['sensingMid'] = metadata['sensing_mid']
-    meta['azimuthTimeInterval'] = metadata['azimuth_time_interval']
-    meta['rangePixelSize'] = metadata['range_pixel_spacing']
-    meta['swathNumber'] = metadata['swathNumber']
+    meta['sensingMid'] = metadata.get('sensing_mid', metadata.get('sensing_start', ''))
+    meta['azimuthTimeInterval'] = metadata.get('azimuth_time_interval',
+                                   metadata.get('azimuth_time_interval_', 0.002))
+    meta['rangePixelSize'] = metadata.get('range_pixel_spacing',
+                              metadata.get('range_pixel_spacing_', 2.3))
+    meta['swathNumber'] = metadata.get('swathNumber',
+                           metadata.get('swath_number', 2))
     meta['ascendingNodeTime'] = None
-    # Calculate satellite speed (Vs) from orbit.velocity
 
-    sensingMid = _to_seconds(metadata['sensing_mid'], metadata['reference_epoch'])
-    sv = _orbit_interp_hermite(metadata,sensingMid)
-    velocity = np.linalg.norm(sv[1])
-    position = sv[0]
-    ellipsoid = isce3.core.Ellipsoid()
-    
-    llh = ellipsoid.xyz_to_lon_lat(position)
-    heading = _compute_heading(sv)
-    meta['satelliteSpeed'] = velocity
-    meta['position'] = position
-    meta['HEADING'] = heading
-    meta['earthRadius'] = ellipsoid.r_dir(math.radians(heading),llh[1])
-    meta['altitude'] = llh[2]
+    # Calculate satellite speed (Vs) from orbit data (if available)
+    has_orbit = all(k in metadata for k in ['time', 'position_x', 'velocity_x'])
+    if has_orbit and isce3_available:
+        try:
+            sensingMid = _to_seconds(metadata['sensing_mid'], metadata['reference_epoch'])
+            sv = _orbit_interp_hermite(metadata, sensingMid)
+            velocity = np.linalg.norm(sv[1])
+            position = sv[0]
+            ellipsoid = isce3.core.Ellipsoid()
+            llh = ellipsoid.xyz_to_lon_lat(position)
+            heading = _compute_heading(sv)
+            meta['satelliteSpeed'] = velocity
+            meta['position'] = position
+            meta['HEADING'] = heading
+            meta['earthRadius'] = ellipsoid.r_dir(math.radians(heading), llh[1])
+            meta['altitude'] = llh[2]
+        except Exception as e:
+            print(f"WARNING: orbit interpolation failed: {e}. Using default values.")
+            isce3_available = False
+
+    if not has_orbit or not isce3_available:
+        meta['satelliteSpeed'] = 7545.0
+        meta['position'] = [0.0, 0.0, 0.0]
+        meta['HEADING'] = 0.0
+        meta['earthRadius'] = 6371000.0
+        meta['altitude'] = 693000.0
+
     # Calculate frame numbers
-    if meta['ascendingNodeTime'] is not None:
-        time_diff_start = (metadata['sensing_start'] - meta['ascendingNodeTime']).total_seconds()
-        time_diff_stop = (metadata['sensing_stop'] - meta['ascendingNodeTime']).total_seconds()
-        meta['firstFrameNumber'] = int(0.2 * time_diff_start)
-        meta['lastFrameNumber'] = int(0.2 * time_diff_stop)
+    if meta['ascendingNodeTime'] is not None and meta['burstStartUTC']:
+        try:
+            from datetime import datetime
+            start_dt = datetime.strptime(meta['burstStartUTC'], '%Y-%m-%d %H:%M:%S.%f')
+            if isinstance(meta['ascendingNodeTime'], str):
+                node_dt = datetime.strptime(meta['ascendingNodeTime'], '%Y-%m-%d %H:%M:%S.%f')
+            else:
+                node_dt = meta['ascendingNodeTime']
+            time_diff_start = (start_dt - node_dt).total_seconds()
+            time_diff_stop = (datetime.strptime(meta['burstStopUTC'], '%Y-%m-%d %H:%M:%S.%f') - node_dt).total_seconds()
+            meta['firstFrameNumber'] = int(0.2 * time_diff_start)
+            meta['lastFrameNumber'] = int(0.2 * time_diff_stop)
+        except Exception:
+            meta['firstFrameNumber'] = 0
+            meta['lastFrameNumber'] = 0
     else:
         meta['firstFrameNumber'] = 0
         meta['lastFrameNumber'] = 0

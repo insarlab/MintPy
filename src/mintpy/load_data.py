@@ -686,12 +686,18 @@ def prepare_metadata(iDict):
 
         # Geometry source directory (contains burst subdirs with HDF5)
         geom_src_dir = iDict.get('mintpy.load.geomSrcDir', None)
-        if geom_src_dir is None:
+        if geom_src_dir is None or geom_src_dir.lower() == 'auto':
             dem_path = iDict.get('mintpy.load.demFile', '')
             if dem_path and dem_path.lower() != 'auto':
                 geom_src_dir = os.path.dirname(dem_path)
             else:
                 geom_src_dir = os.path.abspath('.')
+        else:
+            # Expand glob patterns (e.g. "../../t124*/20210104/")
+            if '*' in geom_src_dir or '?' in geom_src_dir:
+                matches = sorted(glob.glob(geom_src_dir))
+                if matches:
+                    geom_src_dir = matches[0]
         geom_src_dir = os.path.abspath(geom_src_dir)
 
         # Output directory for merged geometry (same as demFile's directory)
@@ -715,10 +721,7 @@ def prepare_metadata(iDict):
 
         ut.print_command_line('prep_isce3.py', iargs)
         prep_module = importlib.import_module('mintpy.cli.prep_isce3')
-        try:
-            prep_module.main(iargs)
-        except Exception as e:
-            warnings.warn(f'prep_isce3.py failed: {e}. Assuming its result exists and continue...')
+        prep_module.main(iargs)
 
     elif processor == 'isce':
         from mintpy.utils import isce_utils, s1_utils
