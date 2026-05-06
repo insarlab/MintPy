@@ -74,10 +74,13 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
     # Sensing mid time and center line UTC
     sensing_mid = get_value('sensingMid')
     if sensing_mid:
-        # Parse time to compute seconds of day (optional)
-        # For simplicity, we may skip CENTER_LINE_UTC calculation or use a placeholder
-        # Here we set a default
-        meta['CENTER_LINE_UTC'] = '0'
+        try:
+            from datetime import datetime
+            dt = datetime.strptime(sensing_mid, '%Y-%m-%d %H:%M:%S.%f')
+            seconds_of_day = dt.hour * 3600.0 + dt.minute * 60.0 + dt.second + dt.microsecond / 1e6
+            meta['CENTER_LINE_UTC'] = str(seconds_of_day)
+        except (ValueError, TypeError):
+            meta['CENTER_LINE_UTC'] = '0'
     else:
         meta['CENTER_LINE_UTC'] = '0'
 
