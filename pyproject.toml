@@ -114,6 +114,9 @@ readme = { file = ["docs/README.md"], content-type = "text/markdown" }
 [tool.setuptools.dynamic.optional-dependencies.test]
 file = ["tests/requirements.txt"]
 
+[tool.setuptools.dynamic.optional-dependencies.gpu]
+file = ["requirements-gpu.txt"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
