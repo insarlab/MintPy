@@ -50,6 +50,15 @@ def create_parser(subparsers=None):
     )
 
     parser.add_argument(
+        "-freq",
+        "--frequency",
+        dest="frequency",
+        choices=["auto", "A", "B"],
+        default="auto",
+        help="NISAR frequency to load: auto defaults to A (default: %(default)s).",
+    )
+
+    parser.add_argument(
         "-o",
         "--out-dir",
         dest="out_dir",
