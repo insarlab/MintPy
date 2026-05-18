@@ -636,7 +636,7 @@ def prepare_metadata(iDict):
         dem_file = iDict['mintpy.load.demFile']
         gunw_files = iDict['mintpy.load.unwFile']
         water_mask = iDict['mintpy.load.waterMaskFile']
-        band = iDict.get('mintpy.load.band', 'LSAR')
+        band = iDict.get('mintpy.load.band', 'auto')
         frequency = iDict.get('mintpy.load.frequency', 'auto')
 
         if str(dem_file).lower() in ['auto', 'none', 'no', '']:

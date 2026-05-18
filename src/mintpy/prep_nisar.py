@@ -49,9 +49,12 @@ def _normalize_frequency(frequency) -> str:
 
 def _normalize_sar_band(sar_band) -> str:
     """Return the normalized NISAR product family name."""
-    normalized = "LSAR" if sar_band is None else str(sar_band).upper()
+    if sar_band is None or str(sar_band).lower() == "auto":
+        return "LSAR"
+
+    normalized = str(sar_band).upper()
     if normalized not in {"LSAR", "SSAR"}:
-        raise ValueError("sar_band must be one of: LSAR, SSAR")
+        raise ValueError("sar_band must be one of: auto, LSAR, SSAR")
     return normalized
 
 

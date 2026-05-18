@@ -62,9 +62,9 @@ def create_parser(subparsers=None):
         "-ba",
         "--band",
         dest="sar_band",
-        choices=["LSAR", "SSAR"],
-        default="LSAR",
-        help="NISAR product family to load (default: %(default)s).",
+        choices=["auto", "LSAR", "SSAR"],
+        default="auto",
+        help="NISAR product family to load: auto defaults to LSAR (default: %(default)s).",
     )
 
     parser.add_argument(
