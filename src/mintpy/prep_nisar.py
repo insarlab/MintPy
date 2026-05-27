@@ -9,7 +9,9 @@
 import datetime
 import glob
 import os
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Dict, Optional
 
 import h5py
 import numpy as np
@@ -62,80 +64,155 @@ def _normalize_sar_band(sar_band) -> str:
     return normalized
 
 
-def _science_root(sar_band: str = DEFAULT_SAR_BAND) -> str:
-    return f"/science/{sar_band}"
+@dataclass(frozen=True)
+class NisarProductContext:
+    """Cache the band-specific HDF5 roots and commonly reused dataset paths."""
+
+    sar_band: str = DEFAULT_SAR_BAND
+    science_root: str = field(init=False)
+    identification_root: str = field(init=False)
+    radargrid_root: str = field(init=False)
+    processinfo: Dict[str, str] = field(init=False)
+
+    def __post_init__(self):
+        sar_band = _normalize_sar_band(self.sar_band)
+        science_root = f"/science/{sar_band}"
+        identification_root = f"{science_root}/identification"
+        radargrid_root = f"{science_root}/GUNW/metadata/radarGrid"
+
+        object.__setattr__(self, "sar_band", sar_band)
+        object.__setattr__(self, "science_root", science_root)
+        object.__setattr__(self, "identification_root", identification_root)
+        object.__setattr__(self, "radargrid_root", radargrid_root)
+        object.__setattr__(
+            self,
+            "processinfo",
+            {
+                "orbit_direction": f"{identification_root}/orbitPassDirection",
+                "platform": f"{identification_root}/missionId",
+                "start_time": f"{identification_root}/referenceZeroDopplerStartTime",
+                "end_time": f"{identification_root}/referenceZeroDopplerEndTime",
+                "ref_start_time": f"{identification_root}/referenceZeroDopplerStartTime",
+                "sec_start_time": f"{identification_root}/secondaryZeroDopplerStartTime",
+                "rdr_xcoord": f"{radargrid_root}/xCoordinates",
+                "rdr_ycoord": f"{radargrid_root}/yCoordinates",
+                "rdr_slant_range": f"{radargrid_root}/referenceSlantRange",
+                "rdr_height": f"{radargrid_root}/heightAboveEllipsoid",
+                "rdr_incidence": f"{radargrid_root}/incidenceAngle",
+                "rdr_los_x": f"{radargrid_root}/losUnitVectorX",
+                "rdr_los_y": f"{radargrid_root}/losUnitVectorY",
+                "rdr_wet_tropo": f"{radargrid_root}/wetTroposphericPhaseScreen",
+                "rdr_hs_tropo": f"{radargrid_root}/hydrostaticTroposphericPhaseScreen",
+                "rdr_SET": f"{radargrid_root}/slantRangeSolidEarthTidesPhase",
+                "bperp": f"{radargrid_root}/perpendicularBaseline",
+            },
+        )
+
+    def dataset_root_unw(self, frequency: str) -> str:
+        return f"{self.science_root}/GUNW/grids/{frequency}/unwrappedInterferogram"
+
+    def parameters_root(self, frequency: str) -> str:
+        return (
+            f"{self.science_root}/GUNW/metadata/processingInformation/parameters/"
+            f"unwrappedInterferogram/{frequency}"
+        )
+
+    def center_frequency_path(self, frequency: str) -> str:
+        return f"{self.science_root}/GUNW/grids/{frequency}/centerFrequency"
+
+    def datasets_for_pol(self, polarization: str, frequency: str) -> Dict[str, str]:
+        root = self.dataset_root_unw(frequency)
+        parameters = self.parameters_root(frequency)
+        return {
+            "xcoord": f"{root}/{polarization}/xCoordinates",
+            "ycoord": f"{root}/{polarization}/yCoordinates",
+            "unw": f"{root}/{polarization}/unwrappedPhase",
+            "mask": f"{root}/mask",
+            "cor": f"{root}/{polarization}/coherenceMagnitude",
+            "connComp": f"{root}/{polarization}/connectedComponents",
+            "ion": f"{root}/{polarization}/ionospherePhaseScreen",
+            "epsg": f"{root}/{polarization}/projection",
+            "xSpacing": f"{root}/{polarization}/xCoordinateSpacing",
+            "ySpacing": f"{root}/{polarization}/yCoordinateSpacing",
+            "polarization": (
+                f"{self.science_root}/GUNW/grids/{frequency}/listOfPolarizations"
+            ),
+            "range_look": f"{parameters}/numberOfRangeLooks",
+            "azimuth_look": f"{parameters}/numberOfAzimuthLooks",
+        }
 
 
-def _identification_root(sar_band: str = DEFAULT_SAR_BAND) -> str:
-    return f"{_science_root(sar_band)}/identification"
+def _coerce_product_context(
+    product_ctx: Optional[NisarProductContext] = None,
+    sar_band: str = DEFAULT_SAR_BAND,
+) -> NisarProductContext:
+    return product_ctx if product_ctx is not None else NisarProductContext(sar_band)
 
 
-def _radargrid_root(sar_band: str = DEFAULT_SAR_BAND) -> str:
-    return f"{_science_root(sar_band)}/GUNW/metadata/radarGrid"
+def _science_root(
+    sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
+) -> str:
+    return _coerce_product_context(product_ctx, sar_band).science_root
 
 
-def _processinfo(sar_band: str = DEFAULT_SAR_BAND) -> dict:
-    identification = _identification_root(sar_band)
-    radargrid_root = _radargrid_root(sar_band)
-    return {
-        "orbit_direction": f"{identification}/orbitPassDirection",
-        "platform": f"{identification}/missionId",
-        "start_time": f"{identification}/referenceZeroDopplerStartTime",
-        "end_time": f"{identification}/referenceZeroDopplerEndTime",
-        "ref_start_time": f"{identification}/referenceZeroDopplerStartTime",
-        "sec_start_time": f"{identification}/secondaryZeroDopplerStartTime",
-        "rdr_xcoord": f"{radargrid_root}/xCoordinates",
-        "rdr_ycoord": f"{radargrid_root}/yCoordinates",
-        "rdr_slant_range": f"{radargrid_root}/referenceSlantRange",
-        "rdr_height": f"{radargrid_root}/heightAboveEllipsoid",
-        "rdr_incidence": f"{radargrid_root}/incidenceAngle",
-        "rdr_los_x": f"{radargrid_root}/losUnitVectorX",
-        "rdr_los_y": f"{radargrid_root}/losUnitVectorY",
-        "rdr_wet_tropo": f"{radargrid_root}/wetTroposphericPhaseScreen",
-        "rdr_hs_tropo": f"{radargrid_root}/hydrostaticTroposphericPhaseScreen",
-        "rdr_SET": f"{radargrid_root}/slantRangeSolidEarthTidesPhase",
-        "bperp": f"{radargrid_root}/perpendicularBaseline",
-    }
+def _identification_root(
+    sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
+) -> str:
+    return _coerce_product_context(product_ctx, sar_band).identification_root
 
 
-def _dataset_root_unw(frequency: str, sar_band: str = DEFAULT_SAR_BAND) -> str:
-    return f"{_science_root(sar_band)}/GUNW/grids/{frequency}/unwrappedInterferogram"
+def _radargrid_root(
+    sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
+) -> str:
+    return _coerce_product_context(product_ctx, sar_band).radargrid_root
 
 
-def _parameters_root(frequency: str, sar_band: str = DEFAULT_SAR_BAND) -> str:
-    return (
-        f"{_science_root(sar_band)}/GUNW/metadata/processingInformation/parameters/"
-        f"unwrappedInterferogram/{frequency}"
-    )
+def _processinfo(
+    sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
+) -> Dict[str, str]:
+    return _coerce_product_context(product_ctx, sar_band).processinfo
+
+
+def _dataset_root_unw(
+    frequency: str,
+    sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
+) -> str:
+    return _coerce_product_context(product_ctx, sar_band).dataset_root_unw(frequency)
+
+
+def _parameters_root(
+    frequency: str,
+    sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
+) -> str:
+    return _coerce_product_context(product_ctx, sar_band).parameters_root(frequency)
 
 
 def _center_frequency_path(
-    frequency: str, sar_band: str = DEFAULT_SAR_BAND
+    frequency: str,
+    sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ) -> str:
-    return f"{_science_root(sar_band)}/GUNW/grids/{frequency}/centerFrequency"
+    return _coerce_product_context(product_ctx, sar_band).center_frequency_path(
+        frequency
+    )
 
 
 def _datasets_for_pol(
-    polarization: str, frequency: str, sar_band: str = DEFAULT_SAR_BAND
-) -> dict:
+    polarization: str,
+    frequency: str,
+    sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
+) -> Dict[str, str]:
     """Return per-call dataset paths for the selected frequency/polarization."""
-    root = _dataset_root_unw(frequency, sar_band)
-    parameters = _parameters_root(frequency, sar_band)
-    return {
-        "xcoord": f"{root}/{polarization}/xCoordinates",
-        "ycoord": f"{root}/{polarization}/yCoordinates",
-        "unw": f"{root}/{polarization}/unwrappedPhase",
-        "mask": f"{root}/mask",
-        "cor": f"{root}/{polarization}/coherenceMagnitude",
-        "connComp": f"{root}/{polarization}/connectedComponents",
-        "ion": f"{root}/{polarization}/ionospherePhaseScreen",
-        "epsg": f"{root}/{polarization}/projection",
-        "xSpacing": f"{root}/{polarization}/xCoordinateSpacing",
-        "ySpacing": f"{root}/{polarization}/yCoordinateSpacing",
-        "polarization": f"{_science_root(sar_band)}/GUNW/grids/{frequency}/listOfPolarizations",
-        "range_look": f"{parameters}/numberOfRangeLooks",
-        "azimuth_look": f"{parameters}/numberOfAzimuthLooks",
-    }
+    return _coerce_product_context(product_ctx, sar_band).datasets_for_pol(
+        polarization, frequency
+    )
 
 
 def _resolve_frequency(
@@ -143,16 +220,20 @@ def _resolve_frequency(
     frequency,
     polarization: str,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ) -> str:
     """Resolve and validate the requested NISAR frequency."""
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     resolved = _normalize_frequency(frequency)
-    datasets = _datasets_for_pol(polarization, resolved, sar_band)
+    datasets = _datasets_for_pol(
+        polarization, resolved, product_ctx=product_ctx
+    )
 
     with h5py.File(gunw_file, "r") as ds:
         required_paths = [
-            _dataset_root_unw(resolved, sar_band),
+            _dataset_root_unw(resolved, product_ctx=product_ctx),
             datasets["unw"],
-            _center_frequency_path(resolved, sar_band),
+            _center_frequency_path(resolved, product_ctx=product_ctx),
         ]
         missing = [path for path in required_paths if path not in ds]
 
@@ -170,7 +251,7 @@ def _resolve_frequency(
                 "Check that the input file contains frequencyB for this polarization."
             )
         raise ValueError(
-            f"NISAR {sar_band} {requested} data for "
+            f"NISAR {product_ctx.sar_band} {requested} data for "
             f"polarization {polarization!r} was not found in {gunw_file}. "
             f"Missing path: {missing[0]}. {hint}"
         )
@@ -303,9 +384,11 @@ def _read_unwrapped_phase_valid_mask(
     pol: str,
     frequency: str,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Fallback validity mask based on finite unwrappedPhase (+ _FillValue check)."""
-    datasets = _datasets_for_pol(pol, frequency, sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    datasets = _datasets_for_pol(pol, frequency, product_ctx=product_ctx)
     path = datasets["unw"]
     with h5py.File(gunw_file, "r") as ds:
         dset = ds[path]
@@ -324,15 +407,21 @@ def _read_is_land_and_valid_mask(
     pol: str,
     frequency: str,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Decode the native GUNW mask into MintPy's keep-mask convention."""
-    datasets = _datasets_for_pol(pol, frequency, sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    datasets = _datasets_for_pol(pol, frequency, product_ctx=product_ctx)
     path = datasets["mask"]
 
     with h5py.File(gunw_file, "r") as ds:
         if path not in ds:
             return _read_unwrapped_phase_valid_mask(
-                gunw_file, xybbox, pol, frequency, sar_band
+                gunw_file,
+                xybbox,
+                pol,
+                frequency,
+                product_ctx=product_ctx,
             )
 
         dset = ds[path]
@@ -358,8 +447,10 @@ def _read_common_is_land_and_valid_mask(
     pol: str,
     frequency: str,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Return the common keep-mask across all input GUNW products."""
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     common_mask = None
     for gunw_file in input_files:
         geo_ds = read_subset(
@@ -367,11 +458,15 @@ def _read_common_is_land_and_valid_mask(
             bbox,
             polarization=pol,
             frequency=frequency,
-            sar_band=sar_band,
+            product_ctx=product_ctx,
             geometry=True,
         )
         mask = _read_is_land_and_valid_mask(
-            gunw_file, geo_ds["xybbox"], pol, frequency, sar_band
+            gunw_file,
+            geo_ds["xybbox"],
+            pol,
+            frequency,
+            product_ctx=product_ctx,
         ).astype(bool, copy=False)
 
         if common_mask is None:
@@ -403,13 +498,19 @@ def _apply_external_mask(
     polarization: str,
     frequency: str,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Refine a keep-mask with an optional external raster mask."""
     if not _external_mask_is_set(external_mask_file):
         return keep_mask
 
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     dst_epsg, xcoord, ycoord = _read_target_grid(
-        gunw_file, xybbox, polarization, frequency, sar_band
+        gunw_file,
+        xybbox,
+        polarization,
+        frequency,
+        product_ctx=product_ctx,
     )
     mask_src_epsg = _read_raster_epsg(external_mask_file)
     external_mask = _warp_to_grid_mem(
@@ -424,10 +525,13 @@ def _apply_external_mask(
 
 
 def _read_perpendicular_baseline(
-    gunw_file: str, sar_band: str = DEFAULT_SAR_BAND
+    gunw_file: str,
+    sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ) -> np.float32:
     """Read the NISAR perpendicular baseline as one finite mean value."""
-    processinfo = _processinfo(sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    processinfo = _processinfo(product_ctx=product_ctx)
     with h5py.File(gunw_file, "r") as ds:
         dset = ds[processinfo["bperp"]]
         bperp = np.asarray(dset[()], dtype=np.float64).reshape(-1)
@@ -452,9 +556,13 @@ def _read_target_grid(
     polarization: str,
     frequency: str,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Read the destination EPSG and subset grid axes from a GUNW file."""
-    datasets = _datasets_for_pol(polarization, frequency, sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    datasets = _datasets_for_pol(
+        polarization, frequency, product_ctx=product_ctx
+    )
     with h5py.File(gunw_file, "r") as ds:
         return (
             int(ds[datasets["epsg"]][()]),
@@ -467,9 +575,11 @@ def _read_radar_grid_fields(
     gunw_file: str,
     field_map: dict,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Read radar-grid interpolation axes plus the requested data fields."""
-    processinfo = _processinfo(sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    processinfo = _processinfo(product_ctx=product_ctx)
     rdr_coords = {}
     with h5py.File(gunw_file, "r") as ds:
         rdr_coords["xcoord_radar_grid"] = ds[processinfo["rdr_xcoord"]][()]
@@ -489,13 +599,21 @@ def _prepare_radar_grid_interpolation(
     field_map,
     valid_mask=None,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Build the common DEM/grid/valid-mask context for radar-grid interpolation."""
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     dem_src_epsg = _read_raster_epsg(dem_file)
     dst_epsg, xcoord, ycoord = _read_target_grid(
-        gunw_file, xybbox, polarization, frequency, sar_band
+        gunw_file,
+        xybbox,
+        polarization,
+        frequency,
+        product_ctx=product_ctx,
     )
-    rdr_coords = _read_radar_grid_fields(gunw_file, field_map, sar_band)
+    rdr_coords = _read_radar_grid_fields(
+        gunw_file, field_map, product_ctx=product_ctx
+    )
 
     dem_subset_array = _warp_to_grid_mem(
         src_path=dem_file,
@@ -509,7 +627,11 @@ def _prepare_radar_grid_interpolation(
     y_2d, x_2d = np.meshgrid(ycoord, xcoord, indexing="ij")
     if valid_mask is None:
         valid_mask = _read_is_land_and_valid_mask(
-            gunw_file, xybbox, polarization, frequency, sar_band
+            gunw_file,
+            xybbox,
+            polarization,
+            frequency,
+            product_ctx=product_ctx,
         )
     else:
         valid_mask = np.asarray(valid_mask, dtype=np.bool_)
@@ -594,10 +716,14 @@ def _required_paths_for_stack_type(
     polarization,
     frequency,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Return HDF5 source datasets needed to build the requested stack."""
-    datasets = _datasets_for_pol(polarization, frequency, sar_band)
-    processinfo = _processinfo(sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    datasets = _datasets_for_pol(
+        polarization, frequency, product_ctx=product_ctx
+    )
+    processinfo = _processinfo(product_ctx=product_ctx)
     if stack_type == "ifgram":
         return [datasets["unw"], datasets["cor"], datasets["connComp"]]
     if stack_type == "ion":
@@ -618,10 +744,12 @@ def _missing_required_paths(
     polarization,
     frequency,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Return missing required HDF5 source paths as (file, path) pairs."""
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     required_paths = _required_paths_for_stack_type(
-        stack_type, polarization, frequency, sar_band
+        stack_type, polarization, frequency, product_ctx=product_ctx
     )
     missing = []
 
@@ -640,9 +768,11 @@ def _read_stack_observation(
     polarization,
     frequency,
     sar_band: str = DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Read one observation for the requested stack type."""
-    pbase = _read_perpendicular_baseline(file, sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    pbase = _read_perpendicular_baseline(file, product_ctx=product_ctx)
 
     if stack_type in {"ifgram", "ion"}:
         dataset = read_subset(
@@ -650,7 +780,7 @@ def _read_stack_observation(
             bbox,
             polarization=polarization,
             frequency=frequency,
-            sar_band=sar_band,
+            product_ctx=product_ctx,
         )
         unwrap_key = "unw_data" if stack_type == "ifgram" else "ion_data"
         return {
@@ -665,7 +795,7 @@ def _read_stack_observation(
         bbox,
         polarization=polarization,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
         geometry=True,
     )
     if stack_type == "tropo":
@@ -675,7 +805,7 @@ def _read_stack_observation(
             geo_ds["xybbox"],
             polarization=polarization,
             frequency=frequency,
-            sar_band=sar_band,
+            product_ctx=product_ctx,
         )
     else:
         unwrap_phase = read_and_interpolate_SET(
@@ -684,7 +814,7 @@ def _read_stack_observation(
             geo_ds["xybbox"],
             polarization=polarization,
             frequency=frequency,
-            sar_band=sar_band,
+            product_ctx=product_ctx,
         )
 
     return {"unwrap_phase": unwrap_phase, "pbase": pbase}
@@ -754,30 +884,35 @@ def load_nisar(inps):
     # extract metadata
     pol = getattr(inps, "polarization", "HH")
     # Normalize once here so downstream helpers can assume a concrete product family.
-    sar_band = _normalize_sar_band(
-        getattr(inps, "sar_band", DEFAULT_SAR_BAND)
-    )
-    inps.sar_band = sar_band
+    product_ctx = NisarProductContext(getattr(inps, "sar_band", DEFAULT_SAR_BAND))
+    inps.sar_band = product_ctx.sar_band
     frequency = _resolve_frequency(
-        input_files[0], getattr(inps, "frequency", "auto"), pol, sar_band
+        input_files[0],
+        getattr(inps, "frequency", "auto"),
+        pol,
+        product_ctx=product_ctx,
     )
-    print(f"Using NISAR {sar_band} {frequency}")
+    print(f"Using NISAR {product_ctx.sar_band} {frequency}")
     metadata, bounds = extract_metadata(
         input_files,
         bbox=bbox,
         polarization=pol,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
     )
     common_mask = _read_common_is_land_and_valid_mask(
-        input_files, bounds, pol=pol, frequency=frequency, sar_band=sar_band
+        input_files,
+        bounds,
+        pol=pol,
+        frequency=frequency,
+        product_ctx=product_ctx,
     )
     first_geo_ds = read_subset(
         input_files[0],
         bounds,
         polarization=pol,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
         geometry=True,
     )
     common_mask = _apply_external_mask(
@@ -787,7 +922,7 @@ def load_nisar(inps):
         inps.mask_file,
         pol,
         frequency,
-        sar_band,
+        product_ctx=product_ctx,
     )
     print(
         "Common valid land pixels from all NISAR masks: "
@@ -802,7 +937,7 @@ def load_nisar(inps):
     set_stack_file = os.path.join(inps.out_dir, "inputs/setStack.h5")
 
     # date pairs
-    date12_list = _get_date_pairs(input_files, sar_band=sar_band)
+    date12_list = _get_date_pairs(input_files, product_ctx=product_ctx)
 
     # geometry
     metadata = prepare_geometry(
@@ -815,7 +950,7 @@ def load_nisar(inps):
         commonMask=common_mask,
         polarization=pol,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
     )
 
     # standalone water mask (MintPy format)
@@ -829,7 +964,7 @@ def load_nisar(inps):
         commonMask=common_mask,
         polarization=pol,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
     )
 
     # ifgram stack
@@ -842,7 +977,7 @@ def load_nisar(inps):
         date12_list=date12_list,
         polarization=pol,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
         stack_type="ifgram",
         commonMask=common_mask,
     )
@@ -857,7 +992,7 @@ def load_nisar(inps):
         date12_list=date12_list,
         polarization=pol,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
         stack_type="ion",
         commonMask=common_mask,
     )
@@ -872,7 +1007,7 @@ def load_nisar(inps):
         date12_list=date12_list,
         polarization=pol,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
         stack_type="tropo",
         commonMask=common_mask,
     )
@@ -887,7 +1022,7 @@ def load_nisar(inps):
         date12_list=date12_list,
         polarization=pol,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
         stack_type="set",
         commonMask=common_mask,
     )
@@ -904,13 +1039,17 @@ def extract_metadata(
     polarization="HH",
     frequency="frequencyA",
     sar_band=DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Extract NISAR metadata for MintPy."""
     meta_file = input_files[0]
     meta = {}
 
-    datasets = _datasets_for_pol(polarization, frequency, sar_band)
-    processinfo = _processinfo(sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    datasets = _datasets_for_pol(
+        polarization, frequency, product_ctx=product_ctx
+    )
+    processinfo = _processinfo(product_ctx=product_ctx)
 
     with h5py.File(meta_file, "r") as ds:
         pixel_height = ds[datasets["ySpacing"]][()]
@@ -921,7 +1060,7 @@ def extract_metadata(
         ycoord = ds[datasets["ycoord"]][()]
         meta["EPSG"] = int(ds[datasets["epsg"]][()])
         meta["WAVELENGTH"] = SPEED_OF_LIGHT / ds[
-            _center_frequency_path(frequency, sar_band)
+            _center_frequency_path(frequency, product_ctx=product_ctx)
         ][()]
         meta["ORBIT_DIRECTION"] = ds[processinfo["orbit_direction"]][()].decode("utf-8")
         meta["POLARIZATION"] = polarization
@@ -985,7 +1124,7 @@ def extract_metadata(
         utm_bbox,
         polarization=polarization,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
     )
     meta["bbox"] = ",".join([str(b) for b in bounds])
 
@@ -1053,10 +1192,14 @@ def get_raster_corners(
     polarization="HH",
     frequency="frequencyA",
     sar_band=DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Get the (west, south, east, north) bounds of the image."""
-    datasets = _datasets_for_pol(polarization, frequency, sar_band)
-    processinfo = _processinfo(sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    datasets = _datasets_for_pol(
+        polarization, frequency, product_ctx=product_ctx
+    )
+    processinfo = _processinfo(product_ctx=product_ctx)
     with h5py.File(input_file, "r") as ds:
         xcoord = ds[datasets["xcoord"]][:]
         ycoord = ds[datasets["ycoord"]][:]
@@ -1073,8 +1216,10 @@ def common_raster_bound(
     polarization="HH",
     frequency="frequencyA",
     sar_band=DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Get common bounds among all data in (xmin, ymin, xmax, ymax)."""
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     wests = []
     souths = []
     easts = []
@@ -1084,7 +1229,7 @@ def common_raster_bound(
             file,
             polarization=polarization,
             frequency=frequency,
-            sar_band=sar_band,
+            product_ctx=product_ctx,
         )
         wests.append(west)
         souths.append(south)
@@ -1137,9 +1282,13 @@ def read_subset(
     frequency="frequencyA",
     sar_band=DEFAULT_SAR_BAND,
     geometry=False,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Read subset arrays or only geometry bounds for unwrapped products."""
-    datasets = _datasets_for_pol(polarization, frequency, sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    datasets = _datasets_for_pol(
+        polarization, frequency, product_ctx=product_ctx
+    )
     with h5py.File(gunw_file, "r") as ds:
         xcoord = ds[datasets["xcoord"]][()]
         ycoord = ds[datasets["ycoord"]][()]
@@ -1200,8 +1349,10 @@ def read_and_interpolate_geometry(
     sar_band=DEFAULT_SAR_BAND,
     external_mask_file=None,
     valid_mask=None,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Warp DEM to the interferogram grid and interpolate geometry layers."""
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     interp_ctx = _prepare_radar_grid_interpolation(
         gunw_file,
         dem_file,
@@ -1215,7 +1366,7 @@ def read_and_interpolate_geometry(
             "los_y": "rdr_los_y",
         },
         valid_mask=valid_mask,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
     )
     slant_range, incidence_angle, azimuth_angle = interpolate_geometry(
         interp_ctx["x_2d"],
@@ -1235,7 +1386,7 @@ def read_and_interpolate_geometry(
             external_mask_file,
             polarization,
             frequency,
-            sar_band,
+            product_ctx=product_ctx,
         )
 
     return (
@@ -1278,8 +1429,10 @@ def read_and_interpolate_troposphere(
     polarization="HH",
     frequency="frequencyA",
     sar_band=DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Warp DEM to aligned grid and interpolate combined tropo at valid pixels only."""
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     interp_ctx = _prepare_radar_grid_interpolation(
         gunw_file,
         dem_file,
@@ -1290,7 +1443,7 @@ def read_and_interpolate_troposphere(
             "wet_tropo": "rdr_wet_tropo",
             "hydrostatic_tropo": "rdr_hs_tropo",
         },
-        sar_band=sar_band,
+        product_ctx=product_ctx,
     )
     total_tropo = interpolate_troposphere(
         interp_ctx["x_2d"],
@@ -1326,8 +1479,10 @@ def read_and_interpolate_SET(
     polarization="HH",
     frequency="frequencyA",
     sar_band=DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Warp DEM to aligned grid and interpolate SET phase at valid pixels only."""
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     interp_ctx = _prepare_radar_grid_interpolation(
         gunw_file,
         dem_file,
@@ -1335,7 +1490,7 @@ def read_and_interpolate_SET(
         polarization,
         frequency,
         {"rdr_SET": "rdr_SET"},
-        sar_band=sar_band,
+        product_ctx=product_ctx,
     )
     set_phase = interpolate_set(
         interp_ctx["x_2d"],
@@ -1363,10 +1518,15 @@ def interpolate_set(X_2d, Y_2d, dem, rdr_coords, valid_mask):
 # ---------------------------------------------------------------------
 # MintPy file builders
 # ---------------------------------------------------------------------
-def _get_date_pairs(filenames, sar_band=DEFAULT_SAR_BAND):
+def _get_date_pairs(
+    filenames,
+    sar_band=DEFAULT_SAR_BAND,
+    product_ctx: Optional[NisarProductContext] = None,
+):
     """Return reference_secondary date pairs in YYYYMMDD_YYYYMMDD format."""
     date12_list = []
-    processinfo = _processinfo(sar_band)
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
+    processinfo = _processinfo(product_ctx=product_ctx)
     for filename in filenames:
         with h5py.File(filename, "r") as ds:
             if (
@@ -1405,19 +1565,21 @@ def prepare_geometry(
     frequency="frequencyA",
     sar_band=DEFAULT_SAR_BAND,
     commonMask=None,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Prepare the geometry file."""
     print("-" * 50)
     print(f"preparing geometry file: {outfile}")
 
     meta = {key: value for key, value in metadata.items()}
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
 
     geo_ds = read_subset(
         metaFile,
         bbox,
         polarization=polarization,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
         geometry=True,
     )
     dem_subset_array, slant_range, incidence_angle, azimuth_angle, mask = (
@@ -1427,7 +1589,7 @@ def prepare_geometry(
             geo_ds["xybbox"],
             polarization=polarization,
             frequency=frequency,
-            sar_band=sar_band,
+            product_ctx=product_ctx,
             external_mask_file=externalMaskFile,
             valid_mask=commonMask,
         )
@@ -1462,12 +1624,14 @@ def prepare_water_mask(
     frequency="frequencyA",
     sar_band=DEFAULT_SAR_BAND,
     commonMask=None,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Prepare a standalone MintPy waterMask.h5 from the GUNW mask."""
     print("-" * 50)
     print(f"preparing water mask file: {outfile}")
 
     meta = {key: value for key, value in metadata.items()}
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
 
     # get subset indices
     geo_ds = read_subset(
@@ -1475,14 +1639,18 @@ def prepare_water_mask(
         bbox,
         polarization=polarization,
         frequency=frequency,
-        sar_band=sar_band,
+        product_ctx=product_ctx,
         geometry=True,
     )
     xybbox = geo_ds["xybbox"]
 
     if commonMask is None:
         water_mask_bool = _read_is_land_and_valid_mask(
-            metaFile, xybbox, polarization, frequency, sar_band
+            metaFile,
+            xybbox,
+            polarization,
+            frequency,
+            product_ctx=product_ctx,
         )
     else:
         water_mask_bool = np.asarray(commonMask, dtype=np.bool_)
@@ -1501,7 +1669,7 @@ def prepare_water_mask(
         externalMaskFile,
         polarization,
         frequency,
-        sar_band,
+        product_ctx=product_ctx,
     )
 
     length, width = water_mask_bool.shape
@@ -1527,6 +1695,7 @@ def prepare_stack(
     sar_band=DEFAULT_SAR_BAND,
     stack_type=None,
     commonMask=None,
+    product_ctx: Optional[NisarProductContext] = None,
 ):
     """Prepare the input stacks."""
     effective_stack_type = _resolve_stack_type(stack_type, outfile)
@@ -1534,11 +1703,16 @@ def prepare_stack(
     print(f"preparing {effective_stack_type} stack file: {outfile}")
 
     meta = {key: value for key, value in metadata.items()}
+    product_ctx = _coerce_product_context(product_ctx, sar_band)
     num_pair = len(inp_files)
     print(f"number of inputs/unwrapped interferograms: {num_pair}")
 
     missing = _missing_required_paths(
-        inp_files, effective_stack_type, polarization, frequency, sar_band
+        inp_files,
+        effective_stack_type,
+        polarization,
+        frequency,
+        product_ctx=product_ctx,
     )
     if missing:
         first_file, first_path = missing[0]
@@ -1591,7 +1765,7 @@ def prepare_stack(
                 demFile,
                 polarization,
                 frequency,
-                sar_band,
+                product_ctx=product_ctx,
             )
             obs = _apply_common_mask_to_observation(obs, commonMask)
             f["unwrapPhase"][i] = obs["unwrap_phase"]
