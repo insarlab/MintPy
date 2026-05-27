@@ -65,8 +65,8 @@ def _normalize_sar_band(sar_band) -> str:
 
 
 @dataclass(frozen=True)
-
 class NisarProductContext:
+
     """Cache the band-specific HDF5 roots and commonly reused dataset paths."""
 
     sar_band: str = DEFAULT_SAR_BAND
