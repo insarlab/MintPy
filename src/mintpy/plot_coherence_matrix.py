@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, Nov 2018                           #
+# Author: Zhang Yunjun, Changyang Hu, Nov 2018             #
 ############################################################
 
 
@@ -102,10 +102,7 @@ class coherenceMatrixViewer():
 
         if not self.figsize_mat:
             num_ifg = len(self.date12_list)
-            if num_ifg <= 50:
-                self.figsize_mat = [6, 5]
-            else:
-                self.figsize_mat = [8, 6]
+            self.figsize_mat = [8, 6]
             vprint(f'create matrix figure in size of {self.figsize_mat} inches')
 
         # read aux data
@@ -146,19 +143,6 @@ class coherenceMatrixViewer():
         view_cmd = self.view_cmd.format(self.img_file)
         d_img, atr, view_inps = view.prep_slice(view_cmd)
         self.coord = ut.coordinate(atr)
-
-        if all(i is not None for i in self.yx):
-            view_inps.pts_marker = 'r^'
-            view_inps.pts_yx = np.array(self.yx).reshape(-1, 2)
-
-            # point yx --> lalo for geocoded product
-            if 'Y_FIRST' in atr.keys():
-                view_inps.pts_lalo = np.array(
-                    self.coord.radar2geo(
-                        self.yx[0],
-                        self.yx[1],
-                    )[0:2],
-                ).reshape(-1,2)
 
         view_inps.print_msg = self.print_msg
         self.ax_img = view.plot_slice(self.ax_img, d_img, atr, view_inps)[0]
@@ -217,6 +201,9 @@ class coherenceMatrixViewer():
 
         # info
         msg = f'pixel in yx = {tuple(yx)}, '
+        if self.fig_coord == 'geo':
+            lat, lon = self.coord.radar2geo(yx[0], yx[1])[0:2]
+            msg += f'lat/lon = ({lat}, {lon}), '
         msg += f'min/max spatial coherence: {np.min(coh):.2f} / {np.max(coh):.2f}, '
         if self.tcoh_file:
             msg += f'temporal coherence: {tcoh:.2f}'
@@ -232,6 +219,17 @@ class coherenceMatrixViewer():
         # update figure
         self.fig_mat.canvas.draw_idle()
         self.fig_mat.canvas.flush_events()
+
+        # plot/update marker on the image window
+        if self._marker_artist is None:
+            (self._marker_artist,) = self.ax_img.plot(
+                yx[1], yx[0], 'r^', markersize=6, markeredgecolor='black'
+            )
+        else:
+            self._marker_artist.set_data([yx[1]], [yx[0]])
+
+        self.fig_img.canvas.draw_idle()
+
         return
 
     def update_coherence_matrix(self, event):
@@ -243,16 +241,3 @@ class coherenceMatrixViewer():
                 yx = [int(event.ydata+0.5),
                       int(event.xdata+0.5)]
             self.plot_coherence_matrix4pixel(yx)
-            self.update_image_marker(yx)
-
-
-    def update_image_marker(self, yx):
-        """Update the marker point in the image window."""
-        if self._marker_artist is None:
-            (self._marker_artist,) = self.ax_img.plot(
-                yx[1], yx[0], 'r^', markersize=10, markeredgecolor='black'
-            )
-        else:
-            self._marker_artist.set_data([yx[1]], [yx[0]])
-
-        self.fig_img.canvas.draw_idle()
