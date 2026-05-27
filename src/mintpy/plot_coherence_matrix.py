@@ -135,8 +135,7 @@ class coherenceMatrixViewer():
             self.plot_coherence_matrix4pixel(self.yx)
 
         # Link the canvas to the plots.
-        self.cid_img = self.fig_img.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
-        self.cid_mat = self.fig_mat.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
+        self.fig_img.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
 
         if self.disp_fig:
             plt.show()
@@ -242,14 +241,13 @@ class coherenceMatrixViewer():
             self.plot_coherence_matrix4pixel(yx)
             self.update_image_marker(yx)
 
-        elif event.inaxes == self.ax_mat:
-            pass
 
     def update_image_marker(self, yx):
         """Update the marker point in the image window."""
+        # remove any existing marker
         for artist in self.ax_img.get_children():
             if hasattr(artist, 'get_marker') and artist.get_marker() == '^':
                 artist.remove()
-
+        # draw the new marker
         self.ax_img.plot(yx[1], yx[0], 'r^', markersize=10, markeredgecolor='black')
         self.fig_img.canvas.draw_idle()
