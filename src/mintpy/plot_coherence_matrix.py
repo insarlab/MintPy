@@ -76,6 +76,8 @@ class coherenceMatrixViewer():
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
 
+        self._marker_artist = None
+
 
     def open(self):
         global vprint
@@ -102,10 +104,8 @@ class coherenceMatrixViewer():
             num_ifg = len(self.date12_list)
             if num_ifg <= 50:
                 self.figsize_mat = [6, 5]
-            elif num_ifg <= 100:
-                self.figsize_mat = [8, 6]
             else:
-                self.figsize_mat = [10, 8]
+                self.figsize_mat = [8, 6]
             vprint(f'create matrix figure in size of {self.figsize_mat} inches')
 
         # read aux data
@@ -248,10 +248,11 @@ class coherenceMatrixViewer():
 
     def update_image_marker(self, yx):
         """Update the marker point in the image window."""
-        # remove any existing marker
-        for artist in self.ax_img.get_children():
-            if hasattr(artist, 'get_marker') and artist.get_marker() == '^':
-                artist.remove()
-        # draw the new marker
-        self.ax_img.plot(yx[1], yx[0], 'r^', markersize=10, markeredgecolor='black')
+        if self._marker_artist is None:
+            (self._marker_artist,) = self.ax_img.plot(
+                yx[1], yx[0], 'r^', markersize=10, markeredgecolor='black'
+            )
+        else:
+            self._marker_artist.set_data([yx[1]], [yx[0]])
+
         self.fig_img.canvas.draw_idle()
