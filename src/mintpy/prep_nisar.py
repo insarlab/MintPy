@@ -65,6 +65,7 @@ def _normalize_sar_band(sar_band) -> str:
 
 
 @dataclass(frozen=True)
+
 class NisarProductContext:
     """Cache the band-specific HDF5 roots and commonly reused dataset paths."""
 
@@ -75,6 +76,7 @@ class NisarProductContext:
     processinfo: Dict[str, str] = field(init=False)
 
     def __post_init__(self):
+        """Normalize the band name and precompute shared HDF5 path prefixes."""
         sar_band = _normalize_sar_band(self.sar_band)
         science_root = f"/science/{sar_band}"
         identification_root = f"{science_root}/identification"
