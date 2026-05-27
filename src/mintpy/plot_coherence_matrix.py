@@ -223,7 +223,11 @@ class coherenceMatrixViewer():
         vprint(msg)
 
         self.fig_mat.canvas.manager.set_window_title(self.figname_mat)
-        self.fig_mat.tight_layout()
+
+        # call tight_layout only once to avoid jitter and repeated work
+        if not hasattr(self, "_mat_tight_layout_done"):
+            self.fig_mat.tight_layout()
+            self._mat_tight_layout_done = True
 
         # update figure
         self.fig_mat.canvas.draw_idle()
