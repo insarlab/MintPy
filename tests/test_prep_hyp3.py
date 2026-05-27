@@ -16,6 +16,11 @@ def test_get_product_name_and_type():
         'S1AA_20150504T120217_20150621T120220_VVP048_INT80_G_ueF_5CED_foo.tif'
     ) == ('S1AA_20150504T120217_20150621T120220_VVP048_INT80_G_ueF_5CED', 'INSAR_GAMMA')
 
+    assert _get_product_name_and_type(
+        'S1BC_20210807T053645_20250729T053630_VVP1452_INT80_G_weF_9C74_unw_phase_clip.tif'
+    ) == ('S1BC_20210807T053645_20250729T053630_VVP1452_INT80_G_weF_9C74', 'INSAR_GAMMA')
+
+
     # Old INSAR_ISCE_MULTI_BURST naming convention
     with pytest.raises(
         ValueError,

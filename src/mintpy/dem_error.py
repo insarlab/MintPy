@@ -411,7 +411,7 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
             )
 
             # assemble
-            delta_z[idx] = delta_z_i
+            delta_z[idx] = np.asarray(delta_z_i).reshape(-1).item()
             ts_cor[:, idx] = ts_cor_i.flatten()
             ts_res[:, idx] = ts_res_i.flatten()
 

@@ -143,7 +143,7 @@ def extract_metadata(stack):
     meta["FILE_LENGTH"] = ds.RasterYSize
     meta["LENGTH"] = ds.RasterYSize
     meta["ORBIT_DIRECTION"] = meta["orbitDirection"].upper()
-    meta["PLATFORM"] = "Sen"
+    meta["PLATFORM"] = meta.get("PLATFORM", "Sen")              # provided by ARIA-tools since version 1.4.3 on Mar 2026
     meta["WAVELENGTH"] = float(meta["Wavelength (m)"])
     meta["WIDTH"] = ds.RasterXSize
     meta["NUMBER_OF_PAIRS"] = ds.RasterCount
@@ -296,6 +296,10 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
 
             # write
             f['waterMask'][:,:] = water_mask
+
+            # apply mask to azimuthAngle after conversion factor
+            if azAngleFile is not None:
+                f['azimuthAngle'][:,:] *= water_mask
 
     print(f'finished writing to HD5 file: {outfile}\n')
     return outfile
@@ -455,7 +459,7 @@ def write_timeseries(outfile, corrStack, box=None,
 
     # Get the wavelength. need to convert radians to meters
     wavelength = np.float64(dsCor.GetRasterBand(1).GetMetadata(layer)["Wavelength (m)"])
-    phase2range = -wavelength / (4.*np.pi)
+    phase2range = wavelength / (4.*np.pi)
 
     # get model dates and time
     nDate = dsCor.RasterCount
@@ -651,8 +655,8 @@ def load_aria(inps):
 
         layer_name, _ = get_correction_layer(inps.ionoFile)
 
-        if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[0]) == 'run':
-            outname = f'{out_dir}/ionStack.h5'
+        outname = f'{out_dir}/ionStack.h5'
+        if run_or_skip(inps, ds_name_dict, out_file=outname) == 'run':
 
             writefile.layout_hdf5(
                 outname,
