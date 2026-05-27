@@ -101,7 +101,6 @@ class coherenceMatrixViewer():
             vprint(f'create image figure in size of {self.figsize_img} inches')
 
         if not self.figsize_mat:
-            num_ifg = len(self.date12_list)
             self.figsize_mat = [8, 6]
             vprint(f'create matrix figure in size of {self.figsize_mat} inches')
 
