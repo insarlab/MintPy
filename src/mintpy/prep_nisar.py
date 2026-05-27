@@ -66,7 +66,6 @@ def _normalize_sar_band(sar_band) -> str:
 
 @dataclass(frozen=True)
 class NisarProductContext:
-
     """Cache the band-specific HDF5 roots and commonly reused dataset paths."""
 
     sar_band: str = DEFAULT_SAR_BAND
@@ -227,9 +226,7 @@ def _resolve_frequency(
     """Resolve and validate the requested NISAR frequency."""
     product_ctx = _coerce_product_context(product_ctx, sar_band)
     resolved = _normalize_frequency(frequency)
-    datasets = _datasets_for_pol(
-        polarization, resolved, product_ctx=product_ctx
-    )
+    datasets = _datasets_for_pol(polarization, resolved, product_ctx=product_ctx)
 
     with h5py.File(gunw_file, "r") as ds:
         required_paths = [
@@ -562,9 +559,7 @@ def _read_target_grid(
 ):
     """Read the destination EPSG and subset grid axes from a GUNW file."""
     product_ctx = _coerce_product_context(product_ctx, sar_band)
-    datasets = _datasets_for_pol(
-        polarization, frequency, product_ctx=product_ctx
-    )
+    datasets = _datasets_for_pol(polarization, frequency, product_ctx=product_ctx)
     with h5py.File(gunw_file, "r") as ds:
         return (
             int(ds[datasets["epsg"]][()]),
@@ -613,9 +608,7 @@ def _prepare_radar_grid_interpolation(
         frequency,
         product_ctx=product_ctx,
     )
-    rdr_coords = _read_radar_grid_fields(
-        gunw_file, field_map, product_ctx=product_ctx
-    )
+    rdr_coords = _read_radar_grid_fields(gunw_file, field_map, product_ctx=product_ctx)
 
     dem_subset_array = _warp_to_grid_mem(
         src_path=dem_file,
@@ -722,9 +715,7 @@ def _required_paths_for_stack_type(
 ):
     """Return HDF5 source datasets needed to build the requested stack."""
     product_ctx = _coerce_product_context(product_ctx, sar_band)
-    datasets = _datasets_for_pol(
-        polarization, frequency, product_ctx=product_ctx
-    )
+    datasets = _datasets_for_pol(polarization, frequency, product_ctx=product_ctx)
     processinfo = _processinfo(product_ctx=product_ctx)
     if stack_type == "ifgram":
         return [datasets["unw"], datasets["cor"], datasets["connComp"]]
@@ -1048,9 +1039,7 @@ def extract_metadata(
     meta = {}
 
     product_ctx = _coerce_product_context(product_ctx, sar_band)
-    datasets = _datasets_for_pol(
-        polarization, frequency, product_ctx=product_ctx
-    )
+    datasets = _datasets_for_pol(polarization, frequency, product_ctx=product_ctx)
     processinfo = _processinfo(product_ctx=product_ctx)
 
     with h5py.File(meta_file, "r") as ds:
@@ -1061,9 +1050,10 @@ def extract_metadata(
         xcoord = ds[datasets["xcoord"]][()]
         ycoord = ds[datasets["ycoord"]][()]
         meta["EPSG"] = int(ds[datasets["epsg"]][()])
-        meta["WAVELENGTH"] = SPEED_OF_LIGHT / ds[
-            _center_frequency_path(frequency, product_ctx=product_ctx)
-        ][()]
+        meta["WAVELENGTH"] = (
+            SPEED_OF_LIGHT
+            / ds[_center_frequency_path(frequency, product_ctx=product_ctx)][()]
+        )
         meta["ORBIT_DIRECTION"] = ds[processinfo["orbit_direction"]][()].decode("utf-8")
         meta["POLARIZATION"] = polarization
         meta["ALOOKS"] = ds[datasets["azimuth_look"]][()]
@@ -1198,9 +1188,7 @@ def get_raster_corners(
 ):
     """Get the (west, south, east, north) bounds of the image."""
     product_ctx = _coerce_product_context(product_ctx, sar_band)
-    datasets = _datasets_for_pol(
-        polarization, frequency, product_ctx=product_ctx
-    )
+    datasets = _datasets_for_pol(polarization, frequency, product_ctx=product_ctx)
     processinfo = _processinfo(product_ctx=product_ctx)
     with h5py.File(input_file, "r") as ds:
         xcoord = ds[datasets["xcoord"]][:]
@@ -1288,9 +1276,7 @@ def read_subset(
 ):
     """Read subset arrays or only geometry bounds for unwrapped products."""
     product_ctx = _coerce_product_context(product_ctx, sar_band)
-    datasets = _datasets_for_pol(
-        polarization, frequency, product_ctx=product_ctx
-    )
+    datasets = _datasets_for_pol(polarization, frequency, product_ctx=product_ctx)
     with h5py.File(gunw_file, "r") as ds:
         xcoord = ds[datasets["xcoord"]][()]
         ycoord = ds[datasets["ycoord"]][()]
