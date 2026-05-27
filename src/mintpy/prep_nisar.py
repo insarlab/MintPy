@@ -29,6 +29,8 @@ FREQUENCY_MAP = {
     "frequencyA": "frequencyA",
     "frequencyB": "frequencyB",
 }
+DEFAULT_SAR_BAND = "LSAR"
+VALID_SAR_BANDS = {DEFAULT_SAR_BAND, "SSAR"}
 
 STACK_TYPES = {"ifgram", "ion", "tropo", "set"}
 
@@ -50,27 +52,29 @@ def _normalize_frequency(frequency) -> str:
 def _normalize_sar_band(sar_band) -> str:
     """Return the normalized NISAR product family name."""
     if sar_band is None or str(sar_band).lower() == "auto":
-        return "LSAR"
+        return DEFAULT_SAR_BAND
 
     normalized = str(sar_band).upper()
-    if normalized not in {"LSAR", "SSAR"}:
-        raise ValueError("sar_band must be one of: auto, LSAR, SSAR")
+    if normalized not in VALID_SAR_BANDS:
+        raise ValueError(
+            f"sar_band must be one of: auto, {', '.join(sorted(VALID_SAR_BANDS))}"
+        )
     return normalized
 
 
-def _science_root(sar_band: str = "LSAR") -> str:
-    return f"/science/{_normalize_sar_band(sar_band)}"
+def _science_root(sar_band: str = DEFAULT_SAR_BAND) -> str:
+    return f"/science/{sar_band}"
 
 
-def _identification_root(sar_band: str = "LSAR") -> str:
+def _identification_root(sar_band: str = DEFAULT_SAR_BAND) -> str:
     return f"{_science_root(sar_band)}/identification"
 
 
-def _radargrid_root(sar_band: str = "LSAR") -> str:
+def _radargrid_root(sar_band: str = DEFAULT_SAR_BAND) -> str:
     return f"{_science_root(sar_band)}/GUNW/metadata/radarGrid"
 
 
-def _processinfo(sar_band: str = "LSAR") -> dict:
+def _processinfo(sar_band: str = DEFAULT_SAR_BAND) -> dict:
     identification = _identification_root(sar_band)
     radargrid_root = _radargrid_root(sar_band)
     return {
@@ -94,23 +98,25 @@ def _processinfo(sar_band: str = "LSAR") -> dict:
     }
 
 
-def _dataset_root_unw(frequency: str, sar_band: str = "LSAR") -> str:
+def _dataset_root_unw(frequency: str, sar_band: str = DEFAULT_SAR_BAND) -> str:
     return f"{_science_root(sar_band)}/GUNW/grids/{frequency}/unwrappedInterferogram"
 
 
-def _parameters_root(frequency: str, sar_band: str = "LSAR") -> str:
+def _parameters_root(frequency: str, sar_band: str = DEFAULT_SAR_BAND) -> str:
     return (
         f"{_science_root(sar_band)}/GUNW/metadata/processingInformation/parameters/"
         f"unwrappedInterferogram/{frequency}"
     )
 
 
-def _center_frequency_path(frequency: str, sar_band: str = "LSAR") -> str:
+def _center_frequency_path(
+    frequency: str, sar_band: str = DEFAULT_SAR_BAND
+) -> str:
     return f"{_science_root(sar_band)}/GUNW/grids/{frequency}/centerFrequency"
 
 
 def _datasets_for_pol(
-    polarization: str, frequency: str, sar_band: str = "LSAR"
+    polarization: str, frequency: str, sar_band: str = DEFAULT_SAR_BAND
 ) -> dict:
     """Return per-call dataset paths for the selected frequency/polarization."""
     root = _dataset_root_unw(frequency, sar_band)
@@ -133,7 +139,10 @@ def _datasets_for_pol(
 
 
 def _resolve_frequency(
-    gunw_file: str, frequency, polarization: str, sar_band: str = "LSAR"
+    gunw_file: str,
+    frequency,
+    polarization: str,
+    sar_band: str = DEFAULT_SAR_BAND,
 ) -> str:
     """Resolve and validate the requested NISAR frequency."""
     resolved = _normalize_frequency(frequency)
@@ -161,7 +170,7 @@ def _resolve_frequency(
                 "Check that the input file contains frequencyB for this polarization."
             )
         raise ValueError(
-            f"NISAR {_normalize_sar_band(sar_band)} {requested} data for "
+            f"NISAR {sar_band} {requested} data for "
             f"polarization {polarization!r} was not found in {gunw_file}. "
             f"Missing path: {missing[0]}. {hint}"
         )
@@ -293,7 +302,7 @@ def _read_unwrapped_phase_valid_mask(
     xybbox,
     pol: str,
     frequency: str,
-    sar_band: str = "LSAR",
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Fallback validity mask based on finite unwrappedPhase (+ _FillValue check)."""
     datasets = _datasets_for_pol(pol, frequency, sar_band)
@@ -314,7 +323,7 @@ def _read_is_land_and_valid_mask(
     xybbox,
     pol: str,
     frequency: str,
-    sar_band: str = "LSAR",
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Decode the native GUNW mask into MintPy's keep-mask convention."""
     datasets = _datasets_for_pol(pol, frequency, sar_band)
@@ -344,7 +353,11 @@ def _read_is_land_and_valid_mask(
 
 
 def _read_common_is_land_and_valid_mask(
-    input_files, bbox, pol: str, frequency: str, sar_band: str = "LSAR"
+    input_files,
+    bbox,
+    pol: str,
+    frequency: str,
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Return the common keep-mask across all input GUNW products."""
     common_mask = None
@@ -389,7 +402,7 @@ def _apply_external_mask(
     external_mask_file,
     polarization: str,
     frequency: str,
-    sar_band: str = "LSAR",
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Refine a keep-mask with an optional external raster mask."""
     if not _external_mask_is_set(external_mask_file):
@@ -411,7 +424,7 @@ def _apply_external_mask(
 
 
 def _read_perpendicular_baseline(
-    gunw_file: str, sar_band: str = "LSAR"
+    gunw_file: str, sar_band: str = DEFAULT_SAR_BAND
 ) -> np.float32:
     """Read the NISAR perpendicular baseline as one finite mean value."""
     processinfo = _processinfo(sar_band)
@@ -438,7 +451,7 @@ def _read_target_grid(
     xybbox,
     polarization: str,
     frequency: str,
-    sar_band: str = "LSAR",
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Read the destination EPSG and subset grid axes from a GUNW file."""
     datasets = _datasets_for_pol(polarization, frequency, sar_band)
@@ -451,7 +464,9 @@ def _read_target_grid(
 
 
 def _read_radar_grid_fields(
-    gunw_file: str, field_map: dict, sar_band: str = "LSAR"
+    gunw_file: str,
+    field_map: dict,
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Read radar-grid interpolation axes plus the requested data fields."""
     processinfo = _processinfo(sar_band)
@@ -473,7 +488,7 @@ def _prepare_radar_grid_interpolation(
     frequency,
     field_map,
     valid_mask=None,
-    sar_band: str = "LSAR",
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Build the common DEM/grid/valid-mask context for radar-grid interpolation."""
     dem_src_epsg = _read_raster_epsg(dem_file)
@@ -575,7 +590,10 @@ def _resolve_stack_type(stack_type, outfile):
 
 
 def _required_paths_for_stack_type(
-    stack_type, polarization, frequency, sar_band: str = "LSAR"
+    stack_type,
+    polarization,
+    frequency,
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Return HDF5 source datasets needed to build the requested stack."""
     datasets = _datasets_for_pol(polarization, frequency, sar_band)
@@ -595,7 +613,11 @@ def _required_paths_for_stack_type(
 
 
 def _missing_required_paths(
-    inp_files, stack_type, polarization, frequency, sar_band: str = "LSAR"
+    inp_files,
+    stack_type,
+    polarization,
+    frequency,
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Return missing required HDF5 source paths as (file, path) pairs."""
     required_paths = _required_paths_for_stack_type(
@@ -617,7 +639,7 @@ def _read_stack_observation(
     dem_file,
     polarization,
     frequency,
-    sar_band: str = "LSAR",
+    sar_band: str = DEFAULT_SAR_BAND,
 ):
     """Read one observation for the requested stack type."""
     pbase = _read_perpendicular_baseline(file, sar_band)
@@ -731,11 +753,15 @@ def load_nisar(inps):
 
     # extract metadata
     pol = getattr(inps, "polarization", "HH")
-    sar_band = getattr(inps, "sar_band", "LSAR")
+    # Normalize once here so downstream helpers can assume a concrete product family.
+    sar_band = _normalize_sar_band(
+        getattr(inps, "sar_band", DEFAULT_SAR_BAND)
+    )
+    inps.sar_band = sar_band
     frequency = _resolve_frequency(
         input_files[0], getattr(inps, "frequency", "auto"), pol, sar_band
     )
-    print(f"Using NISAR {_normalize_sar_band(sar_band)} {frequency}")
+    print(f"Using NISAR {sar_band} {frequency}")
     metadata, bounds = extract_metadata(
         input_files,
         bbox=bbox,
@@ -877,7 +903,7 @@ def extract_metadata(
     bbox=None,
     polarization="HH",
     frequency="frequencyA",
-    sar_band="LSAR",
+    sar_band=DEFAULT_SAR_BAND,
 ):
     """Extract NISAR metadata for MintPy."""
     meta_file = input_files[0]
@@ -1023,7 +1049,10 @@ def get_rows_cols(xcoord, ycoord, bounds):
 
 
 def get_raster_corners(
-    input_file, polarization="HH", frequency="frequencyA", sar_band="LSAR"
+    input_file,
+    polarization="HH",
+    frequency="frequencyA",
+    sar_band=DEFAULT_SAR_BAND,
 ):
     """Get the (west, south, east, north) bounds of the image."""
     datasets = _datasets_for_pol(polarization, frequency, sar_band)
@@ -1039,7 +1068,11 @@ def get_raster_corners(
 
 
 def common_raster_bound(
-    input_files, utm_bbox=None, polarization="HH", frequency="frequencyA", sar_band="LSAR"
+    input_files,
+    utm_bbox=None,
+    polarization="HH",
+    frequency="frequencyA",
+    sar_band=DEFAULT_SAR_BAND,
 ):
     """Get common bounds among all data in (xmin, ymin, xmax, ymax)."""
     wests = []
@@ -1102,7 +1135,7 @@ def read_subset(
     bbox,
     polarization="HH",
     frequency="frequencyA",
-    sar_band="LSAR",
+    sar_band=DEFAULT_SAR_BAND,
     geometry=False,
 ):
     """Read subset arrays or only geometry bounds for unwrapped products."""
@@ -1164,7 +1197,7 @@ def read_and_interpolate_geometry(
     xybbox,
     polarization="HH",
     frequency="frequencyA",
-    sar_band="LSAR",
+    sar_band=DEFAULT_SAR_BAND,
     external_mask_file=None,
     valid_mask=None,
 ):
@@ -1244,7 +1277,7 @@ def read_and_interpolate_troposphere(
     xybbox,
     polarization="HH",
     frequency="frequencyA",
-    sar_band="LSAR",
+    sar_band=DEFAULT_SAR_BAND,
 ):
     """Warp DEM to aligned grid and interpolate combined tropo at valid pixels only."""
     interp_ctx = _prepare_radar_grid_interpolation(
@@ -1292,7 +1325,7 @@ def read_and_interpolate_SET(
     xybbox,
     polarization="HH",
     frequency="frequencyA",
-    sar_band="LSAR",
+    sar_band=DEFAULT_SAR_BAND,
 ):
     """Warp DEM to aligned grid and interpolate SET phase at valid pixels only."""
     interp_ctx = _prepare_radar_grid_interpolation(
@@ -1330,7 +1363,7 @@ def interpolate_set(X_2d, Y_2d, dem, rdr_coords, valid_mask):
 # ---------------------------------------------------------------------
 # MintPy file builders
 # ---------------------------------------------------------------------
-def _get_date_pairs(filenames, sar_band="LSAR"):
+def _get_date_pairs(filenames, sar_band=DEFAULT_SAR_BAND):
     """Return reference_secondary date pairs in YYYYMMDD_YYYYMMDD format."""
     date12_list = []
     processinfo = _processinfo(sar_band)
@@ -1370,7 +1403,7 @@ def prepare_geometry(
     externalMaskFile,
     polarization="HH",
     frequency="frequencyA",
-    sar_band="LSAR",
+    sar_band=DEFAULT_SAR_BAND,
     commonMask=None,
 ):
     """Prepare the geometry file."""
@@ -1427,7 +1460,7 @@ def prepare_water_mask(
     externalMaskFile,
     polarization="HH",
     frequency="frequencyA",
-    sar_band="LSAR",
+    sar_band=DEFAULT_SAR_BAND,
     commonMask=None,
 ):
     """Prepare a standalone MintPy waterMask.h5 from the GUNW mask."""
@@ -1491,7 +1524,7 @@ def prepare_stack(
     date12_list,
     polarization="HH",
     frequency="frequencyA",
-    sar_band="LSAR",
+    sar_band=DEFAULT_SAR_BAND,
     stack_type=None,
     commonMask=None,
 ):
