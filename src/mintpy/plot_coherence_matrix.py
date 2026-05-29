@@ -28,6 +28,7 @@ def read_network_info(inps):
     date12_kept = obj.get_date12_list(dropIfgram=True)
     inps.ex_date12_list = sorted(list(set(inps.date12_list) - set(date12_kept)))
     inps.date_list = obj.get_date_list(dropIfgram=False)
+    inps.ifgram_shape = (int(obj.metadata['LENGTH']), int(obj.metadata['WIDTH']))
     vprint(f'number of all     interferograms: {len(inps.date12_list)}')
     vprint(f'number of dropped interferograms: {len(inps.ex_date12_list)}')
     vprint(f'number of kept    interferograms: {len(inps.date12_list) - len(inps.ex_date12_list)}')
@@ -109,6 +110,12 @@ class coherenceMatrixViewer():
         self.tcoh = None
         if self.tcoh_file:
             self.tcoh = readfile.read(self.tcoh_file)[0]
+            if self.tcoh.shape != self.ifgram_shape:
+                msg = f'WARNING: {self.tcoh_file} has shape {self.tcoh.shape}, '
+                msg += f'not matching ifgramStack shape {self.ifgram_shape}; ignore it.'
+                print(msg)
+                self.tcoh = None
+                self.tcoh_file = None
         # 2. minimum used coherence from template file
         self.min_coh_used = 0.0
         if self.template_file:
@@ -131,7 +138,7 @@ class coherenceMatrixViewer():
             self.plot_coherence_matrix4pixel(self.yx)
 
         # Link the canvas to the plots.
-        self.fig_img.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
+        self.cid_img = self.fig_img.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
 
         if self.disp_fig:
             plt.show()
@@ -171,7 +178,7 @@ class coherenceMatrixViewer():
         plotDict = {}
         plotDict['fig_title'] = f'Y = {yx[0]}, X = {yx[1]}'
         # display temporal coherence value of the pixel
-        if self.tcoh_file:
+        if self.tcoh is not None:
             tcoh = self.tcoh[yx[0], yx[1]]
             plotDict['fig_title'] += f', tcoh = {tcoh:.2f}'
         plotDict['colormap'] = self.colormap
@@ -204,7 +211,7 @@ class coherenceMatrixViewer():
             lat, lon = self.coord.radar2geo(yx[0], yx[1])[0:2]
             msg += f'lat/lon = ({lat}, {lon}), '
         msg += f'min/max spatial coherence: {np.min(coh):.2f} / {np.max(coh):.2f}, '
-        if self.tcoh_file:
+        if self.tcoh is not None:
             msg += f'temporal coherence: {tcoh:.2f}'
         vprint(msg)
 
@@ -220,12 +227,21 @@ class coherenceMatrixViewer():
         self.fig_mat.canvas.flush_events()
 
         # plot/update marker on the image window
+        xlim = self.ax_img.get_xlim()
+        ylim = self.ax_img.get_ylim()
+        if self.fig_coord == 'geo':
+            lat, lon = self.coord.radar2geo(yx[0], yx[1], print_msg=False)[0:2]
+            marker_x, marker_y = lon, lat
+        else:
+            marker_x, marker_y = yx[1], yx[0]
         if self._marker_artist is None:
             (self._marker_artist,) = self.ax_img.plot(
-                yx[1], yx[0], 'r^', markersize=6, markeredgecolor='black'
+                marker_x, marker_y, 'r^', markersize=6, markeredgecolor='black'
             )
         else:
-            self._marker_artist.set_data([yx[1]], [yx[0]])
+            self._marker_artist.set_data([marker_x], [marker_y])
+        self.ax_img.set_xlim(xlim)
+        self.ax_img.set_ylim(ylim)
 
         self.fig_img.canvas.draw_idle()
 
@@ -239,4 +255,8 @@ class coherenceMatrixViewer():
             else:
                 yx = [int(event.ydata+0.5),
                       int(event.xdata+0.5)]
+            y, x = yx
+            if not (0 <= y < self.ifgram_shape[0] and 0 <= x < self.ifgram_shape[1]):
+                vprint(f'ignore point outside ifgramStack coverage: {yx}')
+                return
             self.plot_coherence_matrix4pixel(yx)
