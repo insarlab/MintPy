@@ -9,7 +9,6 @@
 import os
 import sys
 
-from mintpy.utils import readfile
 from mintpy.utils.arg_utils import create_argument_parser
 
 ###########################  Sub Function  #############################
@@ -83,16 +82,10 @@ def cmd_line_parse(iargs=None):
 
     # default: auxiliary file paths (velocity and template)
     mintpy_dir = os.path.dirname(os.path.dirname(inps.ifgram_file))
-    atr = readfile.read_attribute(inps.ifgram_file)
-    is_geo = 'Y_FIRST' in atr
     if not inps.img_file:
         inps.img_file = os.path.join(mintpy_dir, 'velocity.h5')
-        if is_geo:
-            inps.img_file = os.path.join(mintpy_dir, 'geo', 'geo_velocity.h5')
     if not inps.tcoh_file:
         inps.tcoh_file = os.path.join(mintpy_dir, 'temporalCoherence.h5')
-        if is_geo:
-            inps.tcoh_file = os.path.join(mintpy_dir, 'geo', 'geo_temporalCoherence.h5')
     if not inps.template_file:
         inps.template_file = os.path.join(mintpy_dir, 'smallbaselineApp.cfg')
 
