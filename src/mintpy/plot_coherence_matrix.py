@@ -28,7 +28,6 @@ def read_network_info(inps):
     date12_kept = obj.get_date12_list(dropIfgram=True)
     inps.ex_date12_list = sorted(list(set(inps.date12_list) - set(date12_kept)))
     inps.date_list = obj.get_date_list(dropIfgram=False)
-    inps.ifgram_shape = (int(obj.metadata['LENGTH']), int(obj.metadata['WIDTH']))
     vprint(f'number of all     interferograms: {len(inps.date12_list)}')
     vprint(f'number of dropped interferograms: {len(inps.ex_date12_list)}')
     vprint(f'number of kept    interferograms: {len(inps.date12_list) - len(inps.ex_date12_list)}')
