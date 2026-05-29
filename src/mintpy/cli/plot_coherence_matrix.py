@@ -116,7 +116,7 @@ def main(iargs=None):
     obj = coherenceMatrixViewer(inps)
     obj.open()
     obj.plot()
-    obj.fig_img.canvas.mpl_disconnect(obj.cid_img)
+    #obj.fig_img.canvas.mpl_disconnect(obj.cid_img)
 
 
 ############################################################
