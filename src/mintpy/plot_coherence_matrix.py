@@ -108,14 +108,14 @@ class coherenceMatrixViewer():
         # read aux data
         # 1. temporal coherence value
         self.tcoh = None
-        if self.tcoh_file:
-            self.tcoh = readfile.read(self.tcoh_file)[0]
+        tcoh_file = getattr(self, 'tcoh_file', None)
+        if tcoh_file:
+            self.tcoh = readfile.read(tcoh_file)[0]
             if self.tcoh.shape != self.ifgram_shape:
-                msg = f'WARNING: {self.tcoh_file} has shape {self.tcoh.shape}, '
+                msg = f'WARNING: {tcoh_file} has shape {self.tcoh.shape}, '
                 msg += f'not matching ifgramStack shape {self.ifgram_shape}; ignore it.'
                 print(msg)
                 self.tcoh = None
-                self.tcoh_file = None
         # 2. minimum used coherence from template file
         self.min_coh_used = 0.0
         if self.template_file:
