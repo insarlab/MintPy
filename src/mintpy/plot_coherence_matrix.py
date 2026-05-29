@@ -108,14 +108,8 @@ class coherenceMatrixViewer():
         # read aux data
         # 1. temporal coherence value
         self.tcoh = None
-        tcoh_file = getattr(self, 'tcoh_file', None)
-        if tcoh_file:
-            self.tcoh = readfile.read(tcoh_file)[0]
-            if self.tcoh.shape != self.ifgram_shape:
-                msg = f'WARNING: {tcoh_file} has shape {self.tcoh.shape}, '
-                msg += f'not matching ifgramStack shape {self.ifgram_shape}; ignore it.'
-                print(msg)
-                self.tcoh = None
+        if self.tcoh_file:
+            self.tcoh = readfile.read(self.tcoh_file)[0]
         # 2. minimum used coherence from template file
         self.min_coh_used = 0.0
         if self.template_file:
@@ -208,8 +202,8 @@ class coherenceMatrixViewer():
         # info
         msg = f'pixel in yx = {tuple(yx)}, '
         if self.fig_coord == 'geo':
-            lat, lon = self.coord.radar2geo(yx[0], yx[1])[0:2]
-            msg += f'lat/lon = ({lat}, {lon}), '
+            lat, lon = self.coord.yx2lalo(yx[0], yx[1])
+            msg += f'lat/lon = ({lat:.8f}, {lon:.8f}), '
         msg += f'min/max spatial coherence: {np.min(coh):.2f} / {np.max(coh):.2f}, '
         if self.tcoh is not None:
             msg += f'temporal coherence: {tcoh:.2f}'
@@ -227,21 +221,14 @@ class coherenceMatrixViewer():
         self.fig_mat.canvas.flush_events()
 
         # plot/update marker on the image window
-        xlim = self.ax_img.get_xlim()
-        ylim = self.ax_img.get_ylim()
-        if self.fig_coord == 'geo':
-            lat, lon = self.coord.radar2geo(yx[0], yx[1], print_msg=False)[0:2]
-            marker_x, marker_y = lon, lat
-        else:
-            marker_x, marker_y = yx[1], yx[0]
+        mx = lon if self.fig_coord == 'geo' else yx[1]
+        my = lat if self.fig_coord == 'geo' else yx[0]
         if self._marker_artist is None:
-            (self._marker_artist,) = self.ax_img.plot(
-                marker_x, marker_y, 'r^', markersize=6, markeredgecolor='black'
-            )
+            self._marker_artist = self.ax_img.plot(
+                mx, my, 'r^', markersize=6, markeredgecolor='black'
+            )[0]
         else:
-            self._marker_artist.set_data([marker_x], [marker_y])
-        self.ax_img.set_xlim(xlim)
-        self.ax_img.set_ylim(ylim)
+            self._marker_artist.set_data([mx], [my])
 
         self.fig_img.canvas.draw_idle()
 
@@ -255,8 +242,4 @@ class coherenceMatrixViewer():
             else:
                 yx = [int(event.ydata+0.5),
                       int(event.xdata+0.5)]
-            y, x = yx
-            if not (0 <= y < self.ifgram_shape[0] and 0 <= x < self.ifgram_shape[1]):
-                vprint(f'ignore point outside ifgramStack coverage: {yx}')
-                return
             self.plot_coherence_matrix4pixel(yx)
