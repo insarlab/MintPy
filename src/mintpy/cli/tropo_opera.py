@@ -13,7 +13,7 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ############################################################################
 REFERENCE = """references:
-  Bekaert, D. et al., OPERA L4 Tropospheric Zenith Delay products derived from ECMWF HRES model 
+  Bekaert, D. et al., OPERA L4 Tropospheric Zenith Delay products derived from ECMWF HRES model
   (https://www.earthdata.nasa.gov/data/catalog/asf-opera-l4-tropo-zenith-v1-1).
 """
 
