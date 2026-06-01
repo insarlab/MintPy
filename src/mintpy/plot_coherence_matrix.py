@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, Nov 2018                           #
+# Author: Zhang Yunjun, Changyang Hu, Nov 2018             #
 ############################################################
 
 
@@ -62,15 +62,21 @@ class coherenceMatrixViewer():
 
     def __init__(self, inps):
         # figure variables
-        self.figname = 'Coherence matrix'
-        self.fig_size = None
-        self.fig = None
+        self.figname_img = 'Image'
+        self.figsize_img = None
+        self.fig_img = None
         self.ax_img = None
+
+        self.figname_mat = 'Coherence Matrix'
+        self.figsize_mat = None
+        self.fig_mat = None
         self.ax_mat = None
 
         # copy inps to self object
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
+
+        self._marker_artist = None
 
 
     def open(self):
@@ -89,11 +95,14 @@ class coherenceMatrixViewer():
         self = read_network_info(self)
 
         # auto figure size
-        if not self.fig_size:
+        if not self.figsize_img:
             ds_shape = readfile.read(self.img_file)[0].shape
-            fig_size = pp.auto_figure_size(ds_shape, disp_cbar=True, scale=0.7)
-            self.fig_size = [fig_size[0]+fig_size[1], fig_size[1]]
-            vprint(f'create figure in size of {self.fig_size} inches')
+            self.figsize_img = pp.auto_figure_size(ds_shape, disp_cbar=True, scale=0.7)
+            vprint(f'create image figure in size of {self.figsize_img} inches')
+
+        if not self.figsize_mat:
+            self.figsize_mat = [8, 6]
+            vprint(f'create matrix figure in size of {self.figsize_mat} inches')
 
         # read aux data
         # 1. temporal coherence value
@@ -111,42 +120,35 @@ class coherenceMatrixViewer():
 
 
     def plot(self):
-        # Figure 1
-        self.fig = plt.figure(self.figname, figsize=self.fig_size)
+        # Figure 1 - Image
+        self.fig_img, self.ax_img = plt.subplots(num=self.figname_img, figsize=self.figsize_img)
+        self.plot_init_image()
 
-        # Axes 1 - Image
-        self.ax_img = self.fig.add_axes([0.05, 0.1, 0.4, 0.8])
-        view_cmd = self.view_cmd.format(self.img_file)
-        d_img, atr, view_inps = view.prep_slice(view_cmd)
-        self.coord = ut.coordinate(atr)
-
-        if all(i is not None for i in self.yx):
-            view_inps.pts_marker = 'r^'
-            view_inps.pts_yx = np.array(self.yx).reshape(-1, 2)
-
-            # point yx --> lalo for geocoded product
-            if 'Y_FIRST' in atr.keys():
-                view_inps.pts_lalo = np.array(
-                    self.coord.radar2geo(
-                        self.yx[0],
-                        self.yx[1],
-                    )[0:2],
-                ).reshape(-1,2)
-
-        view_inps.print_msg = self.print_msg
-        self.ax_img = view.plot_slice(self.ax_img, d_img, atr, view_inps)[0]
-        self.fig_coord = view_inps.fig_coord
-
-        # Axes 2 - coherence matrix
-        self.ax_mat = self.fig.add_axes([0.55, 0.125, 0.40, 0.75])
+        # Figure 2 - Coherence Matrix
+        self.fig_mat, self.ax_mat = plt.subplots(num=self.figname_mat, figsize=self.figsize_mat)
         self.colormap = pp.ColormapExt(self.cmap_name, vlist=self.cmap_vlist).colormap
         if all(i is not None for i in self.yx):
             self.plot_coherence_matrix4pixel(self.yx)
 
         # Link the canvas to the plots.
-        self.cid = self.fig.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
+        self.cid_img = self.fig_img.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
+
         if self.disp_fig:
             plt.show()
+        return
+
+    def plot_init_image(self):
+        """Plot the initial image."""
+        view_cmd = self.view_cmd.format(self.img_file)
+        d_img, atr, view_inps = view.prep_slice(view_cmd)
+        self.coord = ut.coordinate(atr)
+
+        view_inps.print_msg = self.print_msg
+        self.ax_img = view.plot_slice(self.ax_img, d_img, atr, view_inps)[0]
+        self.fig_coord = view_inps.fig_coord
+
+        self.fig_img.canvas.manager.set_window_title(self.figname_img)
+        self.fig_img.tight_layout()
         return
 
     def plot_coherence_matrix4pixel(self, yx):
@@ -169,7 +171,7 @@ class coherenceMatrixViewer():
         plotDict = {}
         plotDict['fig_title'] = f'Y = {yx[0]}, X = {yx[1]}'
         # display temporal coherence value of the pixel
-        if self.tcoh_file:
+        if self.tcoh is not None:
             tcoh = self.tcoh[yx[0], yx[1]]
             plotDict['fig_title'] += f', tcoh = {tcoh:.2f}'
         plotDict['colormap'] = self.colormap
@@ -198,17 +200,41 @@ class coherenceMatrixViewer():
 
         # info
         msg = f'pixel in yx = {tuple(yx)}, '
+        if self.fig_coord == 'geo':
+            lat, lon = self.coord.yx2lalo(yx[0], yx[1])
+            msg += f'lat/lon = ({lat:.8f}, {lon:.8f}), '
         msg += f'min/max spatial coherence: {np.min(coh):.2f} / {np.max(coh):.2f}, '
-        if self.tcoh_file:
+        if self.tcoh is not None:
             msg += f'temporal coherence: {tcoh:.2f}'
         vprint(msg)
 
+        self.fig_mat.canvas.manager.set_window_title(self.figname_mat)
+
+        # call tight_layout only once to avoid jitter and repeated work
+        if not hasattr(self, "_mat_tight_layout_done"):
+            self.fig_mat.tight_layout()
+            self._mat_tight_layout_done = True
+
         # update figure
-        self.fig.canvas.draw_idle()
-        self.fig.canvas.flush_events()
+        self.fig_mat.canvas.draw_idle()
+        self.fig_mat.canvas.flush_events()
+
+        # plot/update marker on the image window
+        mx = lon if self.fig_coord == 'geo' else yx[1]
+        my = lat if self.fig_coord == 'geo' else yx[0]
+        if self._marker_artist is None:
+            self._marker_artist = self.ax_img.plot(
+                mx, my, 'r^', markersize=6, markeredgecolor='black'
+            )[0]
+        else:
+            self._marker_artist.set_data([mx], [my])
+
+        self.fig_img.canvas.draw_idle()
+
         return
 
     def update_coherence_matrix(self, event):
+        """Update coherence matrix when clicking on either window."""
         if event.inaxes == self.ax_img:
             if self.fig_coord == 'geo':
                 yx = self.coord.lalo2yx(event.ydata, event.xdata)
