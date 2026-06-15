@@ -814,7 +814,8 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
     # Per-pixel NaN observations are masked via zero-weights inside the kernel,
     # which is mathematically equivalent to dropping them from the LS system
     # for the full-rank case. Rank-deficient pixels (rare on real SBAS networks)
-    # are not handled here; if encountered, NaN/Inf will propagate downstream.
+    # are detected via cholesky_ex info codes and their solution is set to zero
+    # with a warning, so NaN/Inf is not propagated downstream.
     if solver != 'cpu':
         from mintpy.ifgram_inversion_gpu import estimate_timeseries_batch
         print(f'estimating time-series via {solver} solver (batched, GPU)')
