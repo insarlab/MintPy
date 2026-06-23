@@ -7,17 +7,25 @@
 #   from mintpy import timeseries2velocity as ts2vel
 
 
+# os 用来处理路径、判断文件是否存在、比较输入输出文件修改时间。
 import os
+# time 用来统计速度拟合运行耗时。
 import time
 
+# numpy 用于数组计算；时序数据和拟合参数都以 numpy 数组表示。
 import numpy as np
+# scipy.linalg 用于协方差传播等线性代数计算。
 from scipy import linalg
 
+# 这些对象用于读取不同类型的时序文件：普通 timeseries、GIAnT 时序、HDF-EOS5 产品。
 from mintpy.objects import HDFEOS, cluster, giantTimeseries, timeseries
+# ptime 处理日期；time_func 构建/估计时间函数模型；readfile/writefile 读写 HDF5。
 from mintpy.utils import ptime, readfile, time_func, writefile
 
+# 输出拟合参数统一使用 float32，兼顾精度和文件大小。
 DATA_TYPE = np.float32
 # key configuration parameter name
+# 这些 timeFunc 配置会写入 velocity.h5 属性，用于 update 模式判断是否需要重跑。
 key_prefix = 'mintpy.timeFunc.'
 config_keys = [
     # date
@@ -39,6 +47,7 @@ config_keys = [
 
 ############################################################################
 def run_or_skip(inps):
+    # update 模式判断：如果输出 velocity 文件存在、比输入新、配置没变，就跳过。
     print('update mode: ON')
     flag = 'skip'
 
@@ -58,6 +67,7 @@ def run_or_skip(inps):
 
     # check configuration
     if flag == 'skip':
+        # 读取输出文件属性，比对本次拟合模型配置是否与上次一致。
         atr = readfile.read_attribute(inps.outfile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in config_keys):
             flag = 'run'
@@ -80,6 +90,7 @@ def read_date_info(inps):
                        dropDate  - 1D np.ndarray in bool in size of all available dates
     """
     # initiate and open time-series file object
+    # 根据 FILE_TYPE 选择正确的时序读取对象。
     ftype = readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']
     if ftype == 'timeseries':
         ts_obj = timeseries(inps.timeseries_file)
@@ -92,6 +103,7 @@ def read_date_info(inps):
     ts_obj.open()
 
     # exclude dates - user inputs
+    # 根据 startDate/endDate/excludeDate 计算不参与拟合的日期列表。
     ex_date_list = ptime.get_exclude_date_list(
         date_list=ts_obj.dateList,
         start_date=inps.startDate,
@@ -100,6 +112,7 @@ def read_date_info(inps):
 
     # exclude dates - no obs data [for offset time-series only for now]
     if os.path.basename(inps.timeseries_file).startswith('timeseriesRg'):
+        # 对偏移时序，如果某些日期全为 0，说明没有有效观测，应排除。
         data, atr = readfile.read(inps.timeseries_file)
         flag = np.nansum(data, axis=(1,2)) == 0
         flag[ts_obj.dateList.index(atr['REF_DATE'])] = 0
@@ -109,9 +122,11 @@ def read_date_info(inps):
             ex_date_list = sorted(list(set(ex_date_list)))
 
     # dates used for estimation - inps.date_list
+    # date_list 是真正参与时间函数拟合的日期。
     inps.date_list = [i for i in ts_obj.dateList if i not in ex_date_list]
 
     # flag array for ts data reading
+    # dropDate 是布尔数组：True 表示该日期保留，False 表示该日期丢弃。
     inps.dropDate = np.array([i not in ex_date_list for i in ts_obj.dateList], dtype=np.bool_)
 
     # print out msg
@@ -128,9 +143,11 @@ def read_date_info(inps):
 
 
 def run_timeseries2time_func(inps):
+    # 主入口：读取位移时序，拟合时间函数参数，并写入 velocity.h5。
     start_time = time.time()
 
     # basic file info
+    # LENGTH/WIDTH 是图像行列数，用来创建输出数据集。
     atr = readfile.read_attribute(inps.timeseries_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
 
@@ -147,13 +164,16 @@ def run_timeseries2time_func(inps):
         print(f'  Set "--ref-date {inps.date_list[0]}" and continue.')
 
     # get deformation model from inputs
+    # model 描述要拟合哪些时间函数：速度、多项式、周期、阶跃、指数/对数等。
     model = time_func.inps2model(inps, date_list=inps.date_list)
+    # num_param 是模型参数数量，例如线性速度模型通常有 intercept 和 velocity 两个参数。
     num_param = time_func.get_num_param(model)
 
 
     ## output preparation
 
     # time_func_param: attributes
+    # atrV 是输出 velocity.h5 的元数据，继承输入时序并改写文件类型/单位/日期范围。
     date0, date1 = inps.date_list[0], inps.date_list[-1]
     atrV = dict(atr)
     atrV['FILE_TYPE'] = 'velocity'
@@ -168,11 +188,13 @@ def run_timeseries2time_func(inps):
         atrV['REF_DATE'] = inps.ref_date
 
     # time_func_param: config parameter
+    # 把本次拟合配置写进 HDF5 属性，方便复现和 update 模式检查。
     print(f'add/update the following configuration metadata:\n{config_keys}')
     for key in config_keys:
         atrV[key_prefix+key] = str(vars(inps)[key])
 
     # time_func_param: instantiate output file
+    # model2hdf5_dataset() 根据 model 自动生成 velocity、annualAmplitude、stepYYYYMMDD 等输出数据集定义。
     ds_name_dict, ds_unit_dict = model2hdf5_dataset(model, ds_shape=(length, width))[1:]
     # add dataset: residue
     if inps.uncertaintyQuantification == 'residue':
@@ -186,6 +208,7 @@ def run_timeseries2time_func(inps):
 
     # timeseries_res: attributes + instantiate output file
     if inps.save_res:
+        # 可选输出残差时序：原时序减去拟合时间函数后的剩余部分。
         atrR = dict(atr)
         # remove REF_DATE attribute
         for key in ['REF_DATE']:
@@ -203,6 +226,7 @@ def run_timeseries2time_func(inps):
     ## estimation
 
     # calc number of box based on memory limit
+    # 按内存上限估算需要把图像切成多少个空间块。
     memoryAll = (num_date + num_param * 2 + 2) * length * width * 4
     if inps.uncertaintyQuantification == 'bootstrap':
         memoryAll += inps.bootstrapCount * num_param * length * width * 4
@@ -216,6 +240,7 @@ def run_timeseries2time_func(inps):
 
     # loop for block-by-block IO
     for i, box in enumerate(box_list):
+        # 当前 box 是空间块范围 (x0, y0, x1, y1)。
         box_wid = box[2] - box[0]
         box_len = box[3] - box[1]
         num_pixel = box_len * box_wid
@@ -225,21 +250,25 @@ def run_timeseries2time_func(inps):
             print(f'box length: {box_len}')
 
         # initiate output
+        # m 保存模型参数，m_std 保存参数标准差；形状是 num_param x num_pixel。
         m = np.zeros((num_param, num_pixel), dtype=DATA_TYPE)
         m_std = np.zeros((num_param, num_pixel), dtype=DATA_TYPE)
 
         # read input
+        # 读取当前空间块的时序数据。
         print(f'reading data from file {inps.timeseries_file} ...')
         ts_data = readfile.read(inps.timeseries_file, box=box)[0]
 
         # referencing in time and space
         # for file w/o reference info. e.g. ERA5.h5
         if inps.ref_date:
+            # 如果指定参考日期，就把每个像元所有日期减去该参考日期的值。
             print(f'referecing to date: {inps.ref_date}')
             ref_ind = inps.date_list.index(inps.ref_date)
             ts_data -= np.tile(ts_data[ref_ind, :, :], (ts_data.shape[0], 1, 1))
 
         if inps.ref_yx:
+            # 如果指定参考点，就把每个日期所有像元减去该参考点的值。
             print(f'referencing to point (y, x): ({inps.ref_yx[0]}, {inps.ref_yx[1]})')
             ref_box = (inps.ref_yx[1], inps.ref_yx[0], inps.ref_yx[1]+1, inps.ref_yx[0]+1)
             ref_val = readfile.read(inps.timeseries_file, box=ref_box)[0]
@@ -248,10 +277,12 @@ def run_timeseries2time_func(inps):
 
         ts_data = ts_data[inps.dropDate, :, :].reshape(num_date, -1)
         if atrV['UNIT'] == 'mm':
+            # 输出单位需要是米/年；如果输入是毫米，先转成米。
             ts_data *= 1./1000.
 
         ts_cov = None
         if inps.uncertaintyQuantification == 'covariance':
+            # covariance 模式从时间序列协方差文件传播得到模型参数不确定性。
             print(f'reading time-series covariance matrix from file {inps.timeSeriesCovFile} ...')
             ts_cov = readfile.read(inps.timeSeriesCovFile, box=box)[0]
             if len(ts_cov.shape) == 4:
@@ -272,6 +303,7 @@ def run_timeseries2time_func(inps):
             #ts_cov[ts_cov<epsilon] = epsilon
 
         # mask invalid pixels
+        # 跳过所有日期均为 0 或 NaN 的像元；这些像元没有有效位移信息。
         print('skip pixels with zero/nan value in all acquisitions')
         ts_stack = np.nanmean(ts_data, axis=0)
         mask = np.multiply(~np.isnan(ts_stack), ts_stack!=0.)
@@ -299,6 +331,7 @@ def run_timeseries2time_func(inps):
 
 
         ### estimation / solve Gm = d
+        # 时间函数拟合本质上也是最小二乘：G 是设计矩阵，m 是模型参数，d 是观测位移。
         print('estimating time functions via linalg.lstsq ...')
 
         if inps.uncertaintyQuantification == 'bootstrap':
@@ -310,6 +343,7 @@ def run_timeseries2time_func(inps):
                 inps.bootstrapCount))
 
             # calc model of all bootstrap sampling
+            # bootstrap 反复有放回抽样日期，得到多组参数，用参数离散程度估计不确定性。
             rng = np.random.default_rng()
             m_boot = np.zeros((inps.bootstrapCount, num_param, num_pixel2inv), dtype=DATA_TYPE)
             prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
@@ -340,6 +374,7 @@ def run_timeseries2time_func(inps):
 
         else:
             ## option 2 - least squares with uncertainty propagation
+            # 普通模式：直接估计模型参数 m 和残差平方和 e2。
             G, m[:, mask], e2 = time_func.estimate_time_func(
                 model=model,
                 date_list=inps.date_list,
@@ -384,6 +419,7 @@ def run_timeseries2time_func(inps):
                 print(msg)
 
                 # calc the common pseudo-inverse matrix
+                # Gplus 是 G 的伪逆，用于把时序协方差传播到模型参数协方差。
                 Gplus = linalg.pinv(G)
 
                 # loop over each pixel
@@ -403,6 +439,7 @@ def run_timeseries2time_func(inps):
 
             elif inps.uncertaintyQuantification == 'residue':
                 # option 2.3 - assume obs errors following normal dist. in time
+                # residue 模式根据拟合残差估计参数标准差。
                 print('estimating time functions STD from time-series fitting residual ...')
                 G_inv = linalg.inv(np.dot(G.T, G))
                 m_var = e2.reshape(1, -1) / (num_date - num_param)
@@ -415,6 +452,7 @@ def run_timeseries2time_func(inps):
                 # vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
 
         # write - time func params
+        # 把一维像元参数重新 reshape 成当前空间块的二维图像，并写入 HDF5 对应数据集。
         block = [box[1], box[3], box[0], box[2]]
         ds_dict = model2hdf5_dataset(model, m, m_std, mask=mask)[0]
         # save dataset: residue
@@ -430,6 +468,7 @@ def run_timeseries2time_func(inps):
 
         # write - residual file
         if inps.save_res:
+            # 计算并保存残差时序，便于后续检查模型没有解释掉的信号。
             print('calculating the time series residual ...')
             block = [0, num_date, box[1], box[3], box[0], box[2]]
             ts_res = np.full((num_date, box_len*box_wid), np.nan, dtype=np.float32)
@@ -464,6 +503,7 @@ def timefun_names2ds_names(timefun_names, all_ds_names):
                 out_ds_inds   - list(int), list of index of the matched datasets in the inverted dataset list
     """
     # remove 1) dataset endswith "Std" and 2) "residue", as they are not directly inverted.
+    # 这个函数把用户输入的时间函数类别，例如 'periodic'，转换成实际 HDF5 数据集名。
     inv_ds_names = [x for x in all_ds_names if not x.endswith('Std') and x not in ['residue']]
 
     timefun_name2ds_name_patterns = {
@@ -514,6 +554,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
                 ds_dict = model2hdf5_dataset(model, m, m_std)[0]
     """
     # deformation model info
+    # 根据 model 中各类时间函数数量，依次生成对应输出数据集。
     poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
     num_step   = len(model['stepDate'])
@@ -538,6 +579,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
             mask = mask.flatten()
 
     # time func 1 - polynomial
+    # 多项式项：intercept、velocity、acceleration、poly3...
     p0 = 0
     for i in range(poly_deg+1):
         # dataset name
@@ -566,6 +608,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
         ds_unit_dict[dsName+'Std'] = unit
 
     # time func 2 - periodic
+    # 周期项：保存振幅和相位，例如 annualAmplitude / annualPhase。
     p0 += poly_deg + 1
     for i in range(num_period):
         # dataset name
@@ -601,6 +644,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
         ds_unit_dict[dsNames[1]] = 'radian'
 
     # time func 3 - step
+    # 阶跃项：保存指定日期之后的突跳量，例如 step20200101。
     p0 += 2 * num_period
     for i in range(num_step):
         # dataset name
@@ -618,6 +662,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
         ds_unit_dict[dsName+'Std'] = 'm'
 
     # time func 4 - polyline
+    # 分段线性项：保存某个日期之后的速度变化。
     p0 += num_step
     for i in range(num_pline):
         # dataset name
@@ -646,6 +691,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
         ds_unit_dict[dsName+'Std'] = 'm/yr'
 
     # time func 5 - exponential
+    # 指数衰减项：常用于震后松弛等随时间指数衰减的信号。
     p0 += num_pline
     i = 0
     for exp_onset in model['exp'].keys():
@@ -668,6 +714,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
             i += 1
 
     # time func 6 - logarithmic
+    # 对数项：常用于某些震后/长期缓慢恢复过程。
     p0 += num_exp
     i = 0
     for log_onset in model['log'].keys():

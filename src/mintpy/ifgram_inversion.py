@@ -8,18 +8,27 @@
 #     from mintpy import ifgram_inversion as ifginv
 
 
+# os 用来处理文件路径、判断文件是否存在、比较文件修改时间。
 import os
+# time 用来统计反演运行耗时。
 import time
 
+# h5py 用来直接读写 HDF5 文件中的数据集和属性。
 import h5py
+# numpy 用来做数组计算；反演过程中相位栈、时间序列、掩膜都以 numpy 数组表示。
 import numpy as np
+# scipy.linalg 提供线性代数求解器；这里比 numpy.linalg 更适合大型最小二乘问题。
 from scipy import linalg  # more effieint than numpy.linalg
 
+# cluster 负责分块/并行；ifgramStack 是读取 ifgramStack.h5 的对象。
 from mintpy.objects import cluster, ifgramStack
+# decorrelation 模块把相干性转换成权重，用于加权最小二乘反演。
 from mintpy.simulation import decorrelation as decor
+# ptime 处理日期；readfile/writefile 读写文件；ut 是通用工具函数。
 from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 # key configuration parameter name
+# 这些配置项会写入输出文件属性；下次 update 模式用它们判断是否需要重跑。
 key_prefix = 'mintpy.networkInversion.'
 config_keys = [
     'obsDatasetName',
@@ -36,6 +45,7 @@ config_keys = [
 
 
 def run_or_skip(inps):
+    # update 模式判断：如果输出文件已存在、比输入新、关键配置没变，就跳过反演。
     print('-'*50)
     print('update mode: ON')
     flag = 'skip'
@@ -48,6 +58,7 @@ def run_or_skip(inps):
         # check if time-series file is partly written using file size
         # since time-series file is not compressed
         with h5py.File(inps.outfile[0], 'r') as f:
+            # timeseries 数据集是 float32，理论数据字节数约为元素个数 * 4。
             fsize_ref = f['timeseries'].size * 4
         fsize = os.path.getsize(inps.outfile[0])
         if fsize <= fsize_ref:
@@ -58,6 +69,7 @@ def run_or_skip(inps):
             print(f'1) output files already exist: {inps.outfile}.')
             # check modification time
             with h5py.File(inps.ifgramStackFile, 'r') as f:
+                # MODIFICATION_TIME 是输入数据集的修改时间；没有这个属性时退回文件修改时间。
                 ti = float(f[inps.obsDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
             to = min(os.path.getmtime(i) for i in inps.outfile)
             if ti > to:
@@ -70,6 +82,7 @@ def run_or_skip(inps):
     if flag == 'skip':
         atr_ifg = readfile.read_attribute(inps.ifgramStackFile)
         atr_ts = readfile.read_attribute(inps.tsFile)
+        # 当前实际参与反演的干涉图数量，受 dropIfgram 网络筛选影响。
         inps.numIfgram = len(ifgramStack(inps.ifgramStackFile).get_date12_list(dropIfgram=True))
         meta_keys = [i for i in ['REF_Y', 'REF_X'] if i in atr_ts.keys()]
 
@@ -141,8 +154,10 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                                     used during the inversion
     """
 
+    # y 是观测值矩阵：行是干涉图，列是像元。reshape 保证它是二维数组。
     y = y.reshape(A.shape[0], -1)
     if weight_sqrt is not None:
+        # weight_sqrt 是权重的平方根，用于加权最小二乘：sqrt(W) * G * x = sqrt(W) * y。
         weight_sqrt = weight_sqrt.reshape(A.shape[0], -1)
     num_date = A.shape[1] + 1
     num_pixel = y.shape[1]
@@ -156,6 +171,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
     num_inv_obs = 0
 
     ##### skip invalid phase/offset value [NaN]
+    # 对单个像元，如果某些干涉图是 NaN，就同时从观测值和设计矩阵中删掉对应行。
     y, [A, B, weight_sqrt] = skip_invalid_obs(y, mat_list=[A, B, weight_sqrt])
 
     # check 1 - network redundancy: skip inversion if < threshold
@@ -177,6 +193,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
     try:
         if min_norm_velocity:
             ##### min-norm velocity
+            # 最小范数速度模式使用 B 矩阵求解速度增量，再累加成位移时序。
             if weight_sqrt is not None:
                 X, e2 = linalg.lstsq(np.multiply(B, weight_sqrt),
                                      np.multiply(y, weight_sqrt),
@@ -192,11 +209,13 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                                                print_msg=print_msg)
 
             # assemble time-series
+            # X 是速度；乘以相邻日期时间间隔 tbase_diff 得到位移增量，再 cumsum 累加成时序。
             ts_diff = X * np.tile(tbase_diff, (1, num_pixel))
             ts[1:, :] = np.cumsum(ts_diff, axis=0)
 
         else:
             ##### min-norm displacement
+            # 最小范数位移模式直接使用 A 矩阵求解每个日期相对参考日期的位移。
             if weight_sqrt is not None:
                 X, e2 = linalg.lstsq(np.multiply(A, weight_sqrt),
                                      np.multiply(y, weight_sqrt),
@@ -215,6 +234,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
             ts[1: ,:] = X
 
     except linalg.LinAlgError:
+        # 线性方程不可解或矩阵数值异常时，保留默认输出，避免整个批块崩溃。
         pass
 
     # number of observations used for inversion
@@ -238,6 +258,7 @@ def estimate_timeseries_cov(G, y, y_std, rcond=1e-5, min_redundancy=1.0):
                 y_std  - 2D np.ndarray in size of (num_pair, 1), stack of obs std. dev.
     Returns:    ts_cov - 2D np.ndarray in size of (num_date-1, num_date-1), time-series obs std. dev.
     """
+    # 这个函数用于不确定性传播：把干涉图观测标准差传播成时间序列协方差。
     y = y.reshape(G.shape[0], -1)
     y_std = y_std.reshape(G.shape[0], -1)
 
@@ -259,7 +280,9 @@ def estimate_timeseries_cov(G, y, y_std, rcond=1e-5, min_redundancy=1.0):
     ## TS var. --> TS std. dev.
     #ts_cov = np.sqrt(ts_var)
     Gplus = linalg.pinv(G)
+    # stack_cov 是观测协方差矩阵；这里假设不同干涉图之间相互独立，所以是对角矩阵。
     stack_cov = np.diag(np.square(y_std.flatten()))
+    # 线性传播公式：Cov(x) = G+ * Cov(y) * (G+)^T。
     ts_cov = np.linalg.multi_dot([Gplus, stack_cov, Gplus.T])
 
     return ts_cov
@@ -275,6 +298,7 @@ def skip_invalid_obs(obs, mat_list):
     """
     if np.any(np.isnan(obs)):
         # get flag matrix
+        # flag=True 表示该干涉图观测值有效；False 表示当前像元在这幅干涉图中无效。
         flag = (~np.isnan(obs[:, 0])).flatten()
 
         # update obs
@@ -303,12 +327,14 @@ def calc_inv_quality(G, X, y, e2, inv_quality_name='temporalCoherence', weight_s
     Returns:    inv_quality      - 1D np.ndarray in size of (num_pixel), temporalCoherence / residual
     """
 
+    # 反演质量用于判断时序结果可信度：相位用 temporalCoherence，偏移用 residual。
     num_pair, num_pixel = y.shape
     inv_quality = np.zeros(num_pixel, dtype=np.float32)
 
     # chunk_size as the number of pixels
     chunk_size = int(ut.round_to_1(2e5 / num_pair))
     if num_pixel > chunk_size:
+        # 像元很多时分块计算质量指标，避免一次性创建巨大残差矩阵占满内存。
         num_chunk = int(np.ceil(num_pixel / chunk_size))
         if print_msg:
             print('calculating {} in chunks of {} pixels: {} chunks in total ...'.format(
@@ -321,6 +347,7 @@ def calc_inv_quality(G, X, y, e2, inv_quality_name='temporalCoherence', weight_s
 
             if inv_quality_name == 'temporalCoherence':
                 #for phase
+                # e 是残差相位；exp(1j*e) 把残差转为单位复数，平均长度越接近 1 表示越一致。
                 e = y[:, c0:c1] - np.dot(G, X[:, c0:c1])
                 inv_quality[c0:c1] = np.abs(np.sum(np.exp(1j*e), axis=0)) / num_pair
 
@@ -370,6 +397,7 @@ def check_design_matrix(ifgram_file, weight_func='var'):
     Check Rank of Design matrix for weighted inversion
     """
 
+    # 设计矩阵必须满秩，才能把干涉图网络稳定反演成时间序列。
     date12_list = ifgramStack(ifgram_file).get_date12_list(dropIfgram=True)
     A = ifgramStack.get_design_matrix4timeseries(date12_list)[0]
     if weight_func == 'no':
@@ -399,6 +427,7 @@ def read_stack_obs(stack_obj, box, ref_phase, obs_ds_name='unwrapPhase', dropIfg
     Returns:    stack_obs - 2D array of unwrapPhase in size of (num_pair, num_pixel)
     """
     # Read unwrapPhase
+    # dropIfgram=True 表示只读取网络筛选后保留的干涉图。
     num_pair = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if print_msg:
         print(f'reading {obs_ds_name} in {box} * {num_pair} ...')
@@ -426,6 +455,7 @@ def read_stack_obs(stack_obj, box, ref_phase, obs_ds_name='unwrapPhase', dropIfg
 
     # reference unwrapPhase
     for i in range(num_pair):
+        # 每幅干涉图减去参考像元相位，使所有相位相对于同一个参考点。
         mask = stack_obs[i, :] != 0.
         stack_obs[i, :][mask] -= ref_phase[i]
     return stack_obs
@@ -436,6 +466,7 @@ def mask_stack_obs(stack_obs, stack_obj, box, mask_ds_name=None, mask_threshold=
     """Mask input unwrapped phase by setting them to np.nan."""
 
     # Read/Generate Mask
+    # 掩膜的目的：把低质量像元设为 NaN，让最小二乘反演自动忽略它们。
     num_pair = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if mask_ds_name and mask_ds_name in stack_obj.datasetNames:
         if print_msg:
@@ -451,11 +482,13 @@ def mask_stack_obs(stack_obs, stack_obj, box, mask_ds_name=None, mask_threshold=
         msk = np.ones(msk_data.shape, dtype=np.bool_)
 
         if mask_ds_name in ['connectComponent']:
+            # connectComponent 为 0 通常表示该像元解缠不可靠。
             msk *= msk_data != 0
             if print_msg:
                 print(f'mask out pixels with {mask_ds_name} == 0 by setting them to NaN')
 
         elif mask_ds_name in ['coherence', 'offsetSNR']:
+            # coherence/offsetSNR 小于阈值表示质量低，设为无效。
             msk *= msk_data >= mask_threshold
             if print_msg:
                 print(f'mask out pixels with {mask_ds_name} < {mask_threshold} by setting them to NaN')
@@ -514,6 +547,7 @@ def calc_weight_sqrt(stack_obj, box, weight_func='var', dropIfgram=True, chunk_s
     print('calculating weight from spatial coherence ...')
 
     # read coherence
+    # 相干性越高，干涉图通常越可靠；加权反演会给高相干观测更大权重。
     weight = read_coherence(stack_obj, box=box, dropIfgram=dropIfgram)
     num_pixel = weight.shape[1]
 
@@ -532,6 +566,7 @@ def calc_weight_sqrt(stack_obj, box, weight_func='var', dropIfgram=True, chunk_s
            ': {n} chunks in total ...').format(c=chunk_size, n=num_chunk))
 
     for i in range(num_chunk):
+        # 分块把 coherence 转成 weight，减少内存峰值。
         c0 = i * chunk_size
         c1 = min((i + 1) * chunk_size, num_pixel)
         if i == 0:
@@ -564,6 +599,7 @@ def get_design_matrix4std(stack_obj):
     """
 
     # get ref_date from template file
+    # 时间序列标准差计算需要明确参考日期，因为协方差矩阵要相对于该日期组织。
     mintpy_dir = os.path.dirname(os.path.dirname(stack_obj.file))
     cfg_file = os.path.join(mintpy_dir, 'smallbaselineApp.cfg')
     ref_date = readfile.read_template(cfg_file)['mintpy.reference.date']
@@ -618,6 +654,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
     Example:    run_ifgram_inversion_patch('ifgramStack.h5', box=(0,200,1316,400))
     """
 
+    # patch 表示图像的一块区域。大图会被切成多个 patch 分别反演，降低内存占用。
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
     stack_dir, stack_base = os.path.split(ifgram_file)
@@ -630,6 +667,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
     ## 1. input info
 
     # size
+    # box 是 (x0, y0, x1, y1)。如果 box=None，就处理整幅图。
     if box:
         num_row = box[3] - box[1]
         num_col = box[2] - box[0]
@@ -639,12 +677,14 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
     num_pixel = num_row * num_col
 
     # get tbase_diff in the unit of year
+    # tbase_diff 是相邻日期之间的时间间隔，单位为年，用于把速度积分成位移。
     date_list = stack_obj.get_date_list(dropIfgram=True)
     num_date = len(date_list)
     tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / 365.25
     tbase_diff = np.diff(tbase).reshape(-1, 1)
 
     # design matrix
+    # A/B 是由干涉图网络生成的设计矩阵，是“干涉图相位差 -> 日期时序”的数学桥梁。
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     A, B = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)[0:2]
 
@@ -655,6 +695,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
     if obs_ds_name.startswith(('unwrapPhase', 'ion')):
         # calculate weight
         if weight_func not in ['no', 'sbas']:
+            # 相位观测可以根据 coherence 计算权重。
             weight_sqrt = calc_weight_sqrt(stack_obj, box,
                                            weight_func=weight_func,
                                            dropIfgram=True,
@@ -675,6 +716,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
     elif 'offset' in obs_ds_name.lower():
         if calc_cov or weight_func == 'var':
             # calculate weight for offset
+            # 偏移观测的权重来自对应的 Std 数据集，标准差越小权重越大。
             print('reading {} in {} * {} ...'.format(obs_ds_name+'Std', box, len(date12_list)))
             weight_sqrt = stack_obj.read(datasetName=obs_ds_name+'Std',
                                          box=box,
@@ -704,6 +746,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
         raise ValueError(f'un-recognized observation dataset name: {obs_ds_name}')
 
     # 1.2 read / mask unwrapPhase and offset
+    # 读取观测栈数据，并减去参考相位，得到可用于反演的观测矩阵。
     stack_obs = read_stack_obs(stack_obj, box, ref_phase,
                                obs_ds_name=obs_ds_name,
                                dropIfgram=True)
@@ -722,10 +765,12 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
                                  dropIfgram=True)
 
     # 1.3 mask of pixels to invert
+    # mask 是一维布尔数组，长度等于当前 patch 的像元数；True 表示该像元需要反演。
     mask = np.ones(num_pixel, np.bool_)
 
     # 1.3.1 - Water Mask
     if water_mask_file:
+        # 水体区域通常没有稳定 InSAR 相位，因此跳过 waterMask 为 0 的像元。
         print(f'skip pixels (on the water) with zero value in file: {os.path.basename(water_mask_file)}')
         atr_msk = readfile.read_attribute(water_mask_file)
         len_msk, wid_msk = int(atr_msk['LENGTH']), int(atr_msk['WIDTH'])
@@ -739,6 +784,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
         del waterMask
 
     # 1.3.2 - Mask for NaN value in ALL ifgrams
+    # 如果一个像元在所有干涉图里都是 NaN，没有任何观测，无法反演。
     print(f'skip pixels with {obs_ds_name} = NaN in all interferograms')
     mask *= ~np.all(np.isnan(stack_obs), axis=0)
 
@@ -757,6 +803,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
         stack_quality_file = os.path.join(stack_dir, '../avgSpatialCoh.h5')
 
     if os.path.isfile(stack_quality_file):
+        # 如果有平均相干性/SNR 文件，则把质量指标为 0 的像元也跳过。
         atr_stack = readfile.read_attribute(stack_quality_file)
         len_stack, wid_stack = int(atr_stack['LENGTH']), int(atr_stack['WIDTH'])
         if (len_stack, wid_stack) == (stack_obj.length, stack_obj.width):
@@ -775,6 +822,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
     ## 2. inversion
 
     # 2.1 initiale the output matrices
+    # 先创建当前 patch 的输出数组，后面只把有效像元位置填进去。
     ts = np.zeros((num_date, num_pixel), np.float32)
     ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32) if calc_cov else None
     inv_quality = np.zeros(num_pixel, np.float32)
@@ -802,6 +850,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
     # 2.2 un-weighted inversion (classic SBAS)
     if weight_sqrt is None:
+        # 非加权反演是经典 SBAS。对“所有干涉图都有有效观测”的像元，可以一次性矩阵求解。
         msg = f'estimating time-series for pixels with valid {obs_ds_name} in'
 
         # a. split mask into mask_all/part_net
@@ -829,6 +878,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
         # c. pixel-by-pixel for pixels with obs not in all ifgrams
         if np.sum(mask_part_net) > 0:
+            # 有些像元只在部分干涉图有效，它们的有效观测行不同，需要逐像元反演。
             num_pixel2inv_part = int(np.sum(mask_part_net))
             idx_pixel2inv_part = np.where(mask_part_net)[0]
             print(f'{msg} some ifgrams ({num_pixel2inv_part} pixels; {num_pixel2inv_part/num_pixel2inv*100:.1f}%) ...')
@@ -853,6 +903,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
     # 2.3 weighted inversion - pixel-by-pixel
     else:
+        # 加权反演中每个像元权重可能不同，因此逐像元求解。
         print('estimating time-series via WLS pixel-by-pixel ...')
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
         for i in range(num_pixel2inv):
@@ -875,6 +926,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
     # 2.4 time-series std. dev. - pixel-by-pixel
     if calc_cov:
+        # 如果要求协方差，就把干涉图观测标准差传播到时间序列协方差。
         print('propagating std. dev. from network of interferograms to time-series (Yunjun et al., 2021, FRINGE) ...')
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
         for i in range(num_pixel2inv):
@@ -907,12 +959,14 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
     # 3.2 convert displacement unit to meter
     if obs_ds_name.startswith(('unwrapPhase','ion')):
+        # 相位单位是弧度，按雷达波长转换为 LOS 位移，单位米。
         phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
         ts *= phase2range
         ts_cov = ts_cov * np.abs(phase2range)**2 if calc_cov else ts_cov
         print('converting LOS phase unit from radian to meter')
 
     elif (obs_ds_name == 'azimuthOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
+        # 方位向偏移原本单位是像素，需要乘以地面分辨率转换为米。
         az_pixel_size = ut.azimuth_ground_resolution(stack_obj.metadata)
         az_pixel_size /= float(stack_obj.metadata['ALOOKS'])
         ts *= az_pixel_size
@@ -920,6 +974,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
         print(f'converting azimuth offset unit from pixel ({az_pixel_size:.2f} m) to meter')
 
     elif (obs_ds_name == 'rangeOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
+        # 距离向偏移原本单位是像素，需要乘以距离向像素大小转换为米。
         rg_pixel_size = float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
         rg_pixel_size /= float(stack_obj.metadata['RLOOKS'])
         ts *= -1 * rg_pixel_size
@@ -937,6 +992,8 @@ def run_ifgram_inversion(inps):
                 run_ifgram_inversion(inps)
     """
 
+    # run_ifgram_inversion() 是整个 ifgram_inversion.py 的主入口。
+    # 它负责准备输出文件、把图像切块、逐块调用 run_ifgram_inversion_patch()、再把结果写回磁盘。
     start_time = time.time()
 
     ## limit the number of threads in numpy/scipy to 1
@@ -963,16 +1020,19 @@ def run_ifgram_inversion(inps):
 
     stack_obj = ifgramStack(inps.ifgramStackFile)
     stack_obj.open(print_msg=False)
+    # 只读取 dropIfgram=True 的日期对，也就是 modify_network 后保留下来的干涉图。
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     date_list = stack_obj.get_date_list(dropIfgram=True)
     length, width = stack_obj.length, stack_obj.width
 
     # 1.1 read values on the reference pixel
+    # refPhase 是每幅干涉图在参考像元上的相位，用于把所有干涉图统一参考到同一点。
     inps.refPhase = stack_obj.get_reference_phase(unwDatasetName=inps.obsDatasetName,
                                                   skip_reference=inps.skip_ref,
                                                   dropIfgram=True)
 
     # 1.2 design matrix
+    # A 的行数是干涉图数量，列数是日期数-1；它描述每个干涉图由哪些日期位移相减得到。
     A = stack_obj.get_design_matrix4timeseries(date12_list)[0]
     num_pair, num_date = A.shape[0], A.shape[1]+1
     inps.numIfgram = num_pair
@@ -1022,6 +1082,7 @@ def run_ifgram_inversion(inps):
     ## 2. prepare output
 
     # 2.1 metadata
+    # 输出文件继承输入 ifgramStack 的元数据，并额外写入本次反演的关键配置。
     meta = dict(stack_obj.metadata)
     for key in config_keys:
         meta[key_prefix+key] = str(vars(inps)[key])
@@ -1031,6 +1092,7 @@ def run_ifgram_inversion(inps):
     meta['REF_DATE'] = date_list[0]
 
     # 2.2 instantiate time-series
+    # timeseries.h5 保存反演得到的位移时序，包含 date、bperp 和 timeseries 三个核心数据集。
     dates = np.array(date_list, dtype=np.bytes_)
     pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
     ds_name_dict = {
@@ -1041,6 +1103,7 @@ def run_ifgram_inversion(inps):
     writefile.layout_hdf5(inps.tsFile, ds_name_dict, metadata=meta)
 
     if inps.calcCov:
+        # 可选输出：时间序列协方差文件，用来量化每期位移的不确定性。
         fbase = os.path.splitext(inps.tsFile)[0]
         fbase += 'Decor' if inps.obsDatasetName.startswith('unwrapPhase') else ''
         tsStdFile = f'{fbase}Cov.h5'
@@ -1050,6 +1113,7 @@ def run_ifgram_inversion(inps):
         writefile.layout_hdf5(tsStdFile, ds_name_dict, meta)
 
     # 2.3 instantiate invQualifyFile: temporalCoherence / residualInv
+    # invQualityFile 保存反演质量：相位时通常是 temporalCoherence，偏移时通常是 residual。
     if 'residual' in os.path.basename(inps.invQualityFile).lower():
         inv_quality_name = 'residual'
         meta['UNIT'] = 'pixel'
@@ -1062,6 +1126,7 @@ def run_ifgram_inversion(inps):
     writefile.layout_hdf5(inps.invQualityFile, ds_name_dict, metadata=meta)
 
     # 2.4 instantiate number of inverted observations
+    # numInvFile 保存每个像元实际参与反演的干涉图数量，可用于筛选低约束像元。
     meta['FILE_TYPE'] = 'mask'
     meta['UNIT'] = '1'
     # ignore NO_DATA_VALUE from ifgram stack file here as 1) it makes sense
@@ -1075,9 +1140,11 @@ def run_ifgram_inversion(inps):
     ## 3. run the inversion / estimation and write to disk
 
     # 3.1 split ifgram_file into blocks to save memory
+    # 大图像直接一次性反演会占用大量内存，所以按 maxMemory 把图像切成多个 box。
     box_list, num_box = stack_obj.split2boxes(max_memory=inps.maxMemory)
 
     # 3.2 prepare the input arguments for *_patch()
+    # data_kwargs 是传给 run_ifgram_inversion_patch() 的固定参数；循环中只更新 box。
     data_kwargs = {
         "ifgram_file"       : inps.ifgramStackFile,
         "ref_phase"         : inps.refPhase,
@@ -1104,10 +1171,12 @@ def run_ifgram_inversion(inps):
         data_kwargs['box'] = box
         if not inps.cluster:
             # non-parallel
+            # 单进程模式：直接调用 patch 函数。
             ts, ts_cov, inv_quality, num_inv_obs = run_ifgram_inversion_patch(**data_kwargs)[:-1]
 
         else:
             # parallel
+            # 并行模式：用 Dask 把同一个 patch 内部的计算再分给多个 worker。
             print('\n\n------- start parallel processing using Dask -------')
 
             # initiate the output data
@@ -1134,6 +1203,7 @@ def run_ifgram_inversion(inps):
         # write the block to disk
         # with 3D block in [z0, z1, y0, y1, x0, x1]
         # and  2D block in         [y0, y1, x0, x1]
+        # HDF5 分块写入时必须指定写入区域 block，避免覆盖其它 patch 的结果。
         # time-series - 3D
         block = [0, num_date, box[1], box[3], box[0], box[2]]
         writefile.write_hdf5_block(inps.tsFile,
@@ -1167,6 +1237,7 @@ def run_ifgram_inversion(inps):
 
     # 3.4 update output data on the reference pixel (for phase)
     if not inps.skip_ref:
+        # 参考像元理论上位移为 0、质量为最佳；这里显式修正输出文件中的参考像元值。
         # grab ref_y/x
         ref_y = int(stack_obj.metadata['REF_Y'])
         ref_x = int(stack_obj.metadata['REF_X'])
@@ -1183,6 +1254,7 @@ def run_ifgram_inversion(inps):
             f['mask'][ref_y, ref_x] = num_pair
 
     # roll back to the original number of threads
+    # 恢复进入函数前的线程设置，避免影响后续其它模块。
     cluster.roll_back_num_threads(num_threads_dict)
 
     m, s = divmod(time.time() - start_time, 60)

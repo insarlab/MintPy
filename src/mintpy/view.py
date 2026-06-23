@@ -7,19 +7,29 @@
 #   from mintpy.view import prep_slice, plot_slice, viewer
 
 
+# datetime 用来生成时间戳或处理绘图中的日期显示。
 import datetime as dt
+# os 用来处理文件路径、判断输出图片是否存在、比较修改时间。
 import os
+# re 是正则表达式库，用来按通配/模式搜索数据集名称。
 import re
+# warnings 用来控制警告显示；这里抑制 matplotlib 的部分 UserWarning。
 import warnings  # suppress UserWarning from matplotlib
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
+# cartopy.crs 提供地图投影对象，例如 PlateCarree、UTM。
 import cartopy.crs as ccrs
+# matplotlib.pyplot 是 Python 常用绘图库；view.py 的图像最终由它绘制。
 import matplotlib.pyplot as plt
+# numpy 用于数组计算和掩膜处理。
 import numpy as np
+# make_axes_locatable 用来在主图旁边创建 colorbar 的坐标轴。
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+# subset 读取裁剪范围；version 打印 MintPy 版本。
 from mintpy import subset, version
+# multilook_data 用来对数据降采样，减少绘图数据量。
 from mintpy.multilook import multilook_data
 from mintpy.objects import (
     TIMESERIES_KEY_NAMES,
@@ -27,16 +37,19 @@ from mintpy.objects import (
     gnss,
     ifgramStack,
 )
+# pp 是 MintPy 绘图工具集合；ptime 处理日期；readfile 读取 HDF5；ut 是通用工具。
 from mintpy.utils import plot as pp, ptime, readfile, utils as ut
 
 
 ##################################################################################################
 def run_or_skip(inps):
+    # update 模式判断：如果输出图片已存在且比输入文件新，就跳过绘图。
     vprint('update mode: ON')
     flag = 'skip'
 
     # run if showing figures
     if inps.disp_fig:
+        # 如果要弹出图形窗口，就必须运行，不能只看已有图片文件。
         flag = 'run'
         return flag
 
@@ -63,10 +76,12 @@ def run_or_skip(inps):
 
 ##################################################################################################
 def update_inps_with_file_metadata(inps, metadata):
+    # 根据输入文件元数据补全绘图参数，例如裁剪范围、坐标系、颜色范围、标题、输出文件名。
     # Subset
     # Convert subset input into bounding box in radar / geo coordinate
     # geo_box = None if atr is not geocoded.
     coord = ut.coordinate(metadata)
+    # subset_input_dict2box() 把用户输入的 --sub-x/y 或 --sub-lat/lon 转换成像素框。
     inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), metadata)
     inps.pix_box = coord.check_box_within_data_coverage(inps.pix_box)
     inps.geo_box = coord.box_pixel2geo(inps.pix_box)
@@ -79,6 +94,7 @@ def update_inps_with_file_metadata(inps, metadata):
     vprint('------------------------------------------------------------------------')
 
     # DEM contour display
+    # 显示范围太大时，默认关闭 DEM 等高线，避免绘图太慢或图面过乱。
     if max(inps.pix_box[3] - inps.pix_box[1],
            inps.pix_box[2] - inps.pix_box[0]) > 2e3:
         inps.disp_dem_contour = False
@@ -90,6 +106,7 @@ def update_inps_with_file_metadata(inps, metadata):
         inps.multilook = True
 
     # Colormap
+    # 根据文件类型和数据集名称自动选择合适的色带。
     inps.colormap = pp.auto_colormap_name(
         metadata,
         inps.colormap,
@@ -101,6 +118,7 @@ def update_inps_with_file_metadata(inps, metadata):
     # Convert ref_lalo if existed, to ref_yx, and use ref_yx for the following
     # ref_yx is referenced to input data coverage, not subseted area for display
     if inps.ref_lalo:
+        # 如果用户给的是经纬度参考点，转换成文件中的 y/x 像素坐标。
         vprint(f'input reference point in lat/lon: {inps.ref_lalo}')
         if not inps.geo_box and not coord.lookup_file:
             print('WARNING: --ref-lalo is NOT supported when 1) file is radar-coded AND 2) no lookup table file found')
@@ -120,9 +138,11 @@ def update_inps_with_file_metadata(inps, metadata):
         inps.ref_lalo = None
 
     # Points of interest
+    # 读取用户指定的点文件或点坐标，用于在图上标记。
     inps = pp.read_pts2inps(inps, coord)
 
     # Unit and Wrap
+    # 根据数据单位和 --wrap 设置，决定显示单位、缩放倍数以及是否相位缠绕显示。
     inps.disp_unit, inps.wrap = pp.check_disp_unit_and_wrap(
         metadata,
         disp_unit=inps.disp_unit,
@@ -132,6 +152,7 @@ def update_inps_with_file_metadata(inps, metadata):
     )
 
     # Map Projection via cartopy
+    # 根据文件是否地理编码、是否要求 coast/lalo-label，决定是否启用 cartopy 投影。
     inps = check_map_projection(inps, metadata, print_msg=inps.print_msg)
 
     # Min / Max - Display
@@ -144,6 +165,7 @@ def update_inps_with_file_metadata(inps, metadata):
             inps.vlim = inps.wrap_range
 
     # Transparency - Alpha
+    # alpha 是透明度；叠加 DEM 阴影时默认让主数据稍透明。
     if not inps.transparency:
         # Auto adjust transparency value when showing shaded relief DEM
         if inps.dem_file and inps.disp_dem_shade:
@@ -166,6 +188,7 @@ def update_inps_with_file_metadata(inps, metadata):
 
     # Figure output file name
     if not inps.outfile:
+        # 没指定输出文件名时，根据图标题自动生成图片名。
         # ignore whitespaces in the filename
         fbase = inps.fig_title.replace(' ', '')
         if not inps.disp_whitespace:
@@ -195,6 +218,7 @@ def check_map_projection(inps, metadata, print_msg=True):
     """
 
     inps.map_proj_obj = None
+    # Y_UNIT 是坐标单位，常见为 degrees 或 meter。
     inps.coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
     if (inps.geo_box
             and inps.coord_unit.startswith(('deg', 'meter'))
@@ -205,11 +229,13 @@ def check_map_projection(inps, metadata, print_msg=True):
         # https://scitools.org.uk/cartopy/docs/latest/crs/projections.html
         msg = 'initiate cartopy map projection: '
         if inps.coord_unit.startswith('deg'):
+            # PlateCarree 是经纬度坐标最常见的地图投影。
             inps.map_proj_obj = ccrs.PlateCarree()
             print(msg + 'PlateCarree')
 
         elif inps.coord_unit.startswith('meter'):
             if 'UTM_ZONE' in metadata.keys():
+                # UTM 是以米为单位的投影坐标；需要知道 UTM 分区。
                 utm_zone = metadata['UTM_ZONE']
                 inps.map_proj_obj = ccrs.UTM(utm_zone)
                 print(msg + f'UTM zone {utm_zone}')
@@ -228,6 +254,7 @@ def check_map_projection(inps, metadata, print_msg=True):
 
 ##################################################################################################
 def update_data_with_plot_inps(data, metadata, inps):
+    # 在真正绘图前，根据用户参数对数据做参考点改正、单位转换、缠绕显示和数学操作。
     # 1. spatial referencing with respect to the seed point
     if inps.ref_yx:
         inps.ref_box = [inps.ref_yx[1],     inps.ref_yx[0],
@@ -244,6 +271,7 @@ def update_data_with_plot_inps(data, metadata, inps):
 
         if len(data.shape) == 2:
             # read ref_val
+            # 二维图像直接读取参考像元的一个值，然后整幅图减去它。
             if 0 <= ref_y < data.shape[-2] and 0 <= ref_x < data.shape[-1]:
                 ref_val = data[ref_y, ref_x]
             else:
@@ -266,6 +294,7 @@ def update_data_with_plot_inps(data, metadata, inps):
 
         elif len(data.shape) == 3:
             # read ref_val
+            # 三维数据通常是 date x row x col，每个日期都要减去对应日期的参考像元值。
             if 0 <= ref_y < data.shape[-2] and 0 <= ref_x < data.shape[-1]:
                 ref_val = np.squeeze(data[:, ref_y, ref_x])
             elif inps.key == 'timeseries':
@@ -291,6 +320,7 @@ def update_data_with_plot_inps(data, metadata, inps):
         inps.ref_yx = None
 
     # 2. scale data based on the display unit and re-wrap
+    # 例如把 m 转成 cm，或者把相位按 [-pi, pi] 重新缠绕显示。
     (data,
      inps.disp_unit,
      inps.disp_scale,
@@ -307,6 +337,7 @@ def update_data_with_plot_inps(data, metadata, inps):
 
     # math operation
     if inps.math_operation:
+        # 用户可对显示数据做简单数学变换，例如开方、取反、弧度转角度。
         vprint(f'Apply math operation: {inps.math_operation}')
         if   inps.math_operation == 'square' :  data = np.square(data)
         elif inps.math_operation == 'sqrt'   :  data = np.sqrt(data)
@@ -317,6 +348,7 @@ def update_data_with_plot_inps(data, metadata, inps):
         else: raise ValueError(f'un-recognized math operation: {inps.math_operation}')
 
     # 4. update display min/max
+    # 自动计算数据范围和颜色显示范围。
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if not inps.vlim: # and data.ndim < 3:
         (inps.cmap_lut,
@@ -356,6 +388,7 @@ def prep_slice(cmd, auto_fig=False):
         plt.show()
     """
     # parse
+    # prep_slice() 方便其它 Python 代码用一条 view.py 命令字符串准备绘图数据。
     from mintpy.cli.view import cmd_line_parse
     iargs = cmd.split()[1:]
 
@@ -387,12 +420,14 @@ def prep_slice(cmd, auto_fig=False):
                 iargs.append(temp_iarg)
 
     # run parse
+    # 复用 CLI 的参数解析逻辑，保证 Python 调用和命令行调用行为一致。
     inps = cmd_line_parse(iargs)
 
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
     # read input args
+    # 读取文件基础信息、数据集列表，并根据元数据更新绘图参数。
     inps, atr = read_input_file_info(inps)
     inps = update_inps_with_file_metadata(inps, atr)
 
@@ -407,6 +442,7 @@ def prep_slice(cmd, auto_fig=False):
     )
 
     # read data
+    # 只读取当前要绘制的数据集和裁剪区域。
     data, atr = readfile.read(
         inps.file,
         datasetName=inps.dset[0],
@@ -438,6 +474,7 @@ def prep_slice(cmd, auto_fig=False):
 
     # masking
     if inps.zero_mask:
+        # zero_mask 表示把值为 0 的像元遮住，不显示。
         data = np.ma.masked_where(data == 0., data)
 
     if inps.msk is not None:
@@ -477,6 +514,7 @@ def plot_slice(ax, data, metadata, inps):
                 cbar     : matplotlib.colorbar.Colorbar object
     Example: See prep_slice() above for example usage.
     """
+    # plot_slice() 绘制一张二维图，是 view.py 可视化的核心绘图函数。
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
@@ -486,6 +524,7 @@ def plot_slice(ax, data, metadata, inps):
                     shape  - list of int for [length, width] of the data
         Returns:    xx/yy  - 1D np.ndarray of the data coordinates
         """
+        # scatter 绘图需要每个像元的 x/y 坐标，因此把 extent 和数据形状转换成网格坐标。
         height, width = ds_shape
         x = np.linspace(extent[0], extent[1], width)
         y = np.linspace(extent[2], extent[3], height)[::-1]  # reverse the Y-axis
@@ -494,6 +533,7 @@ def plot_slice(ax, data, metadata, inps):
 
     # colormap: str -> object
     if isinstance(inps.colormap, str):
+        # 把色带名称字符串转换成 matplotlib colormap 对象。
         inps.colormap = pp.ColormapExt(
             inps.colormap,
             cmap_lut=inps.cmap_lut,
@@ -502,6 +542,7 @@ def plot_slice(ax, data, metadata, inps):
 
     # read DEM
     if inps.dem_file:
+        # 如果指定 DEM，就读取 DEM 作为背景阴影或等高线。
         dem, dem_metadata, dem_pix_box = pp.read_dem(
             inps.dem_file,
             pix_box=inps.pix_box,
@@ -514,6 +555,7 @@ def plot_slice(ax, data, metadata, inps):
     lalo_digit = ut.get_lalo_digit4display(metadata, coord_unit=inps.coord_unit)
 
     # common options for data visualization
+    # kwargs 是传给 imshow/scatter 的通用绘图参数。
     kwargs = dict(cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1], alpha=inps.transparency, zorder=1)
 
     #----------------------- Plot in Geo-coordinate --------------------------------------------#
@@ -523,6 +565,7 @@ def plot_slice(ax, data, metadata, inps):
         vprint('plot in geo-coordinate')
 
         # extent info for matplotlib.imshow and other functions
+        # extent 告诉 matplotlib 图像四条边对应的地理坐标范围。
         inps.extent = (inps.geo_box[0], inps.geo_box[2], inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
         SNWE = (inps.geo_box[3], inps.geo_box[1], inps.geo_box[0], inps.geo_box[2])
 
@@ -543,6 +586,7 @@ def plot_slice(ax, data, metadata, inps):
             )
 
         # Reference (InSAR) data to a GNSS site
+        # 可选：把 InSAR 图像参考到某个 GNSS 站点附近的像元值。
         coord = ut.coordinate(metadata)
         if inps.disp_gnss and inps.gnss_component and inps.ref_gnss_site:
             gnss_obj = gnss.get_gnss_class(inps.gnss_source)(site=inps.ref_gnss_site)
@@ -558,14 +602,17 @@ def plot_slice(ax, data, metadata, inps):
 
         # Plot data
         if inps.disp_dem_blend:
+            # DEM blend 会把数据颜色和 DEM 阴影融合显示。
             im = pp.plot_blend_image(ax, data, dem, inps, print_msg=inps.print_msg)
 
         elif inps.style == 'image':
+            # image 模式用 imshow 绘制规则栅格，速度最快。
             vprint(f'plotting data as {inps.style} via matplotlib.pyplot.imshow ...')
             im = ax.imshow(data, extent=inps.extent, origin='upper', interpolation=inps.interpolation,
                            animated=inps.animation, **kwargs)
 
         elif inps.style == 'scatter':
+            # scatter 模式逐像元散点绘制，适合不规则显示但速度较慢。
             vprint(f'plotting data as {inps.style} via matplotlib.pyplot.scatter (can take some time) ...')
             xx, yy = extent2meshgrid(inps.extent, data.shape)
             im = ax.scatter(xx, yy, c=data.flatten(), marker='o', s=inps.scatter_marker_size, **kwargs)
@@ -637,6 +684,7 @@ def plot_slice(ax, data, metadata, inps):
             ax = pp.plot_gnss(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
 
         # Status bar
+        # format_coord() 自定义鼠标悬停/状态栏显示内容：经纬度、像元值、DEM 高程、x/y。
         if inps.dem_file:
             coord_dem = ut.coordinate(dem_metadata)
             dem_len, dem_wid = dem.shape
@@ -668,6 +716,7 @@ def plot_slice(ax, data, metadata, inps):
 
     #------------------------ Plot in Y/X-coordinate ------------------------------------------------#
     else:
+        # 非地理坐标绘图：直接使用图像行列号 x/y 作为坐标。
         inps.fig_coord = 'yx'
         vprint('plotting in Y/X coordinate ...')
 
@@ -683,6 +732,7 @@ def plot_slice(ax, data, metadata, inps):
             )
 
         # extent = (left, right, bottom, top) in data coordinates
+        # y 轴使用图像行号，origin 在左上角，因此 top/bottom 顺序与地理图不同。
         inps.extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
                        inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
 
@@ -742,6 +792,7 @@ def plot_slice(ax, data, metadata, inps):
         # Status bar
 
         # read lats/lons if exist
+        # 雷达坐标图也可以尝试从 geometryRadar.h5 读取 latitude/longitude，在状态栏显示经纬度。
         geom_file = os.path.join(os.path.dirname(metadata['FILE_PATH']), 'inputs/geometryRadar.h5')
         if os.path.isfile(geom_file):
             geom_ds_list = readfile.get_dataset_list(geom_file)
@@ -783,6 +834,7 @@ def plot_slice(ax, data, metadata, inps):
     # 3.1 Colorbar
     cbar = None
     if inps.disp_cbar:
+        # 在主图旁边创建一个 colorbar 轴，并绘制颜色条。
         divider = make_axes_locatable(ax)
         cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size, axes_class=plt.Axes)
         inps, cbar = pp.plot_colorbar(inps, im, cax)
@@ -835,6 +887,7 @@ def plot_slice(ax, data, metadata, inps):
 
 ##################################################################################################
 def read_input_file_info(inps):
+    # 读取输入文件基础信息：文件类型、尺寸、数据集列表，并确定要显示哪些数据集。
     # File Basic Info
     atr = readfile.read_attribute(inps.file)
     msg = 'input file is '
@@ -856,6 +909,7 @@ def read_input_file_info(inps):
     vprint(f'file size in y/x: {(inps.length, inps.width)}')
 
     # File dataset List
+    # get_slice_list() 返回可以被 view.py 绘制的二维切片名称列表。
     inps.sliceList = readfile.get_slice_list(inps.file, no_complex=True)
 
     # Read input list of dataset to display
@@ -866,6 +920,7 @@ def read_input_file_info(inps):
 
 def search_dataset_input(all_list, in_list=[], in_num_list=[], search_dset=True):
     """Get dataset(es) from input dataset / dataset_num"""
+    # 这个函数根据用户输入的数据集名称/编号，在文件所有数据集列表中找到匹配项。
     # make a copy to avoid weird variable behavior
     in_num_list = [x for x in in_num_list]
 
@@ -878,6 +933,7 @@ def search_dataset_input(all_list, in_list=[], in_num_list=[], search_dset=True)
         if search_dset:
             for ds in in_list:
                 # style of regular expression
+                # 用户可以输入 velocity 或 *velocity* 这类模式，这里转换成正则表达式搜索。
                 if '*' not in ds:
                     ds = f'*{ds}*'
                 ds = ds.replace('*','.*')
@@ -901,6 +957,7 @@ def search_dataset_input(all_list, in_list=[], in_num_list=[], search_dset=True)
 
 def read_dataset_input(inps):
     """Check input / exclude / reference dataset input with file dataset list"""
+    # 根据用户输入、文件类型和默认规则，确定最终要绘制的数据集列表 inps.dset。
     # read inps.dset + inps.dsetNumList --> inps.dsetNumList
     if len(inps.dset) > 0 or len(inps.dsetNumList) > 0:
         # message
@@ -909,10 +966,12 @@ def read_dataset_input(inps):
 
         # special rule for special file types
         if inps.key == 'velocity':
+            # velocity 文件的数据集名通常很明确，关闭模糊搜索避免误匹配。
             inps.search_dset = False
             vprint(f'turning glob search OFF for {inps.key} file')
 
         elif inps.key == 'timeseries' and len(inps.dset) == 1 and '_' in inps.dset[0]:
+            # 支持 view.py timeseries.h5 20180101_20180201 这种写法：显示后者相对前者。
             date1, date2 = inps.dset[0].split('_')
             inps.dset = [date2]
             inps.ref_date = date1
@@ -926,6 +985,7 @@ def read_dataset_input(inps):
 
     else:
         # default dataset to display for certain type of files
+        # 用户没有指定数据集时，根据文件类型选择默认绘制内容。
         if inps.key == 'ifgramStack':
             inps.dset = ['unwrapPhase']
         elif inps.key == 'HDFEOS':
@@ -956,6 +1016,7 @@ def read_dataset_input(inps):
         search_dset=inps.search_dset)
 
     # read inps.plot_drop_ifgram
+    # ifgramStack 中被 modify_network 丢弃的干涉图，默认不显示。
     drop_num_list = []
     ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
 
@@ -1019,11 +1080,13 @@ def update_figure_setting(inps):
     2) for multi: figure/row/column number
     3) for multi: output file name
     """
+    # 根据数据集数量自动设置单图/多子图布局、字体大小、图像大小和输出文件名。
     length = float(inps.pix_box[3]-inps.pix_box[1])
     width = float(inps.pix_box[2]-inps.pix_box[0])
 
     # One Plot
     if inps.dsetNum == 1:
+        # 单图时优先保证图像比例和 colorbar 空间合适。
         if not inps.font_size:
             inps.font_size = 16
         if not inps.fig_size:
@@ -1039,6 +1102,7 @@ def update_figure_setting(inps):
 
     # Multiple Plots
     else:
+        # 多数据集时自动计算行列数，必要时分成多张 figure。
         if not inps.fig_size:
             inps.fig_size = pp.default_figsize_multi
         vprint(f'figure size : [{inps.fig_size[0]:.2f}, {inps.fig_size[1]:.2f}]')
@@ -1117,6 +1181,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
     """Read multiple datasets for one figure into 3D matrix based on i_start/end"""
 
     # initiate output matrix
+    # data 形状为 子图数量 x 行 x 列；每个子图对应一个二维数据集。
     data = np.zeros((
         i_end - i_start,
         int((inps.pix_box[3] - inps.pix_box[1]) / inps.multilook_num),
@@ -1137,6 +1202,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
         ref_kwargs = dict(box=(ref_x, ref_y, ref_x+1, ref_y+1), print_msg=False)
 
     # fast reading for single dataset type
+    # 如果所有子图属于同一种数据集家族，可以一次性读成 3D 矩阵，速度更快。
     if (len(inps.dsetFamilyList) == 1
             and inps.key in ['timeseries', 'ifgramStack', 'geometry', 'HDFEOS', 'giantTimeseries']):
 
@@ -1158,6 +1224,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
     # slow reading with one 2D matrix at a time
     else:
+        # 数据集类型混杂时，逐个读取二维矩阵更稳妥。
         vprint('reading data as a list of 2D matrices ...')
         kwargs['print_msg'] = False
         prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
@@ -1178,6 +1245,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
     # ref_date for timeseries
     if inps.ref_date:
+        # 对时序数据，可以显示某个日期相对于参考日期的差值。
         vprint('consider input reference date: '+inps.ref_date)
         ref_data = readfile.read(inps.file, datasetName=inps.ref_date, **kwargs)[0]
         data -= ref_data
@@ -1197,10 +1265,12 @@ def read_data4figure(i_start, i_end, inps, metadata):
             or all(d.endswith('Phase') for d in inps.dsetFamilyList)):
         same_unit4all_subplots = True
     else:
+        # 如果多个子图单位不同，就不能统一做单位转换和统一 colorbar 范围。
         same_unit4all_subplots = False
 
     # adjust data due to spatial referencing and unit related scaling
     if same_unit4all_subplots:
+        # 单位一致时，可以对整个 3D data 一次性做参考点/单位/缠绕处理。
         data, inps = update_data_with_plot_inps(data, metadata, inps)
     else:
         if any(x in inps.argv for x in ['-u', '--unit']):
@@ -1211,6 +1281,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
     # mask
     if inps.zero_mask:
+        # 多子图同样支持把 0 值遮住。
         vprint('masking pixels with zero value')
         data = np.ma.masked_where(data == 0., data)
     if inps.msk is not None:
@@ -1219,6 +1290,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
         data = np.ma.masked_where(msk == 0., data)
 
     # update display min/max
+    # 多子图如果共享单位且用户没有手动设置 -v，就自动计算统一颜色范围。
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if (same_unit4all_subplots
             and all(arg not in inps.argv for arg in ['-v', '--vlim', '--wrap'])
@@ -1239,6 +1311,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     1) Plot DEM, data and reference pixel
     2) axes setting: tick, ticklabel, title, axis etc.
     """
+    # plot_subplot4figure() 负责多子图中的一个小图：画背景、画数据、画参考点、设置标题和坐标轴。
     # Plot DEM
     if inps.dem_file:
         pp.plot_dem_background(
@@ -1251,6 +1324,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             print_msg=inps.print_msg)
 
     # Plot Data
+    # 多子图使用 imshow 绘制，每个子图是一个二维矩阵。
     vlim = inps.vlim if inps.vlim is not None else [np.nanmin(data), np.nanmax(data)]
     inps.extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
                    inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
@@ -1260,6 +1334,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
     # Plot Seed Point
     if inps.disp_ref_pixel:
+        # 在每个子图上标出参考像元位置。
         ref_y, ref_x = None, None
         if inps.ref_yx:
             ref_y, ref_x = inps.ref_yx[0], inps.ref_yx[1]
@@ -1286,6 +1361,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     # Title
     if inps.disp_title:
         # get title
+        # 时序类数据集通常用日期作为标题，其它数据集用数据集名或索引作为标题。
         subplot_title = None
         if inps.key in TIMESERIES_KEY_NAMES or inps.dset[0].startswith('bperp'):
             # support "/" in the dataset names, e.g. HDF-EOS5 and py2-mintpy formats
@@ -1304,6 +1380,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             if len(inps.dsetFamilyList) == 1 and '-' in title_str:
                 title_str = title_str.split('-')[1]
                 # for ifgramStack, show index in the date12 list to facilitate the network modification
+                # 对 ifgramStack，标题中显示索引有助于回到 modify_network 用编号删除干涉图。
                 if inps.atr['FILE_TYPE'] == 'ifgramStack':
                     title_ind = inps.date12List.index(title_str)
 
@@ -1326,6 +1403,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             else:
                 kwarg = dict(fontsize=inps.font_size)
                 # mark dropped interferograms in bold crimson
+                # 被 dropIfgram=False 标记删除的干涉图标题显示为红色粗体。
                 if inps.dset[i] in inps.dropDatasetList:
                     kwarg['color'] = 'crimson'
                     kwarg['fontweight'] = 'bold'
@@ -1359,11 +1437,13 @@ def plot_figure(j, inps, metadata):
     3) loop to plot each subplot using plot_subplot4figure()
     4) common colorbar and save
     """
+    # plot_figure() 负责生成一整张 figure，里面可能包含很多 subplot。
     fig_title = f'Figure {str(j)} - {inps.outfile[j-1]}'
     vprint('----------------------------------------')
     vprint(fig_title)
 
     # Open a new figure object
+    # plt.subplots() 创建 figure 和子图网格。
     fig, axs = plt.subplots(
         num=j, figsize=inps.fig_size,
         nrows=inps.fig_row_num,
@@ -1374,6 +1454,7 @@ def plot_figure(j, inps, metadata):
     axs = axs.flatten()
 
     # Read all data for the current figure into 3D np.array
+    # 每张 figure 只读取自己需要显示的那一段数据集，避免一次读入所有子图。
     i_start = (j - 1) * inps.fig_row_num * inps.fig_col_num
     i_end = min([inps.dsetNum, i_start + inps.fig_row_num * inps.fig_col_num])
     data = read_data4figure(i_start, i_end, inps, metadata)
@@ -1384,6 +1465,7 @@ def plot_figure(j, inps, metadata):
         ).colormap
 
     # Loop - Subplots
+    # 逐个子图调用 plot_subplot4figure()。
     vprint('plotting ...')
     prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
     for i in range(i_start, i_end):
@@ -1409,6 +1491,7 @@ def plot_figure(j, inps, metadata):
     del data
 
     # delete empty axes
+    # 最后一张 figure 可能没有填满所有子图位置，需要删除空白 axes。
     for i in range(i_end-i_start, len(axs)):
         fig.delaxes(axs[i])
 
@@ -1423,6 +1506,7 @@ def plot_figure(j, inps, metadata):
     # before fig.add_axes(), which is the case of common colorbar
     # after fig.colorbar() and fig.set_size_inches(), which is the case of individual/multiple colorbars
     def adjust_subplots_layout(fig, inps):
+        # 调整子图间距，减少多子图中的空白区域。
         fig.subplots_adjust(
             left=0.02, right=0.98,
             bottom=0.02, top=0.98,
@@ -1438,12 +1522,14 @@ def plot_figure(j, inps, metadata):
     # Colorbar
     if inps.disp_cbar:
         if not inps.vlim:
+            # 没有统一 vlim 时，每个子图都有自己的颜色范围和 colorbar。
             vprint('Note: different color scale for EACH subplot!')
             vprint('Adjust figsize for the colorbar of each subplot.')
             fig.set_size_inches(inps.fig_size[0] * 1.1, inps.fig_size[1])
             adjust_subplots_layout(fig, inps)
 
         else:
+            # 有统一 vlim 时，整张 figure 共用一个 colorbar。
             adjust_subplots_layout(fig, inps)
             # plot common colorbar
             cbar_length = 0.4
@@ -1459,6 +1545,7 @@ def plot_figure(j, inps, metadata):
 
     # Save Figure
     if inps.save_fig:
+        # 保存当前 figure 到磁盘；不显示窗口时，保存后清空 figure 释放内存。
         vprint(f'save figure to {os.path.abspath(inps.outfile[j-1])} with dpi={inps.fig_dpi}')
         fig.savefig(inps.outfile[j-1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
         if not inps.disp_fig:
@@ -1473,6 +1560,7 @@ def prepare4multi_subplots(inps, metadata):
     3) read dropIfgram info
     4) read and prepare DEM for background
     """
+    # 多子图绘制前的准备：确定数据集家族、降采样、参考像元、被删除干涉图、DEM 背景等。
     inps.dsetFamilyList = sorted(list({x.split('-')[0] for x in inps.dset}))
     inps.dsetFamilyList = sorted(list({x.replace('Std','') for x in inps.dsetFamilyList}))
     if len(inps.dsetFamilyList) == 1 and inps.atr['FILE_TYPE'] == 'ifgramStack':
@@ -1495,6 +1583,7 @@ def prepare4multi_subplots(inps, metadata):
 
     # multilook mask
     if inps.msk is not None and inps.multilook_num > 1:
+        # 如果数据降采样了，掩膜也必须用同样倍率降采样，尺寸才能匹配。
         inps.msk = multilook_data(
             inps.msk,
             inps.multilook_num,
@@ -1503,6 +1592,7 @@ def prepare4multi_subplots(inps, metadata):
         )
 
     # Reference pixel for timeseries and ifgramStack
+    # 对 ifgramStack 的 unwrapPhase，多子图显示时要考虑文件已有参考像元。
     inps.file_ref_yx = None
     if inps.key in ['ifgramStack'] and 'REF_Y' in metadata.keys():
         ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
@@ -1517,6 +1607,7 @@ def prepare4multi_subplots(inps, metadata):
         inps.ref_marker_size /= 20.
 
     # Check dropped interferograms
+    # 多子图显示 ifgramStack 时，被网络筛选删除的干涉图会在标题中标红。
     inps.dropDatasetList = []
     if inps.key == 'ifgramStack' and inps.disp_title:
         obj = ifgramStack(inps.file)
@@ -1528,6 +1619,7 @@ def prepare4multi_subplots(inps, metadata):
 
     # Read DEM
     if inps.dem_file:
+        # 多子图只支持 DEM 与数据文件尺寸一致的情况；否则 DEM 背景会被忽略。
         dem_metadata = readfile.read_attribute(inps.dem_file)
         if all(dem_metadata[i] == metadata[i] for i in ['LENGTH', 'WIDTH']):
             vprint(f'reading DEM: {os.path.basename(inps.dem_file)} ... ')
@@ -1570,32 +1662,39 @@ class viewer():
     """
 
     def __init__(self, cmd=None, iargs=None):
+        # viewer 是面向外部调用的类：可以传命令字符串 cmd，也可以传已经拆好的参数列表 iargs。
         if cmd:
             iargs = cmd.split()[1:]
         self.cmd = cmd
         self.iargs = iargs
 
     def configure(self, inps):
+        # configure() 做绘图前准备：读取文件信息、更新参数、判断是否跳过、读取掩膜。
         global vprint
         vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
         # matplotlib backend setting
         if not inps.disp_fig:
+            # Agg 是无界面绘图后端，适合只保存图片、不弹窗的批处理。
             plt.switch_backend('Agg')
 
+        # 读取文件元数据和数据集列表，并根据元数据补全绘图配置。
         inps, self.atr = read_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 
         # --update option
         self.flag = 'run'
         if inps.update_mode and run_or_skip(inps) == 'skip':
+            # 如果 update 模式判断可以跳过，plot() 外层通常就不会继续绘图。
             self.flag = 'skip'
 
         # copy inps to self object
+        # setattr(self, key, value) 把 argparse 参数复制成 viewer 对象属性，后面用 self.xxx 访问。
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
 
         # read mask
+        # 读取用户指定或默认掩膜，后续绘图时遮住无效像元。
         self.msk, self.mask_file = pp.read_mask(
             self.file,
             mask_file=self.mask_file,
@@ -1609,10 +1708,12 @@ class viewer():
 
 
     def plot(self):
+        # plot() 是真正绘图的入口：根据 dsetNum 决定画单图还是多子图。
         # One Subplot
         if self.dsetNum == 1:
             vprint('reading data ...')
             # read data
+            # 单图只读取一个数据集和裁剪范围。
             data, self.atr = readfile.read(
                 self.file,
                 datasetName=self.dset[0],
@@ -1621,6 +1722,7 @@ class viewer():
 
             # reference in time
             if self.ref_date:
+                # 时序单图支持减去参考日期，显示两个日期之间的变化。
                 data -= readfile.read(
                     self.file,
                     datasetName=self.ref_date,
@@ -1631,6 +1733,7 @@ class viewer():
             if (self.key in ['ifgramStack']
                     and self.dset[0].split('-')[0].startswith('unwrapPhase')
                     and 'REF_Y' in self.atr.keys()):
+                # ifgramStack 的 unwrapPhase 需要减去参考像元相位。
                 ref_y, ref_x = int(self.atr['REF_Y']), int(self.atr['REF_X'])
                 ref_data = readfile.read(
                     self.file,
@@ -1641,6 +1744,7 @@ class viewer():
 
             # masking - input options
             if self.zero_mask:
+                # 按用户选项遮住 0 值像元。
                 vprint('masking pixels with zero value')
                 data = np.ma.masked_where(data == 0., data)
             if self.msk is not None:
@@ -1650,6 +1754,7 @@ class viewer():
                 self.msk = np.ones(data.shape, dtype=np.bool_)
 
             # masking - NO_DATA_VALUE
+            # 如果文件定义了 NO_DATA_VALUE，也把这些像元转成 NaN，不参与显示。
             no_data_val = readfile.get_no_data_value(self.file)
             if self.no_data_value is not None:
                 vprint(f'masking pixels with NO_DATA_VALUE of {self.no_data_value}')
@@ -1672,15 +1777,18 @@ class viewer():
                 self.msk *= ~np.isnan(data)
 
             # update data
+            # 做单位转换、参考点改正、数学操作和颜色范围更新。
             data, self = update_data_with_plot_inps(data, self.atr, self)
 
             # prepare figure
+            # 如果启用了 cartopy 地图投影，就把 projection 传给 plt.subplots()。
             subplot_kw = dict(projection=self.map_proj_obj) if self.map_proj_obj is not None else {}
             fig, ax = plt.subplots(figsize=self.fig_size, subplot_kw=subplot_kw)
             if not self.disp_whitespace:
                 fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 
             # plot
+            # 调用前面定义的 plot_slice() 绘制单张二维图。
             self = plot_slice(ax, data, self.atr, self)[1]
 
             # save figure
@@ -1695,6 +1803,7 @@ class viewer():
 
         # Multiple Subplots
         else:
+            # 多子图模式用于一次查看多个日期、多个干涉图或多个数据集。
             # warn single-subplot options
             opt_names = ['--show-gnss', '--coastline', '--lalo-label', '--lalo-step', '--scalebar',
                          '--pts-yx', '--pts-lalo', '--pts-file']
@@ -1703,9 +1812,11 @@ class viewer():
                 print(f'WARNING: {opt_name} is NOT supported for multi-subplots, ignore it and continue.')
 
             # prepare
+            # 多子图准备包括自动降采样、DEM 背景、dropIfgram 标题标记等。
             self = prepare4multi_subplots(self, metadata=self.atr)
 
             # plot
+            # 可能有多张 figure，因此循环调用 plot_figure()。
             self.dlim_all = [0., 0.]
             for j in range(1, self.fig_num + 1):
                 plot_figure(j, self, metadata=self.atr)
@@ -1719,6 +1830,7 @@ class viewer():
 
         # Display Figure
         if self.disp_fig:
+            # 如果用户要求显示图形窗口，最后调用 plt.show()。
             vprint('showing ...')
             plt.show()
         return
