@@ -187,3 +187,37 @@ def test_add_hyp3_metadata_insar_gamma(test_data_dir):
        'stopUTC': '2025-10-01 20:45:40.000000',
        'unwrap_method': 'mcf'
    }
+
+
+def test_add_hyp3_metadata_insar_gamma_s1d_reference_granule(tmp_path):
+    product_name = 'S1DD_20260610T042337_20260622T042338_VVR012_INT80_G_weF_0B7B'
+    (tmp_path / f'{product_name}.txt').write_text(
+        '\n'.join([
+            'UTC time: 15817.0',
+            'Azimuth looks: 4',
+            'Range looks: 20',
+            'Earth radius at nadir: 6337286.638938101',
+            'Spacecraft height: 693000.0',
+            'Slant range near: 846099.1914484155',
+            'Heading: -13.3',
+            'Unwrapping type: mcf',
+            'Reference granule: S1D_IW_SLC__1SDV_20260610T042337_20260610T042418_003169_005832_1158',
+            'Reference orbit number: 3169',
+            'Baseline: 0.0',
+        ])
+    )
+    meta = add_hyp3_metadata(
+        fname=str(tmp_path / f'{product_name}_unw_phase_clip.tif'),
+        meta={
+            'WIDTH': 100,
+            'LENGTH': 100,
+            'X_STEP': 80.0,
+            'Y_STEP': -80.0,
+            'X_FIRST': 0.0,
+            'Y_FIRST': 8000.0,
+        },
+        is_ifg=True,
+    )
+    assert meta['relative_orbit'] == 153
+    assert meta['startUTC'] == '2026-06-10 04:23:37.000000'
+    assert meta['stopUTC'] == '2026-06-10 04:24:18.000000'
