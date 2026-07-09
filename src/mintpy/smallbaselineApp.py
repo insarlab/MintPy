@@ -1106,7 +1106,10 @@ class TimeSeriesAnalysis:
         import mintpy.cli.view
         if run_parallel and num_cores > 1:
             print(f"parallel processing using {num_cores} cores ...")
-            Parallel(n_jobs=num_cores)(delayed(mintpy.cli.view.main)(iargs) for iargs in iargs_list)
+            Parallel(n_jobs=num_cores, backend='multiprocessing')(
+                delayed(mintpy.cli.view.main)(iargs)
+                for iargs in iargs_list
+            )
         else:
             for iargs in iargs_list:
                 mintpy.cli.view.main(iargs)
