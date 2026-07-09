@@ -33,7 +33,7 @@ ENV PATH=/opt/conda/bin:${PATH}
 ARG MINTPY_HOME=/home/mambauser/tools/MintPy
 COPY --chown=mambauser:mambauser . ${MINTPY_HOME}/
 
-ARG PYTHON_VERSION="3.9"
+ARG PYTHON_VERSION="3.11"
 RUN micromamba install -y -n base -c conda-forge python=${PYTHON_VERSION}  \
       jupyterlab ipympl gdal">=3" isce2 -f ${MINTPY_HOME}/requirements.txt && \
     python -m pip install --no-cache-dir ${MINTPY_HOME} && \
