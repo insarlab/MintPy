@@ -9,11 +9,9 @@ import glob
 import os
 
 import numpy as np
+from osgeo import gdal
 
-try:
-    from osgeo import gdal
-except ImportError:
-    raise ImportError('Can not import gdal!')
+gdal.UseExceptions()
 
 from mintpy.utils import ptime, readfile, utils as ut, writefile
 
