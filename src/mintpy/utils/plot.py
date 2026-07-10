@@ -959,6 +959,134 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     return ax, coh_mat, im
 
 
+def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[], p_dict={}):
+    """Plot Coherence Matrix with continuous time axis
+    Parameters: ax : matplotlib.pyplot.Axes,
+                date12List : list of date12 in YYYYMMDD_YYYYMMDD format
+                cohList    : list of float, coherence value
+                date12List_drop : list of date12 for date12 marked as dropped
+                p_dict  : dict of plot setting
+    Returns:    ax : matplotlib.pyplot.Axes
+                coh_mat : 2D np.array in size of [num_date, num_date]
+                mesh : matplotlib.collections.QuadMesh object
+    """
+    # Figure Setting
+    if 'ds_name'     not in p_dict.keys():   p_dict['ds_name']     = 'Coherence'
+    if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
+    if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
+    if 'fig_title'   not in p_dict.keys():   p_dict['fig_title']   = '{} Matrix'.format(p_dict['ds_name'])
+    if 'colormap'    not in p_dict.keys():   p_dict['colormap']    = 'RdBu_truncate'
+    if 'cbar_label'  not in p_dict.keys():   p_dict['cbar_label']  = p_dict['ds_name']
+    if 'vlim'        not in p_dict.keys():   p_dict['vlim']        = (0.2, 1.0)
+    if 'disp_cbar'   not in p_dict.keys():   p_dict['disp_cbar']   = True
+    if 'legend_loc'  not in p_dict.keys():   p_dict['legend_loc']  = 'best'
+    if 'disp_legend' not in p_dict.keys():   p_dict['disp_legend'] = True
+
+    # support input colormap: string for colormap name, or colormap object directly
+    if isinstance(p_dict['colormap'], str):
+        cmap = ColormapExt(p_dict['colormap']).colormap
+    elif isinstance(p_dict['colormap'], mpl.colors.LinearSegmentedColormap):
+        cmap = p_dict['colormap']
+    else:
+        raise ValueError('unrecognized colormap input: {}'.format(p_dict['colormap']))
+
+    date12List = ptime.yyyymmdd_date12(date12List)
+    coh_mat = pnet.coherence_matrix(date12List, cohList)
+
+    m_dates = [i.split('_')[0] for i in date12List]
+    s_dates = [i.split('_')[1] for i in date12List]
+    dateList = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
+    dateList_dt = [dt.datetime.strptime(i, '%Y%m%d') for i in dateList]
+
+    if date12List_drop:
+        date12List_drop = ptime.yyyymmdd_date12(date12List_drop)
+        for date12 in date12List_drop:
+            idx1, idx2 = (dateList.index(i) for i in date12.split('_'))
+            coh_mat[idx1, idx2] = np.nan
+
+    # Plotting strategy for the time-axis coherence matrix:
+    # 1) Build a date-centered grid: each acquisition sits at the midpoint between
+    #    neighboring cell edges; the first/last edges extend outward by half of the
+    #    adjacent interval so edge cells match the in-network cell width.
+    # 2) Convert grid edges to matplotlib date numbers via mdates.date2num() because
+    #    pcolormesh() requires numeric vertex coordinates for datetime axes.
+    # 3) Draw the diagonal in gray to distinguish selected vs un-selected ifgrams.
+    grid_points = [dateList_dt[0] - (dateList_dt[1] - dateList_dt[0]) / 2]
+    for date1, date2 in zip(dateList_dt[:-1], dateList_dt[1:]):
+        grid_points.append(date1 + (date2 - date1) / 2)
+    grid_points.append(dateList_dt[-1] + (dateList_dt[-1] - dateList_dt[-2]) / 2)
+
+    grid_nums = mdates.date2num(grid_points)
+    X, Y = np.meshgrid(grid_nums, grid_nums)
+
+    # Show diagonal value as black, to be distinguished from un-selected interferograms
+    diag_mat = np.diag(np.ones(coh_mat.shape[0]))
+    diag_mat[diag_mat == 0.] = np.nan
+    ax.pcolormesh(X, Y, diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, shading='auto', zorder=1)
+
+    cmap_plot = cmap.copy()
+    cmap_plot.set_bad('white')
+    mesh = ax.pcolormesh(
+        X, Y, coh_mat,
+        cmap=cmap_plot,
+        vmin=p_dict['vlim'][0],
+        vmax=p_dict['vlim'][1],
+        shading='auto',
+        zorder=0,
+    )
+
+    ax.set_aspect('equal', adjustable='box')
+
+    # axis format - reuse auto_adjust_xaxis_date() year labels on both axes
+    ax = auto_adjust_xaxis_date(
+        ax, dateList_dt, buffer_year=None, fontsize=p_dict['fontsize'],
+    )[0]
+    ax.yaxis.set_major_locator(ax.xaxis.get_major_locator())
+    ax.yaxis.set_major_formatter(ax.xaxis.get_major_formatter())
+    ax.yaxis.set_minor_locator(ax.xaxis.get_minor_locator())
+    ax.set_ylim(ax.get_xlim()[::-1])
+    ax.set_xlabel('Time', fontsize=p_dict['fontsize'])
+    ax.set_ylabel('Time', fontsize=p_dict['fontsize'])
+    for label in ax.get_yticklabels():
+        label.set_rotation(90)
+        label.set_va('center')
+    ax.tick_params(which='both', direction='out',
+                   bottom=True, top=True, left=True, right=True)
+
+    if p_dict['disp_title']:
+        ax.set_title(p_dict['fig_title'])
+
+    # Colorbar
+    if p_dict['disp_cbar']:
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", "3%", pad="3%")
+        cbar = ax.figure.colorbar(mesh, cax=cax)
+        cbar.set_label(p_dict['cbar_label'], fontsize=p_dict['fontsize'])
+
+    # Legend
+    if date12List_drop and p_dict['disp_legend']:
+        ax.plot([], [], label='Upper: Ifgrams used')
+        ax.plot([], [], label='Lower: Ifgrams all')
+        ax.legend(loc=p_dict['legend_loc'], handlelength=0)
+
+    # Status bar
+    def format_coord(x, y):
+        col = np.searchsorted(grid_nums, x, side='right') - 1
+        row = np.searchsorted(grid_nums, y, side='right') - 1
+        if 0 <= row < len(dateList_dt) and 0 <= col < len(dateList_dt):
+            date1 = dateList_dt[col].strftime('%Y-%m-%d')
+            date2 = dateList_dt[row].strftime('%Y-%m-%d')
+            coh_val = coh_mat[row, col]
+            if not np.isnan(coh_val):
+                return f'x={date1}, y={date2}, v={coh_val:.3f}'
+            return f'x={date1}, y={date2}, v=NaN'
+        return ''
+
+    ax.format_coord = format_coord
+
+    return ax, coh_mat, mesh
+
+
 def plot_num_triplet_with_nonzero_integer_ambiguity(fname, disp_fig=False, font_size=12, fig_size=[9,3]):
     """Plot the histogram for the number of triplets with non-zero integer ambiguity.
 

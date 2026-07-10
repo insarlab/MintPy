@@ -25,6 +25,7 @@ EXAMPLE = """example:
   # right: matrix view
   # show color jump same as the coherence threshold in network inversion with pixel-wised masking
   plot_coherence_matrix.py inputs/ifgramStack.h5 --cmap-vlist 0 0.4 1
+  plot_coherence_matrix.py inputs/ifgramStack.h5 --axis-format time --yx 216 310
 """
 
 
@@ -60,6 +61,10 @@ def create_parser(subparsers=None):
                         help='temporal coherence file.')
     parser.add_argument('-t','--template', dest='template_file',
                         help='temporal file.')
+    parser.add_argument('--axis-format', dest='axis_format', choices=['index', 'time'],
+                        default='index',
+                        help='Coherence matrix axis format: index (date indices) or time '
+                             '(continuous time axis). Default: index')
 
     parser.add_argument('--save', dest='save_fig',
                         action='store_true', help='save the figure')
