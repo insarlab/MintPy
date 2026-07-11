@@ -259,6 +259,8 @@ def gdal_to_numpy_dtype(gdal_dtype: Union[str, int]) -> np.dtype:
     Returns:    np_dtype   - np.dtype, NumPy dtype
     """
     from osgeo import gdal, gdal_array
+    gdal.UseExceptions()
+
     if isinstance(gdal_dtype, str):
         gdal_dtype = gdal.GetDataTypeByName(gdal_dtype)
     np_dtype = np.dtype(gdal_array.GDALTypeCodeToNumericTypeCode(gdal_dtype))
@@ -1694,10 +1696,8 @@ def read_gdal_vrt(fname):
 
     Modified from $ISCE_HOME/applications/gdal2isce_xml.gdal2isce_xml() written by David Bekaert.
     """
-    try:
-        from osgeo import gdal, osr
-    except ImportError:
-        raise ImportError('Cannot import gdal and osr!')
+    from osgeo import gdal, osr
+    gdal.UseExceptions()
 
     # read dataset using gdal
     # Using os.fspath to convert Path objects to str, recommended by
@@ -2090,10 +2090,8 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
                 x/ystep  : int, number of pixels to pick/multilook for each output pixel
     Returns:    data     : 2D np.array
     """
-    try:
-        from osgeo import gdal
-    except ImportError:
-        raise ImportError('Cannot import gdal!')
+    from osgeo import gdal
+    gdal.UseExceptions()
 
     # open data file
     # Using os.fspath to convert Path objects to str, recommended by

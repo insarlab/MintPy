@@ -13,7 +13,6 @@ import re
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
-import matplotlib;  matplotlib.use('Agg')
 import numpy as np
 from cartopy import crs as ccrs
 from matplotlib import pyplot as plt
@@ -1580,8 +1579,8 @@ class viewer():
         vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
         # matplotlib backend setting
-        if inps.disp_fig:
-            plt.switch_backend('TkAgg')
+        if not inps.disp_fig:
+            plt.switch_backend('Agg')
 
         inps, self.atr = read_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)

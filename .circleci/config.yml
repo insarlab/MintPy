@@ -28,6 +28,8 @@ jobs:
             source "${HOME}/tools/miniforge/etc/profile.d/mamba.sh"
             # modify/export env var PATH to BASH_ENV to be shared across run steps
             echo 'export PATH=${CONDA_PREFIX}/bin:${PATH}' >> ${BASH_ENV}
+            echo 'export PROJ_LIB=${CONDA_PREFIX}/share/proj' >> ${BASH_ENV}
+            echo 'export GDAL_DATA=${CONDA_PREFIX}/share/gdal' >> ${BASH_ENV}
 
       - run:
           name: Installing MintPy

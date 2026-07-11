@@ -1103,6 +1103,7 @@ class TimeSeriesAnalysis:
             plot_memory = 1.5 if 2.0 < max_plot_memory <= 4.0 else 1.5 * (max_plot_memory / 4.0)
             num_cores = min(num_cores, max(int(max_memory / plot_memory), 1))
 
+        import matplotlib;  matplotlib.use('Agg')
         import mintpy.cli.view
         if run_parallel and num_cores > 1:
             print(f"parallel processing using {num_cores} cores ...")
