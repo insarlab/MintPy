@@ -11,11 +11,9 @@ import xml.etree.ElementTree as ET
 
 import h5py
 import numpy as np
+from osgeo import gdal
 
-try:
-    from osgeo import gdal
-except ImportError:
-    raise ImportError("Can not import gdal!")
+gdal.UseExceptions()
 
 from mintpy import subset
 from mintpy.utils import (

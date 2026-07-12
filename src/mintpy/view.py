@@ -10,13 +10,12 @@
 import datetime as dt
 import os
 import re
-import warnings  # suppress UserWarning from matplotlib
+import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
-
-import cartopy.crs as ccrs
-import matplotlib.pyplot as plt
 import numpy as np
+from cartopy import crs as ccrs
+from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from mintpy import subset, version
@@ -1365,7 +1364,7 @@ def plot_figure(j, inps, metadata):
 
     # Open a new figure object
     fig, axs = plt.subplots(
-        num=j, figsize=inps.fig_size,
+        figsize=inps.fig_size,
         nrows=inps.fig_row_num,
         ncols=inps.fig_col_num,
         sharex=True, sharey=True,
@@ -1461,8 +1460,8 @@ def plot_figure(j, inps, metadata):
     if inps.save_fig:
         vprint(f'save figure to {os.path.abspath(inps.outfile[j-1])} with dpi={inps.fig_dpi}')
         fig.savefig(inps.outfile[j-1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        if not inps.disp_fig:
-            fig.clf()
+    if not inps.disp_fig:
+        plt.close(fig)
     return
 
 
@@ -1690,8 +1689,8 @@ class viewer():
                     fig.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, pad_inches=0.0)
                 else:
                     fig.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, bbox_inches='tight')
-                if not self.disp_fig:
-                    fig.clf()
+            if not self.disp_fig:
+                plt.close(fig)
 
         # Multiple Subplots
         else:

@@ -502,6 +502,9 @@ class TimeSeriesAnalysis:
                     elif method == 'gacos':
                         fname1 = f'{os.path.splitext(fname0)[0]}_GACOS.h5'
 
+                    elif method == 'opera':
+                        fname1 = f'{os.path.splitext(fname0)[0]}_OPERA.h5'
+
                     elif method == 'pyaps':
                         fname1 = f'{os.path.splitext(fname0)[0]}_{model}.h5'
 
@@ -647,6 +650,16 @@ class TimeSeriesAnalysis:
                 if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
                     import mintpy.cli.tropo_phase_elevation
                     mintpy.cli.tropo_phase_elevation.main(iargs)
+
+            # OPERA ZTD products derived from ECMWF HRES data and available through the ASF DAAC
+            elif method == 'opera':
+                opera_dir = self.template['mintpy.troposphericDelay.operaDir']
+                iargs = ['-f', in_file, '-g', geom_file, '-o', out_file, '--dir', opera_dir]
+                print('tropospheric delay correction with OPERA ZTD products')
+                print('\ntropo_opera.py', ' '.join(iargs))
+                if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                    import mintpy.cli.tropo_opera
+                    mintpy.cli.tropo_opera.main(iargs)
 
             # Weather re-analysis data with iterative tropospheric decomposition (GACOS)
             # Yu et al. (2018, JGR)
@@ -1090,10 +1103,14 @@ class TimeSeriesAnalysis:
             plot_memory = 1.5 if 2.0 < max_plot_memory <= 4.0 else 1.5 * (max_plot_memory / 4.0)
             num_cores = min(num_cores, max(int(max_memory / plot_memory), 1))
 
+        import matplotlib;  matplotlib.use('Agg')
         import mintpy.cli.view
         if run_parallel and num_cores > 1:
             print(f"parallel processing using {num_cores} cores ...")
-            Parallel(n_jobs=num_cores)(delayed(mintpy.cli.view.main)(iargs) for iargs in iargs_list)
+            Parallel(n_jobs=num_cores, backend='multiprocessing')(
+                delayed(mintpy.cli.view.main)(iargs)
+                for iargs in iargs_list
+            )
         else:
             for iargs in iargs_list:
                 mintpy.cli.view.main(iargs)

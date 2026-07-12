@@ -947,7 +947,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     if p_dict['disp_cbar']:
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
-        cbar = plt.colorbar(im, cax=cax)
+        cbar = ax.figure.colorbar(im, cax=cax)
         cbar.set_label(p_dict['cbar_label'], fontsize=p_dict['fontsize'])
 
     # Legend

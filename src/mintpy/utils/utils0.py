@@ -346,6 +346,7 @@ def to_latlon(infile, x, y):
     """
     from osgeo import gdal
     from pyproj import Proj, Transformer
+    gdal.UseExceptions()
 
     # read projection info using gdal
     ds = gdal.Open(infile)

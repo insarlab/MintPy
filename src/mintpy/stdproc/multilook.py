@@ -133,6 +133,7 @@ def multilook_gdal(in_file, lks_y, lks_x, box=None, out_file=None):
     """
     print('apply multilooking via gdal.Translate ...')
     from osgeo import gdal
+    gdal.UseExceptions()
 
     # default output file name
     if not out_file:

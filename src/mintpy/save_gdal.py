@@ -11,6 +11,8 @@ import warnings
 import numpy as np
 from osgeo import gdal, osr
 
+gdal.UseExceptions()
+
 from mintpy.utils import plot as pp, readfile, utils0 as ut
 
 # link: https://gdal.org/drivers/raster/index.html

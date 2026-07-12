@@ -31,6 +31,7 @@ __all__ = [
     'timeseries2velocity',
     'timeseries_rms',
     'tropo_gacos',
+    'tropo_opera',
     'tropo_phase_elevation',
     'tropo_pyaps3',
     'unwrap_error_bridging',

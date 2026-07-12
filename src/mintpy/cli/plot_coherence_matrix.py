@@ -56,7 +56,7 @@ def create_parser(subparsers=None):
                              'Default: view.py img_file --wrap --noverbose')
 
     # aux files
-    parser.add_argument('--tcoh', dest='tcoh_file', default='temporalCoherence.h5',
+    parser.add_argument('--tcoh', dest='tcoh_file',
                         help='temporal coherence file.')
     parser.add_argument('-t','--template', dest='template_file',
                         help='temporal file.')
@@ -84,6 +84,8 @@ def cmd_line_parse(iargs=None):
     mintpy_dir = os.path.dirname(os.path.dirname(inps.ifgram_file))
     if not inps.img_file:
         inps.img_file = os.path.join(mintpy_dir, 'velocity.h5')
+    if not inps.tcoh_file:
+        inps.tcoh_file = os.path.join(mintpy_dir, 'temporalCoherence.h5')
     if not inps.template_file:
         inps.template_file = os.path.join(mintpy_dir, 'smallbaselineApp.cfg')
 
@@ -114,7 +116,7 @@ def main(iargs=None):
     obj = coherenceMatrixViewer(inps)
     obj.open()
     obj.plot()
-    obj.fig.canvas.mpl_disconnect(obj.cid)
+    #obj.fig_img.canvas.mpl_disconnect(obj.cid_img)
 
 
 ############################################################
