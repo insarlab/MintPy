@@ -2,8 +2,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Sara Mirzaee, Jul 2023                           #
-#         Emre Havazli, Apr 2026                           #
+# Author: Sara Mirzaee, Emre Havazli, Jul 2023             #
 ############################################################
 
 import datetime
@@ -16,6 +15,8 @@ import numpy as np
 from osgeo import gdal, osr
 from pyproj import Transformer
 from scipy.interpolate import RegularGridInterpolator
+
+gdal.UseExceptions()
 
 from mintpy.constants import EARTH_RADIUS, SPEED_OF_LIGHT
 from mintpy.utils import attribute as attr, ptime, writefile

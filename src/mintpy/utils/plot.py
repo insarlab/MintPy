@@ -2162,7 +2162,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
                         dem=None, inps=None, print_msg=True):
     """Plot DEM as background.
     Parameters: ax   - matplotlib.pyplot.Axes or BasemapExt object
-                geo_box         - tuple of 4 float in order of (E, N, W, S), geo bounding box
+                geo_box         - tuple of 4 float in order of (W, N, E, S), geo bounding box
                 dem_shade       - 3D np.ndarray in size of (length, width, 4)
                 dem_contour     - 2D np.ndarray in size of (length, width)
                 dem_contour_seq - 1D np.ndarray
