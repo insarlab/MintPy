@@ -22,7 +22,6 @@ EXAMPLE = """example:
 
   save_kmz.py geo/geo_ifgramStack.h5 20101120_20110220
   save_kmz.py geo/geo_geometryRadar.h5 height --cbar-label Elevation
-  save_kmz.py geo_filt_fine.int phase
 
   # to generate placemarks for the file in radar coordinates, the corresponding
   # geometry file with latitude & longitude in radar coordinates are required,
