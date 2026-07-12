@@ -11,11 +11,9 @@ import time
 
 import h5py
 import numpy as np
+from osgeo import gdal
 
-try:
-    from osgeo import gdal
-except ImportError:
-    raise ImportError('Can not import gdal [version>=3.0]!')
+gdal.UseExceptions()
 
 from mintpy.multilook import multilook_data
 from mintpy.objects import geometry, ifgramStack, sensor
