@@ -133,6 +133,7 @@ def prepare_stack(obs_file, metadata=dict(), baseline_dict=dict(), update_mode=T
     """
     print(f'preparing RSC file for: {obs_file}')
     isce_files = sorted(glob.glob(obs_file))
+    isce_files = [os.path.abspath(x) for x in isce_files]
     if len(isce_files) == 0:
         raise FileNotFoundError(f'NO file found with path pattern: {obs_file}')
 
