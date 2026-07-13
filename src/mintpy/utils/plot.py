@@ -1041,9 +1041,23 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     ax = auto_adjust_xaxis_date(
         ax, dateList_dt, buffer_year=None, fontsize=p_dict['fontsize'],
     )[0]
-    ax.yaxis.set_major_locator(ax.xaxis.get_major_locator())
-    ax.yaxis.set_major_formatter(ax.xaxis.get_major_formatter())
-    ax.yaxis.set_minor_locator(ax.xaxis.get_minor_locator())
+    # short span (<=1.5 yr): same-line labels — year at January, month number at other odd months
+    span_years = (dateList_dt[-1] - dateList_dt[0]).days / 365.25
+    if span_years <= 1.5:
+        def _month_or_year(x, pos=None):
+            d = mdates.num2date(x).replace(tzinfo=None)
+            if d.month == 1:
+                return str(d.year)
+            return str(d.month)
+
+        for axis in [ax.xaxis, ax.yaxis]:
+            axis.set_major_locator(mdates.MonthLocator(bymonth=range(1, 13, 2)))
+            axis.set_major_formatter(ticker.FuncFormatter(_month_or_year))
+            axis.set_minor_locator(mdates.MonthLocator())
+    else:
+        ax.yaxis.set_major_locator(ax.xaxis.get_major_locator())
+        ax.yaxis.set_major_formatter(ax.xaxis.get_major_formatter())
+        ax.yaxis.set_minor_locator(ax.xaxis.get_minor_locator())
     ax.set_ylim(ax.get_xlim()[::-1])
     ax.set_xlabel('Time', fontsize=p_dict['fontsize'])
     ax.set_ylabel('Time', fontsize=p_dict['fontsize'])
