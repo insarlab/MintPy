@@ -147,17 +147,23 @@ def add_hyp3_metadata(fname, meta, is_ifg=True):
         ref_granule = hyp3_meta['ReferenceGranule']
         assert ref_granule.startswith('S1')
 
+        # relative_orbit
+        ref_sat = ref_granule[:3]
         abs_orbit = int(hyp3_meta['ReferenceOrbitNumber'])
-        if ref_granule.startswith('S1A'):
-            meta['relative_orbit'] = ((abs_orbit - 73) % 175) + 1
-        elif ref_granule.startswith('S1B'):
-            meta['relative_orbit'] = ((abs_orbit - 202) % 175) + 1
-        elif ref_granule.startswith('S1C'):
-            meta['relative_orbit'] = ((abs_orbit - 172) % 175) + 1
-        elif ref_granule.startswith('S1D'):
-            meta['relative_orbit'] = ((abs_orbit - 42) % 175) + 1
+        if ref_sat == 'S1A':
+            rel_orbit = (abs_orbit - 73) % 175 + 1
+        elif ref_sat == 'S1B':
+            rel_orbit = (abs_orbit - 202) % 175 + 1
+        elif ref_sat == 'S1C':
+            if abs_orbit <= 8018:
+                rel_orbit = (abs_orbit - 172) % 175 + 1
+            else:
+                rel_orbit = (abs_orbit - 99) % 175 + 1
+        elif ref_sat == 'S1D':
+            rel_orbit = (abs_orbit - 42) % 175 + 1
         else:
-            raise ValueError(f'Un-recognized Sentinel-1 satellite from {ref_granule}!')
+            raise ValueError(f'Un-recognized Sentinel-1 satellite: {ref_granule}!')
+        meta['relative_orbit'] = rel_orbit
 
         # first/last_frame [to be completed]
         t0, t1 = ref_granule.split('_')[-5:-3]
