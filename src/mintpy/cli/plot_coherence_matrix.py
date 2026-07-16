@@ -61,8 +61,8 @@ def create_parser(subparsers=None):
                         help='temporal coherence file.')
     parser.add_argument('-t','--template', dest='template_file',
                         help='temporal file.')
-    parser.add_argument('--axis-format', dest='axis_format', choices=['index', 'time'],
-                        default='index',
+    parser.add_argument('--axis-format', '--axfmt', '--ax-fmt', dest='axis_format',
+                        choices=['index', 'time'], default='index',
                         help='Coherence matrix axis format: index (date indices) or time '
                              '(continuous time axis). Default: index')
 

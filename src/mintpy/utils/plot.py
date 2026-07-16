@@ -905,11 +905,11 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     date12List = ptime.yyyymmdd_date12(date12List)
     coh_mat = pnet.coherence_matrix(date12List, cohList)
 
+    # Date Convert (also used by status bar below)
+    m_dates = [i.split('_')[0] for i in date12List]
+    s_dates = [i.split('_')[1] for i in date12List]
+    dateList = sorted(list(set(m_dates + s_dates)))
     if date12List_drop:
-        # Date Convert
-        m_dates = [i.split('_')[0] for i in date12List]
-        s_dates = [i.split('_')[1] for i in date12List]
-        dateList = sorted(list(set(m_dates + s_dates)))
         # Set dropped pairs' value to nan, in upper triangle only.
         for date12 in date12List_drop:
             idx1, idx2 = (dateList.index(i) for i in date12.split('_'))
@@ -955,6 +955,17 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
         ax.plot([], [], label='Upper: Ifgrams used')
         ax.plot([], [], label='Lower: Ifgrams all')
         ax.legend(loc=p_dict['legend_loc'], handlelength=0)
+
+    # Status bar
+    def format_coord(x, y):
+        row, col = int(y + 0.5), int(x + 0.5)
+        if 0 <= row < len(dateList) and 0 <= col < len(dateList):
+            date12 = sorted([dateList[row], dateList[col]])
+            date12 = [f'{i[0:4]}-{i[4:6]}-{i[6:8]}' for i in date12]
+            return f'x={date12[0]}, y={date12[1]}, v={coh_mat[row, col]:.3f}'
+        return ''
+
+    ax.format_coord = format_coord
 
     return ax, coh_mat, im
 
@@ -1010,7 +1021,6 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     #    adjacent interval so edge cells match the in-network cell width.
     # 2) Convert grid edges to matplotlib date numbers via mdates.date2num() because
     #    pcolormesh() requires numeric vertex coordinates for datetime axes.
-    # 3) Draw the diagonal in gray to distinguish selected vs un-selected ifgrams.
     grid_points = [dateList_dt[0] - (dateList_dt[1] - dateList_dt[0]) / 2]
     for date1, date2 in zip(dateList_dt[:-1], dateList_dt[1:]):
         grid_points.append(date1 + (date2 - date1) / 2)
@@ -1019,11 +1029,13 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
     grid_nums = mdates.date2num(grid_points)
     X, Y = np.meshgrid(grid_nums, grid_nums)
 
-    # Show diagonal value as black, to be distinguished from un-selected interferograms
+    # Diagonal (gray/black, zorder=1): mark acquisition dates for visual reference, and
+    # to distinguish them from un-selected / dropped interferograms (off-diagonal NaNs).
+    # Off-diagonal (zorder=0): coherence of each ifgram pair; upper triangle may exclude
+    # dropped pairs (NaN -> white via set_bad) while lower triangle keeps the full network.
     diag_mat = np.diag(np.ones(coh_mat.shape[0]))
     diag_mat[diag_mat == 0.] = np.nan
     ax.pcolormesh(X, Y, diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, shading='auto', zorder=1)
-
     cmap_plot = cmap.copy()
     cmap_plot.set_bad('white')
     mesh = ax.pcolormesh(
@@ -1037,11 +1049,12 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
 
     ax.set_aspect('equal', adjustable='box')
 
-    # axis format - reuse auto_adjust_xaxis_date() year labels on both axes
+    # Axis format: reuse auto_adjust_xaxis_date() year labels; copy the same locators/
+    # formatters onto the y-axis so both sides share a continuous time scale.
     ax = auto_adjust_xaxis_date(
         ax, dateList_dt, buffer_year=None, fontsize=p_dict['fontsize'],
     )[0]
-    # short span (<=1.5 yr): same-line labels — year at January, month number at other odd months
+    # Short span (<=1.5 yr): same-line labels — year at January, month number at other odd months
     span_years = (dateList_dt[-1] - dateList_dt[0]).days / 365.25
     if span_years <= 1.5:
         def _month_or_year(x, pos=None):
@@ -1055,12 +1068,15 @@ def plot_coherence_matrix_time_axis(ax, date12List, cohList, date12List_drop=[],
             axis.set_major_formatter(ticker.FuncFormatter(_month_or_year))
             axis.set_minor_locator(mdates.MonthLocator())
     else:
+        # Sync y-axis tick locators/formatters with the x-axis (after auto_adjust)
         ax.yaxis.set_major_locator(ax.xaxis.get_major_locator())
         ax.yaxis.set_major_formatter(ax.xaxis.get_major_formatter())
         ax.yaxis.set_minor_locator(ax.xaxis.get_minor_locator())
+    # Invert y-axis so early dates are at the top (same visual layout as the index matrix)
     ax.set_ylim(ax.get_xlim()[::-1])
     ax.set_xlabel('Time', fontsize=p_dict['fontsize'])
     ax.set_ylabel('Time', fontsize=p_dict['fontsize'])
+    # Rotate y tick labels 90 deg for readable date/month labels along the left edge
     for label in ax.get_yticklabels():
         label.set_rotation(90)
         label.set_va('center')
