@@ -179,21 +179,21 @@ class coherenceMatrixViewer():
 
         # plot
         if self.axis_format == 'time':
-            coh_mat = pp.plot_coherence_matrix_time_axis(
+            pp.plot_coherence_matrix_time_axis(
                 self.ax_mat,
                 date12List=self.date12_list,
                 cohList=coh.tolist(),
                 date12List_drop=ex_date12_list,
                 p_dict=plotDict,
-            )[1]
+            )
         else:
-            coh_mat = pp.plot_coherence_matrix(
+            pp.plot_coherence_matrix(
                 self.ax_mat,
                 date12List=self.date12_list,
                 cohList=coh.tolist(),
                 date12List_drop=ex_date12_list,
                 p_dict=plotDict,
-            )[1]
+            )
 
         self.ax_mat.annotate('ifgrams\navailable', xy=(0.05, 0.05), xycoords='axes fraction', fontsize=12)
         self.ax_mat.annotate('ifgrams\nused', ha='right', xy=(0.95, 0.85), xycoords='axes fraction', fontsize=12)
