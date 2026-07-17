@@ -1852,8 +1852,8 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     if len(data_unit) == 2:
         try:
             if   disp_unit[1] in ['y','yr','year'  ]: disp_unit[1] = 'year'
-            elif disp_unit[1] in ['m','mon','month']: disp_unit[1] = 'mon'; scale *= 12.0
-            elif disp_unit[1] in ['d','day'        ]: disp_unit[1] = 'day'; scale *= 365.25
+            elif disp_unit[1] in ['m','mon','month']: disp_unit[1] = 'mon'; scale /= 12.0
+            elif disp_unit[1] in ['d','day'        ]: disp_unit[1] = 'day'; scale /= 365.25
             else: print('Unrecognized time unit for display:', disp_unit[1])
         except:
             disp_unit.append('year')
