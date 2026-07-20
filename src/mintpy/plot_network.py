@@ -204,21 +204,31 @@ def plot_network(inps):
         )
         if inps.save_fig:
             fig.savefig(fig_names[1], **kwargs)
-            print(f'save figure to {fig_names[2]}')
+            print(f'save figure to {fig_names[1]}')
 
-        # Fig 3 - Coherence Matrix
+        # Fig 3 - Coherence Matrix (index or time axis)
         fig_size3 = np.mean(inps.fig_size)
         fig, ax = plt.subplots(figsize=[fig_size3, fig_size3])
-        ax = pp.plot_coherence_matrix(
-            ax,
-            inps.date12List,
-            inps.cohList,
-            inps.date12List_drop,
-            p_dict=vars(inps),
-        )[0]
+        if inps.axis_format == 'time':
+            ax = pp.plot_coherence_matrix_time_axis(
+                ax,
+                inps.date12List,
+                inps.cohList,
+                inps.date12List_drop,
+                p_dict=vars(inps),
+            )[0]
+            fig.tight_layout()
+        else:
+            ax = pp.plot_coherence_matrix(
+                ax,
+                inps.date12List,
+                inps.cohList,
+                inps.date12List_drop,
+                p_dict=vars(inps),
+            )[0]
         if inps.save_fig:
             fig.savefig(fig_names[2], **kwargs)
-            print(f'save figure to {fig_names[1]}')
+            print(f'save figure to {fig_names[2]}')
 
     # Fig 4 - Interferogram Network
     fig, ax = plt.subplots(figsize=inps.fig_size)

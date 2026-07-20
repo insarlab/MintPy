@@ -74,6 +74,9 @@ def create_parser(subparsers=None):
 
     # Figure  Setting
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
+    fig.add_argument('--ax-fmt', '--axis-format', dest='axis_format',
+                     choices=['index', 'time'], default='time',
+                     help='Coherence matrix axis format: index or time (default: %(default)s).')
     fig.add_argument('--fs', '--fontsize', type=int,
                      default=12, help='font size in points')
     fig.add_argument('--lw', '--linewidth', dest='linewidth',

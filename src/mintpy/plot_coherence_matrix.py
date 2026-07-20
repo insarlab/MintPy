@@ -179,24 +179,25 @@ class coherenceMatrixViewer():
         plotDict['disp_legend'] = False
 
         # plot
-        coh_mat = pp.plot_coherence_matrix(
-            self.ax_mat,
-            date12List=self.date12_list,
-            cohList=coh.tolist(),
-            date12List_drop=ex_date12_list,
-            p_dict=plotDict,
-        )[1]
+        if self.axis_format == 'time':
+            pp.plot_coherence_matrix_time_axis(
+                self.ax_mat,
+                date12List=self.date12_list,
+                cohList=coh.tolist(),
+                date12List_drop=ex_date12_list,
+                p_dict=plotDict,
+            )
+        else:
+            pp.plot_coherence_matrix(
+                self.ax_mat,
+                date12List=self.date12_list,
+                cohList=coh.tolist(),
+                date12List_drop=ex_date12_list,
+                p_dict=plotDict,
+            )
 
         self.ax_mat.annotate('ifgrams\navailable', xy=(0.05, 0.05), xycoords='axes fraction', fontsize=12)
         self.ax_mat.annotate('ifgrams\nused', ha='right', xy=(0.95, 0.85), xycoords='axes fraction', fontsize=12)
-
-        # status bar
-        def format_coord(x, y):
-            row, col = int(y+0.5), int(x+0.5)
-            date12 = sorted([self.date_list[row], self.date_list[col]])
-            date12 = [f'{i[0:4]}-{i[4:6]}-{i[6:8]}' for i in date12]
-            return f'x={date12[0]}, y={date12[1]}, v={coh_mat[row, col]:.3f}'
-        self.ax_mat.format_coord = format_coord
 
         # info
         msg = f'pixel in yx = {tuple(yx)}, '
