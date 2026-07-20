@@ -692,12 +692,8 @@ def prepare_metadata(iDict):
                 geom_src_dir = os.path.dirname(dem_path)
             else:
                 geom_src_dir = os.path.abspath('.')
-        else:
-            # Expand glob patterns (e.g. "../../t124*/20210104/")
-            if '*' in geom_src_dir or '?' in geom_src_dir:
-                matches = sorted(glob.glob(geom_src_dir))
-                if matches:
-                    geom_src_dir = matches[0]
+        # NOTE: keep glob patterns (e.g. "../CSLC/t124*/20240611/") as-is,
+        # prep_isce3.py expands them to support multiple burst directories.
         geom_src_dir = os.path.abspath(geom_src_dir)
 
         # Output directory for merged geometry (same as demFile's directory)
@@ -705,7 +701,8 @@ def prepare_metadata(iDict):
         if dem_file and dem_file.lower() != 'auto':
             out_dir = os.path.dirname(os.path.abspath(dem_file))
         else:
-            out_dir = os.path.join(os.path.dirname(geom_src_dir), 'merged_geom')
+            first_match = (sorted(glob.glob(geom_src_dir)) or [geom_src_dir])[0]
+            out_dir = os.path.join(os.path.dirname(first_match), 'merged_geom')
 
         obs_keys = ['mintpy.load.unwFile', 'mintpy.load.corFile', 'mintpy.load.connCompFile']
         obs_paths = [iDict[key] for key in obs_keys if iDict.get(key, 'auto').lower() != 'auto']

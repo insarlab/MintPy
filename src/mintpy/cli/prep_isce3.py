@@ -89,10 +89,12 @@ def cmd_line_parse(iargs=None):
             raise FileNotFoundError(inps.meta_file)
 
     # Expand glob patterns in geometry directory (e.g. "../../t124*/20210104/")
+    inps.geom_dirs = [inps.geom_dir]
     if inps.geom_dir and ('*' in inps.geom_dir or '?' in inps.geom_dir):
         matches = sorted(glob.glob(inps.geom_dir))
         if matches:
             inps.geom_dir = matches[0]
+            inps.geom_dirs = matches
 
     # Set default output directory if not provided
     if inps.out_dir is None:

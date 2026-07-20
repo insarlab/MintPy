@@ -29,7 +29,7 @@ def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
 
 def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
                            processor='tops', update_mode=True, ref_int_file=None,
-                           target_shape=None):
+                           target_shape=None, geom_dirs=None):
     """Prepare geometry files from ISCE3/Dolphin static_layers HDF5.
 
     Parameters
@@ -62,6 +62,16 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
     elif h5_files_root:
         first_h5_path = h5_files_root[0]
     num_bursts = len(burst_subdirs) if burst_subdirs else (1 if h5_files_root else 0)
+    if geom_dirs and len(geom_dirs) > 1:
+        for edir in geom_dirs[1:]:
+            epath = Path(edir)
+            if epath.is_dir():
+                if list(epath.glob('static_layers*.h5')):
+                    num_bursts += 1
+                else:
+                    for sub in epath.iterdir():
+                        if sub.is_dir() and list(sub.glob('static_layers*.h5')):
+                            num_bursts += 1
     if first_h5_path:
         try:
             import h5py
@@ -76,12 +86,14 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
             print(f'WARNING: could not read full-res pixel size: {e}')
 
     # Step 1: Merge and crop geometry to interferogram extent and resolution
+    extra_dirs = geom_dirs[1:] if (geom_dirs and len(geom_dirs) > 1) else None
     geometry_dict = isce3_utils.extract_merge_geometry(
         geom_dir=geom_dir,
         output_dir=out_dir,
         geom_types=geom_files,
         ref_int_file=ref_int_file,
         metadata=None,
+        extra_dirs=extra_dirs,
     )
 
     # Step 2: Compute ALOOKS/RLOOKS from full-res pixel size vs target pixel size
@@ -244,7 +256,8 @@ def prep_isce3(inps):
             processor=inps.processor,
             update_mode=inps.update_mode,
             ref_int_file=ref_int,
-            target_shape=target_shape
+            target_shape=target_shape,
+            geom_dirs=getattr(inps, 'geom_dirs', None)
         )
 
     # Read baseline info
