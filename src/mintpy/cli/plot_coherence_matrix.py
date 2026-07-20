@@ -43,6 +43,11 @@ def create_parser(subparsers=None):
                         help='Point of interest in lat/lon')
     parser.add_argument('--lookup','--lut', dest='lookup_file',
                         help='Lookup file to convert lat/lon into y/x')
+
+    # format
+    parser.add_argument('--ax-fmt', '--axis-format', dest='axis_format',
+                        choices=['index', 'time'], default='time',
+                        help='Coherence matrix axis format: index or time (default: %(default)s).')
     parser.add_argument('-c','--cmap', dest='cmap_name', default='RdBu_truncate',
                         help='Colormap for coherence matrix.\nDefault: RdBu_truncate')
     parser.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.0, 0.7, 1.0],
@@ -61,11 +66,8 @@ def create_parser(subparsers=None):
                         help='temporal coherence file.')
     parser.add_argument('-t','--template', dest='template_file',
                         help='temporal file.')
-    parser.add_argument('--axis-format', '--axfmt', '--ax-fmt', dest='axis_format',
-                        choices=['index', 'time'], default='index',
-                        help='Coherence matrix axis format: index (date indices) or time '
-                             '(continuous time axis). Default: index')
 
+    # output
     parser.add_argument('--save', dest='save_fig',
                         action='store_true', help='save the figure')
     parser.add_argument('--nodisplay', dest='disp_fig',

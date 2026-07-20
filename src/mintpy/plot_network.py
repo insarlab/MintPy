@@ -209,7 +209,7 @@ def plot_network(inps):
         # Fig 3 - Coherence Matrix (index or time axis)
         fig_size3 = np.mean(inps.fig_size)
         fig, ax = plt.subplots(figsize=[fig_size3, fig_size3])
-        if getattr(inps, 'axis_format', 'time') == 'time':
+        if inps.axis_format == 'time':
             ax = pp.plot_coherence_matrix_time_axis(
                 ax,
                 inps.date12List,

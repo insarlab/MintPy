@@ -175,6 +175,7 @@ class coherenceMatrixViewer():
             tcoh = self.tcoh[yx[0], yx[1]]
             plotDict['fig_title'] += f', tcoh = {tcoh:.2f}'
         plotDict['colormap'] = self.colormap
+        plotDict['cmap_vlist'] = self.cmap_vlist
         plotDict['disp_legend'] = False
 
         # plot

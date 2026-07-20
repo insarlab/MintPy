@@ -25,11 +25,9 @@ DATE12_LIST = """
 """
 
 TEMPLATE = """
-## template options for plot_network.py
-mintpy.network.plotAxisFormat = auto  #[time / index], auto for time, axis format for the coherence matrix plot
-mintpy.network.maskFile       = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
-mintpy.network.aoiYX          = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
-mintpy.network.aoiLALO        = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
+mintpy.network.maskFile = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
+mintpy.network.aoiYX    = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
+mintpy.network.aoiLALO  = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 """
 
 EXAMPLE = """example:
@@ -73,13 +71,12 @@ def create_parser(subparsers=None):
                        help='colormap name for the network display. Default: RdBu_truncate')
     color.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.2, 0.4, 1.0],
                        help='normalized start/jump/end value for truncated colormap (default: %(default)s).')
-    color.add_argument('--axis-format', '--axfmt', '--ax-fmt', dest='axis_format',
-                       choices=['index', 'time'], default='time',
-                       help='Coherence matrix axis format: index (date indices) or time '
-                            '(continuous time axis). Default: time')
 
     # Figure  Setting
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
+    fig.add_argument('--ax-fmt', '--axis-format', dest='axis_format',
+                     choices=['index', 'time'], default='time',
+                     help='Coherence matrix axis format: index or time (default: %(default)s).')
     fig.add_argument('--fs', '--fontsize', type=int,
                      default=12, help='font size in points')
     fig.add_argument('--lw', '--linewidth', dest='linewidth',
@@ -160,13 +157,6 @@ def read_template2inps(template_file, inps):
     if key in inps.template.keys():
         if inps.template[key]:
             inps.maskFile = inps.template[key]
-
-    # coherence matrix axis format
-    key = prefix+'plotAxisFormat'
-    if (key in inps.template.keys()
-            and inps.template[key]
-            and all(i not in inps.argv for i in ['--axis-format', '--axfmt', '--ax-fmt'])):
-        inps.axis_format = inps.template[key]
 
     return inps
 
