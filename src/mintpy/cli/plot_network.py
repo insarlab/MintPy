@@ -25,9 +25,9 @@ DATE12_LIST = """
 """
 
 TEMPLATE = """
-mintpy.network.maskFile = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
-mintpy.network.aoiYX    = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
-mintpy.network.aoiLALO  = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
+mintpy.network.maskFile  = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
+mintpy.network.aoiYX     = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
+mintpy.network.aoiLALO   = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 """
 
 EXAMPLE = """example:
