@@ -677,7 +677,6 @@ def prepare_metadata(iDict):
             warnings.warn('prep_nisar.py failed. Assuming its result exists and continue...')
 
     elif processor == 'isce3':
-        from mintpy.utils import isce3_utils
 
         meta_files = sorted(glob.glob(iDict['mintpy.load.metaFile'])) if iDict.get('mintpy.load.metaFile') else []
         meta_file = meta_files[0] if meta_files else 'auto'

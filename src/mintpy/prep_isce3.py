@@ -82,7 +82,7 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
             burst_full_dy = abs(y_coords[1] - y_coords[0])
             print(f'Number of bursts: {num_bursts}')
             print(f'Full-resolution pixel size: dx={burst_full_dx}, dy={burst_full_dy}')
-        except Exception as e:
+        except Exception:
             print(f'WARNING: could not read full-res pixel size: {e}')
 
     # Step 1: Merge and crop geometry to interferogram extent and resolution

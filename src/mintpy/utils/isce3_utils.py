@@ -1,6 +1,5 @@
 import os
 import re
-import json
 import math
 import tempfile
 import shutil
@@ -15,7 +14,7 @@ import h5py
 import numpy as np
 from osgeo import gdal, osr
 
-from mintpy.utils import ptime, readfile
+from mintpy.utils import readfile
 from mintpy.objects import sensor
 
 try:
@@ -166,7 +165,6 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
         try:
             H = float(meta['HEIGHT'])
             R = float(meta['EARTH_RADIUS'])
-            sr = float(meta['startingRange'])
             look_angle = np.arcsin(R / (R + H))
             inc_angle = np.arcsin((R + H) / R * np.sin(look_angle))
             meta['CENTER_INCIDENCE_ANGLE'] = str(np.rad2deg(inc_angle))
@@ -216,7 +214,6 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
     """
     import glob
     import os
-    from mintpy.utils import ptime
 
     baseline_dict = {}
     
@@ -921,7 +918,6 @@ def _compute_heading(state_vector):
     
     # Altitude
     N = a / np.sqrt(1 - e2 * np.sin(lat)**2)
-    alt = p / np.cos(lat) - N
     
     # Calculate ENU basis vectors at satellite position
     sin_lat = np.sin(lat)

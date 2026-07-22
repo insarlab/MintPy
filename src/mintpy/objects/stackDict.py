@@ -641,7 +641,8 @@ class geometryDict:
 
         # Use gdalwarp CLI for reliable CRS handling (Python API may
         # not apply -s_srs correctly for files missing embedded SRS).
-        import tempfile, subprocess
+        import tempfile
+import subprocess
         tmp_f = tempfile.mktemp(suffix='.tif')
         cmd = [
             'gdalwarp', '-overwrite', '-q',
