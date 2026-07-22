@@ -516,7 +516,7 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None, debug_mode=False
         else:
             # in the operation mode, try to download 3 times, then use whatever downloaded and continue
             i = 0
-            while i < 30:
+            while i < 3:
                 i += 1
                 try:
                     if tropo_model in ['ERA5', 'ERAINT']:
@@ -528,11 +528,11 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None, debug_mode=False
                     elif tropo_model == 'NARR':
                         pa.NARRdload(date_list2dload, hour, grib_dir)
                 except:
-                    if i < 30:
+                    if i < 3:
                         print(f'WARNING: the {i} attempt to download failed, retry it.\n')
                     else:
                         print('\n\n'+'*'*50)
-                        print('WARNING: downloading failed for 30 times, stop trying and continue.')
+                        print('WARNING: downloading failed for 3 times, stop trying and continue.')
                         print('*'*50+'\n\n')
                     pass
 
