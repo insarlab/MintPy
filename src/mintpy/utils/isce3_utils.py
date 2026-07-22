@@ -1297,7 +1297,6 @@ def extract_required_attributes(metadata):
     # Calculate frame numbers
     if meta['ascendingNodeTime'] is not None and meta['burstStartUTC']:
         try:
-            from datetime import datetime
             start_dt = datetime.strptime(meta['burstStartUTC'], '%Y-%m-%d %H:%M:%S.%f')
             if isinstance(meta['ascendingNodeTime'], str):
                 node_dt = datetime.strptime(meta['ascendingNodeTime'], '%Y-%m-%d %H:%M:%S.%f')
