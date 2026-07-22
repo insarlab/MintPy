@@ -883,9 +883,7 @@ def extract_merge_geometry(
 # XML generation for ISCE3 burst metadata (optional)
 ###############################################################################
 def _to_seconds(t_str: str, ref_epoch_str: str) -> float:
-    """
-    Convert datetime string to seconds relative to reference epoch.
-    """
+    """Convert datetime string to seconds relative to reference epoch."""
     t = datetime.strptime(t_str, '%Y-%m-%d %H:%M:%S.%f')
     ref = datetime.strptime(ref_epoch_str, '%Y-%m-%d %H:%M:%S.%f')
     return (t - ref).total_seconds()
