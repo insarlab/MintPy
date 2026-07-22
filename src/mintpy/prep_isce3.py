@@ -8,8 +8,7 @@ from mintpy.utils import isce3_utils, ptime, readfile, writefile
 
 #########################################################################
 def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
-    """
-    Add metadata unique for each interferogram.
+    """    Add metadata unique for each interferogram.
 
     Parameters: metadata_in   : dict, input common metadata for the entire dataset
                 dates         : list of str in YYYYMMDD format
@@ -56,7 +55,6 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
         Update mode (not used here, for consistency).
 
     """
-
     print('preparing geometry files from ISCE3/Dolphin static layers')
     geom_dir = os.path.abspath(geom_dir)
     out_dir = os.path.abspath(out_dir)

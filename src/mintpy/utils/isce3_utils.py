@@ -40,7 +40,8 @@ _setup_gdal_proj_data()
 
 
 def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
-    """Extract common metadata from an ISCE3/Dolphin burst XML file.
+    """
+    Extract common metadata from an ISCE3/Dolphin burst XML file.
 
     Parameters
     ----------
@@ -192,7 +193,8 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
 
 
 def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -> Dict:
-    """Read baseline time series from ISCE3/Dolphin baseline directory.
+    """
+    Read baseline time series from ISCE3/Dolphin baseline directory.
 
     Expected structure: baseline_dir/*.txt where each filename is YYYYMMDD_YYYYMMDD.txt
     File content example:
@@ -273,7 +275,8 @@ def extract_h5_geometry(
     y_coords_name: str = "y_coordinates",
     projection_name: str = "projection"
 ) -> Dict[str, Dict]:
-    """Extract geometry datasets from a static_layers HDF5 file to GeoTIFF.
+    """
+    Extract geometry datasets from a static_layers HDF5 file to GeoTIFF.
 
     Parameters
     ----------
@@ -409,7 +412,8 @@ def build_vrt_from_h5(
     geom_types: List[str],
     dataset_mapping: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Dict]:
-    """Build tiny VRT files referencing HDF5 subdatasets directly (no raster copy).
+    """
+    Build tiny VRT files referencing HDF5 subdatasets directly (no raster copy).
 
     Fast alternative to extract_h5_geometry(): only the 1D coordinate arrays and
     dataset attributes are read; the actual raster data stays in the HDF5 file and
@@ -541,7 +545,8 @@ def merge_geometry_files(
     ref_int_file: Optional[str] = None,
     keep_temp: bool = False
 ) -> Dict[str, Path]:
-    """Merge geometry files across multiple burst IDs and compute incidence angle.
+    """
+    Merge geometry files across multiple burst IDs and compute incidence angle.
 
     Parameters
     ----------
@@ -693,7 +698,8 @@ def merge_geometry_files(
     return merged
 
 def compute_azimuth_angle(los_east_file: Path, los_north_file: Path, output_file: Path, nodata: float = None):
-    """Compute azimuth angle from LOS east and north components.
+    """
+    Compute azimuth angle from LOS east and north components.
 
     The azimuth angle is defined as the angle from the North, measured
     anti‑clockwise as positive (standard mathematical convention).
@@ -737,7 +743,8 @@ def compute_azimuth_angle(los_east_file: Path, los_north_file: Path, output_file
     ds_north = None
 
 def compute_incidence_angle(los_east_file: Path, los_north_file: Path, output_file: Path, nodata: float = None):
-    """Compute incidence angle from LOS east and north components.
+    """
+    Compute incidence angle from LOS east and north components.
 
     Parameters
     ----------
@@ -788,7 +795,8 @@ def extract_merge_geometry(
     metadata: Optional[Dict] = None,
     extra_dirs: Optional[List[str]] = None
 ) -> Dict[str, Path]:
-    """High-level function to extract, merge, and prepare geometry.
+    """
+    High-level function to extract, merge, and prepare geometry.
 
     Parameters
     ----------
@@ -882,9 +890,7 @@ def _to_seconds(t_str: str, ref_epoch_str: str) -> float:
 
 
 def _compute_heading(state_vector):
-
-    """
-    Calculate ENU heading angle from satellite state vectors.
+    """Calculate ENU heading angle from satellite state vectors.
 
     Parameters
     ----------
