@@ -581,9 +581,7 @@ def merge_geometry_files(
         temp_dir = Path(tempfile.mkdtemp(prefix='geom_merge_', dir=str(output_dir)))
 
     def _collect(use_vrt):
-        """
-        Collect per-burst sources (VRT or extracted GeoTIFF) per geometry type.
-        """
+        """Collect per-burst sources (VRT or extracted GeoTIFF) per geometry type."""
         geometry_files = defaultdict(list)
         nodata_dict = {}
         for burst_id in burst_ids:
