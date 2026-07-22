@@ -1033,9 +1033,7 @@ def read_burst_metadata_h5(
     layer_names: List[str] = None,
     group_path: str = "/metadata/processing_information/input_burst_metadata/"
 ) -> Dict[str, Any]:
-
-    """
-    Read metadata for burst attributes from an HDF5 file.
+    """Read metadata for burst attributes from an HDF5 file.
 
     Parameters
     ----------
