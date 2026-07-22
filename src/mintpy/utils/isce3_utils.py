@@ -192,8 +192,7 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
 
 
 def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -> Dict:
-    """
-    Read baseline time series from ISCE3/Dolphin baseline directory.
+    """Read baseline time series from ISCE3/Dolphin baseline directory.
 
     Expected structure: baseline_dir/*.txt where each filename is YYYYMMDD_YYYYMMDD.txt
     File content example:
