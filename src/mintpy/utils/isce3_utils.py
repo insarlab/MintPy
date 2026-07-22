@@ -40,7 +40,8 @@ _setup_gdal_proj_data()
 
 
 def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
-    """Extract common metadata from an ISCE3/Dolphin burst XML file.
+    """
+    Extract common metadata from an ISCE3/Dolphin burst XML file.
 
     Parameters
     ----------
@@ -192,7 +193,8 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
 
 
 def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -> Dict:
-    """Read baseline time series from ISCE3/Dolphin baseline directory.
+    """
+    Read baseline time series from ISCE3/Dolphin baseline directory.
 
     Expected structure: baseline_dir/*.txt where each filename is YYYYMMDD_YYYYMMDD.txt
     File content example:
@@ -579,7 +581,9 @@ def merge_geometry_files(
         temp_dir = Path(tempfile.mkdtemp(prefix='geom_merge_', dir=str(output_dir)))
 
     def _collect(use_vrt):
-        """Collect per-burst sources (VRT or extracted GeoTIFF) per geometry type."""
+        """
+        Collect per-burst sources (VRT or extracted GeoTIFF) per geometry type.
+        """
         geometry_files = defaultdict(list)
         nodata_dict = {}
         for burst_id in burst_ids:
@@ -881,14 +885,17 @@ def extract_merge_geometry(
 # XML generation for ISCE3 burst metadata (optional)
 ###############################################################################
 def _to_seconds(t_str: str, ref_epoch_str: str) -> float:
-    """Convert datetime string to seconds relative to reference epoch."""
+    """
+    Convert datetime string to seconds relative to reference epoch.
+    """
     t = datetime.strptime(t_str, '%Y-%m-%d %H:%M:%S.%f')
     ref = datetime.strptime(ref_epoch_str, '%Y-%m-%d %H:%M:%S.%f')
     return (t - ref).total_seconds()
 
 
 def _compute_heading(state_vector):
-    """Calculate ENU heading angle from satellite state vectors.
+    """
+    Calculate ENU heading angle from satellite state vectors.
 
     Parameters
     ----------
@@ -1033,7 +1040,8 @@ def read_burst_metadata_h5(
     layer_names: List[str] = None,
     group_path: str = "/metadata/processing_information/input_burst_metadata/"
 ) -> Dict[str, Any]:
-    """Read metadata for burst attributes from an HDF5 file.
+    """
+    Read metadata for burst attributes from an HDF5 file.
 
     Parameters
     ----------
@@ -1164,7 +1172,6 @@ def read_burst_metadata_h5(
 
 
 def prepare_mintpy_metadata(metafile: Path) -> Dict[str, Any]:
-
     """
     Prepare metadata dictionary from MintPy HDF5 file for processing.
 
@@ -1223,7 +1230,9 @@ def prepare_mintpy_metadata(metafile: Path) -> Dict[str, Any]:
 
 
 def extract_required_attributes(metadata):
-    """Extract only the burst attributes needed by extract_tops_metadata."""
+    """
+    Extract only the burst attributes needed by extract_tops_metadata.
+    """
     isce3_available = True
     try:
         import isce3
@@ -1318,7 +1327,9 @@ def extract_required_attributes(metadata):
 
 
 def save_burst_attributes_to_xml(burst_attrs: Dict[str, Any], output_path: Union[str, Path]) -> bool:
-    """Save burst attributes to XML file in MintPy-compatible format."""
+    """
+    Save burst attributes to XML file in MintPy-compatible format.
+    """
     root = ET.Element('burst_metadata')
     info = ET.SubElement(root, 'info')
     ET.SubElement(info, 'generation_time').text = datetime.now().isoformat() + 'Z'
@@ -1366,7 +1377,9 @@ def save_burst_attributes_to_xml(burst_attrs: Dict[str, Any], output_path: Union
 
 
 def generate_burst_xml_from_static(static_h5_file: Union[str, Path], output_xml: Union[str, Path]) -> str:
-    """Generate burst XML file from a single static_layers HDF5."""
+    """
+    Generate burst XML file from a single static_layers HDF5.
+    """
     print(f'Generating burst XML from {static_h5_file}')
     meta = prepare_mintpy_metadata(static_h5_file)
     attrs = extract_required_attributes(meta)
