@@ -40,8 +40,7 @@ _setup_gdal_proj_data()
 
 
 def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
-    """
-    Extract common metadata from an ISCE3/Dolphin burst XML file.
+    """Extract common metadata from an ISCE3/Dolphin burst XML file.
 
     Parameters
     ----------
@@ -968,7 +967,6 @@ def _compute_heading(state_vector):
 
 
 def _orbit_interp_hermite(metadata, time):
-
     """
     Interpolate orbit state vectors at given time using Hermite interpolation.
 
