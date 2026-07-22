@@ -8,7 +8,8 @@ from mintpy.utils import isce3_utils, ptime, readfile, writefile
 
 #########################################################################
 def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
-    """Add metadata unique for each interferogram.
+    """
+    Add metadata unique for each interferogram.
 
     Parameters: metadata_in   : dict, input common metadata for the entire dataset
                 dates         : list of str in YYYYMMDD format
@@ -30,14 +31,31 @@ def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
 def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
                            processor='tops', update_mode=True, ref_int_file=None,
                            target_shape=None, geom_dirs=None):
-    """Prepare geometry files from ISCE3/Dolphin static_layers HDF5.
+    """
+    Prepare geometry files from ISCE3/Dolphin static_layers HDF5.
 
     Parameters
     ----------
+    geom_dir     : str
+        Base geometry directory containing burst subdirectories.
+    geom_dirs    : list of str, optional
+        Additional directories with static_layers*.h5 files.
+    geom_files   : list of str, optional
+        Direct paths to static_layers*.h5 files.
+    metadata     : dict
+        Metadata dictionary to be updated with LENGTH/WIDTH.
+    out_dir      : str
+        Output directory for merged geometry files.
+    processor    : str
+        Processor name (e.g., 'isce3').
+    ref_int_file : str, optional
+        Reference interferogram for output extent.
     target_shape : tuple of (length, width), optional
         Interferogram dimensions.
+    update_mode  : bool, optional
+        Update mode (not used here, for consistency).
+
     """
-    from pathlib import Path
 
     print('preparing geometry files from ISCE3/Dolphin static layers')
     geom_dir = os.path.abspath(geom_dir)
@@ -118,7 +136,7 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
               f'(full-res dx={burst_full_dx}, dy={burst_full_dy})')
 
     # Write .rsc files
-    for geom_name, geom_path in geometry_dict.items():
+    for _, geom_path in geometry_dict.items():
         if geom_path and os.path.isfile(geom_path):
             geom_path = str(geom_path)
             rsc_file = geom_path + '.rsc'

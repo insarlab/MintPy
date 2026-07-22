@@ -610,7 +610,8 @@ class geometryDict:
         return self.metadata
 
     def _warp_water_mask(self, dsName, target_length, target_width):
-        """Reproject water mask to match reference geometry grid via GDAL Warp.
+        """
+        Reproject water mask to match reference geometry grid via GDAL Warp.
 
         Parameters: dsName          - str, dataset name (waterMask)
                     target_length   - int, target rows

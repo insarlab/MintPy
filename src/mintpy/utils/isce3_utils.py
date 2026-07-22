@@ -53,6 +53,7 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
     -------
     dict
         Common metadata dictionary with keys required by MintPy.
+
     """
     # Parse XML file with entity resolution disabled (XXE protection)
     parser = ET.XMLParser(resolve_entities=False)
@@ -89,7 +90,6 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
     sensing_mid = get_value('sensingMid')
     if sensing_mid:
         try:
-            from datetime import datetime
             dt = datetime.strptime(sensing_mid, '%Y-%m-%d %H:%M:%S.%f')
             seconds_of_day = dt.hour * 3600.0 + dt.minute * 60.0 + dt.second + dt.microsecond / 1e6
             meta['CENTER_LINE_UTC'] = str(seconds_of_day)
@@ -212,9 +212,9 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
     dict
         Dictionary of baseline values keyed by date (YYYYMMDD).
         Each value is [bperp_top, bperp_bottom] (identical for both).
+
     """
     import glob
-    import os
 
     baseline_dict = {}
 
@@ -241,7 +241,7 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
         dates = date_pair.split('_')
         if len(dates) != 2:
             continue
-        date1, date2 = dates
+        _, date2 = dates
 
         # Parse file content (robust: handles Bperp average (m), Bperp (m), bperp, etc.)
         bperp = 0.0
@@ -293,6 +293,7 @@ def extract_h5_geometry(
     -------
     dict
         Keys are geometry types, values are dicts with 'file_list' and 'nodata'.
+
     """
     if dataset_mapping is None:
         dataset_mapping = {
@@ -431,6 +432,7 @@ def build_vrt_from_h5(
     dict
         Keys are geometry types, values are dicts with 'file_list' (VRT path)
         and 'nodata'.
+
     """
     if dataset_mapping is None:
         dataset_mapping = {
@@ -561,6 +563,7 @@ def merge_geometry_files(
     -------
     dict
         Mapping from geometry type to merged file path.
+
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -704,6 +707,7 @@ def compute_azimuth_angle(los_east_file: Path, los_north_file: Path, output_file
         Output path for azimuthAngle.tif.
     nodata : float, optional
         No-data value to use.
+
     """
     ds_east = gdal.Open(str(los_east_file))
     ds_north = gdal.Open(str(los_north_file))
@@ -744,6 +748,7 @@ def compute_incidence_angle(los_east_file: Path, los_north_file: Path, output_fi
         Output path for incidenceAngle.tif.
     nodata : float, optional
         No-data value to use.
+
     """
     ds_east = gdal.Open(str(los_east_file))
     ds_north = gdal.Open(str(los_north_file))
@@ -806,6 +811,7 @@ def extract_merge_geometry(
     -------
     dict
         Merged geometry file paths.
+
     """
     geom_path = Path(geom_dir)
     # Find burst IDs (subdirectories containing static_layers*.h5)
@@ -859,7 +865,6 @@ def extract_merge_geometry(
     if metadata is not None:
         height_file = merged.get('height.tif')
         if height_file and height_file.exists():
-            from mintpy.utils import readfile
             geom_atr = readfile.read_attribute(str(height_file))
             metadata['LENGTH'] = geom_atr['LENGTH']
             metadata['WIDTH'] = geom_atr['WIDTH']
@@ -878,16 +883,22 @@ def _to_seconds(t_str: str, ref_epoch_str: str) -> float:
 
 
 def _compute_heading(state_vector):
+
     """
-    Calculate ENU heading angle from satellite state vectors
+    Calculate ENU heading angle from satellite state vectors.
 
-    Args:
-        state_vector: Tuple containing (position, velocity) in ECEF coordinates
-                     position: [x, y, z] in meters
-                     velocity: [vx, vy, vz] in m/s
+    Parameters
+    ----------
+    state_vector : tuple
+        (position, velocity) in ECEF coordinates.
+        position: [x, y, z] in meters.
+        velocity: [vx, vy, vz] in m/s.
 
-    Returns:
-        heading: ENU heading angle in degrees (0-360), clockwise from North
+    Returns
+    -------
+    heading : float
+        ENU heading angle in degrees (0-360), clockwise from North.
+
     """
     # Unpack state vector
     state_pos, state_vel = state_vector
@@ -952,6 +963,7 @@ def _compute_heading(state_vector):
 
 
 def _orbit_interp_hermite(metadata, time):
+
     """
     Interpolate orbit state vectors at given time using Hermite interpolation.
 
@@ -970,6 +982,7 @@ def _orbit_interp_hermite(metadata, time):
     -------
     dict
         Dictionary containing interpolated position and velocity at given time(s)
+
     """
     # Extract time array
     t_array = np.array(metadata['time'])
@@ -1018,6 +1031,7 @@ def read_burst_metadata_h5(
     layer_names: List[str] = None,
     group_path: str = "/metadata/processing_information/input_burst_metadata/"
 ) -> Dict[str, Any]:
+
     """
     Read metadata for burst attributes from an HDF5 file.
 
@@ -1037,6 +1051,7 @@ def read_burst_metadata_h5(
     -------
     Dict[str, Any]
         Metadata dictionary for the burst attributes
+
     """
     metadata = {}
 
@@ -1149,6 +1164,7 @@ def read_burst_metadata_h5(
 
 
 def prepare_mintpy_metadata(metafile: Path) -> Dict[str, Any]:
+
     """
     Prepare metadata dictionary from MintPy HDF5 file for processing.
 
@@ -1177,9 +1193,8 @@ def prepare_mintpy_metadata(metafile: Path) -> Dict[str, Any]:
 
     The swath number is extracted from the 'burst_id' field using regex
     pattern matching for IW1, IW2, or IW3 swaths.
-    """
-    import re
 
+    """
     # Define HDF5 group paths to extract metadata from
     group_path_list = [
         '/metadata/processing_information/input_burst_metadata/',
@@ -1208,9 +1223,7 @@ def prepare_mintpy_metadata(metafile: Path) -> Dict[str, Any]:
 
 
 def extract_required_attributes(metadata):
-    """
-    Extract only the burst attributes needed by extract_tops_metadata.
-    """
+    """Extract only the burst attributes needed by extract_tops_metadata."""
     isce3_available = True
     try:
         import isce3
@@ -1238,7 +1251,7 @@ def extract_required_attributes(metadata):
                 SPEED_OF_LIGHT = 299792458.0
                 meta['startingRange'] = meta['startingRange'] * SPEED_OF_LIGHT / 2.0
         except Exception:
-            pass
+            meta['startingRange'] = meta.get('starting_range', 800000.0)
     meta['passDirection'] = metadata.get('orbit_direction',
                              metadata.get('orbit_pass_direction', 'ascending'))
     meta['polarization'] = metadata.get('polarization', 'VV')
