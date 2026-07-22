@@ -1439,7 +1439,9 @@ def read_isce3_geotiff(fname):
         meta['DATA_TYPE'] = 'float32'
     elif 'int' in dtype:
         meta['DATA_TYPE'] = 'int16'
-    meta['NO_DATA_VALUE'] = str(band.GetNoDataValue())
+    ndv = band.GetNoDataValue()
+    if ndv is not None:
+        meta['NO_DATA_VALUE'] = str(ndv)
 
     # File type and processor
     fbase = os.path.basename(fname).lower()

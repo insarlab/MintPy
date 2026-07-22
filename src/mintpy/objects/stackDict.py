@@ -639,26 +639,32 @@ class geometryDict:
             print('    (source water mask has no projection, assuming EPSG:4326)')
             src_srs = 'EPSG:4326'
 
-        # Use gdalwarp CLI for reliable CRS handling (Python API may
-        # not apply -s_srs correctly for files missing embedded SRS).
+        # Use gdalwarp CLI for reliable CRS handling. All inputs are
+        # local filesystem paths from user configuration, not
+        # externally controllable.
         import tempfile
         import subprocess
-        tmp_f = tempfile.mktemp(suffix='.tif')
-        cmd = [
-            'gdalwarp', '-overwrite', '-q',
-            '-s_srs', src_srs, '-t_srs', ref_srs,
-            '-te', str(xmin), str(ymin), str(xmax), str(ymax),
-            '-tr', str(dx), str(dy),
-            '-r', 'near',
-            '-of', 'GTiff', '-co', 'COMPRESS=LZW',
-            src_file, tmp_f,
-        ]
-        subprocess.run(cmd, check=True)
-        tmp_ds = gdal.Open(tmp_f)
-        result = tmp_ds.GetRasterBand(1).ReadAsArray()
-        tmp_ds = None
-        src_ds = None
-        os.remove(tmp_f)
+        fd, tmp_f = tempfile.mkstemp(suffix='.tif')
+        os.close(fd)
+        try:
+            cmd = [
+                'gdalwarp', '-overwrite', '-q',
+                '-s_srs', src_srs, '-t_srs', ref_srs,
+                '-te', str(xmin), str(ymin), str(xmax), str(ymax),
+                '-tr', str(dx), str(dy),
+                '-r', 'near',
+                '-of', 'GTiff', '-co', 'COMPRESS=LZW',
+                src_file, tmp_f,
+            ]
+            subprocess.run(cmd, check=True)
+            tmp_ds = gdal.Open(tmp_f)
+            result = tmp_ds.GetRasterBand(1).ReadAsArray()
+            tmp_ds = None
+            src_ds = None
+            return result
+        finally:
+            if os.path.exists(tmp_f):
+                os.remove(tmp_f)
         return result
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, xstep=1, ystep=1,
