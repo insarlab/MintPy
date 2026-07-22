@@ -1400,6 +1400,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
     return atr
 
 from osgeo import gdal, osr
+
+
 def read_isce3_geotiff(fname):
     """Read attributes from ISCE3/Dolphin GeoTIFF file (e.g., .int.tif)."""
     ds = gdal.Open(fname, gdal.GA_ReadOnly)

@@ -642,8 +642,8 @@ class geometryDict:
         # Use gdalwarp CLI for reliable CRS handling. All inputs are
         # local filesystem paths from user configuration, not
         # externally controllable.
-        import tempfile
         import subprocess
+        import tempfile
         fd, tmp_f = tempfile.mkstemp(suffix='.tif')
         os.close(fd)
         try:

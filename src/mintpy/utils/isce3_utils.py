@@ -1,21 +1,21 @@
+import math
 import os
 import re
-import math
-import tempfile
 import shutil
-import xml.etree.ElementTree as ET
+import tempfile
 import xml.dom.minidom
-from pathlib import Path
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import h5py
 import numpy as np
 from osgeo import gdal, osr
 
-from mintpy.utils import readfile
 from mintpy.objects import sensor
+from mintpy.utils import readfile
 
 try:
     from scipy.interpolate import CubicHermiteSpline
@@ -216,11 +216,11 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
     import os
 
     baseline_dict = {}
-    
+
     # Find all .txt files matching the pattern YYYYMMDD_YYYYMMDD.txt
     pattern = os.path.join(baseline_dir, '[0-9]*_[0-9]*.txt')
     txt_files = sorted(glob.glob(pattern))
-    
+
     if not txt_files:
         print(f'WARNING: no baseline text files found in {os.path.abspath(baseline_dir)}')
         return baseline_dict
@@ -229,10 +229,10 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
     ref_date_candidates = [os.path.basename(f).split('_')[0] for f in txt_files]
     from collections import Counter
     ref_date = Counter(ref_date_candidates).most_common(1)[0][0]
-    
+
     # Filter files that start with the reference date
     bFiles = [f for f in txt_files if os.path.basename(f).startswith(ref_date)]
-    
+
     # Read each file
     for bFile in bFiles:
         filename = os.path.basename(bFile)
@@ -241,10 +241,10 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
         if len(dates) != 2:
             continue
         date1, date2 = dates
-        
+
         # Parse file content (robust: handles Bperp average (m), Bperp (m), bperp, etc.)
         bperp = 0.0
-        with open(bFile, 'r') as f:
+        with open(bFile) as f:
             for line in f:
                 line = line.strip()
                 match = re.match(r'[Bb]perp\b.*?:\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)', line)
@@ -254,13 +254,13 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
                     except ValueError:
                         pass
                     break
-        
+
         # For tops, top and bottom are assumed equal (average)
         baseline_dict[date2] = [bperp, bperp]
-    
+
     # Set reference date baseline to [0, 0]
     baseline_dict[ref_date] = [0.0, 0.0]
-    
+
     return baseline_dict
 
 
@@ -879,34 +879,34 @@ def _to_seconds(t_str: str, ref_epoch_str: str) -> float:
 def _compute_heading(state_vector):
     """
     Calculate ENU heading angle from satellite state vectors
-    
+
     Args:
         state_vector: Tuple containing (position, velocity) in ECEF coordinates
                      position: [x, y, z] in meters
                      velocity: [vx, vy, vz] in m/s
-    
+
     Returns:
         heading: ENU heading angle in degrees (0-360), clockwise from North
     """
     # Unpack state vector
     state_pos, state_vel = state_vector
-    
+
     # Convert ECEF position to LLH
     # Using WGS84 ellipsoid parameters
     a = 6378137.0  # semi-major axis
     f = 1.0 / 298.257223563  # flattening
     b = a * (1 - f)  # semi-minor axis
     e2 = 1 - (b**2 / a**2)  # eccentricity squared
-    
+
     x, y, z = state_pos
-    
+
     # Longitude
     lon = np.arctan2(y, x)
-    
+
     # Latitude using iterative method
     p = np.sqrt(x**2 + y**2)
     lat = np.arctan2(z, p * (1 - e2))
-    
+
     # Iterate to improve latitude accuracy
     for _ in range(10):
         N = a / np.sqrt(1 - e2 * np.sin(lat)**2)
@@ -915,45 +915,45 @@ def _compute_heading(state_vector):
         if np.abs(lat_new - lat) < 1e-12:
             break
         lat = lat_new
-    
+
     # Altitude
     N = a / np.sqrt(1 - e2 * np.sin(lat)**2)
-    
+
     # Calculate ENU basis vectors at satellite position
     sin_lat = np.sin(lat)
     cos_lat = np.cos(lat)
     sin_lon = np.sin(lon)
     cos_lon = np.cos(lon)
-    
+
     # ECEF to ENU rotation matrix
     R = np.array([
         [-sin_lon,           cos_lon,           0.0],
         [-sin_lat * cos_lon, -sin_lat * sin_lon, cos_lat],
         [cos_lat * cos_lon,  cos_lat * sin_lon, sin_lat]
     ])
-    
+
     # Rotate velocity from ECEF to ENU
     vel_enu = np.dot(R, state_vel)
-    
+
     # Extract East and North components
     v_east = vel_enu[0]
     v_north = vel_enu[1]
-    
+
     # Calculate heading angle
     heading_rad = np.arctan2(v_east, v_north)
     heading_deg = np.degrees(heading_rad)
-    
+
     # Normalize to 0-360
     if heading_deg < 0:
         heading_deg += 360.0
-    
+
     return heading_deg
 
 
 def _orbit_interp_hermite(metadata, time):
     """
     Interpolate orbit state vectors at given time using Hermite interpolation.
-    
+
     Parameters
     ----------
     metadata : dict
@@ -964,7 +964,7 @@ def _orbit_interp_hermite(metadata, time):
         - 'reference_epoch': reference epoch datetime string
     time : float or array_like
         Time(s) in seconds relative to reference_epoch for interpolation
-    
+
     Returns
     -------
     dict
@@ -972,16 +972,16 @@ def _orbit_interp_hermite(metadata, time):
     """
     # Extract time array
     t_array = np.array(metadata['time'])
-    
+
     # Create Hermite interpolators for each component
     # Position interpolation with velocity as derivatives
     pos_x_interp = CubicHermiteSpline(t_array, metadata['position_x'], metadata['velocity_x'])
     pos_y_interp = CubicHermiteSpline(t_array, metadata['position_y'], metadata['velocity_y'])
     pos_z_interp = CubicHermiteSpline(t_array, metadata['position_z'], metadata['velocity_z'])
-    
+
     # For velocity, we can either use the derivative of position interpolators
     # or create separate velocity interpolators. Using derivative ensures consistency.
-    
+
     # Calculate interpolated values
     if np.isscalar(time):
         position = np.array([
@@ -1008,7 +1008,7 @@ def _orbit_interp_hermite(metadata, time):
             pos_y_interp.derivative()(time_array),
             pos_z_interp.derivative()(time_array)
         ])
-    
+
     return position, velocity
 
 
@@ -1019,36 +1019,36 @@ def read_burst_metadata_h5(
 ) -> Dict[str, Any]:
     """
     Read metadata for burst attributes from an HDF5 file.
-    
+
     Parameters
     ----------
     h5_file : Path
         Path to the HDF5 file
     layer_names : List[str], optional
-        List of burst metadata attribute names to read. 
+        List of burst metadata attribute names to read.
         If None, all datasets directly under the group will be read.
         Defaults to None.
     group_path : str, optional
         Path to the burst metadata group in the HDF5 file.
         Defaults to '/metadata/processing_information/input_burst_metadata/'
-    
+
     Returns
     -------
     Dict[str, Any]
         Metadata dictionary for the burst attributes
     """
     metadata = {}
-    
+
     try:
         with h5py.File(h5_file, 'r') as f:
             # Check if group exists
             if group_path not in f:
                 print(f"Group {group_path} not found in {h5_file}")
                 return metadata
-            
+
             # Get the group object
             group = f[group_path]
-            
+
             # If layer_names is not provided, get all direct datasets in the group
             if layer_names is None:
                 # Get all items in the group, filter only datasets (not subgroups)
@@ -1060,14 +1060,14 @@ def read_burst_metadata_h5(
             # Read each requested layer
             for layer_name in layer_names:
                 dataset_path = f"{group_path.rstrip('/')}/{layer_name}"
-                
+
                 if dataset_path in f:
                     # Get the dataset
                     dataset = f[dataset_path]
-                    
+
                     # Read the value
                     value = dataset[()]
-                    
+
                     # Handle different data types
                     if isinstance(value, np.ndarray):
                         # For string arrays, decode bytes to string
@@ -1089,31 +1089,31 @@ def read_burst_metadata_h5(
                     else:
                         # Convert scalar numpy types to Python types
                         metadata[layer_name] = value.item() if hasattr(value, 'item') else value
-                    
+
                     # Optionally add dataset attributes if they exist
                     if dataset.attrs:
                         metadata[f"{layer_name}_attrs"] = {
-                            key: (val.tolist() if isinstance(val, np.ndarray) else val) 
+                            key: (val.tolist() if isinstance(val, np.ndarray) else val)
                             for key, val in dataset.attrs.items()
                         }
                 else:
                     print(f"Dataset {dataset_path} not found in {h5_file}")
-    
+
     except Exception as e:
         print(f"Failed to read burst metadata from {h5_file}: {e}")
         return metadata
-    
+
     # Calculate sensing_mid if we have sensing_start and sensing_stop
     if 'sensing_start' in metadata and 'sensing_stop' in metadata:
         try:
             # Parse datetime strings
             start_dt = datetime.strptime(metadata['sensing_start'], '%Y-%m-%d %H:%M:%S.%f')
             stop_dt = datetime.strptime(metadata['sensing_stop'], '%Y-%m-%d %H:%M:%S.%f')
-            
+
             # Calculate time difference and mid time
             time_diff = stop_dt - start_dt
             mid_dt = start_dt + (time_diff / 2)
-            
+
             # Format back to string
             metadata['sensing_mid'] = mid_dt.strftime('%Y-%m-%d %H:%M:%S.%f')
 
@@ -1133,67 +1133,67 @@ def read_burst_metadata_h5(
                             metadata['sensing_mid'] = value
             except Exception as read_e:
                 print(f"Failed to read sensing_mid from file: {read_e}")
-    
+
     # Calculate mid_range if we have starting_range, width, and range_pixel_spacing
     if all(key in metadata for key in ['starting_range', 'width', 'range_pixel_spacing']):
         try:
-            mid_range = (metadata['starting_range'] + 
-                        (metadata['width'] / 2) * 
+            mid_range = (metadata['starting_range'] +
+                        (metadata['width'] / 2) *
                         metadata['range_pixel_spacing'])
             metadata['mid_range'] = mid_range
         except Exception as e:
             print(f"Failed to calculate mid_range: {e}")
-    
+
     return metadata
 
 
 def prepare_mintpy_metadata(metafile: Path) -> Dict[str, Any]:
     """
     Prepare metadata dictionary from MintPy HDF5 file for processing.
-    
+
     This function extracts specific metadata groups from a MintPy HDF5 file,
     combines them into a single dictionary, and extracts additional derived
     metadata fields such as swath number.
-    
+
     Parameters
     ----------
     metafile : Path
         Path to the MintPy HDF5 metadata file.
-        
+
     Returns
     -------
     Dict[str, Any]
         Combined metadata dictionary containing:
         - All metadata from specified HDF5 groups
         - Derived fields like 'swathNumber'
-        
+
     Notes
     -----
     The function reads metadata from three predefined HDF5 group paths:
     1. Processing information and input burst metadata
     2. Orbit information
     3. Identification information
-    
+
     The swath number is extracted from the 'burst_id' field using regex
     pattern matching for IW1, IW2, or IW3 swaths.
     """
     import re
-    
+
     # Define HDF5 group paths to extract metadata from
     group_path_list = [
         '/metadata/processing_information/input_burst_metadata/',
         '/metadata/orbit',
         '/identification'
     ]
-    
+
     # Initialize empty metadata dictionary
     metadata = {}
-    
+
     # Iterate through each group path and read metadata
     for group_path in group_path_list:
         # Update metadata dictionary with contents from current group
         metadata.update(read_burst_metadata_h5(metafile, group_path=group_path))
-    
+
     # Extract swath number from burst_id using regex pattern matching
     # Pattern matches iw0, iw1, or iw2 (case-insensitive) and extracts the digit
     if re.search(r"iw([012])", metadata.get('burst_id', ''), re.IGNORECASE):
@@ -1202,7 +1202,7 @@ def prepare_mintpy_metadata(metafile: Path) -> Dict[str, Any]:
         )
     else:
         metadata['swathNumber'] = None
-    
+
     return metadata
 
 
@@ -1218,7 +1218,7 @@ def extract_required_attributes(metadata):
         print("WARNING: isce3 not available. Some metadata fields will use defaults.")
 
     meta = {}
-    
+
     # Direct burst attributes used in original function (with fallbacks)
     meta['prf'] = metadata.get('prf_raw_data',
                     metadata.get('prf', 1717.0))
@@ -1243,7 +1243,7 @@ def extract_required_attributes(metadata):
     meta['polarization'] = metadata.get('polarization', 'VV')
     meta['trackNumber'] = metadata.get('track_number', 0)
     meta['orbitNumber'] = metadata.get('absolute_orbit_number', 0)
-    
+
     # Additional attributes needed for calculations
     meta['sensingMid'] = metadata.get('sensing_mid', metadata.get('sensing_start', ''))
     meta['azimuthTimeInterval'] = metadata.get('azimuth_time_interval',
@@ -1300,7 +1300,7 @@ def extract_required_attributes(metadata):
     else:
         meta['firstFrameNumber'] = 0
         meta['lastFrameNumber'] = 0
-    
+
     return meta
 
 
