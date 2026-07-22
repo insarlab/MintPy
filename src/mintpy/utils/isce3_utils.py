@@ -54,8 +54,9 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
     dict
         Common metadata dictionary with keys required by MintPy.
     """
-    # Parse XML file
-    tree = ET.parse(meta_file)
+    # Parse XML file with entity resolution disabled (XXE protection)
+    parser = ET.XMLParser(resolve_entities=False)
+    tree = ET.parse(meta_file, parser=parser)
     root = tree.getroot()
     burst_elem = root.find('burst_attributes')
     if burst_elem is None:
