@@ -18,6 +18,7 @@ import warnings
 
 import h5py
 import numpy as np
+from osgeo import gdal
 from skimage.transform import resize
 
 from mintpy.multilook import multilook_data
@@ -391,8 +392,8 @@ class ifgramDict:
     def get_perp_baseline(self, family=IFGRAM_DSET_NAMES[0]):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
-        self.bperp_top = float(metadata['P_BASELINE_TOP_HDR'])
-        self.bperp_bottom = float(metadata['P_BASELINE_BOTTOM_HDR'])
+        self.bperp_top = float(metadata.get('P_BASELINE_TOP_HDR', 0))
+        self.bperp_bottom = float(metadata.get('P_BASELINE_BOTTOM_HDR', 0))
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
 
@@ -608,6 +609,65 @@ class geometryDict:
 
         return self.metadata
 
+    def _warp_water_mask(self, dsName, target_length, target_width):
+        """
+        Reproject water mask to match reference geometry grid via GDAL Warp.
+
+        Parameters: dsName          - str, dataset name (waterMask)
+                    target_length   - int, target rows
+                    target_width    - int, target columns
+        Returns:    data            - np.ndarray (target_length, target_width)
+        """
+        src_file = self.datasetDict[dsName]
+        ref_file = self.datasetDict[self.dsNames[0]]
+        ref_ds = gdal.Open(ref_file)
+        ref_gt = ref_ds.GetGeoTransform()
+        ref_srs = ref_ds.GetProjection()
+        ref_ds = None
+
+        xmin = ref_gt[0]
+        ymax = ref_gt[3]
+        xmax = xmin + ref_gt[1] * target_width
+        ymin = ymax + ref_gt[5] * target_length
+        dx = abs(ref_gt[1])
+        dy = abs(ref_gt[5])
+
+        src_ds = gdal.Open(src_file)
+        src_srs = src_ds.GetProjection()
+        if not src_srs:
+            # source file may lack embedded projection (e.g. GeoTIFF
+            # written before PROJ_DATA was set). Assume EPSG:4326.
+            print('    (source water mask has no projection, assuming EPSG:4326)')
+            src_srs = 'EPSG:4326'
+
+        # Use gdalwarp CLI for reliable CRS handling. All inputs are
+        # local filesystem paths from user configuration, not
+        # externally controllable.
+        import subprocess
+        import tempfile
+        fd, tmp_f = tempfile.mkstemp(suffix='.tif')
+        os.close(fd)
+        try:
+            cmd = [
+                'gdalwarp', '-overwrite', '-q',
+                '-s_srs', src_srs, '-t_srs', ref_srs,
+                '-te', str(xmin), str(ymin), str(xmax), str(ymax),
+                '-tr', str(dx), str(dy),
+                '-r', 'near',
+                '-of', 'GTiff', '-co', 'COMPRESS=LZW',
+                src_file, tmp_f,
+            ]
+            subprocess.run(cmd, check=True)
+            tmp_ds = gdal.Open(tmp_f)
+            result = tmp_ds.GetRasterBand(1).ReadAsArray()
+            tmp_ds = None
+            src_ds = None
+            return result
+        finally:
+            if os.path.exists(tmp_f):
+                os.remove(tmp_f)
+        return result
+
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, xstep=1, ystep=1,
                    compression='lzf', extra_metadata=None):
         """Save/write to HDF5 file with structure defined in:
@@ -706,6 +766,12 @@ class geometryDict:
                               'convert to water mask (False/True for water/land).'.format(fname))
 
                     elif dsName == 'waterMask':
+                        # auto-align if source has different resolution/CRS
+                        # (e.g. 1-arcsec global water mask vs 20 m interferogram grid)
+                        if data.shape != (length, width):
+                            print(f'    auto-aligning waterMask: {data.shape} -> ({length}, {width})')
+                            data = self._warp_water_mask(dsName, length, width)
+
                         # GMTSAR water/land mask: 1 for land, and nan for water / no data
                         if np.sum(np.isnan(data)) > 0:
                             print('    convert NaN value for waterMask to zero.')
