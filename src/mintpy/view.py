@@ -214,10 +214,7 @@ def check_map_projection(inps, metadata, print_msg=True):
                 if inps.lalo_label:
                     print(f'UTM zone {utm_zone}: draw --lalo-label on regular axes')
                 else:
-                    # --coastline only: cartopy needs zone number, not "14N"
-                    zone_num = int(str(utm_zone)[:-1])
-                    southern = str(utm_zone)[-1].upper() == 'S'
-                    inps.map_proj_obj = ccrs.UTM(zone_num, southern_hemisphere=southern)
+                    inps.map_proj_obj = ccrs.UTM(utm_zone)
                     print(msg + f'UTM zone {utm_zone}')
 
             else:
