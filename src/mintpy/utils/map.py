@@ -67,6 +67,57 @@ def draw_lalo_label(ax, geo_box, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max
     return ax
 
 
+def draw_utm_lalo_label(ax, meta, geo_box, lalo_step=None, lalo_loc=[1, 0, 0, 1],
+                        lalo_max_num=4, lalo_offset=None, font_size=None, print_msg=True):
+    """Draw lat/lon tick labels on a regular matplotlib axes for UTM-geocoded data.
+
+    Data/extent stay in UTM meters. Tick positions are UTM coordinates of lat/lon
+    lines through the plot center; tick labels are formatted as lat/lon.
+    """
+    from mintpy.utils import utils as ut
+
+    W, N, E, S = geo_box
+    lats, lons = ut.utm2latlon(meta, [W, E, E, W], [N, N, S, S])
+    lalo_box = (min(lons), max(lats), max(lons), min(lats))
+    if print_msg:
+        print(f'convert UTM box {geo_box} to lat/lon box {lalo_box} for --lalo-label')
+
+    lats_t, lons_t, lalo_step, digit = auto_lalo_sequence(
+        lalo_box, lalo_step=lalo_step, lalo_max_num=lalo_max_num)
+    if print_msg:
+        print(f'plot lat/lon label in step of {lalo_step} and location of {lalo_loc}')
+
+    mid_lat = 0.5 * (lalo_box[1] + lalo_box[3])
+    mid_lon = 0.5 * (lalo_box[0] + lalo_box[2])
+    # latlon2utm returns (northing, easting)
+    xticks = [ut.latlon2utm(meta, mid_lat, lon)[1] for lon in lons_t]
+    yticks = [ut.latlon2utm(meta, lat, mid_lon)[0] for lat in lats_t]
+
+    dec_digit = max(0, 0 - digit)
+    lon_fmt = f'{{:.{dec_digit}f}}'
+    lat_fmt = f'{{:.{dec_digit}f}}'
+
+    def _lon_label(lon):
+        return f'{lon_fmt.format(abs(lon))}°{"E" if lon >= 0 else "W"}'
+
+    def _lat_label(lat):
+        return f'{lat_fmt.format(abs(lat))}°{"N" if lat >= 0 else "S"}'
+
+    ax.tick_params(which='both', direction='in', labelsize=font_size,
+                   left=True, right=True, top=True, bottom=True,
+                   labelleft=bool(lalo_loc[0]), labelright=bool(lalo_loc[1]),
+                   labeltop=bool(lalo_loc[2]), labelbottom=bool(lalo_loc[3]))
+    if lalo_offset:
+        ax.tick_params(axis='x', which='major', pad=lalo_offset[1])
+        ax.tick_params(axis='y', which='major', pad=lalo_offset[0])
+
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([_lon_label(lon) for lon in lons_t], fontsize=font_size)
+    ax.set_yticks(yticks)
+    ax.set_yticklabels([_lat_label(lat) for lat in lats_t], fontsize=font_size)
+    return ax
+
+
 def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5]):
     """Auto calculate lat/lon label sequence based on input geo_box
     Parameters: geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
