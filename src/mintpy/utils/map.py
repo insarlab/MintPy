@@ -74,11 +74,11 @@ def draw_utm_lalo_label(ax, meta, geo_box, lalo_step=None, lalo_loc=[1, 0, 0, 1]
     Data/extent stay in UTM meters. Tick positions are UTM coordinates of lat/lon
     lines through the plot center; tick labels are formatted as lat/lon.
     """
-    from mintpy.utils import utils as ut
+    from mintpy.utils import utils0 as ut
 
     W, N, E, S = geo_box
     lats, lons = ut.utm2latlon(meta, [W, E, E, W], [N, N, S, S])
-    lalo_box = (min(lons), max(lats), max(lons), min(lats))
+    lalo_box = (min(lons), max(lats), max(lons), min(lats))   # W, N, E, S
     if print_msg:
         print(f'convert UTM box {geo_box} to lat/lon box {lalo_box} for --lalo-label')
 
