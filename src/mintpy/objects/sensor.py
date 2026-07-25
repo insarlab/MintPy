@@ -476,6 +476,7 @@ SEN = {
     'IW2' : {'range_resolution' : 3.1, 'azimuth_resolution': 22.7},
     'IW3' : {'range_resolution' : 3.5, 'azimuth_resolution': 22.6},
     'noise_equivalent_sigma_zero': -22,       # dB
+    'incidence_angle'            : [20, 47],  # degrees for Strip Map mode; 31-46 for IW mode
 }
 
 
@@ -651,6 +652,7 @@ ALOS4 = {
     'chirp_bandwidth'            : 84e6,      # Hz, 84/42/28
     'range_resolution'           : 3,         # m
     'noise_equivalent_sigma_zero': -20,       # dB, -20/-24/-28
+    'incidence_angle'            : [30, 56],  # degrees for Strip Map mode
 }
 
 # SAOCOM-1A/B stripmap
@@ -695,6 +697,7 @@ LT1 = {
     'range_pixel_size'           : 1.67,      # m
     'range_resolution'           : 2.50,      # m
     'noise_equivalent_sigma_zero': -28,       # dB
+    'incidence_angle'            : [20,46],   # degree for STRIP1/2 InSAR
 }
 
 # UAVSAR-L
@@ -744,6 +747,7 @@ NISAR_L = {
         '80MHz'                  : 1.87,      # m
     },
     'noise_equivalent_sigma_zero': -25,       # dB
+    'incidence_angle'            : [34, 48],  # degrees
 }
 
 
