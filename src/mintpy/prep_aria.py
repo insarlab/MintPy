@@ -520,6 +520,160 @@ def write_timeseries(outfile, corrStack, box=None,
     return outfile
 
 
+def get_nisar_dates(corr_stack):
+    """Extract unique acquisition dates and UTC sensing times from NISAR VRT."""
+    ds_cor = gdal.Open(corr_stack, gdal.GA_ReadOnly)
+    layer = ds_cor.GetRasterBand(1).GetMetadataDomainList()[0]
+    n_pairs = ds_cor.RasterCount
+
+    unique_dates = set()
+    date_utc_dict = {}
+
+    for ii in range(n_pairs):
+        bnd = ds_cor.GetRasterBand(ii + 1)
+        meta_dict = bnd.GetMetadata(layer)
+        dates = meta_dict["Dates"].split("_")
+        utc_str = meta_dict.get("UTCTime (HH:MM:SS.ss)", "00:00:00.000000")
+
+        for d in dates:
+            unique_dates.add(d)
+            if d not in date_utc_dict:
+                try:
+                    utc = dt.datetime.strptime(f"{d},{utc_str}", "%Y%m%d,%H:%M:%S.%f")
+                    date_utc_dict[d] = str(utc)
+                except ValueError:
+                    date_utc_dict[d] = f"{d} 00:00:00"
+
+    date_list = sorted(list(unique_dates))
+    ds_cor = None
+    return date_list, date_utc_dict
+
+
+def invert_diff_corrections(outfile, corrStack, box=None, xstep=1, ystep=1, mli_method='nearest'):
+    """Invert differential pairwise corrections into epoch-wise timeseries.
+
+    Used specifically for NISAR products where solidearthtides and troposphereTotal
+    layers are distributed as differential files.
+    """
+    print('-' * 50)
+    max_digit = len(os.path.basename(str(corrStack)))
+
+    if corrStack is not None:
+        print(f'open {os.path.basename(corrStack):<{max_digit}} with gdal ...')
+        if not os.path.exists(corrStack):
+            raise FileNotFoundError(f"{corrStack} does not exist")
+
+    # Open raster and fetch NoDataValue
+    ds_cor = gdal.Open(corrStack, gdal.GA_ReadOnly)
+    ds = gdal.Open(ds_cor.GetFileList()[-1], gdal.GA_ReadOnly)
+    no_data_val = ds.GetRasterBand(1).GetNoDataValue()
+    ds = None
+
+    layer_name, layer_type = get_correction_layer(corrStack)
+    wavelength = np.float64(ds_cor.GetRasterBand(1).GetMetadata(layer_name)["Wavelength (m)"])
+
+    # Physical Sign Convention for Differential Phase Inversion:
+    # 1. Displacement / SET: d = + phi * (lambda / 4pi)
+    # 2. Tropospheric Path Delay: L = - phi * (lambda / 4pi)
+    if layer_type == 'tropo':
+        phase2range = -1.0 * wavelength / (4.0 * np.pi)
+    else:
+        phase2range = wavelength / (4.0 * np.pi)
+
+    n_pairs = ds_cor.RasterCount
+    date_list, date_utc_dict = get_nisar_dates(corrStack)
+    n_dates = len(date_list)
+    date2idx = {d: i for i, d in enumerate(date_list)}
+
+    print(f'number of differential pairs: {n_pairs}')
+    print(f'number of unique {layer_name} dates: {n_dates}')
+
+    # Construct design matrix A (n_pairs, n_dates)
+    A = np.zeros((n_pairs, n_dates), dtype=np.float32)
+
+    kwargs = dict()
+    if box is not None:
+        kwargs = dict(
+            xoff=box[0],
+            yoff=box[1],
+            win_xsize=box[2] - box[0],
+            win_ysize=box[3] - box[1],
+        )
+
+    # Determine spatial shape after optional multilooking
+    bnd1 = ds_cor.GetRasterBand(1)
+    sample_data = bnd1.ReadAsArray(**kwargs)
+    if xstep * ystep > 1:
+        sample_data = multilook_data(sample_data, ystep, xstep, method=mli_method)
+    length, width = sample_data.shape
+    num_pixels = length * width
+
+    diff_data = np.zeros((n_pairs, length, width), dtype=np.float32)
+
+    for ii in range(n_pairs):
+        bnd = ds_cor.GetRasterBand(ii + 1)
+        data = bnd.ReadAsArray(**kwargs)
+        if xstep * ystep > 1:
+            data = multilook_data(data, ystep, xstep, method=mli_method)
+
+        d12 = bnd.GetMetadata(layer_name)["Dates"]
+        d_sec, d_ref = d12.split("_")
+
+        # Directly map secondary and reference date indices
+        # ARIA differential band stores: C(d_sec) - C(d_ref)
+        idx_sec = date2idx[d_sec]
+        idx_ref = date2idx[d_ref]
+
+        A[ii, idx_sec] = 1.0
+        A[ii, idx_ref] = -1.0
+
+        data[data == no_data_val] = np.nan
+        diff_data[ii, :, :] = data * phase2range
+
+    # Invert differential phase into epoch time series setting t0 = 0
+    A_sub = A[:, 1:]
+    A_pinv = np.linalg.pinv(A_sub)
+
+    diff_data_flat = diff_data.reshape(n_pairs, num_pixels)
+    nan_mask = np.isnan(diff_data_flat)
+    diff_data_flat[nan_mask] = 0.0
+
+    ts_sub = np.matmul(A_pinv, diff_data_flat)
+
+    ts_flat = np.zeros((n_dates, num_pixels), dtype=np.float32)
+    ts_flat[1:, :] = ts_sub
+
+    # Mask pixels where any pair contained invalid/NaN values
+    has_nan_pixel = np.any(nan_mask, axis=0)
+    ts_flat[:, has_nan_pixel] = 0.0
+
+    timeseries = ts_flat.reshape(n_dates, length, width)
+
+    if xstep * ystep > 1:
+        print(f'apply {xstep} x {ystep} multilooking/downsampling via {mli_method} to {layer_name}')
+
+    print(f'writing data to HDF5 file {outfile} with a mode ...')
+    with h5py.File(outfile, "a") as f:
+        prog_bar = ptime.progressBar(maxValue=n_dates)
+        for ii in range(n_dates):
+            date = date_list[ii]
+            utc = date_utc_dict.get(date, f"{date} 00:00:00")
+            prog_bar.update(ii + 1, suffix=f'{date} {ii + 1}/{n_dates}')
+
+            f["date"][ii] = date.encode("utf-8")
+            f["sensingMid"][ii] = utc.encode("utf-8")
+            f["timeseries"][ii, :, :] = timeseries[ii, :, :]
+
+        prog_bar.close()
+
+        f["timeseries"].attrs['MODIFICATION_TIME'] = str(time.time())
+
+    print(f'finished writing to HD5 file: {outfile}\n')
+    ds_cor = None
+
+    return outfile
+
+
 def get_number_of_epochs(vrtfile):
     ds = gdal.Open(vrtfile, gdal.GA_ReadOnly)
 
@@ -532,13 +686,17 @@ def get_correction_layer(correction_filename):
     layer_name = ds.GetRasterBand(1).GetMetadataDomainList()[0]
 
     # Get type of correction
-    if layer_name in ['GMAO', 'HRES', 'HRRR', "ERA5"]:
+    tropo_models = [
+        'GMAO', 'HRES', 'HRRR', 'ERA5',
+        'troposphereTotal', 'troposphereWet', 'troposphereHydrostatic',
+    ]
+    if layer_name in tropo_models or 'trop' in layer_name.lower():
         layer_type = 'tropo'
     else:
         # ionosphere, solid earth tides
         layer_type = layer_name
 
-    #close
+    # close
     ds = None
 
     return layer_name, layer_type
@@ -684,7 +842,15 @@ def load_aria(inps):
         if layer:
             # get name and type
             layer_name, _ = get_correction_layer(layer)
-            num_dates = get_number_of_epochs(layer)
+
+            # Check if dataset is NISAR
+            is_nisar = meta.get("PLATFORM", "").upper().startswith("NISAR")
+
+            if is_nisar:
+                date_list, _ = get_nisar_dates(layer)
+                num_dates = len(date_list)
+            else:
+                num_dates = get_number_of_epochs(layer)
 
             meta['FILE_TYPE'] = 'timeseries'
             meta['UNIT'] = 'm'
@@ -695,26 +861,37 @@ def load_aria(inps):
 
             # define correction dataset structure for timeseries
             ds_name_dict = {
-            'date'           : (np.dtype('S8'),  (num_dates, )),
-            'sensingMid'     : (np.dtype('S15'), (num_dates, )),
-            'timeseries'     : (np.float32,      (num_dates, length, width)),
+                'date'       : (np.dtype('S8'),  (num_dates, )),
+                'sensingMid' : (np.dtype('S15'), (num_dates, )),
+                'timeseries' : (np.float32,      (num_dates, length, width)),
             }
 
-            if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[0]) == 'run':
+            out_file = f'{out_dir}/{layer_name}_ARIA.h5'
+            if run_or_skip(inps, ds_name_dict, out_file=out_file) == 'run':
                 writefile.layout_hdf5(
-                    f'{out_dir}/{layer_name}_ARIA.h5',
+                    out_file,
                     ds_name_dict,
                     metadata=meta,
                     compression=None if inps.compression == 'default' else inps.compression,
-                    )
+                )
 
                 # write data to disk
-                write_timeseries(
-                    f'{out_dir}/{layer_name}_ARIA.h5',
-                    corrStack=layer,
-                    box=box,
-                    xstep=inps.xstep,
-                    ystep=inps.ystep,
+                if is_nisar:
+                    invert_diff_corrections(
+                        out_file,
+                        corrStack=layer,
+                        box=box,
+                        xstep=inps.xstep,
+                        ystep=inps.ystep,
+                        mli_method=inps.method,
+                    )
+                else:
+                    write_timeseries(
+                        out_file,
+                        corrStack=layer,
+                        box=box,
+                        xstep=inps.xstep,
+                        ystep=inps.ystep,
                     )
     print('-'*50)
 
