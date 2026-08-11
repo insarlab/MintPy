@@ -690,7 +690,7 @@ def get_correction_layer(correction_filename):
         'GMAO', 'HRES', 'HRRR', 'ERA5',
         'troposphereTotal', 'troposphereWet', 'troposphereHydrostatic',
     ]
-    if layer_name in tropo_models or 'trop' in layer_name.lower():
+    if layer_name in tropo_models or 'troposphere' in layer_name.lower():
         layer_type = 'tropo'
     else:
         # ionosphere, solid earth tides
