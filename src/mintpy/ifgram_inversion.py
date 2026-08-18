@@ -521,7 +521,7 @@ def calc_weight_sqrt(stack_obj, box, weight_func='var', dropIfgram=True, chunk_s
         L = float(stack_obj.metadata['NCORRLOOKS'])
     else:
         # use the typical ratio of resolution vs pixel size of Sentinel-1 IW mode
-        L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
+        L = int(float(stack_obj.metadata['ALOOKS'])) * int(float(stack_obj.metadata['RLOOKS']))
         L /= 1.94
     # make sure L >= 1
     L = max(np.rint(L).astype(int), 1)

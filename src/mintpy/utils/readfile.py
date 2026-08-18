@@ -719,8 +719,8 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         if 'byte order' in atr.keys() and atr['byte order'] == '0':
             byte_order = 'little-endian'
 
-    # GDAL / GMTSAR / ASF HyP3
-    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr', 'uavsar']:
+    # GDAL / GMTSAR / ASF HyP3 / ISCE3 geo
+    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr', 'uavsar', 'isce3']:
         # try to recognize custom dataset names if specified and recognized.
         if datasetName:
             slice_list = get_slice_list(fname)
@@ -738,7 +738,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         xstep=xstep,
         ystep=ystep,
     )
-    if processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
+    if processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr', 'isce3']:
         data = read_gdal(fname, **kwargs)
 
     else:
@@ -1257,7 +1257,11 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         atr = {}
         # PROCESSOR
-        if fname.endswith('.img') and any(i.endswith('.hdr') for i in metafiles):
+        if fext in ['.tif', '.tiff'] and fbase.endswith('.int'):
+            atr = read_isce3_geotiff(fname)
+            return atr
+
+        elif fname.endswith('.img') and any(i.endswith('.hdr') for i in metafiles):
             atr['PROCESSOR'] = 'snap'
 
         elif any(i.endswith(('.xml', '.hdr', '.vrt')) for i in metafiles):
@@ -1275,6 +1279,12 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         elif fext in GDAL_FILE_EXTS:
             atr['PROCESSOR'] = 'gdal'
+            # Recognize ISCE3/Dolphin geocoded products by naming pattern
+            if (fext in ['.tif', '.tiff']
+                    and (fbase.endswith('.unw') or fbase.endswith('.cor')
+                         or fbase.endswith('.int') or fbase.endswith('.unw.conncomp'))
+                    and re.search(r'\d{8}_\d{8}', fbase)):
+                atr['PROCESSOR'] = 'isce3'
 
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'mintpy'
@@ -1375,8 +1385,85 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
     atr = standardize_metadata(atr)
 
+    # Fill in missing HEIGHT/EARTH_RADIUS for isce3 geocoded products
+    if atr.get('PROCESSOR', '').startswith('isce'):
+        # try altitude -> HEIGHT if standardization didn't catch it
+        if 'HEIGHT' not in atr or not atr['HEIGHT']:
+            for alt_key in ['altitude', 'SC_height']:
+                if alt_key in atr and atr[alt_key]:
+                    atr['HEIGHT'] = str(atr[alt_key])
+                    break
+        if ('EARTH_RADIUS' not in atr or not atr['EARTH_RADIUS']) and 'earthRadius' in atr:
+            if atr['earthRadius']:
+                atr['EARTH_RADIUS'] = str(atr['earthRadius'])
+
     return atr
 
+from osgeo import gdal, osr
+
+
+def read_isce3_geotiff(fname):
+    """Read attributes from ISCE3/Dolphin GeoTIFF file (e.g., .int.tif)."""
+    ds = gdal.Open(fname, gdal.GA_ReadOnly)
+    if ds is None:
+        raise ValueError(f"Cannot open {fname} with GDAL")
+
+    meta = {}
+    # Image dimensions
+    meta['LENGTH'] = str(ds.RasterYSize)
+    meta['WIDTH'] = str(ds.RasterXSize)
+
+    # Geotransform
+    gt = ds.GetGeoTransform()
+    meta['X_FIRST'] = str(gt[0])
+    meta['Y_FIRST'] = str(gt[3])
+    meta['X_STEP'] = str(abs(gt[1]))
+    meta['Y_STEP'] = str(abs(gt[5]))
+    meta['X_UNIT'] = 'meters'
+    meta['Y_UNIT'] = 'meters'
+
+    # Projection
+    proj = ds.GetProjection()
+    if proj:
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(proj)
+        if srs.IsGeographic():
+            meta['X_UNIT'] = 'degrees'
+            meta['Y_UNIT'] = 'degrees'
+        epsg = srs.GetAuthorityCode(None)
+        if epsg:
+            meta['EPSG'] = epsg
+
+    # Data type
+    band = ds.GetRasterBand(1)
+    dtype = gdal.GetDataTypeName(band.DataType).lower()
+    if 'float' in dtype:
+        meta['DATA_TYPE'] = 'float32'
+    elif 'int' in dtype:
+        meta['DATA_TYPE'] = 'int16'
+    ndv = band.GetNoDataValue()
+    if ndv is not None:
+        meta['NO_DATA_VALUE'] = str(ndv)
+
+    # File type and processor
+    fbase = os.path.basename(fname).lower()
+    if fbase.endswith('.int.tif'):
+        meta['FILE_TYPE'] = '.int'
+    elif fbase.endswith('.cor.tif'):
+        meta['FILE_TYPE'] = '.cor'
+    elif 'unw' in fbase:
+        meta['FILE_TYPE'] = '.unw'
+    meta['PROCESSOR'] = 'isce3'
+
+    # Extract DATE12 from filename
+    # Pattern: YYYYMMDD_YYYYMMDD.int.tif
+    match = re.search(r'(\d{8})_(\d{8})', fname)
+    if match:
+        d1, d2 = match.groups()
+        meta['DATE12'] = f"{d1[2:]}-{d2[2:]}"
+
+    ds = None
+    return meta
 
 def auto_no_data_value(meta):
     """Get default no-data-value for the given file's metadata.
