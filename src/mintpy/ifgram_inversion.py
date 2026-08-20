@@ -595,7 +595,8 @@ def get_design_matrix4std(stack_obj):
 
 def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='unwrapPhase',
                                weight_func='var', water_mask_file=None, min_norm_velocity=True,
-                               mask_ds_name=None, mask_threshold=0.4, min_redundancy=1.0, calc_cov=False):
+                               mask_ds_name=None, mask_threshold=0.4, min_redundancy=1.0, calc_cov=False,
+                               solver='cpu', gpu_chunk_size=0):
     """Invert one patch of an ifgram stack into timeseries.
 
     Parameters: ifgram_file       - str, interferograms stack HDF5 file, e.g. ./inputs/ifgramStack.h5
@@ -610,6 +611,15 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
                 mask_threshold    - float, min coherence of pixels if mask_dataset_name='coherence'
                 min_redundancy    - float, the min number of ifgrams for every acquisition.
                 calc_cov          - bool, calculate the time series covariance matrix.
+                solver            - str, WLS solver: 'cpu' (default,
+                                    scipy.linalg.lstsq per pixel) or 'torch'
+                                    (CUDA-batched normal-equation + Cholesky via
+                                    PyTorch). The 'torch' solver requires the
+                                    [gpu] extras and a visible CUDA device;
+                                    absence is a hard error (no silent CPU
+                                    fallback).
+                gpu_chunk_size    - int, pixels per GPU chunk for solver='torch'.
+                                    0 (default) auto-sizes from free VRAM.
     Returns:    ts                - 3D array in size of (num_date, num_row, num_col)
                 ts_cov            - 4D array in size of (num_date, num_date, num_row, num_col) or None
                 inv_quality       - 2D array in size of (num_row, num_col)
@@ -800,8 +810,34 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
         'inv_quality_name'  : inv_quality_name,
     }
 
+    # 2.x GPU batched path: handles weighted and unweighted in one call.
+    # Per-pixel NaN observations are masked via zero-weights inside the kernel,
+    # which is mathematically equivalent to dropping them from the LS system
+    # for the full-rank case. Rank-deficient pixels (rare on real SBAS networks)
+    # are not handled here; if encountered, NaN/Inf will propagate downstream.
+    if solver != 'cpu':
+        from mintpy.ifgram_inversion_gpu import estimate_timeseries_batch
+        print(f'estimating time-series via {solver} solver (batched, GPU)')
+        ts_sub, q_sub, n_sub = estimate_timeseries_batch(
+            A=A, B=B,
+            y=stack_obs[:, idx_pixel2inv],
+            weight_sqrt=(weight_sqrt[:, idx_pixel2inv]
+                         if weight_sqrt is not None else None),
+            tbase_diff=tbase_diff,
+            min_norm_velocity=min_norm_velocity,
+            rcond=1e-5,
+            min_redundancy=min_redundancy,
+            inv_quality_name=inv_quality_name,
+            chunk_size=gpu_chunk_size,
+            solver=solver,
+        )
+        ts[:, idx_pixel2inv] = ts_sub
+        inv_quality[idx_pixel2inv] = q_sub
+        num_inv_obs[idx_pixel2inv] = n_sub
+        del mask
+
     # 2.2 un-weighted inversion (classic SBAS)
-    if weight_sqrt is None:
+    elif weight_sqrt is None:
         msg = f'estimating time-series for pixels with valid {obs_ds_name} in'
 
         # a. split mask into mask_all/part_net
@@ -1089,6 +1125,8 @@ def run_ifgram_inversion(inps):
         "mask_threshold"    : inps.maskThreshold,
         "min_redundancy"    : inps.minRedundancy,
         "calc_cov"          : inps.calcCov,
+        "solver"            : getattr(inps, 'solver', 'cpu'),
+        "gpu_chunk_size"    : int(getattr(inps, 'gpuChunkSize', 0)),
     }
 
     # 3.3 invert / write block-by-block
