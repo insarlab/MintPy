@@ -1,0 +1,4 @@
+# Optional GPU acceleration deps for the `[gpu]` extras.
+# Install with the PyTorch CUDA wheel index, e.g.:
+#   pip install -e ".[gpu]" --extra-index-url https://download.pytorch.org/whl/cu128
+torch>=2.11

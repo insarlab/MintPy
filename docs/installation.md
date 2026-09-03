@@ -194,6 +194,64 @@ Same as the <a href="#21-install-on-linux">instruction for Linux</a>, except for
 </details>
 </p>
 
+### 2.4 Optional: GPU acceleration via PyTorch CUDA ###
+
+<p>
+<details>
+<p><summary>Click to expand for more details</summary></p>
+
+<p>The <code>invert_network</code> step ships an opt-in GPU solver that solves the per-pixel WLS inversion as a batched normal-equation + Cholesky on a CUDA device via PyTorch. It is opt-in: the default <code>mintpy.networkInversion.solver = auto</code> resolves to <code>cpu</code>, so existing setups are unaffected. There is no silent CPU fallback — selecting <code>torch</code> without a visible CUDA device is a hard error.</p>
+
+<h4>a. Prerequisites</h4>
+
+<ul>
+<li>An NVIDIA GPU with a working CUDA driver</li>
+<li>MintPy installed from source in editable mode (Section 2 above)</li>
+</ul>
+
+<h4>b. Install the [gpu] extras</h4>
+
+<p>The <code>[gpu]</code> extras pull a CUDA-enabled PyTorch build. Pick the <code>cuXXX</code> wheel index that matches your CUDA toolkit version (see <a href="https://pytorch.org/get-started/locally/">pytorch.org</a> for the current list); for example, <code>cu121</code>, <code>cu124</code>, or <code>cu128</code>:</p>
+
+```bash
+python -m pip install -e ".[gpu]" \
+    --extra-index-url https://download.pytorch.org/whl/cu128
+```
+
+<p>If you use <a href="https://docs.astral.sh/uv/">uv</a> instead of <code>pip</code>, add <code>--index-strategy unsafe-best-match</code> to work around a stale <code>setuptools</code> pin in the PyTorch wheel index:</p>
+
+```bash
+uv pip install -e ".[gpu]" \
+    --extra-index-url https://download.pytorch.org/whl/cu128 \
+    --index-strategy unsafe-best-match
+```
+
+<h4>c. Verify</h4>
+
+```bash
+python -c "import torch; print(torch.cuda.is_available())"
+# expected: True
+```
+
+<h4>d. Enable</h4>
+
+<p>Set the template flag:</p>
+
+```cfg
+mintpy.networkInversion.solver = torch
+```
+
+<p>or pass it on the command line:</p>
+
+```bash
+ifgram_inversion.py inputs/ifgramStack.h5 --solver torch
+```
+
+<p>See <a href="./gpu.md">gpu.md</a> for tuning, behavior notes, and benchmarks.</p>
+
+</details>
+</p>
+
 ## 3. Post-Installation Setup ##
 
 #### a. ERA5 for tropospheric correction ####
