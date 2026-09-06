@@ -12,6 +12,7 @@ import datetime as dt
 import itertools
 import os
 import time
+import warnings
 
 import h5py
 import numpy as np
@@ -993,6 +994,10 @@ class ifgramStack:
             for i in range(num2read):
                 prog_bar.update(i+1, suffix=f'{i+1}/{num2read}')
                 data = dset[idx2read[i], :, :]
+                if np.all(data == 0.) or np.all(np.isnan(data)):
+                    if print_msg:
+                        print(f'WARNING: ifgram {idx2read[i]} has all-zero/all-NaN {datasetName}, skipping')
+                    continue
                 mask[data == 0.] = 0
                 mask[np.isnan(data)] = 0
             prog_bar.close()
@@ -1048,6 +1053,11 @@ class ifgramStack:
 
                 # referencing / normalizing for phase
                 if 'unwrapPhase' in datasetName:
+                    # keep MintPy's convention that a phase value of 0.0 indicates
+                    # no-data: convert them to NaN so they are excluded from the
+                    # temporal average (np.nanmean below), consistent with the
+                    # data != 0. check in read_stack_obs().
+                    data[data == 0.] = np.nan
                     # spatial referencing
                     if ref_val is not None:
                         data -= np.tile(ref_val.reshape(-1, 1, 1), (1, data.shape[1], data.shape[2]))
@@ -1056,7 +1066,11 @@ class ifgramStack:
                         data[j,:,:] *= (phase2range / tbase[j])
 
                 # use nanmean to better handle NaN values
-                dmean[r0:r1, :] = np.nanmean(data, axis=0)
+                # suppress the Mean of empty slice RuntimeWarning for pixels
+                # with no valid observation (all 0.0 / NaN)
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore', RuntimeWarning)
+                    dmean[r0:r1, :] = np.nanmean(data, axis=0)
             prog_bar.close()
         return dmean
 
