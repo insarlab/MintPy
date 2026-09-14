@@ -59,6 +59,15 @@ def create_parser(subparsers=None):
     )
 
     parser.add_argument(
+        "-ba",
+        "--band",
+        dest="sar_band",
+        choices=["auto", "LSAR", "SSAR"],
+        default="auto",
+        help="NISAR product family to load: auto defaults to LSAR (default: %(default)s).",
+    )
+
+    parser.add_argument(
         "-o",
         "--out-dir",
         dest="out_dir",
