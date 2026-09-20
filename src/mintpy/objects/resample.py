@@ -205,10 +205,18 @@ class resample:
         )
 
         if self.software == 'pyresample':
-            # move 1st/time dimension to the last
+
+            # Move spatial dimensions (row, col) from the end to the front
             # so that rows/cols axis are the first, as required by pyresample
-            if len(src_data.shape) == 3:
-                src_data = np.moveaxis(src_data, 0, -1)
+            src_data = ut.move_spatial_dimension(src_data, to_front=True)
+
+            # save non-spatial shape for restoring later
+            # () for 2d data
+            non_spatial_shape = src_data.shape[2:]
+
+            # and ravel all non-spatial dimensions to shape (row, col, dn1 * dn2 * ...)
+            # will return just return data for 2d data
+            src_data = ut.flatten_for_resample(src_data)
 
             # resample source data into target data
             dest_data = self.run_pyresample(
@@ -220,9 +228,12 @@ class resample:
                 **kwargs,
             )
 
-            # move 1st/time dimension back
-            if len(dest_data.shape) == 3:
-                dest_data = np.moveaxis(dest_data, -1, 0)
+            # Restore original non-spatial dimensions
+            dest_data = ut.restore_from_resample(dest_data, non_spatial_shape)
+
+            # Move spatial dimensions (row, col) from the front back to the end
+            # Restores (..., rows, cols) for any number of leading dimensions
+            dest_data = ut.move_spatial_dimension(dest_data, to_front=False)
 
         else:
             vprint(f'{self.interp_method} resampling using scipy.interpolate.RegularGridInterpolator ...')
@@ -233,6 +244,8 @@ class resample:
                     prog_bar.update(i+1)
                     dest_data[i, :, :] = self.run_regular_grid_interpolator(src_data=src_data[i, :, :], **kwargs)
                 prog_bar.close()
+            elif len(src_data.shape) > 3:
+                raise NotImplementedError('scipy resampling for >3D data is NOT implemented yet. Use pyresample instead.')
             else:
                 dest_data = self.run_regular_grid_interpolator(src_data=src_data, **kwargs)
 
