@@ -27,7 +27,7 @@ repos:
         exclude: tests/data/
 
   - repo: https://github.com/PyCQA/isort
-    rev: "9.0.1"
+    rev: "9.0.2"
     hooks:
       - id: isort
         name: sort imports
