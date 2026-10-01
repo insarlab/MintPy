@@ -4,7 +4,6 @@
 # Author: Heresh Fattahi, Zhang Yunjun, Emre Havazli, 2019 #
 ############################################################
 
-
 import datetime as dt
 import os
 import time
@@ -130,6 +129,9 @@ def extract_metadata(stack):
     # read metadata from unwrapStack.vrt file
     print(f'extract metadata from {stack}')
     metaUnw = ds.GetRasterBand(1).GetMetadata("unwrappedPhase")
+    if not metaUnw:
+        domains = ds.GetRasterBand(1).GetMetadataDomainList()
+        metaUnw = ds.GetRasterBand(1).GetMetadata(domains[0]) if domains else {}
 
     # copy over all metadata from unwrapStack
     for key, value in metaUnw.items():
@@ -140,38 +142,33 @@ def extract_metadata(stack):
     meta["PROCESSOR"] = "isce"
     meta["FILE_LENGTH"] = ds.RasterYSize
     meta["LENGTH"] = ds.RasterYSize
-    meta["ORBIT_DIRECTION"] = meta["orbitDirection"].upper()
-    meta["PLATFORM"] = meta.get("PLATFORM", "Sen")              # provided by ARIA-tools since version 1.4.3 on Mar 2026
-    meta["WAVELENGTH"] = float(meta["Wavelength (m)"])
+    meta["ORBIT_DIRECTION"] = meta.get("orbitDirection", "UNKNOWN").upper()
+    meta["PLATFORM"] = meta.get("PLATFORM", "Sen")
+    meta["WAVELENGTH"] = float(meta.get("Wavelength (m)", 0.05546576))
     meta["WIDTH"] = ds.RasterXSize
     meta["NUMBER_OF_PAIRS"] = ds.RasterCount
-    meta["STARTING_RANGE"] = float(meta["startRange"])
+    meta["STARTING_RANGE"] = float(meta.get("startRange", 0.0))
 
-    # Note from YZ, 2019-07-25
-    # convert isce azimuth angle to roipac orbit heading angle
-    # This value is not consistent with band2 of los.rdr from ISCE/topsStack
-    # need to check with ARIA-tools team.
-    # use hardwired value for now
-    #az_angle = float(meta["azimuthAngle"])
-    #head_angle = -1 * (270 + az_angle)
-    #head_angle -= np.round(head_angle / 360.) * 360.
-    #meta['HEADING'] = head_angle
     if meta["ORBIT_DIRECTION"].startswith("D"):
         meta["HEADING"] = -168
     else:
         meta["HEADING"] = -12
 
-    # ARIA standard products currently don't have number of range and
-    # azimuth looks. They are however fixed to the following values
-    meta["ALOOKS"] = 7
-    meta["RLOOKS"] = 19
-    meta["RANGE_PIXEL_SIZE"] = float(meta["slantRangeSpacing"]) * meta["RLOOKS"]
+    # Set number of looks and correlation looks based on the platform
+    if meta["PLATFORM"].upper().startswith("NISAR"):
+        meta["ALOOKS"] = 1
+        meta["RLOOKS"] = 1
+        meta["RANGE_PIXEL_SIZE"] = float(meta.get("slantRangeSpacing", 1.0))
+        meta['NCORRLOOKS'] = 1.0 
+    else:
+        meta["ALOOKS"] = 7
+        meta["RLOOKS"] = 19
+        meta["RANGE_PIXEL_SIZE"] = float(meta.get("slantRangeSpacing", 2.33)) * meta["RLOOKS"]
 
-    # number of independent looks
-    sen_dict = sensor.SENSOR_DICT['sen']
-    rgfact = sen_dict['IW2']['range_resolution'] / sen_dict['range_pixel_size']
-    azfact = sen_dict['IW2']['azimuth_resolution'] / sen_dict['azimuth_pixel_size']
-    meta['NCORRLOOKS'] = meta['RLOOKS'] * meta['ALOOKS'] / (rgfact * azfact)
+        sen_dict = sensor.SENSOR_DICT['sen']
+        rgfact = sen_dict['IW2']['range_resolution'] / sen_dict['range_pixel_size']
+        azfact = sen_dict['IW2']['azimuth_resolution'] / sen_dict['azimuth_pixel_size']
+        meta['NCORRLOOKS'] = meta['RLOOKS'] * meta['ALOOKS'] / (rgfact * azfact)
 
     # geo transformation
     transform = ds.GetGeoTransform()
@@ -191,14 +188,14 @@ def extract_metadata(stack):
     meta["X_UNIT"] = "degrees"
     meta["Y_UNIT"] = "degrees"
 
-    utc = meta["UTCTime (HH:MM:SS.ss)"]
-    utc = time.strptime(utc, "%H:%M:%S.%f")
-    meta["CENTER_LINE_UTC"] = utc.tm_hour*3600.0 + utc.tm_min*60.0 + utc.tm_sec
+    utc = meta.get("UTCTime (HH:MM:SS.ss)", "00:00:00.00")
+    try:
+        utc_obj = time.strptime(utc, "%H:%M:%S.%f")
+        meta["CENTER_LINE_UTC"] = utc_obj.tm_hour*3600.0 + utc_obj.tm_min*60.0 + utc_obj.tm_sec
+    except ValueError:
+        meta["CENTER_LINE_UTC"] = 0.0
 
-    # following values probably won't be used anywhere for the geocoded data
-    # earth radius
     meta["EARTH_RADIUS"] = 6337286.638938101
-    # nominal altitude of Sentinel1 orbit
     meta["HEIGHT"] = 693000.0
 
     if meta["ORBIT_DIRECTION"].startswith("ASC"):
@@ -229,8 +226,6 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     """Write geometry HDF5 file from list of VRT files."""
 
     print('-'*50)
-    # box to gdal arguments
-    # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
     if box is not None:
         kwargs = dict(
             xoff=box[0],
@@ -269,33 +264,25 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
             data = bnd.ReadAsArray(**kwargs)
             data = multilook_data(data, ystep, xstep, method='nearest')
             data[data == bnd.GetNoDataValue()] = np.nan
-            # azimuth angle of the line-of-sight vector:
-            # ARIA: vector from target to sensor measured from the east  in counterclockwise direction
-            # ISCE: vector from sensor to target measured from the north in counterclockwise direction
-            # convert ARIA format to ISCE format, which is used in mintpy
             data -= 90
             f['azimuthAngle'][:,:] = data
 
         # waterMask
         if waterMaskFile is not None:
-            # read
             ds = gdal.Open(waterMaskFile, gdal.GA_ReadOnly)
             bnd = ds.GetRasterBand(1)
             water_mask = bnd.ReadAsArray(**kwargs)
             water_mask = multilook_data(water_mask, ystep, xstep, method='nearest')
             water_mask[water_mask == bnd.GetNoDataValue()] = False
 
-            # assign False to invalid pixels based on incAngle data
             ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
             bnd = ds.GetRasterBand(1)
             data = bnd.ReadAsArray(**kwargs)
             data = multilook_data(data, ystep, xstep, method='nearest')
             water_mask[data == bnd.GetNoDataValue()] = False
 
-            # write
             f['waterMask'][:,:] = water_mask
 
-            # apply mask to azimuthAngle after conversion factor
             if azAngleFile is not None:
                 f['azimuthAngle'][:,:] *= water_mask
 
@@ -323,7 +310,7 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
         if stackFile is not None:
             print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(stackFile), w=max_digit))
 
-    # extract NoDataValue for each stack (from the last */date2_date1.vrt file for example)
+    # extract NoDataValue for each stack
     noDataValues = {}
     for dsName in stackFiles.keys():
         dsStack = gdal.Open(stackFiles[dsName], gdal.GA_ReadOnly)
@@ -331,8 +318,9 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
         noDataValues[dsName] = ds.GetRasterBand(1).GetNoDataValue()
 
         fileName = os.path.basename(stackFiles[dsName])
+        nodata_str = str(noDataValues[dsName])
         print(f'grab NoDataValue for {fileName:<{max_digit}}: '
-              f'{noDataValues[dsName]:<5} and convert to 0.')
+              f'{nodata_str:<5} and convert to 0.')
         ds = None
 
     # sort the order of interferograms based on date1_date2 with date1 < date2
@@ -340,15 +328,15 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
     d12BandDict = {}
     for ii in range(nPairs):
         bnd = dsStack.GetRasterBand(ii+1)
-        d12 = bnd.GetMetadata(bnd.GetMetadataDomainList()[0])["Dates"]
+        domains = bnd.GetMetadataDomainList()
+        meta = bnd.GetMetadata(domains[0]) if domains else {}
+        d12 = meta.get("Dates", f"pair_{ii}")
         d12 = sorted(d12.split("_"))
-        d12 = f'{d12[0]}_{d12[1]}'
+        d12 = f'{d12[0]}_{d12[1]}' if len(d12) > 1 else d12[0]
         d12BandDict[d12] = ii+1
     d12List = sorted(d12BandDict.keys())
     print(f'number of interferograms: {len(d12List)}')
 
-    # box to gdal arguments
-    # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
     if box is not None:
         kwargs = dict(
             xoff=box[0],
@@ -367,8 +355,9 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
             bndIdx = d12BandDict[d12]
             prog_bar.update(ii+1, suffix=f'{d12} {ii+1}/{nPairs}')
 
-            f["date"][ii,0] = d12.split("_")[0].encode("utf-8")
-            f["date"][ii,1] = d12.split("_")[1].encode("utf-8")
+            dates_parts = d12.split("_")
+            f["date"][ii,0] = dates_parts[0].encode("utf-8")
+            f["date"][ii,1] = dates_parts[1].encode("utf-8") if len(dates_parts) > 1 else dates_parts[0].encode("utf-8")
             f["dropIfgram"][ii] = True
 
             # loop through stacks
@@ -380,13 +369,23 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
                     mli_method_spec = mli_method if dsName not in \
                         ['connCompStack'] else 'nearest'
                     data = multilook_data(data, ystep, xstep, method=mli_method_spec)
-                data[data == noDataValues[dsName]] = 0  #assign pixel with no-data to 0
+
+                nodata = noDataValues[dsName]
+                if nodata is not None:
+                    if np.isnan(nodata):
+                        data[np.isnan(data)] = 0
+                    else:
+                        data[data == nodata] = 0
+                data[np.isnan(data)] = 0
+
+                domains = bnd.GetMetadataDomainList()
+                bnd_meta = bnd.GetMetadata(domains[0]) if domains else {}
 
                 if dsName == 'unwrapPhase':
                     data *= -1  # date2_date1 -> date1_date2
                     f['unwrapPhase'][ii,:,:] = data
 
-                    bperp = float(bnd.GetMetadata("unwrappedPhase")["perpendicularBaseline"])
+                    bperp = float(bnd_meta.get("perpendicularBaseline", 0.0))
                     bperp *= -1.0  # date2_date1 -> date1_date2
                     f["bperp"][ii] = bperp
 
@@ -400,11 +399,17 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
                     f["magnitude"][ii,:,:] = data
 
                 elif dsName == 'ionosphere':
-                    data *= -1.0  #date2_date1 -> date1_date2
+                    platform = f.attrs.get("PLATFORM", "Sen")
+                    if hasattr(platform, "decode"):
+                        platform = platform.decode("utf-8")
+                    is_nisar = str(platform).upper().startswith("NISAR")
+                    
+                    data *= -1.0
                     f["unwrapPhase"][ii,:,:] = data
 
-                    bperp = float(bnd.GetMetadata("ionosphere")["perpendicularBaseline"])
-                    bperp *= -1.0  #date2_date1 -> date1_date2
+                    bperp = float(bnd_meta.get("perpendicularBaseline", 0.0))
+                    if not is_nisar:
+                        bperp *= -1.0
                     f["bperp"][ii] = bperp
 
         prog_bar.close()
@@ -415,67 +420,58 @@ def write_ifgram_stack(outfile, stackFiles, box=None, xstep=1, ystep=1, mli_meth
             f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
 
     print(f'finished writing to HD5 file: {outfile}\n')
-    dsUnw = None
-    dsCoh = None
-    dsComp = None
-    dsAmp = None
     return outfile
 
 
 # OPTIONAL - ARIA model-based corrections troposphereTotal, solidearthtides
 def write_timeseries(outfile, corrStack, box=None,
                       xstep=1, ystep=1, mli_method='nearest'):
-    """Write SET and TropsphericDelay corrections to HDF5 file from stack VRT files
-       Correction layers are stored for each SAR acquisition date
+    """Write per-epoch SET and tropospheric phase corrections in meters.
 
-    ARIA_GUNW_NC_PATH:
-    troposhereTotal : models GMAO, HRRR, HRES, ERA5 '/science/grids/corrections/external/troposphere/'
-    solidEarthTides '/science/grids/corrections/derived/solidearthtides/'
+    ARIA correction layers use the same phase convention as the unwrapped
+    interferograms.  MintPy displacement is therefore ``-phase * lambda / 4pi``.
+    The resulting time series can be subtracted directly by ``diff.py``.
     """
 
     print('-'*50)
 
-    # determine field length for printing
     max_digit = len(os.path.basename(str(corrStack)))
 
     if corrStack is not None:
         print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(corrStack), w=max_digit))
 
-        # check all files exist
         if not os.path.exists(corrStack):
             raise Exception("%s does not exist" % corrStack)
 
-    # open raster
     dsCor = gdal.Open(corrStack, gdal.GA_ReadOnly)
-    # extract NoDataValue (from the last date.vrt file for example)
     ds = gdal.Open(dsCor.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValue = ds.GetRasterBand(1).GetNoDataValue()
     ds = None
 
-    # get the layer name (for tropo this will get the model name)
-    layer = dsCor.GetRasterBand(1).GetMetadataDomainList()[0]
+    domains = dsCor.GetRasterBand(1).GetMetadataDomainList()
+    layer = domains[0] if domains else "UNKNOWN"
 
-    # Get the wavelength. need to convert radians to meters
-    wavelength = np.float64(dsCor.GetRasterBand(1).GetMetadata(layer)["Wavelength (m)"])
-    phase2range = wavelength / (4.*np.pi)
+    bnd_meta = dsCor.GetRasterBand(1).GetMetadata(layer)
+    wavelength = np.float64(bnd_meta.get("Wavelength (m)", 0.05546576))
+    phase2range = -wavelength / (4.0 * np.pi)
 
-    # get model dates and time
     nDate = dsCor.RasterCount
     dateDict = {}
     sensingDict = {}
     for ii in range(nDate):
         bnd = dsCor.GetRasterBand(ii+1)
-        date = bnd.GetMetadata(layer)["Dates"]
-        utc = dt.datetime.strptime(date + ',' + \
-                                   bnd.GetMetadata(layer)["UTCTime (HH:MM:SS.ss)"],
-                                   "%Y%m%d,%H:%M:%S.%f")
+        meta = bnd.GetMetadata(layer)
+        date = meta.get("Dates", f"date_{ii}")
+        utc_str = meta.get("UTCTime (HH:MM:SS.ss)", "00:00:00.00")
+        try:
+            utc = dt.datetime.strptime(date + ',' + utc_str, "%Y%m%d,%H:%M:%S.%f")
+        except ValueError:
+            utc = f"{date} 00:00:00"
         dateDict[date] = ii+1
         sensingDict[ii+1] = str(utc)
     dateList = sorted(dateDict.keys())
     print(f'number of {layer} datasets: {len(dateList)}')
 
-    # box to gdal arguments
-    # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
     if box is not None:
         kwargs = dict(
             xoff=box[0],
@@ -504,13 +500,13 @@ def write_timeseries(outfile, corrStack, box=None,
             bnd = dsCor.GetRasterBand(bndIdx)
             data = bnd.ReadAsArray(**kwargs)
             data = multilook_data(data, ystep, xstep, method=mli_method)
-            data[data == noDataValue] = 0         #assign pixel with no-data to 0
-            data[np.isnan(data)] = 0              #assign nan pixel to 0
+            if noDataValue is not None:
+                data[data == noDataValue] = 0
+            data[np.isnan(data)] = 0
             f["timeseries"][ii,:,:] = data * phase2range
 
         prog_bar.close()
 
-        # add MODIFICATION_TIME metadata to each 3D dataset
         for dsName in ['timeseries']:
             f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
 
@@ -523,7 +519,8 @@ def write_timeseries(outfile, corrStack, box=None,
 def get_nisar_dates(corr_stack):
     """Extract unique acquisition dates and UTC sensing times from NISAR VRT."""
     ds_cor = gdal.Open(corr_stack, gdal.GA_ReadOnly)
-    layer = ds_cor.GetRasterBand(1).GetMetadataDomainList()[0]
+    domains = ds_cor.GetRasterBand(1).GetMetadataDomainList()
+    layer = domains[0] if domains else "UNKNOWN"
     n_pairs = ds_cor.RasterCount
 
     unique_dates = set()
@@ -532,7 +529,7 @@ def get_nisar_dates(corr_stack):
     for ii in range(n_pairs):
         bnd = ds_cor.GetRasterBand(ii + 1)
         meta_dict = bnd.GetMetadata(layer)
-        dates = meta_dict["Dates"].split("_")
+        dates = meta_dict.get("Dates", "00000000_00000000").split("_")
         utc_str = meta_dict.get("UTCTime (HH:MM:SS.ss)", "00:00:00.000000")
 
         for d in dates:
@@ -550,10 +547,11 @@ def get_nisar_dates(corr_stack):
 
 
 def invert_diff_corrections(outfile, corrStack, box=None, xstep=1, ystep=1, mli_method='nearest'):
-    """Invert differential pairwise corrections into epoch-wise timeseries.
+    """Invert NISAR pairwise phase corrections into a meter time series.
 
-    Used specifically for NISAR products where solidearthtides and troposphereTotal
-    layers are distributed as differential files.
+    ARIA-tools normalizes NISAR external corrections to its ``date2_date1``
+    phase convention.  Use the same phase-to-range sign as the Sentinel
+    per-epoch path so the output is ready for subtraction by MintPy ``diff.py``.
     """
     print('-' * 50)
     max_digit = len(os.path.basename(str(corrStack)))
@@ -563,22 +561,15 @@ def invert_diff_corrections(outfile, corrStack, box=None, xstep=1, ystep=1, mli_
         if not os.path.exists(corrStack):
             raise FileNotFoundError(f"{corrStack} does not exist")
 
-    # Open raster and fetch NoDataValue
     ds_cor = gdal.Open(corrStack, gdal.GA_ReadOnly)
     ds = gdal.Open(ds_cor.GetFileList()[-1], gdal.GA_ReadOnly)
     no_data_val = ds.GetRasterBand(1).GetNoDataValue()
     ds = None
 
-    layer_name, layer_type = get_correction_layer(corrStack)
-    wavelength = np.float64(ds_cor.GetRasterBand(1).GetMetadata(layer_name)["Wavelength (m)"])
-
-    # Physical Sign Convention for Differential Phase Inversion:
-    # 1. Displacement / SET: d = + phi * (lambda / 4pi)
-    # 2. Tropospheric Path Delay: L = - phi * (lambda / 4pi)
-    if layer_type == 'tropo':
-        phase2range = -1.0 * wavelength / (4.0 * np.pi)
-    else:
-        phase2range = wavelength / (4.0 * np.pi)
+    layer_name, _ = get_correction_layer(corrStack)
+    bnd_meta = ds_cor.GetRasterBand(1).GetMetadata(layer_name)
+    wavelength = np.float64(bnd_meta.get("Wavelength (m)", 0.05546576))
+    phase2range = -wavelength / (4.0 * np.pi)
 
     n_pairs = ds_cor.RasterCount
     date_list, date_utc_dict = get_nisar_dates(corrStack)
@@ -588,7 +579,6 @@ def invert_diff_corrections(outfile, corrStack, box=None, xstep=1, ystep=1, mli_
     print(f'number of differential pairs: {n_pairs}')
     print(f'number of unique {layer_name} dates: {n_dates}')
 
-    # Construct design matrix A (n_pairs, n_dates)
     A = np.zeros((n_pairs, n_dates), dtype=np.float32)
 
     kwargs = dict()
@@ -600,7 +590,6 @@ def invert_diff_corrections(outfile, corrStack, box=None, xstep=1, ystep=1, mli_
             win_ysize=box[3] - box[1],
         )
 
-    # Determine spatial shape after optional multilooking
     bnd1 = ds_cor.GetRasterBand(1)
     sample_data = bnd1.ReadAsArray(**kwargs)
     if xstep * ystep > 1:
@@ -616,21 +605,21 @@ def invert_diff_corrections(outfile, corrStack, box=None, xstep=1, ystep=1, mli_
         if xstep * ystep > 1:
             data = multilook_data(data, ystep, xstep, method=mli_method)
 
-        d12 = bnd.GetMetadata(layer_name)["Dates"]
-        d_sec, d_ref = d12.split("_")
+        d12 = bnd.GetMetadata(layer_name).get("Dates", "00000000_00000000")
+        d_parts = d12.split("_")
+        date2 = d_parts[0]
+        date1 = d_parts[1] if len(d_parts) > 1 else d_parts[0]
 
-        # Directly map secondary and reference date indices
-        # ARIA differential band stores: C(d_sec) - C(d_ref)
-        idx_sec = date2idx[d_sec]
-        idx_ref = date2idx[d_ref]
+        idx_date2 = date2idx[date2]
+        idx_date1 = date2idx[date1]
 
-        A[ii, idx_sec] = 1.0
-        A[ii, idx_ref] = -1.0
+        A[ii, idx_date2] = 1.0
+        A[ii, idx_date1] = -1.0
 
-        data[data == no_data_val] = np.nan
+        if no_data_val is not None:
+            data[data == no_data_val] = np.nan
         diff_data[ii, :, :] = data * phase2range
 
-    # Invert differential phase into epoch time series setting t0 = 0
     A_sub = A[:, 1:]
     A_pinv = np.linalg.pinv(A_sub)
 
@@ -643,7 +632,6 @@ def invert_diff_corrections(outfile, corrStack, box=None, xstep=1, ystep=1, mli_
     ts_flat = np.zeros((n_dates, num_pixels), dtype=np.float32)
     ts_flat[1:, :] = ts_sub
 
-    # Mask pixels where any pair contained invalid/NaN values
     has_nan_pixel = np.any(nan_mask, axis=0)
     ts_flat[:, has_nan_pixel] = 0.0
 
@@ -676,16 +664,16 @@ def invert_diff_corrections(outfile, corrStack, box=None, xstep=1, ystep=1, mli_
 
 def get_number_of_epochs(vrtfile):
     ds = gdal.Open(vrtfile, gdal.GA_ReadOnly)
-
-    return ds.RasterCount
+    count = ds.RasterCount
+    ds = None
+    return count
 
 
 def get_correction_layer(correction_filename):
     ds = gdal.Open(correction_filename, gdal.GA_ReadOnly)
-    # get the layer name (for tropo this will get the model name)
-    layer_name = ds.GetRasterBand(1).GetMetadataDomainList()[0]
+    domains = ds.GetRasterBand(1).GetMetadataDomainList()
+    layer_name = domains[0] if domains else "UNKNOWN"
 
-    # Get type of correction
     tropo_models = [
         'GMAO', 'HRES', 'HRRR', 'ERA5',
         'troposphereTotal', 'troposphereWet', 'troposphereHydrostatic',
@@ -693,12 +681,9 @@ def get_correction_layer(correction_filename):
     if layer_name in tropo_models or 'troposphere' in layer_name.lower():
         layer_type = 'tropo'
     else:
-        # ionosphere, solid earth tides
         layer_type = layer_name
 
-    # close
     ds = None
-
     return layer_name, layer_type
 
 ####################################################################################
@@ -708,7 +693,6 @@ def load_aria(inps):
     start_time = time.time()
     print(f'update mode: {inps.updateMode}')
 
-    # extract metadata
     meta = extract_metadata(inps.unwFile)
     box, meta = read_subset_box(inps.template_file, meta)
     if inps.xstep * inps.ystep > 1:
@@ -722,12 +706,10 @@ def load_aria(inps):
     width = int(meta["WIDTH"])
     num_pair = int(meta["NUMBER_OF_PAIRS"])
 
-    # prepare output directory
     out_dir = os.path.dirname(inps.outfile[0])
     os.makedirs(out_dir, exist_ok=True)
 
     ########## output file 1 - ifgramStack
-    # define dataset structure for ifgramStack
     ds_name_dict = {
         "date"             : (np.dtype('S8'), (num_pair, 2)),
         "dropIfgram"       : (np.bool_,       (num_pair,)),
@@ -740,7 +722,6 @@ def load_aria(inps):
         ds_name_dict['magnitude'] = (np.float32, (num_pair, length, width))
 
     if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[0]) == 'run':
-        # initiate h5 file with defined structure
         meta['FILE_TYPE'] = 'ifgramStack'
         writefile.layout_hdf5(
             inps.outfile[0],
@@ -762,7 +743,6 @@ def load_aria(inps):
         )
 
     ########## output file 2 - geometryGeo
-    # define dataset structure for geometry
     ds_name_dict = {
         "height"             : (np.float32, (length, width)),
         "incidenceAngle"     : (np.float32, (length, width)),
@@ -774,7 +754,6 @@ def load_aria(inps):
         ds_name_dict["waterMask"] = (np.bool_, (length, width))
 
     if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[1]) == 'run':
-        # initiate h5 file with defined structure
         meta['FILE_TYPE'] = 'geometry'
         writefile.layout_hdf5(
             inps.outfile[1],
@@ -783,7 +762,6 @@ def load_aria(inps):
             compression='lzf' if inps.compression == 'default' else inps.compression,
         )
 
-        # write data to disk
         write_geometry(
             inps.outfile[1],
             demFile=inps.demFile,
@@ -799,7 +777,6 @@ def load_aria(inps):
 
     # 3.1 - ionosphere
     if inps.ionoFile:
-        # define correction dataset structure for ifgramStack
         ds_name_dict = {
             'date'             : (np.dtype('S8'), (num_pair, 2)),
             'dropIfgram'       : (np.bool_,       (num_pair,)),
@@ -821,7 +798,6 @@ def load_aria(inps):
                 compression=None if inps.compression == 'default' else inps.compression,
                 )
 
-            # write data to disk
             write_ifgram_stack(
                 outname,
                 stackFiles={'ionosphere': inps.ionoFile,
@@ -833,17 +809,12 @@ def load_aria(inps):
             )
 
     # 3.2 - model based corrections: SolidEarthTides and Troposphere
-    # Loop through other correction layers also provided as epochs
-    # handle multiple tropo stacks (if specified)
     if inps.tropoFile is None:
         inps.tropoFile = [None]
     correction_layers = inps.tropoFile + [inps.setFile]
     for layer in correction_layers:
         if layer:
-            # get name and type
             layer_name, _ = get_correction_layer(layer)
-
-            # Check if dataset is NISAR
             is_nisar = meta.get("PLATFORM", "").upper().startswith("NISAR")
 
             if is_nisar:
@@ -859,7 +830,6 @@ def load_aria(inps):
                 if key in meta.keys():
                     meta.pop(key)
 
-            # define correction dataset structure for timeseries
             ds_name_dict = {
                 'date'       : (np.dtype('S8'),  (num_dates, )),
                 'sensingMid' : (np.dtype('S15'), (num_dates, )),
@@ -875,7 +845,6 @@ def load_aria(inps):
                     compression=None if inps.compression == 'default' else inps.compression,
                 )
 
-                # write data to disk
                 if is_nisar:
                     invert_diff_corrections(
                         out_file,
@@ -895,6 +864,5 @@ def load_aria(inps):
                     )
     print('-'*50)
 
-    # used time
     m, s = divmod(time.time() - start_time, 60)
     print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
