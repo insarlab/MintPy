@@ -338,10 +338,16 @@ def get_bounding_box(meta, geom_file=None):
         lat1 = lat0 + lat_step * (length - 1)
         lon1 = lon0 + lon_step * (width - 1)
 
-        # for UTM projection, e.g. ASF HyP3
+        # UTM and polar projections
         if not meta.get('Y_UNIT', 'degrees').lower().startswith('deg'):
-            lat0, lon0 = ut.utm2latlon(meta, easting=lon0, northing=lat0)
-            lat1, lon1 = ut.utm2latlon(meta, easting=lon1, northing=lat1)
+         epsg = meta.get('EPSG')
+         transformer = Transformer.from_crs(
+                 f'EPSG:{epsg}',
+                 'EPSG:4326',
+                 always_xy=True,
+                 )
+         lon0, lat0 = transformer.transform(lon0, lat0)
+         lon1, lat1 = transformer.transform(lon1, lat1)
 
     else:
         # radar coordinates
