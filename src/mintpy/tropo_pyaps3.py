@@ -347,12 +347,12 @@ def get_bounding_box(meta, geom_file=None):
                     'EPSG:4326',
                     always_xy=True,
                     )
-            
+
             # Use all four bounding-box corners to capture geographic extrema,
             # especially for polar stereographic projections
             xs = [lon0, lon1, lon0, lon1]
             ys = [lat0, lat0, lat1, lat1]
-            lons, lats = transformer.transform(xs, ys) 
+            lons, lats = transformer.transform(xs, ys)
 
             if lat0 > lat1:
                 lat0, lat1 = max(lats), min(lats)
@@ -363,10 +363,10 @@ def get_bounding_box(meta, geom_file=None):
                 lon0, lon1 = max(lons), min(lons)
             else:
                 lon0, lon1 = min(lons), max(lons)
-            
+
         elif meta.get('UTM_ZONE'):
             lat0, lon0 = ut.utm2latlon(meta, easting=lon0, northing=lat0)
-            lat1, lon1 = ut.utm2latlon(meta, easting=lon1, northing=lat1) 
+            lat1, lon1 = ut.utm2latlon(meta, easting=lon1, northing=lat1)
 
     else:
         # radar coordinates
