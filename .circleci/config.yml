@@ -1,6 +1,7 @@
 version: 2.1
-jobs:
-  unit-n-workflow-tests:
+
+executors:
+  mintpy:
     docker:
       - image: cimg/base:current
         environment:
@@ -10,6 +11,20 @@ jobs:
     working_directory: /root/tools/MintPy
     resource_class: large
 
+commands:
+  configure-environment:
+    steps:
+      - run:
+          name: Configure MintPy environment
+          command: |
+            # BASH_ENV is job-local, so configure it in every job.
+            echo 'export PATH=${CONDA_PREFIX}/bin:${PATH}' >> ${BASH_ENV}
+            echo 'export PROJ_LIB=${CONDA_PREFIX}/share/proj' >> ${BASH_ENV}
+            echo 'export GDAL_DATA=${CONDA_PREFIX}/share/gdal' >> ${BASH_ENV}
+
+jobs:
+  unit-tests:
+    executor: mintpy
     steps:
       - checkout:
           method: blobless
@@ -26,11 +41,8 @@ jobs:
             bash Miniforge3.sh -b -p ${HOME}/tools/miniforge
             source "${HOME}/tools/miniforge/etc/profile.d/conda.sh"
             source "${HOME}/tools/miniforge/etc/profile.d/mamba.sh"
-            # modify/export env var PATH to BASH_ENV to be shared across run steps
-            echo 'export PATH=${CONDA_PREFIX}/bin:${PATH}' >> ${BASH_ENV}
-            echo 'export PROJ_LIB=${CONDA_PREFIX}/share/proj' >> ${BASH_ENV}
-            echo 'export GDAL_DATA=${CONDA_PREFIX}/share/gdal' >> ${BASH_ENV}
 
+      - configure-environment
       - run:
           name: Installing MintPy
           no_output_timeout: 30m
@@ -54,43 +66,78 @@ jobs:
             pytest ${MINTPY_HOME}/tests/
 
       - run:
-          name: Integration Test 1/6 - FernandinaSenDT128 (ISCE2/topsStack)
-          command: |
-            mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
+          name: Remove package download caches before sharing environment
+          command: mamba clean --all --yes
+      - persist_to_workspace:
+          # Preserve absolute installation paths for Conda and pip entry points.
+          root: /root/tools
+          paths:
+            - miniforge
+            - MintPy
 
+  integration-test:
+    parameters:
+      dataset:
+        type: enum
+        enum:
+          - FernandinaSenDT128
+          - SanFranSenDT42
+          - RidgecrestSenDT71
+          - SanFranBaySenD42
+          - WellsEnvD2T399
+          - WCapeSenAT29
+    executor: mintpy
+    steps:
+      - attach_workspace:
+          at: /root/tools
+      - configure-environment
       - run:
-          name: Integration Test 2/6 - SanFranSenDT42 (ARIA)
+          name: Install download utility
+          command: |
+            apt-get update --yes
+            apt-get install --yes wget
+      - restore_cache:
+          keys:
+            - mintpy-data-v1-<< parameters.dataset >>-{{ checksum "tests/smallbaselineApp.py" }}
+      - run:
+          name: Integration Test - << parameters.dataset >>
+          no_output_timeout: 30m
           command: |
             mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
+            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset << parameters.dataset >>
+      - save_cache:
+          key: mintpy-data-v1-<< parameters.dataset >>-{{ checksum "tests/smallbaselineApp.py" }}
+          paths:
+            # Cache the original input archive, never generated test outputs.
+            - /root/data/<< parameters.dataset >>.tar.xz
 
+  unit-n-workflow-tests:
+    executor: mintpy
+    steps:
       - run:
-          name: Integration Test 3/6 - RidgecrestSenDT71 (HyP3)
-          command: |
-            mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset RidgecrestSenDT71
-
-      - run:
-          name: Integration Test 4/6 - SanFranBaySenD42 (GMTSAR)
-          command: |
-            mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset SanFranBaySenD42
-
-      - run:
-          name: Integration Test 5/6 - WellsEnvD2T399 (Gamma)
-          command: |
-            mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
-
-      - run:
-          name: Integration Test 6/6 - WCapeSenAT29 (SNAP)
-          command: |
-            mkdir -p ${HOME}/data
-            ${MINTPY_HOME}/tests/smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
+          name: All unit and integration tests passed
+          command: echo "All unit and integration tests passed."
 
 workflows:
   version: 2
   unit-n-workflow-tests:
     jobs:
-      - unit-n-workflow-tests
+      - unit-tests
+      - integration-test:
+          name: integration-<< matrix.dataset >>
+          requires:
+            - unit-tests
+          matrix:
+            parameters:
+              dataset:
+                - FernandinaSenDT128
+                - SanFranSenDT42
+                - RidgecrestSenDT71
+                - SanFranBaySenD42
+                - WellsEnvD2T399
+                - WCapeSenAT29
+      # Keep the original required status check, after every matrix job passes.
+      - unit-n-workflow-tests:
+          requires:
+            - unit-tests
+            - integration-test
