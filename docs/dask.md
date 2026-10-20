@@ -7,6 +7,8 @@ Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-b
 
 [Here](https://github.com/2gotgrossman/dask-rsmas-presentation) is an entry-level presentation on parallel computing using Dask by David Grossman. Below we brief describe for each cluster/scheduler the required options and recommended best practices.
 
+For GPU acceleration of the `invert_network` step on a single CUDA device — orthogonal to the Dask paths described here — see [gpu.md](./gpu.md).
+
 ## 1. local cluster ##
 
 The parallel processing on a single machine is supported via [`Dask.distributed.LocalCluster`](https://docs.dask.org/en/latest/setup/single-distributed.html#localcluster). This is recommended if you are running MintPy on a local machine with multiple available cores, or on an HPC but wish to allocate only a single node's worth of resources.
