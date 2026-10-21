@@ -14,7 +14,7 @@ from zipfile import ZipFile
 import numpy as np
 from lxml import etree
 from matplotlib import colorbar, colors, pyplot as plt, ticker
-from pykml.factory import KML_ElementMaker as KML
+from pykml.factory import GX_ElementMaker as GX, KML_ElementMaker as KML
 
 import mintpy
 from mintpy import subset
@@ -227,16 +227,35 @@ def write_kmz_overlay(data, meta, out_file, inps):
                            WIDTH/LENGTH      : required, file size
                            X/Y_FIRST/STEP    : required, for lat/lon spatial converage
                            REF_X/Y           : optional, column/row number of reference pixel
+                           UTM_ZONE          : optional, for data in UTM coordinates
                 out_file - string, output file name
                 inps     - Namespace, optional, input options for display
     Returns:    kmz_file - string, output KMZ filename
+    Notes:      data in UTM coordinates are written with gx:LatLonQuad (4 corners)
+                instead of kml:LatLonBox (2 corners), to keep the rotation of the
+                UTM grid w.r.t. the WGS84 lat/lon grid.
     """
 
     south, north, west, east = ut.four_corners(meta)
+
     # convert from UTM to WGS84 when necessary, as KML only natively supports WGS84
+    corner_latlon = None
     if "UTM_ZONE" in meta.keys():
-        north, east = ut.utm2latlon(meta, east, north)
-        south, west = ut.utm2latlon(meta, west, south)
+        # The UTM grid is rotated w.r.t. the WGS84 lat/lon grid by the grid
+        # convergence angle. Convert all 4 corners, so that the rotation is
+        # preserved by gx:LatLonQuad below. The axis-aligned kml:LatLonBox only
+        # anchors the SW/NE corners, which shifts the NW/SE corners by up to
+        # scene_diagonal * sin(convergence_angle), e.g. ~125 m for a 10 x 10 km
+        # scene at a convergence angle of 0.5 deg, and more for larger scenes.
+        # link: https://github.com/insarlab/MintPy/issues/1211
+        corner_latlon = [
+            ut.utm2latlon(meta, west, south),  # SW
+            ut.utm2latlon(meta, east, south),  # SE
+            ut.utm2latlon(meta, east, north),  # NE
+            ut.utm2latlon(meta, west, north),  # NW
+        ]
+        south, west = corner_latlon[0]
+        north, east = corner_latlon[2]
 
     # 1. Make PNG file - Data
     print('plotting data ...')
@@ -248,23 +267,29 @@ def write_kmz_overlay(data, meta, out_file, inps):
     ax = fig.add_axes([0., 0., 1., 1.])
     ax.set_axis_off()
 
+    width = int(meta['WIDTH'])
+    length = int(meta['LENGTH'])
+
     # Plot - data matrix
+    # use the pixel-edge extent, so that pixel (row, col) spans
+    # [col, col+1] x [row, row+1], consistent with the corner-based bounding
+    # box in KML; with the default extent of [-0.5, W-0.5], the data would be
+    # shifted by half a pixel w.r.t. the KML bounding box
     ax.imshow(data, vmin=inps.vlim[0], vmax=inps.vlim[1], cmap=inps.colormap,
-              aspect='auto', interpolation='nearest')
+              aspect='auto', interpolation='nearest',
+              extent=(0, width, length, 0))
 
     # Plot - reference pixel
     rx = meta.get('REF_X', None)
     ry = meta.get('REF_Y', None)
     if inps.disp_ref_pixel and rx is not None and ry is not None:
-        ax.plot(int(rx), int(ry), inps.ref_marker,
+        ax.plot(int(rx) + 0.5, int(ry) + 0.5, inps.ref_marker,
                 color=inps.ref_marker_color,
                 ms=inps.ref_marker_size)
         print('show reference point')
     else:
         print('no plot for reference point.')
 
-    width = int(meta['WIDTH'])
-    length = int(meta['LENGTH'])
     ax.set_xlim([0, width])
     ax.set_ylim([length, 0])
 
@@ -278,18 +303,31 @@ def write_kmz_overlay(data, meta, out_file, inps):
 
     # Add data png file
     img_name = os.path.splitext(os.path.basename(data_png_file))[0]
+    if corner_latlon is not None:
+        # gx:LatLonQuad: the 4 corners in counter-clockwise order, starting from
+        # the lower-left (SW) corner, to keep the UTM grid rotation w.r.t. the
+        # WGS84 lat/lon grid, which the axis-aligned kml:LatLonBox would ignore
+        quad_coord = ' '.join(
+            f'{float(lon):.10f},{float(lat):.10f},0'
+            for lat, lon in corner_latlon)
+        bbox = GX.LatLonQuad(
+            KML.coordinates(quad_coord),
+        )
+    else:
+        bbox = KML.LatLonBox(
+            KML.north(str(north)),
+            KML.east(str(east)),
+            KML.south(str(south)),
+            KML.west(str(west)),
+        )
+
     img_overlay = KML.GroundOverlay(
         KML.name(img_name),
         KML.Icon(
             KML.href(os.path.basename(data_png_file))
         ),
         KML.altitudeMode('clampToGround'),
-        KML.LatLonBox(
-            KML.north(str(north)),
-            KML.east(str(east)),
-            KML.south(str(south)),
-            KML.west(str(west)),
-        ),
+        bbox,
     )
     kml_doc.append(img_overlay)
 
