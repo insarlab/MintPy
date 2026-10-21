@@ -210,12 +210,12 @@ def check_map_projection(inps, metadata, print_msg=True):
         elif inps.coord_unit.startswith('meter'):
             if 'UTM_ZONE' in metadata.keys():
                 utm_zone = metadata['UTM_ZONE']
-                inps.map_proj_obj = ccrs.UTM(utm_zone)
-                print(msg + f'UTM zone {utm_zone}')
-
-                # check --lalo-label (works for PlateCarree only)
+                # --lalo-label: keep regular axes and label ticks as lat/lon (see draw_utm_lalo_label)
                 if inps.lalo_label:
-                    raise ValueError('--lalo-label is NOT supported for projection: UTM')
+                    print(f'UTM zone {utm_zone}: draw --lalo-label on regular axes')
+                else:
+                    inps.map_proj_obj = ccrs.UTM(utm_zone)
+                    print(msg + f'UTM zone {utm_zone}')
 
             else:
                 print(f'WARNING: Un-recognized coordinate unit: {inps.coord_unit}')
@@ -604,16 +604,30 @@ def plot_slice(ax, data, metadata, inps):
 
         # Lat Lon labels
         if inps.lalo_label:
-            pp.draw_lalo_label(
-                ax=ax,
-                geo_box=inps.geo_box,
-                lalo_step=inps.lalo_step,
-                lalo_loc=inps.lalo_loc,
-                lalo_max_num=inps.lalo_max_num,
-                lalo_offset=inps.lalo_offset,
-                font_size=inps.lalo_font_size if inps.lalo_font_size else inps.font_size,
-                projection=inps.map_proj_obj,
-                print_msg=inps.print_msg)
+            if (inps.coord_unit.startswith('meter')
+                    and 'UTM_ZONE' in metadata.keys()):
+                pp.draw_utm_lalo_label(
+                    ax=ax,
+                    meta=metadata,
+                    geo_box=inps.geo_box,
+                    lalo_step=inps.lalo_step,
+                    lalo_loc=inps.lalo_loc,
+                    lalo_max_num=inps.lalo_max_num,
+                    lalo_offset=inps.lalo_offset,
+                    font_size=inps.lalo_font_size if inps.lalo_font_size else inps.font_size,
+                    print_msg=inps.print_msg,
+                )
+            else:
+                pp.draw_lalo_label(
+                    ax=ax,
+                    geo_box=inps.geo_box,
+                    lalo_step=inps.lalo_step,
+                    lalo_loc=inps.lalo_loc,
+                    lalo_max_num=inps.lalo_max_num,
+                    lalo_offset=inps.lalo_offset,
+                    font_size=inps.lalo_font_size if inps.lalo_font_size else inps.font_size,
+                    projection=inps.map_proj_obj,
+                    print_msg=inps.print_msg)
         else:
             ax.tick_params(which='both', direction='in', labelsize=inps.font_size,
                            left=True, right=True, top=True, bottom=True)

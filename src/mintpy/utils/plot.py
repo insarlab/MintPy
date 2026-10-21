@@ -23,7 +23,7 @@ from mintpy.objects import TIMESERIES_DSET_NAMES, TIMESERIES_KEY_NAMES
 from mintpy.objects.colors import ColormapExt
 from mintpy.objects.coord import coordinate
 from mintpy.utils import network as pnet, ptime, readfile, utils0 as ut0
-from mintpy.utils.map import draw_lalo_label, draw_scalebar
+from mintpy.utils.map import draw_lalo_label, draw_scalebar, draw_utm_lalo_label
 
 min_figsize_single = 6.0       # default min size in inch, for single plot
 max_figsize_single = 10.0      # default min size in inch, for single plot
