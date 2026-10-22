@@ -1185,7 +1185,7 @@ def median_abs_deviation(data, center=None, scale=0.67449):
     + scipy.stats.median_abs_deviation(X, axis=-1, center=np.nanmedian, scale=0.67449, nan_policy='omit')
 
     Parameters: data   - 1/2D np.ndarray, input array
-                center - 0/1D np.ndarray or None
+                center - 0/1D np.ndarray or None, scalar or one value per row
                 scale  - float, the normalization constant
     Returns:    mad    - 0/1D np.ndarray
     """
@@ -1199,9 +1199,9 @@ def median_abs_deviation(data, center=None, scale=0.67449):
     if center is None:
         center = np.nanmedian(data, axis=-1)
 
-        # replicate center matrix for 2D matrix calculation later on
-        if data.ndim == 2:
-            center = np.tile(center.reshape(-1, 1), (1, data.shape[1]))
+    # broadcast one center per row for both inferred and explicit centers
+    if data.ndim == 2 and np.ndim(center) == 1:
+        center = np.asarray(center)[:, np.newaxis]
 
     # calculate median absolute deviation
     mad = np.nanmedian(np.abs(data - center), axis=-1) / scale
