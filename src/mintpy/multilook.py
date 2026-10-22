@@ -21,6 +21,39 @@ np_logger.setLevel(logging.WARNING)
 
 
 ######################################## Sub Functions ############################################
+def get_ampcor_box(width, length, lks_y, lks_x, search_win, xcorr_win, margin=0):
+    """Get the box of the dense offsets grid of pycuampcor, to multilook the full resolution files to it.
+
+    The grid of pycuampcor.dense_offsets (https://github.com/earthdef/cuAmpcor, formerly
+    cuDenseOffsets.py of ISCE2/contrib/PyCuAmpcor), with the number of looks as the step between
+    the windows: the first window starts after the margin and the (half) search range, and as many
+    windows as fit are used. The box is aligned so that each multilooked pixel (block) is centered
+    on its window.
+
+    Parameters: width/length - int, size of the full resolution file
+                lks_y/x      - int, number of looks, i.e., the step between the windows in y/x
+                search_win   - list(int), ampcor (half) search window in (width, length)
+                xcorr_win    - list(int), ampcor cross-correlation window in (width, length)
+                margin       - int, ampcor margin
+    Returns:    box          - tuple(int), (x0, y0, x1, y1) of the multilooked area
+    """
+    # number of windows
+    out_wid = (width - 2*margin - 2*search_win[0] - xcorr_win[0]) // lks_x
+    out_len = (length - 2*margin - 2*search_win[1] - xcorr_win[1]) // lks_y
+    if out_wid <= 0 or out_len <= 0:
+        raise ValueError(f'No window fits in the file of {width} x {length} pixels!')
+
+    # the blocks centered on the windows: the center pixel of a window is its first pixel + size // 2,
+    # and that of a block (the nearest pixel, see readfile.read) is its first pixel + lks // 2
+    x0 = margin + search_win[0] + xcorr_win[0] // 2 - lks_x // 2
+    y0 = margin + search_win[1] + xcorr_win[1] // 2 - lks_y // 2
+    box = (x0, y0, x0 + out_wid * lks_x, y0 + out_len * lks_y)
+    if not 0 <= box[0] < box[2] <= width or not 0 <= box[1] < box[3] <= length:
+        msg = f'Calculated bbox ({box}) exceeds input file coverage (width={width}, length={length})!'
+        raise ValueError(msg)
+    return box
+
+
 def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', max_memory=4,
                    search_win=None, xcorr_win=None, margin=0, off_file=None):
     """ Multilook input file.
@@ -51,15 +84,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', max_memory
 
     # box
     if search_win:
-        x0 = margin + search_win[0]
-        y0 = margin + search_win[1]
-        # Note: this is the formular for PyCuAmpcor/cuDenseOffsets.py
-        # the one for Ampcor CPU is different from the GPU version
-        out_wid = (width - 2*margin - 2*search_win[0] - xcorr_win[0]) // lks_x + 1
-        out_len = (length - 2*margin - 2*search_win[1] - xcorr_win[1]) // lks_x + 1
-        x1 = x0 + out_wid * lks_x
-        y1 = y0 + out_len * lks_y
-        box = (x0, y0, x1, y1)
+        box = get_ampcor_box(width, length, lks_y, lks_x, search_win, xcorr_win, margin)
 
     elif off_file:
         # use the existing ampcor dense offsets file as reference
