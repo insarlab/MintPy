@@ -19,6 +19,10 @@ EXAMPLE = """example:
   # support GDAL VRT file from ISCE2 as input
   multilook.py lat.rdr.full.vrt lon.rdr.full.vrt -x 9 -y 3
 
+  # --search/--xcorr options: the grid of the dense offsets of pycuampcor
+  # (python -m pycuampcor.dense_offsets, formerly cuDenseOffsets.py of ISCE2), with -x/-y as the step
+  multilook.py ../../geom_reference/lat.rdr.full -x 64 -y 32 --search 20 20 --xcorr 64 64 -o lat.rdr -m nearest
+
   # --off-file option: use as reference to adjust for the irregular size from isce2 dense offsets
   multilook.py lat.rdr.full.vrt -x 128 -y 64 -o lat.rdr.mli --off-file dense_offsets.bil -m nearest
   multilook.py ../../geom_reference/lat.rdr.full -x 300 -y 100 -o lat.rdr --off-file offset.bip -m nearest
@@ -46,7 +50,8 @@ def create_parser(subparsers=None):
                              'e.g. nearest for geometry, average for observations')
 
     # offset
-    ampcor = parser.add_argument_group('Ampcor options', 'Ampcor options for dense offsets to account for the extra margin')
+    ampcor = parser.add_argument_group('Ampcor options', 'Ampcor options for dense offsets to account for the extra margin,\n'
+                                       'for the grid of pycuampcor.dense_offsets (formerly cuDenseOffsets.py of ISCE2)')
     ampcor.add_argument('--search','--search-win', dest='search_win', type=int, nargs=2, metavar=('X','Y'),
                         help='Ampcor (half) search window in (width, height) in pixel, e.g. 20 x 20.')
     ampcor.add_argument('--xcorr','--xcorr-win', dest='xcorr_win', type=int, nargs=2, metavar=('X','Y'),
