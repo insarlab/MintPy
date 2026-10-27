@@ -153,9 +153,17 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
             print_msg=False,
         ).reshape(num_ifgram, -1)
 
+        # keep MintPy's convention that a phase value of 0.0 indicates no-data:
+        # only count triplets whose 3 interferograms are all valid (non-zero),
+        # consistent with the data != 0. check in read_stack_obs().
+        valid = unw != 0.
+        num_valid_leg = np.dot(np.abs(np.asarray(C)) > 0, valid.astype(np.float32))
+        tri_valid = num_valid_leg == 3
+
         # calculate based on equation (8-9) and T_int equation inline.
         closure_pha = np.dot(C, unw)
         closure_int = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
+        closure_int[~tri_valid] = 0.
         num_nonzero_closure[r0:r1, :] = np.sum(closure_int != 0, axis=0).reshape(-1, width)
 
         prog_bar.update(i+1, every=1, suffix=f'line {r0} / {length}')
@@ -272,9 +280,16 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
                         print_msg=False,
                     ).reshape(num_ifgram, -1)
 
+                    # keep 0.0 == no-data: zero out closure for triplets with invalid legs
+                    valid = unw != 0.
+                    num_valid_leg = np.dot(np.abs(np.asarray(C)) > 0, valid.astype(np.float32))
+                    tri_valid = num_valid_leg == 3
+
                     # calculate closure_int
                     closure_pha = np.dot(C, unw)
-                    closure_int = matrix(np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi)))
+                    closure_int_arr = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
+                    closure_int_arr[~tri_valid] = 0.
+                    closure_int = matrix(closure_int_arr)
 
                     # solve for U
                     U[:,j] = np.round(l1regls(
