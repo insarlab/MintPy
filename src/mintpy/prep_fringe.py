@@ -107,7 +107,7 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     print(f'preparing timeseries file: {outfile}')
 
     # copy metadata to meta
-    meta = {key : value for key, value in metadata.items()}
+    meta = {**metadata}
     phase2range = float(meta['WAVELENGTH']) / (4. * np.pi)
 
     # grab date list from the filename
@@ -184,7 +184,7 @@ def prepare_temporal_coherence(outfile, infile, metadata, box=None):
     print(f'preparing temporal coherence file: {outfile}')
 
     # copy metadata to meta
-    meta = {key : value for key, value in metadata.items()}
+    meta = {**metadata}
     meta["FILE_TYPE"] = "temporalCoherence"
     meta["UNIT"] = "1"
 
@@ -214,7 +214,7 @@ def prepare_ps_mask(outfile, infile, metadata, box=None):
     print(f'preparing PS mask file: {outfile}')
 
     # copy metadata to meta
-    meta = {key : value for key, value in metadata.items()}
+    meta = {**metadata}
     meta["FILE_TYPE"] = "mask"
     meta["UNIT"] = "1"
 
@@ -241,7 +241,7 @@ def prepare_geometry(outfile, geom_dir, metadata, box, water_mask_file=None):
     print(f'preparing geometry file: {outfile}')
 
     # copy metadata to meta
-    meta = {key : value for key, value in metadata.items()}
+    meta = {**metadata}
     meta["FILE_TYPE"] = "temporalCoherence"
 
     fDict = {
@@ -272,7 +272,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
     print('-'*50)
     print(f'preparing ifgramStack file: {outfile}')
     # copy metadata to meta
-    meta = {key : value for key, value in metadata.items()}
+    meta = {**metadata}
 
     # get list of *.unw file
     unw_files = sorted(glob.glob(unw_file))

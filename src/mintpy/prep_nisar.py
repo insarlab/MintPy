@@ -1221,7 +1221,7 @@ def prepare_geometry(
     print("-" * 50)
     print(f"preparing geometry file: {outfile}")
 
-    meta = {key: value for key, value in metadata.items()}
+    meta = {**metadata}
 
     geo_ds = read_subset(
         metaFile, bbox, polarization=polarization, frequency=frequency, geometry=True
@@ -1271,7 +1271,7 @@ def prepare_water_mask(
     print("-" * 50)
     print(f"preparing water mask file: {outfile}")
 
-    meta = {key: value for key, value in metadata.items()}
+    meta = {**metadata}
 
     # get subset indices
     geo_ds = read_subset(
@@ -1330,7 +1330,7 @@ def prepare_stack(
     print("-" * 50)
     print(f"preparing {effective_stack_type} stack file: {outfile}")
 
-    meta = {key: value for key, value in metadata.items()}
+    meta = {**metadata}
     num_pair = len(inp_files)
     print(f"number of inputs/unwrapped interferograms: {num_pair}")
 
