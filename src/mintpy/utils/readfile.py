@@ -1260,7 +1260,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         if fname.endswith('.img') and any(i.endswith('.hdr') for i in metafiles):
             atr['PROCESSOR'] = 'snap'
 
-        elif any(i.endswith(('.xml', '.hdr', '.vrt')) for i in metafiles):
+        # QGIS sidecars for GDAL-readable rasters are not ISCE metadata.
+        elif fext not in GDAL_FILE_EXTS and any(i.endswith(('.xml', '.hdr', '.vrt')) for i in metafiles):
             atr['PROCESSOR'] = 'isce'
             xml_files = [i for i in metafiles if i.endswith('.xml')]
             if len(xml_files) > 0:
