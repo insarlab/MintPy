@@ -47,7 +47,8 @@ def test_geotiff_with_qgis_sidecar(geotiff, sidecar_ext, with_rsc):
 
 
 @pytest.mark.parametrize('xml_type', ['imageFile', 'PAMDataset'])
-def test_isce_binary_with_xml(tmp_path, xml_type):
+@pytest.mark.parametrize('metafile_ext', [None, '.xml'])
+def test_isce_binary_with_xml(tmp_path, xml_type, metafile_ext):
     """ISCE binary rasters must still read their XML metadata."""
     fname = tmp_path / 'hgt.rdr'
     fname.write_bytes(bytes(4 * 3 * 4))
@@ -71,8 +72,56 @@ def test_isce_binary_with_xml(tmp_path, xml_type):
         )
     fname.with_name(fname.name + suffix).write_text(xml, encoding='utf-8')
 
-    metadata = readfile.read_attribute(str(fname))
+    if metafile_ext:
+        # prep_isce explicitly requests XML to avoid stale dimensions in an RSC.
+        fname.with_name(fname.name + '.rsc').write_text(
+            'WIDTH 1\nFILE_LENGTH 1\nPROCESSOR isce\nDATA_TYPE float32\n',
+            encoding='utf-8',
+        )
+
+    metadata = readfile.read_attribute(str(fname), metafile_ext=metafile_ext)
     assert metadata['PROCESSOR'] == 'isce'
     assert metadata['WIDTH'] == '4'
     assert metadata['LENGTH'] == '3'
     assert metadata['DATA_TYPE'] == 'float32'
+
+
+@pytest.mark.parametrize('with_rsc', [False, True])
+@pytest.mark.parametrize('sidecar_ext, metafile_ext', [
+    ('.xml', '.xml'),
+    ('.aux.xml', '.xml'),
+    ('.aux.xml', '.aux.xml'),
+])
+def test_geotiff_with_explicit_qgis_xml(geotiff, with_rsc, sidecar_ext, metafile_ext):
+    """An explicitly selected QGIS XML must fall back to raster metadata."""
+    expected = readfile.read_attribute(str(geotiff))
+    if with_rsc:
+        geotiff.with_name(geotiff.name + '.rsc').write_text(
+            'WIDTH 4\nFILE_LENGTH 3\nPROCESSOR hyp3\nDATA_TYPE float32\n',
+            encoding='utf-8',
+        )
+    geotiff.with_name(geotiff.name + sidecar_ext).write_text(
+        '<PAMDataset><PAMRasterBand band="1"><Metadata>'
+        '<MDI key="STATISTICS_MEAN">5.5</MDI>'
+        '</Metadata></PAMRasterBand></PAMDataset>',
+        encoding='utf-8',
+    )
+
+    assert readfile.read_attribute(str(geotiff), metafile_ext=metafile_ext) == expected
+
+
+@pytest.mark.parametrize('with_rsc', [False, True])
+def test_geotiff_with_gdal_statistics(geotiff, with_rsc):
+    """Reproduce the sidecar using GDAL itself rather than hand-written XML."""
+    if with_rsc:
+        geotiff.with_name(geotiff.name + '.rsc').write_text(
+            'WIDTH 4\nFILE_LENGTH 3\nPROCESSOR hyp3\nDATA_TYPE float32\n',
+            encoding='utf-8',
+        )
+    expected = readfile.read_attribute(str(geotiff))
+    ds = gdal.Open(str(geotiff), gdal.GA_ReadOnly)
+    ds.GetRasterBand(1).ComputeStatistics(False)
+    ds = None
+    assert geotiff.with_name(geotiff.name + '.aux.xml').is_file()
+
+    assert readfile.read_attribute(str(geotiff)) == expected
