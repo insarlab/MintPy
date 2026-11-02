@@ -42,7 +42,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
 
     # copy metadata to meta
     if metadata:
-        meta = {key: value for key, value in metadata.items()}
+        meta = {**metadata}
     elif ref_file:
         meta = readfile.read_attribute(ref_file)
     else:
@@ -281,10 +281,10 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
 
     # get meta from metadata and ref_file
     if metadata:
-        meta = {key: value for key, value in metadata.items()}
+        meta = {**metadata}
     elif ref_file:
         with h5py.File(ref_file, 'r') as fr:
-            meta = {key: value for key, value in fr.attrs.items()}
+            meta = {**fr.attrs}
         vprint(f'grab metadata from ref_file: {ref_file}')
     else:
         raise ValueError('No metadata or ref_file found.')
