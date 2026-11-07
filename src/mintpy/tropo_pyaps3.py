@@ -382,7 +382,7 @@ def check_exist_grib_file(gfile_list, print_msg=True):
     if gfile_exist:
         file_sizes = [os.path.getsize(i) for i in gfile_exist]
         if file_sizes:
-            comm_size = ut.most_common([i for i in file_sizes])
+            comm_size = ut.most_common([*file_sizes])
             if print_msg:
                 print(f'common file size: {comm_size} bytes')
                 print(f'number of grib files existed    : {len(gfile_exist)}')

@@ -197,7 +197,7 @@ def spatial_average(fname, datasetName='coherence', maskFile=None, box=None,
     def read_text_file(fname):
         txtContent = np.loadtxt(fname, dtype=bytes).astype(str)
         meanList = [float(i) for i in txtContent[:, 1]]
-        dateList = [i for i in txtContent[:, 0]]
+        dateList = [*txtContent[:, 0]]
         return meanList, dateList
 
     # Baic File Info
