@@ -1087,8 +1087,9 @@ def interpolate_geometry(X_2d, Y_2d, dem, rdr_coords, valid_mask):
     losx = _interpolate_radar_grid_field(rdr_coords, "los_x", pts)
     losy = _interpolate_radar_grid_field(rdr_coords, "los_y", pts)
 
-    # Azimuth angle from horizontal LOS unit vector components.
-    az = np.degrees(np.arctan2(-losy, -losx))
+    # Azimuth angle of the target-to-sensor LOS vector, measured from north,
+    # anti-clockwise positive (ISCE-2 convention, see utils0.enu2los).
+    az = np.degrees(np.arctan2(-losx, losy))
 
     out_slant[ii, jj] = sl.astype(np.float32)
     out_incid[ii, jj] = inc.astype(np.float32)
