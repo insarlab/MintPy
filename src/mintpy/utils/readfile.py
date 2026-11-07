@@ -1250,7 +1250,12 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         # for .tif/.grd files, priority:
         # .rsc > file itself > .xml/.aux.xml/.hdr etc.
-        if fext in GDAL_FILE_EXTS and not os.path.isfile(fname + '.rsc'):
+        # QGIS XML can contain only statistics, even when explicitly selected.
+        # Read the raster through GDAL instead of treating that XML as ISCE metadata.
+        if fext in GDAL_FILE_EXTS and (
+            not os.path.isfile(fname + '.rsc')
+            or (metafiles and metafiles[0].endswith('.xml'))
+        ):
             metafiles = [fname]
         elif len(metafiles) == 0:
             raise FileNotFoundError(f'No metadata file found for data file: {fname}')
@@ -1260,7 +1265,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         if fname.endswith('.img') and any(i.endswith('.hdr') for i in metafiles):
             atr['PROCESSOR'] = 'snap'
 
-        elif any(i.endswith(('.xml', '.hdr', '.vrt')) for i in metafiles):
+        # QGIS sidecars for GDAL-readable rasters are not ISCE metadata.
+        elif fext not in GDAL_FILE_EXTS and any(i.endswith(('.xml', '.hdr', '.vrt')) for i in metafiles):
             atr['PROCESSOR'] = 'isce'
             xml_files = [i for i in metafiles if i.endswith('.xml')]
             if len(xml_files) > 0:

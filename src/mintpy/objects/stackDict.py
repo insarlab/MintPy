@@ -54,7 +54,7 @@ class ifgramStackDict:
     def get_size(self, box=None, xstep=1, ystep=1, geom_obj=None):
         """Get size in 3D"""
         num_ifgram = len(self.pairsDict)
-        ifgramObj = [v for v in self.pairsDict.values()][0]
+        ifgramObj = [*self.pairsDict.values()][0]
         length, width = ifgramObj.get_size(family=self.dsName0)
 
         # use the reference geometry obj size
@@ -73,24 +73,24 @@ class ifgramStackDict:
         return num_ifgram, length, width
 
     def get_date12_list(self):
-        pairs = [pair for pair in self.pairsDict.keys()]
+        pairs = [*self.pairsDict.keys()]
         self.date12List = [f'{i[0]}_{i[1]}' for i in pairs]
         return self.date12List
 
     def get_dataset_list(self):
-        ifgramObj = [x for x in self.pairsDict.values()][0]
-        dsetList = [x for x in ifgramObj.datasetDict.keys()]
+        ifgramObj = [*self.pairsDict.values()][0]
+        dsetList = [*ifgramObj.datasetDict.keys()]
         return dsetList
 
     def get_metadata(self):
-        ifgramObj = [v for v in self.pairsDict.values()][0]
+        ifgramObj = [*self.pairsDict.values()][0]
         self.metadata = ifgramObj.get_metadata(family=self.dsName0)
         if 'UNIT' in self.metadata.keys():
             self.metadata.pop('UNIT')
         return self.metadata
 
     def get_dataset_data_type(self, dsName):
-        ifgramObj = [v for v in self.pairsDict.values()][0]
+        ifgramObj = [*self.pairsDict.values()][0]
         dsFile = ifgramObj.datasetDict[dsName]
         metadata = readfile.read_attribute(dsFile)
         dataType = DATA_TYPE_DICT[metadata.get('DATA_TYPE', 'float32').lower()]
@@ -899,19 +899,19 @@ class platformTrack:
         # extract the name of the datasets which are actually the keys of
         # observations, quality and geometry dictionaries.
 
-        pairs = [pair for pair in self.pairs.keys()]
+        pairs = [*self.pairs.keys()]
         # Assuming all pairs of a given platform-track have the same observations
         # let's extract the keys of the observations of the first pair.
 
         if self.pairs[pairs[0]].observationsDict is not None:
-            self.dsetObservationNames = [k for k in self.pairs[pairs[0]].observationsDict.keys()]
+            self.dsetObservationNames = [*self.pairs[pairs[0]].observationsDict.keys()]
         else:
             self.dsetObservationNames = []
 
         # Assuming all pairs of a given platform-track have the same quality files
         # let's extract the keys of the quality dictionary of the first pair.
         if self.pairs[pairs[0]].qualityDict is not None:
-            self.dsetQualityNames = [k for k in self.pairs[pairs[0]].qualityDict.keys()]
+            self.dsetQualityNames = [*self.pairs[pairs[0]].qualityDict.keys()]
         else:
             self.dsetQualityNames = []
 
@@ -922,5 +922,5 @@ class platformTrack:
         self.dsetGeometryNames = []
         for pair in pairs:
             if self.pairs[pair].geometryDict is not None:
-                keys = [k for k in self.pairs[pair].geometryDict.keys()]
+                keys = [*self.pairs[pair].geometryDict.keys()]
                 self.dsetGeometryNames = list(set(self.dsetGeometryNames) | set(keys))
