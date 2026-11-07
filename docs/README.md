@@ -88,6 +88,8 @@ Algorithms implemented in the software are described in details at [Yunjun et al
 + [Example data directory](./dir_structure.md)
 + [Example template files](./templates/README.md)
 + [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
++ [Parallel processing with Dask](./dask.md)
++ [GPU acceleration for the `invert_network` step (opt-in PyTorch CUDA solver, partial)](./gpu.md)
 
 ### 4. Contact us
 
