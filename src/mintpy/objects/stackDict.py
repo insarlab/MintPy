@@ -18,7 +18,6 @@ import warnings
 
 import h5py
 import numpy as np
-from osgeo import gdal
 from skimage.transform import resize
 
 from mintpy.multilook import multilook_data
@@ -609,31 +608,44 @@ class geometryDict:
 
         return self.metadata
 
-    def _warp_water_mask(self, dsName, target_length, target_width):
-        """Reproject water mask to match reference geometry grid via GDAL Warp.
+    def _warp_water_mask(self, dsName, target_length, target_width,
+                         box=None, xstep=1, ystep=1):
+        """Reproject the water mask onto the (possibly subset/multilooked) target grid.
 
-        Parameters: dsName          - str, dataset name (waterMask)
+        Parameters: dsName          - str, dataset name, e.g. 'waterMask'
                     target_length   - int, target rows
                     target_width    - int, target columns
-        Returns:    data            - np.ndarray (target_length, target_width)
+                    box             - tuple of 4 int, (x0, y0, x1, y1) in full-res pixels
+                    xstep, ystep    - int, multilook steps along range / azimuth
+        Returns:    data            - np.ndarray, (target_length, target_width)
         """
-        import tempfile
+        from osgeo import gdal
 
         src_file = self.datasetDict[dsName]
         ref_file = self.datasetDict[self.dsNames[0]]
+
         ref_ds = gdal.Open(ref_file)
+        if ref_ds is None:
+            raise RuntimeError(f'cannot open reference geometry file: {ref_file}')
         ref_gt = ref_ds.GetGeoTransform()
         ref_srs = ref_ds.GetProjection()
         ref_ds = None
+        if ref_gt is None:
+            raise RuntimeError(f'reference geometry file has no geotransform: {ref_file}')
 
-        xmin = ref_gt[0]
-        ymax = ref_gt[3]
-        xmax = xmin + ref_gt[1] * target_width
-        ymin = ymax + ref_gt[5] * target_length
-        dx = abs(ref_gt[1])
-        dy = abs(ref_gt[5])
+        # account for the subset box and the multilooking steps in the output grid
+        x0 = box[0] if box else 0
+        y0 = box[1] if box else 0
+        xmin = ref_gt[0] + x0 * ref_gt[1]
+        ymax = ref_gt[3] + y0 * ref_gt[5]
+        xmax = xmin + target_width * ref_gt[1] * xstep
+        ymin = ymax + target_length * ref_gt[5] * ystep
+        dx = abs(ref_gt[1] * xstep)
+        dy = abs(ref_gt[5] * ystep)
 
         src_ds = gdal.Open(src_file)
+        if src_ds is None:
+            raise RuntimeError(f'cannot open source water mask: {src_file}')
         src_srs = src_ds.GetProjection()
         src_ds = None
         if not src_srs:
@@ -642,36 +654,28 @@ class geometryDict:
             print('    (source water mask has no projection, assuming EPSG:4326)')
             src_srs = 'EPSG:4326'
 
-        # Use the GDAL Python API (same engine as the gdalwarp CLI), with a
-        # guaranteed temp-file cleanup via try/finally.
-        fd, tmp_f = tempfile.mkstemp(suffix='.tif')
-        os.close(fd)
-        try:
-            warp_kwargs = dict(
-                format='GTiff',
-                srcSRS=src_srs,
-                dstSRS=ref_srs,
-                outputBounds=(xmin, ymin, xmax, ymax),
-                xRes=dx,
-                yRes=dy,
-                resampleAlg='near',
-                creationOptions=['COMPRESS=LZW'],
-            )
-            tmp_ds = gdal.Warp(tmp_f, src_file, **warp_kwargs)
-            if tmp_ds is None:
-                raise RuntimeError(f'gdal.Warp failed for water mask: {src_file}')
-            result = tmp_ds.GetRasterBand(1).ReadAsArray()
-            tmp_ds = None
-        finally:
-            if os.path.exists(tmp_f):
-                os.remove(tmp_f)
+        # warp into memory (no temporary file on disk)
+        warp_kwargs = dict(
+            format='MEM',
+            srcSRS=src_srs,
+            dstSRS=ref_srs,
+            outputBounds=(xmin, ymin, xmax, ymax),
+            xRes=dx,
+            yRes=dy,
+            resampleAlg='near',
+        )
+        ds_warp = gdal.Warp('', src_file, **warp_kwargs)
+        if ds_warp is None:
+            raise RuntimeError(f'gdal.Warp failed for water mask: {src_file}')
+        result = ds_warp.GetRasterBand(1).ReadAsArray()
+        ds_warp = None
 
-        # verify the output grid matches the reference geometry grid
-        # (float rounding in -te/-tr can rarely produce a +/-1 pixel difference)
+        # the warped grid must match the target grid; a mismatch means the
+        # box/step handling above is inconsistent, so fail loudly instead of
+        # silently returning a misaligned mask
         if result.shape != (target_length, target_width):
-            print(f'    WARNING: warped waterMask size {result.shape} != '
-                  f'target ({target_length}, {target_width}); cropping to target size')
-            result = result[:target_length, :target_width]
+            raise RuntimeError(f'warped waterMask size {result.shape} != '
+                               f'target ({target_length}, {target_width})')
         return result
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, xstep=1, ystep=1,
@@ -776,7 +780,8 @@ class geometryDict:
                         # (e.g. 1-arcsec global water mask vs 20 m interferogram grid)
                         if data.shape != (length, width):
                             print(f'    auto-aligning waterMask: {data.shape} -> ({length}, {width})')
-                            data = self._warp_water_mask(dsName, length, width)
+                            data = self._warp_water_mask(dsName, length, width,
+                                                         box=box, xstep=xstep, ystep=ystep)
 
                         # GMTSAR water/land mask: 1 for land, and nan for water / no data
                         if np.sum(np.isnan(data)) > 0:
