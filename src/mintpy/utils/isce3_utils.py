@@ -9,6 +9,8 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from xml.sax.saxutils import escape
+
 
 # Ensure PROJ/GDAL data paths are set when running without conda activation,
 # otherwise osr.ImportFromEPSG() fails with "proj_create_from_database" errors.
@@ -30,6 +32,9 @@ import h5py  # noqa: E402
 import numpy as np  # noqa: E402
 from osgeo import gdal, osr  # noqa: E402
 
+from mintpy.constants import (  # noqa: E402
+    GEOMETRY_FILENAMES as GEOMETRY_FILENAMES,
+)
 from mintpy.objects import sensor  # noqa: E402
 from mintpy.utils import readfile  # noqa: E402
 
@@ -40,16 +45,8 @@ except ImportError:
     print("Warning: scipy not available. Orbit interpolation will fall back to linear.")
 
 
-# Default geometry layers to extract from the ISCE3/Dolphin static_layers HDF5
-# file, together with their dataset names under /data. Single source of truth
-# used by cli/prep_isce3.py and prep_isce3.py as well.
-GEOMETRY_FILENAMES = [
-    'height.tif',
-    'los_east.tif',
-    'los_north.tif',
-    'layover_shadow_mask.tif',
-    'local_incidence_angle.tif',
-]
+# Default geometry layers are defined in mintpy.constants (single source of
+# truth), so that the CLI can use them without importing the GDAL/h5py stack.
 
 GEOMETRY_DSET_MAPPING = {
     "height.tif": "z",
@@ -60,15 +57,13 @@ GEOMETRY_DSET_MAPPING = {
 }
 
 
-def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
+def extract_isce3_metadata(meta_file: str) -> dict:
     """Extract common metadata from an ISCE3/Dolphin burst XML file.
 
     Parameters
     ----------
     meta_file : str
         Path to the reference burst XML file.
-    update_mode : bool
-        Not used here (kept for consistency).
 
     Returns
     -------
@@ -76,7 +71,9 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
         Common metadata dictionary with keys required by MintPy.
 
     """
-    # Parse XML file (Python 3.8+ disables entity expansion by default)
+    # NOTE: the XML file is a local, MintPy/ISCE3-generated metadata file.
+    # xml.etree.ElementTree does not resolve external entities, but still
+    # expands internal entities, so do not feed it untrusted input.
     tree = ET.parse(meta_file)
     root = tree.getroot()
     burst_elem = root.find('burst_attributes')
@@ -87,7 +84,7 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
     def get_value(tag):
         elem = burst_elem.find(tag)
         if elem is not None:
-            return elem.text.strip()
+            return (elem.text or '').strip()
         return None
 
     meta = {}
@@ -222,7 +219,7 @@ def extract_isce3_metadata(meta_file: str, update_mode: bool = True) -> dict:
     return meta
 
 
-def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -> Dict:
+def read_baseline_timeseries_isce3(baseline_dir: str) -> Dict:
     """Read baseline time series from ISCE3/Dolphin baseline directory.
 
     Expected structure: baseline_dir/*.txt where each filename is YYYYMMDD_YYYYMMDD.txt
@@ -234,8 +231,6 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
     ----------
     baseline_dir : str
         Path to the baseline directory.
-    processor : str
-        Processor name (unused, kept for compatibility).
 
     Returns
     -------
@@ -245,6 +240,8 @@ def read_baseline_timeseries_isce3(baseline_dir: str, processor: str = 'tops') -
 
     """
     baseline_dict = {}
+    if baseline_dir is None or str(baseline_dir).lower() in ['auto', 'none', 'no', '']:
+        return baseline_dict
 
     # Expand any glob pattern in the baseline dir itself first (e.g. the
     # Dolphin layout ".../baselines/t124*/" or ".../baselines/t124*/20210104/"),
@@ -433,7 +430,7 @@ def extract_h5_geometry(
                 extracted[geom_type]['nodata'] = nodata
 
     except Exception as e:
-        print(f"Error processing {h5_file}: {e}")
+        raise RuntimeError(f'failed to extract geometry from {h5_file}: {e}') from e
 
     return extracted
 
@@ -494,8 +491,14 @@ def build_vrt_from_h5(
                 epsg = int(proj_ds[()])
 
         # Geotransform from 1D coordinate arrays (cell centers -> top-left corner)
+        for coord_name in ['x_coordinates', 'y_coordinates']:
+            if coord_name not in data_group:
+                raise KeyError(f'missing /data/{coord_name} in {h5_file}')
         x_coords = data_group['x_coordinates'][:]
         y_coords = data_group['y_coordinates'][:]
+        if len(x_coords) < 2 or len(y_coords) < 2:
+            raise ValueError(f'degenerate geometry grid in {h5_file}: '
+                             f'{len(y_coords)} rows x {len(x_coords)} columns')
         dx = abs(x_coords[1] - x_coords[0])
         dy = abs(y_coords[1] - y_coords[0])
         left = x_coords[0] - dx / 2
@@ -530,13 +533,14 @@ def build_vrt_from_h5(
             else:
                 nodata = None
 
-            src_fname = f'HDF5:"{h5_file}"://data/{ds_name}'
+            # escape free-text fields, in case the input path contains &, < or >
+            src_fname = escape(f'HDF5:"{h5_file}"://data/{ds_name}')
             nodata_xml = ''
             if nodata is not None:
                 nodata_xml = f'    <NoDataValue>{nodata}</NoDataValue>\n'
             vrt_xml = (
                 f'<VRTDataset rasterXSize="{width}" rasterYSize="{length}">\n'
-                f'  <SRS>{srs_wkt}</SRS>\n'
+                f'  <SRS>{escape(srs_wkt)}</SRS>\n'
                 f'  <GeoTransform>{", ".join(repr(float(v)) for v in geotransform)}</GeoTransform>\n'
                 f'  <VRTRasterBand dataType="{gdal_dtype}" band="1">\n'
                 f'{nodata_xml}'
@@ -652,7 +656,11 @@ def merge_geometry_files(
         bounds, xres, yres, expected_size = None, None, None, None
         if ref_int_file and os.path.exists(ref_int_file):
             ds = gdal.Open(str(ref_int_file))
+            if ds is None:
+                raise RuntimeError(f'cannot open reference interferogram: {ref_int_file}')
             gt = ds.GetGeoTransform()
+            if gt is None:
+                raise RuntimeError(f'reference interferogram has no geotransform: {ref_int_file}')
             xmin = gt[0]
             ymax = gt[3]
             xmax = xmin + gt[1] * ds.RasterXSize
@@ -728,11 +736,50 @@ def merge_geometry_files(
         if not keep_temp:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-def compute_azimuth_angle(los_east_file: Path, los_north_file: Path, output_file: Path, nodata: float = None):
-    """Compute azimuth angle from LOS east and north components.
+def _read_los_components(los_east_file: Path, los_north_file: Path):
+    """Read the east/north LOS components and their reference dataset."""
+    ds_east = gdal.Open(str(los_east_file))
+    ds_north = gdal.Open(str(los_north_file))
+    if ds_east is None or ds_north is None:
+        raise RuntimeError(f'cannot open LOS files: {los_east_file}, {los_north_file}')
+    east = ds_east.GetRasterBand(1).ReadAsArray()
+    north = ds_north.GetRasterBand(1).ReadAsArray()
+    if east is None or north is None:
+        raise RuntimeError(f'cannot read LOS bands: {los_east_file}, {los_north_file}')
+    if east.shape != north.shape:
+        raise RuntimeError(f'LOS east/north shape mismatch: {east.shape} vs {north.shape}')
+    ds_north = None
+    return east, north, ds_east
 
-    The azimuth angle is defined as the angle from the North, measured
-    anti‑clockwise as positive (standard mathematical convention).
+
+def _valid_los_mask(east, north, nodata=None):
+    """Boolean mask of valid LOS pixels (finite and not equal to nodata)."""
+    mask = np.isfinite(east) & np.isfinite(north)
+    if nodata is not None and np.isfinite(nodata):
+        mask &= (east != nodata) & (north != nodata)
+    return mask
+
+
+def _write_angle_geotiff(output_file: Path, angle, template_ds, nodata=None):
+    """Write a float32 angle raster on the grid of the template dataset."""
+    driver = gdal.GetDriverByName('GTiff')
+    ds_out = driver.Create(str(output_file), template_ds.RasterXSize, template_ds.RasterYSize,
+                           1, gdal.GDT_Float32, options=['COMPRESS=LZW'])
+    ds_out.SetGeoTransform(template_ds.GetGeoTransform())
+    ds_out.SetProjection(template_ds.GetProjection())
+    band = ds_out.GetRasterBand(1)
+    band.WriteArray(angle)
+    if nodata is not None:
+        band.SetNoDataValue(nodata)
+    band.FlushCache()
+    ds_out = None
+
+
+def compute_azimuth_angle(los_east_file: Path, los_north_file: Path, output_file: Path, nodata: float = None):
+    """Compute azimuth angle from the LOS east/north components.
+
+    The azimuth angle is measured from the North, anti-clockwise as positive
+    (same convention as the ISCE-2 los.rdr band 2).
 
     Parameters
     ----------
@@ -741,39 +788,23 @@ def compute_azimuth_angle(los_east_file: Path, los_north_file: Path, output_file
     output_file : Path
         Output path for azimuthAngle.tif.
     nodata : float, optional
-        No-data value to use.
+        No-data value; if finite, invalid pixels are set to it explicitly.
 
     """
-    ds_east = gdal.Open(str(los_east_file))
-    ds_north = gdal.Open(str(los_north_file))
-    east = ds_east.GetRasterBand(1).ReadAsArray()
-    north = ds_north.GetRasterBand(1).ReadAsArray()
+    east, north, ds_east = _read_los_components(los_east_file, los_north_file)
 
-    # Azimuth from east/north components:
-    # az = -arctan2(east, north) * 180/pi  (mod 360)
+    # azimuth = -arctan2(east, north) * 180/pi (mod 360)
     az_angle = -1 * np.rad2deg(np.arctan2(east, north)) % 360.0
 
-    # Mask nodata
     if nodata is not None:
-        mask = np.isnan(east) | np.isnan(north)
-        az_angle[mask] = nodata
+        az_angle[~_valid_los_mask(east, north, nodata)] = nodata
 
-    driver = gdal.GetDriverByName('GTiff')
-    ds_out = driver.Create(str(output_file), ds_east.RasterXSize, ds_east.RasterYSize,
-                           1, gdal.GDT_Float32, options=['COMPRESS=LZW'])
-    ds_out.SetGeoTransform(ds_east.GetGeoTransform())
-    ds_out.SetProjection(ds_east.GetProjection())
-    band = ds_out.GetRasterBand(1)
-    band.WriteArray(az_angle)
-    if nodata is not None:
-        band.SetNoDataValue(nodata)
-    band.FlushCache()
-    ds_out = None
+    _write_angle_geotiff(output_file, az_angle, ds_east, nodata)
     ds_east = None
-    ds_north = None
+
 
 def compute_incidence_angle(los_east_file: Path, los_north_file: Path, output_file: Path, nodata: float = None):
-    """Compute incidence angle from LOS east and north components.
+    """Compute incidence angle from the LOS east/north components.
 
     Parameters
     ----------
@@ -782,38 +813,20 @@ def compute_incidence_angle(los_east_file: Path, los_north_file: Path, output_fi
     output_file : Path
         Output path for incidenceAngle.tif.
     nodata : float, optional
-        No-data value to use.
+        No-data value; if finite, invalid pixels are set to it explicitly.
 
     """
-    ds_east = gdal.Open(str(los_east_file))
-    ds_north = gdal.Open(str(los_north_file))
-    east = ds_east.GetRasterBand(1).ReadAsArray()
-    north = ds_north.GetRasterBand(1).ReadAsArray()
+    east, north, ds_east = _read_los_components(los_east_file, los_north_file)
 
     # incidence = arccos(up), where up = sqrt(1 - east^2 - north^2)
-    up_sq = 1.0 - east**2 - north**2
-    up_sq = np.clip(up_sq, 0, 1)
-    up = np.sqrt(up_sq)
-    inc_angle = np.rad2deg(np.arccos(up))
+    up_sq = np.clip(1.0 - east**2 - north**2, 0, 1)
+    inc_angle = np.rad2deg(np.arccos(np.sqrt(up_sq)))
 
-    # Mask nodata
     if nodata is not None:
-        mask = np.isnan(east) | np.isnan(north)
-        inc_angle[mask] = nodata
+        inc_angle[~_valid_los_mask(east, north, nodata)] = nodata
 
-    driver = gdal.GetDriverByName('GTiff')
-    ds_out = driver.Create(str(output_file), ds_east.RasterXSize, ds_east.RasterYSize,
-                           1, gdal.GDT_Float32, options=['COMPRESS=LZW'])
-    ds_out.SetGeoTransform(ds_east.GetGeoTransform())
-    ds_out.SetProjection(ds_east.GetProjection())
-    band = ds_out.GetRasterBand(1)
-    band.WriteArray(inc_angle)
-    if nodata is not None:
-        band.SetNoDataValue(nodata)
-    band.FlushCache()
-    ds_out = None
+    _write_angle_geotiff(output_file, inc_angle, ds_east, nodata)
     ds_east = None
-    ds_north = None
 
 
 def extract_merge_geometry(
@@ -821,7 +834,6 @@ def extract_merge_geometry(
     output_dir: str,
     geom_types: List[str],
     ref_int_file: Optional[str] = None,
-    metadata: Optional[Dict] = None,
     extra_dirs: Optional[List[str]] = None
 ) -> Dict[str, Path]:
     """High-level function to extract, merge, and prepare geometry.
@@ -836,8 +848,6 @@ def extract_merge_geometry(
         Desired geometry file names.
     ref_int_file : str, optional
         Reference interferogram GeoTIFF for extent.
-    metadata : dict, optional
-        Metadata dictionary to be updated with LENGTH and WIDTH.
     extra_dirs : list of str, optional
         Additional directories containing static_layers*.h5 files
         (e.g. individual burst dirs from glob expansion).
@@ -851,7 +861,7 @@ def extract_merge_geometry(
     geom_path = Path(geom_dir)
     # Find burst IDs (subdirectories containing static_layers*.h5)
     burst_ids = []
-    for subdir in geom_path.iterdir():
+    for subdir in sorted(geom_path.iterdir()):
         if subdir.is_dir() and list(subdir.glob("static_layers*.h5")):
             burst_ids.append(subdir.name)
     if not burst_ids:
@@ -864,7 +874,7 @@ def extract_merge_geometry(
     base_dir = geom_path
     temp_base_dir = None
     if extra_dirs:
-        temp_base_dir = Path(tempfile.mkdtemp())
+        temp_base_dir = Path(tempfile.mkdtemp(prefix='mintpy_geom_'))
         new_burst_ids = []
         for bid in burst_ids:
             src = (geom_path / bid).resolve()
@@ -884,26 +894,18 @@ def extract_merge_geometry(
         raise FileNotFoundError(f"No static_layers HDF5 found in {geom_dir}")
 
     output_path = Path(output_dir)
-    merged = merge_geometry_files(
-        burst_ids=burst_ids,
-        geom_dir=base_dir,
-        output_dir=output_path,
-        geom_types=geom_types,
-        ref_int_file=ref_int_file,
-        keep_temp=False
-    )
-
-    if temp_base_dir:
-        shutil.rmtree(temp_base_dir, ignore_errors=True)
-
-    # Update metadata with dimensions from the merged height file
-    if metadata is not None:
-        height_file = merged.get('height.tif')
-        if height_file and height_file.exists():
-            geom_atr = readfile.read_attribute(str(height_file))
-            metadata['LENGTH'] = geom_atr['LENGTH']
-            metadata['WIDTH'] = geom_atr['WIDTH']
-            print(f"Updated metadata with LENGTH={metadata['LENGTH']}, WIDTH={metadata['WIDTH']}")
+    try:
+        merged = merge_geometry_files(
+            burst_ids=burst_ids,
+            geom_dir=base_dir,
+            output_dir=output_path,
+            geom_types=geom_types,
+            ref_int_file=ref_int_file,
+            keep_temp=False
+        )
+    finally:
+        if temp_base_dir:
+            shutil.rmtree(temp_base_dir, ignore_errors=True)
 
     return merged
 
@@ -1311,7 +1313,6 @@ def extract_required_attributes(metadata):
                               metadata.get('range_pixel_spacing_', 2.3))
     meta['swathNumber'] = metadata.get('swathNumber',
                            metadata.get('swath_number', 2))
-    meta['ascendingNodeTime'] = None
 
     # Calculate satellite speed (Vs) from orbit data (if available)
     has_orbit = all(k in metadata for k in ['time', 'position_x', 'velocity_x'])
@@ -1341,24 +1342,9 @@ def extract_required_attributes(metadata):
         meta['earthRadius'] = 6371000.0
         meta['altitude'] = 693000.0
 
-    # Calculate frame numbers
-    if meta['ascendingNodeTime'] is not None and meta['burstStartUTC']:
-        try:
-            start_dt = datetime.strptime(meta['burstStartUTC'], '%Y-%m-%d %H:%M:%S.%f')
-            if isinstance(meta['ascendingNodeTime'], str):
-                node_dt = datetime.strptime(meta['ascendingNodeTime'], '%Y-%m-%d %H:%M:%S.%f')
-            else:
-                node_dt = meta['ascendingNodeTime']
-            time_diff_start = (start_dt - node_dt).total_seconds()
-            time_diff_stop = (datetime.strptime(meta['burstStopUTC'], '%Y-%m-%d %H:%M:%S.%f') - node_dt).total_seconds()
-            meta['firstFrameNumber'] = int(0.2 * time_diff_start)
-            meta['lastFrameNumber'] = int(0.2 * time_diff_stop)
-        except Exception:
-            meta['firstFrameNumber'] = 0
-            meta['lastFrameNumber'] = 0
-    else:
-        meta['firstFrameNumber'] = 0
-        meta['lastFrameNumber'] = 0
+    # frame numbers are not available from the ISCE3 static layers
+    meta['firstFrameNumber'] = 0
+    meta['lastFrameNumber'] = 0
 
     return meta
 
