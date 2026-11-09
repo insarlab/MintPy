@@ -54,7 +54,11 @@ def create_parser(subparsers=None):
 
     # geometry and baseline
     parser.add_argument('-b', '--baseline-dir', dest='baseline_dir', type=str, default=None,
-                        help='Directory with baseline files (e.g., ../baselines). '
+                        help='Directory with baseline files (e.g., ../baselines), or a glob '
+                             'pattern of OPERA CSLC HDF5 files '
+                             '(e.g., ../../CSLC/t124*/2021*/t124*.h5).\n'
+                             'For CSLC input, baselines are computed first and written to '
+                             '<parent>/baselines/<burst-id>/. '
                              'If omitted, baseline info will not be added to metadata.')
     parser.add_argument('-g', '--geometry-dir', dest='geom_dir', type=str, required=True,
                         help='Directory containing burst subdirectories with static_layers*.h5 files.\n'

@@ -319,10 +319,27 @@ def prep_isce3(inps):
             geom_dirs=getattr(inps, 'geom_dirs', None),
         )
 
-    # read the baseline time series
+    # baselines: compute them from CSLC products when needed, then read them
     baseline_dict = {}
-    if inps.baseline_dir:
-        baseline_dict = isce3_utils.read_baseline_timeseries_isce3(inps.baseline_dir)
+    if not isce3_utils.is_auto_value(inps.baseline_dir):
+        baseline_paths = inps.baseline_dir
+        geom_dirs = getattr(inps, 'geom_dirs', None) or [inps.geom_dir]
+
+        if isce3_utils.is_cslc_baseline_input(baseline_paths):
+            print('computing baselines from ISCE3/OPERA CSLC products ...')
+            burst_ids = isce3_utils.get_burst_ids_from_cslc(baseline_paths)
+            baseline_paths = isce3_utils.compute_baselines_isce3(
+                baseline_paths,
+                update_mode=inps.update_mode,
+                print_msg=True,
+            )
+        else:
+            burst_ids = isce3_utils.get_burst_ids_from_geom_dirs(geom_dirs)
+
+        baseline_dict = isce3_utils.read_baseline_timeseries_isce3(
+            baseline_paths,
+            burst_ids=burst_ids,
+        )
 
     # prepare metadata for the interferogram stack(s)
     if inps.obs_files:
