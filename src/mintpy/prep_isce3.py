@@ -1,7 +1,15 @@
+############################################################
+# Program is part of MintPy                                #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+############################################################
+
+
 import glob
 import os
 import re
 from pathlib import Path
+
+import h5py
 
 from mintpy.utils import isce3_utils, ptime, readfile, writefile
 
@@ -10,52 +18,40 @@ from mintpy.utils import isce3_utils, ptime, readfile, writefile
 def add_ifgram_metadata(metadata_in, dates=None, baseline_dict=None):
     """Add metadata unique for each interferogram.
 
-    Parameters: metadata_in   : dict, input common metadata for the entire dataset
-                dates         : list of str in YYYYMMDD format
-                baseline_dict : dict, output of baseline_timeseries()
-    Returns:    metadata      : dict, updated metadata
+    Parameters: metadata_in   - dict, common metadata for the entire dataset
+                dates         - list of str in YYYYMMDD format, [ref_date, date2]
+                baseline_dict - dict, output of read_baseline_timeseries_isce3()
+    Returns:    metadata      - dict, updated metadata
     """
     dates = dates or []
     baseline_dict = baseline_dict or {}
+    if len(dates) < 2:
+        raise ValueError(f'dates must contain 2 dates in YYYYMMDD format, got: {dates}')
+
     metadata = metadata_in.copy()
     metadata['DATE12'] = f'{dates[0][2:]}-{dates[1][2:]}'
 
-    if baseline_dict:
-        if dates[0] in baseline_dict and dates[1] in baseline_dict:
-            bperp_top = baseline_dict[dates[1]][0] - baseline_dict[dates[0]][0]
-            bperp_bottom = baseline_dict[dates[1]][1] - baseline_dict[dates[0]][1]
-            metadata['P_BASELINE_TOP_HDR'] = str(bperp_top)
-            metadata['P_BASELINE_BOTTOM_HDR'] = str(bperp_bottom)
+    if baseline_dict and dates[0] in baseline_dict and dates[1] in baseline_dict:
+        bperp_top = baseline_dict[dates[1]][0] - baseline_dict[dates[0]][0]
+        bperp_bottom = baseline_dict[dates[1]][1] - baseline_dict[dates[0]][1]
+        metadata['P_BASELINE_TOP_HDR'] = str(bperp_top)
+        metadata['P_BASELINE_BOTTOM_HDR'] = str(bperp_bottom)
+
     return metadata
 
 
 def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
-                           processor='tops', update_mode=True, ref_int_file=None,
-                           target_shape=None, geom_dirs=None):
+                           update_mode=True, ref_int_file=None, geom_dirs=None):
     """Prepare geometry files from ISCE3/Dolphin static_layers HDF5.
 
-    Parameters
-    ----------
-    geom_dir     : str
-        Base geometry directory containing burst subdirectories.
-    geom_dirs    : list of str, optional
-        Additional directories with static_layers*.h5 files.
-    geom_files   : list of str, optional
-        Direct paths to static_layers*.h5 files. Defaults to
-        isce3_utils.GEOMETRY_FILENAMES.
-    metadata     : dict
-        Metadata dictionary to be updated with LENGTH/WIDTH.
-    out_dir      : str
-        Output directory for merged geometry files.
-    processor    : str
-        Processor name (e.g., 'isce3').
-    ref_int_file : str, optional
-        Reference interferogram for output extent.
-    target_shape : tuple of (length, width), optional
-        Interferogram dimensions.
-    update_mode  : bool, optional
-        Update mode (not used here, for consistency).
-
+    Parameters: geom_dir     - str, base geometry dir with burst subdirectories
+                out_dir      - str, output dir for the merged geometry files
+                geom_files   - list of str, geometry file basenames to extract/merge
+                metadata     - dict, common metadata, updated with LENGTH/WIDTH and looks
+                update_mode  - bool, update existing .rsc files instead of overwriting
+                ref_int_file - str, reference interferogram defining the output grid
+                geom_dirs    - list of str, additional dirs with static_layers*.h5
+    Returns:    metadata     - dict, updated metadata
     """
     print('preparing geometry files from ISCE3/Dolphin static layers')
     geom_dir = os.path.abspath(geom_dir)
@@ -65,105 +61,123 @@ def prepare_geometry_isce3(geom_dir, out_dir, geom_files=None, metadata=None,
     if geom_files is None:
         geom_files = isce3_utils.GEOMETRY_FILENAMES
 
-    # Step 0: Read full-resolution pixel size from first static_layers.h5
-    burst_full_dx = None
-    burst_full_dy = None
-    num_bursts = 0
-    geom_path = Path(geom_dir)
-    burst_subdirs = sorted([d for d in geom_path.iterdir()
-                            if d.is_dir() and list(d.glob('static_layers*.h5'))])
-    h5_files_root = sorted(geom_path.glob('static_layers*.h5'))
-    first_h5_path = None
-    if burst_subdirs:
-        first_h5_path = sorted(burst_subdirs[0].glob('static_layers*.h5'))[0]
-    elif h5_files_root:
-        first_h5_path = h5_files_root[0]
-    num_bursts = len(burst_subdirs) if burst_subdirs else (1 if h5_files_root else 0)
-    if geom_dirs and len(geom_dirs) > 1:
-        for edir in geom_dirs[1:]:
-            epath = Path(edir)
-            if epath.is_dir():
-                if list(epath.glob('static_layers*.h5')):
-                    num_bursts += 1
-                else:
-                    for sub in epath.iterdir():
-                        if sub.is_dir() and list(sub.glob('static_layers*.h5')):
-                            num_bursts += 1
-    if first_h5_path:
-        try:
-            import h5py
-            with h5py.File(first_h5_path, 'r') as h5:
-                x_coords = h5['/data/x_coordinates'][:]
-                y_coords = h5['/data/y_coordinates'][:]
-            burst_full_dx = abs(x_coords[1] - x_coords[0])
-            burst_full_dy = abs(y_coords[1] - y_coords[0])
-            print(f'Number of bursts: {num_bursts}')
-            print(f'Full-resolution pixel size: dx={burst_full_dx}, dy={burst_full_dy}')
-        except Exception as e:
-            print(f'WARNING: could not read full-res pixel size: {e}')
+    # Step 0: full-resolution pixel size and burst count from static_layers.h5
+    burst_full_dx, burst_full_dy, num_bursts, first_h5_path = \
+        _get_static_layers_info(geom_dir, geom_dirs)
 
-    # Step 1: Merge and crop geometry to interferogram extent and resolution
+    # Step 1: merge and crop the geometry to the interferogram extent/resolution
     extra_dirs = geom_dirs[1:] if (geom_dirs and len(geom_dirs) > 1) else None
     geometry_dict = isce3_utils.extract_merge_geometry(
         geom_dir=geom_dir,
         output_dir=out_dir,
         geom_types=geom_files,
         ref_int_file=ref_int_file,
-        metadata=None,
         extra_dirs=extra_dirs,
     )
 
-    # Step 2: Compute ALOOKS/RLOOKS from full-res pixel size vs target pixel size
+    # Step 2: ALOOKS/RLOOKS from the full-resolution vs target pixel size
     if metadata is not None:
-        lks_y = 1
-        lks_x = 1
-
-        if burst_full_dx is not None and burst_full_dy is not None and ref_int_file:
-            from osgeo import gdal
-            ref_ds = gdal.Open(str(ref_int_file))
-            if ref_ds:
-                ref_gt = ref_ds.GetGeoTransform()
-                ref_dx = abs(ref_gt[1])
-                ref_dy = abs(ref_gt[5])
-                ref_ds = None
-                lks_x = max(1, int(round(ref_dx / burst_full_dx)))
-                lks_y = max(1, int(round(ref_dy / burst_full_dy)))
-
+        lks_y, lks_x = _compute_looks(ref_int_file, burst_full_dx, burst_full_dy)
         metadata['ALOOKS'] = str(lks_y)
         metadata['RLOOKS'] = str(lks_x)
         print(f'Set ALOOKS={lks_y}, RLOOKS={lks_x} '
               f'(full-res dx={burst_full_dx}, dy={burst_full_dy})')
 
-    # Write .rsc files
-    for _, geom_path in geometry_dict.items():
-        if geom_path and os.path.isfile(geom_path):
-            geom_path = str(geom_path)
-            rsc_file = geom_path + '.rsc'
-            # Remove any stale .rsc from a previous run when the merged GeoTIFF
-            # was regenerated, so that read_attribute() reads the fresh tif
-            # (readfile gives the .rsc sidecar priority over the .tif itself).
-            if (update_mode and os.path.isfile(rsc_file)
-                    and os.path.getmtime(geom_path) > os.path.getmtime(rsc_file)):
-                os.remove(rsc_file)
-            geom_meta = metadata.copy() if metadata else {}
-            geom_meta.update(readfile.read_attribute(geom_path))
-            writefile.write_roipac_rsc(geom_meta, rsc_file,
-                                       update_mode=update_mode,
-                                       print_msg=True)
+    # write .rsc sidecar files for the merged geometry
+    for merged_file in geometry_dict.values():
+        if not merged_file or not os.path.isfile(merged_file):
+            continue
+        merged_file = str(merged_file)
+        rsc_file = merged_file + '.rsc'
+        # remove a stale .rsc when the merged GeoTIFF was regenerated, otherwise
+        # readfile.read_attribute() would keep returning the old values
+        if (update_mode and os.path.isfile(rsc_file)
+                and os.path.getmtime(merged_file) > os.path.getmtime(rsc_file)):
+            os.remove(rsc_file)
+        geom_meta = metadata.copy() if metadata else {}
+        geom_meta.update(readfile.read_attribute(merged_file))
+        writefile.write_roipac_rsc(geom_meta, rsc_file,
+                                   update_mode=update_mode,
+                                   print_msg=True)
 
-    # Update metadata with final dimensions
-    height_file = geometry_dict.get('height.tif')
-    if height_file and os.path.isfile(height_file):
+    # update the common metadata with the final LENGTH/WIDTH
+    height_file = geometry_dict.get(isce3_utils.GEOMETRY_FILENAMES[0])
+    if height_file and os.path.isfile(height_file) and metadata is not None:
         geom_atr = readfile.read_attribute(str(height_file))
-        if metadata is not None:
-            metadata['LENGTH'] = geom_atr['LENGTH']
-            metadata['WIDTH'] = geom_atr['WIDTH']
-            print(f"Updated metadata with LENGTH={metadata['LENGTH']}, WIDTH={metadata['WIDTH']}")
+        metadata['LENGTH'] = geom_atr['LENGTH']
+        metadata['WIDTH'] = geom_atr['WIDTH']
+        print(f"Updated metadata with LENGTH={metadata['LENGTH']}, WIDTH={metadata['WIDTH']}")
 
     return metadata
 
 
+def _get_static_layers_info(geom_dir, geom_dirs=None):
+    """Return (dx, dy, num_bursts, first_h5_path) from the static_layers HDF5 files."""
+    geom_path = Path(geom_dir)
+    burst_subdirs = sorted([d for d in geom_path.iterdir()
+                            if d.is_dir() and list(d.glob('static_layers*.h5'))])
+    h5_files_root = sorted(geom_path.glob('static_layers*.h5'))
+    if burst_subdirs:
+        first_h5_path = sorted(burst_subdirs[0].glob('static_layers*.h5'))[0]
+    elif h5_files_root:
+        first_h5_path = h5_files_root[0]
+    else:
+        first_h5_path = None
+
+    num_bursts = len(burst_subdirs) if burst_subdirs else (1 if h5_files_root else 0)
+    for edir in (geom_dirs or [])[1:]:
+        epath = Path(edir)
+        if epath.is_dir():
+            if list(epath.glob('static_layers*.h5')):
+                num_bursts += 1
+            else:
+                num_bursts += sum(
+                    1 for sub in epath.iterdir()
+                    if sub.is_dir() and list(sub.glob('static_layers*.h5')))
+    print(f'Number of bursts: {num_bursts}')
+
+    burst_full_dx = None
+    burst_full_dy = None
+    if first_h5_path:
+        try:
+            with h5py.File(first_h5_path, 'r') as h5:
+                x_coords = h5['/data/x_coordinates'][:]
+                y_coords = h5['/data/y_coordinates'][:]
+            if len(x_coords) > 1 and len(y_coords) > 1:
+                burst_full_dx = abs(x_coords[1] - x_coords[0])
+                burst_full_dy = abs(y_coords[1] - y_coords[0])
+            print(f'Full-resolution pixel size: dx={burst_full_dx}, dy={burst_full_dy}')
+        except (OSError, KeyError, IndexError) as e:
+            print(f'WARNING: could not read full-res pixel size from {first_h5_path}: {e}')
+
+    return burst_full_dx, burst_full_dy, num_bursts, first_h5_path
+
+
+def _compute_looks(ref_int_file, burst_full_dx, burst_full_dy):
+    """Compute (ALOOKS, RLOOKS) from the full-resolution and target pixel sizes."""
+    from osgeo import gdal
+
+    lks_y = 1
+    lks_x = 1
+    if burst_full_dx and burst_full_dy and ref_int_file:
+        ref_ds = gdal.Open(str(ref_int_file))
+        if ref_ds is not None:
+            ref_gt = ref_ds.GetGeoTransform()
+            ref_ds = None
+            if ref_gt is not None:
+                lks_x = max(1, int(round(abs(ref_gt[1]) / burst_full_dx)))
+                lks_y = max(1, int(round(abs(ref_gt[5]) / burst_full_dy)))
+    return lks_y, lks_x
+
+
 def prepare_stack_isce3(obs_file, metadata=None, baseline_dict=None, update_mode=True):
+    """Prepare .rsc files for one observation stack (unw/cor/conncomp) from ISCE3 products.
+
+    Parameters: obs_file      - str, wildcard path pattern of the observation files
+                metadata      - dict, common metadata for the whole dataset
+                baseline_dict - dict, per-date perpendicular baselines
+                update_mode   - bool, update existing .rsc files instead of overwriting
+    """
     print(f'preparing RSC file for: {obs_file}')
     tif_files = sorted(glob.glob(obs_file))
     if not tif_files:
@@ -172,7 +186,7 @@ def prepare_stack_isce3(obs_file, metadata=None, baseline_dict=None, update_mode
     meta = metadata.copy() if metadata else {}
     num_file = len(tif_files)
 
-    # Normalize ALOOKS/RLOOKS to integer strings if present
+    # normalize ALOOKS/RLOOKS to integer strings if present
     for key in ['ALOOKS', 'RLOOKS']:
         if key in meta:
             try:
@@ -184,23 +198,8 @@ def prepare_stack_isce3(obs_file, metadata=None, baseline_dict=None, update_mode
     num_valid = 0
     for i, tif_file in enumerate(tif_files):
         try:
-            fbase = os.path.basename(tif_file)
-
-            # Extract date pair(s) from the basename first, then from the parent
-            # directory name (e.g. Dolphin: ifgrams/YYYYMMDD_YYYYMMDD/fullres.unw.tif)
-            date_nums = re.findall(r'\d{8}', fbase)
-            if len(date_nums) < 2:
-                date_pair = re.findall(r'(\d{8})_(\d{8})', os.path.dirname(tif_file))
-                if date_pair:
-                    date_nums = list(date_pair[0])
-                else:
-                    date_nums = re.findall(r'\d{8}', os.path.dirname(tif_file))
-            if len(date_nums) < 2:
-                prog_bar.update(i+1, suffix=f'skipped {i+1}/{num_file}')
-                continue
-            dates = sorted(set(date_nums))[:2]
-
-            if not all(19000101 <= int(d) <= 20991231 for d in dates):
+            dates = _get_date_pair(tif_file)
+            if dates is None:
                 prog_bar.update(i+1, suffix=f'skipped {i+1}/{num_file}')
                 continue
 
@@ -219,7 +218,7 @@ def prepare_stack_isce3(obs_file, metadata=None, baseline_dict=None, update_mode
             ifg_meta = meta.copy()
             ifg_meta.update(readfile.read_attribute(tif_file))
             # the declared processor from the common metadata is authoritative;
-            # restore it in case read_attribute detected a generic gdal product
+            # restore it in case read_attribute() detected a generic gdal product
             # (e.g. Dolphin "fullres.unw.tif" before the naming-pattern detection)
             if meta.get('PROCESSOR'):
                 ifg_meta['PROCESSOR'] = meta['PROCESSOR']
@@ -229,8 +228,10 @@ def prepare_stack_isce3(obs_file, metadata=None, baseline_dict=None, update_mode
                                        update_mode=update_mode,
                                        print_msg=False)
 
-        except Exception:
+        except Exception as e:
             prog_bar.update(i+1, suffix=f'error {i+1}/{num_file}')
+            print(f'WARNING: failed to prepare RSC for {tif_file} '
+                  f'({type(e).__name__}: {e})')
             continue
 
     prog_bar.close()
@@ -239,25 +240,47 @@ def prepare_stack_isce3(obs_file, metadata=None, baseline_dict=None, update_mode
     return
 
 
+def _get_date_pair(tif_file):
+    """Get the [ref_date, date2] pair in YYYYMMDD format from the file/parent dir name."""
+    fbase = os.path.basename(tif_file)
+    date_nums = re.findall(r'\d{8}', fbase)
+    if len(date_nums) < 2:
+        # Dolphin layout: ifgrams/YYYYMMDD_YYYYMMDD/fullres.unw.tif
+        date_pair = re.findall(r'(\d{8})_(\d{8})', os.path.dirname(tif_file))
+        if date_pair:
+            date_nums = list(date_pair[0])
+        else:
+            date_nums = re.findall(r'\d{8}', os.path.dirname(tif_file))
+    if len(date_nums) < 2:
+        return None
+
+    dates = sorted(set(date_nums))[:2]
+    if not all(19000101 <= int(d) <= 20991231 for d in dates):
+        return None
+    return dates
+
+
 #########################################################################
 def prep_isce3(inps):
-    """Prepare ISCE3/Dolphin metadata files."""
+    """Prepare ISCE3/Dolphin metadata files, i.e. the common burst XML and the .rsc files
+    for the geometry and interferogram stacks.
+
+    Parameters: inps - Namespace, parsed command line arguments from cli/prep_isce3.py
+    """
     # If no meta file is provided or it is 'auto', generate one from static_layers
     if not inps.meta_file or inps.meta_file == 'auto':
         print('No meta file provided. Generating burst XML from static_layers.h5...')
         geom_path = Path(inps.geom_dir)
-        # Find all subdirectories containing static_layers*.h5
+        # subdirectories containing static_layers*.h5, or HDF5 files directly in geom_dir
         burst_dirs = sorted([d for d in geom_path.iterdir()
                              if d.is_dir() and list(d.glob('static_layers*.h5'))])
-        # Also check for HDF5 files directly in geom_dir
         h5_files_in_root = sorted(geom_path.glob('static_layers*.h5'))
         if not burst_dirs and not h5_files_in_root:
             raise FileNotFoundError(f'No static_layers HDF5 found in {inps.geom_dir}')
 
         if burst_dirs:
             first_burst_dir = burst_dirs[0]
-            h5_list = sorted(first_burst_dir.glob('static_layers*.h5'))
-            first_h5 = h5_list[0]
+            first_h5 = sorted(first_burst_dir.glob('static_layers*.h5'))[0]
             burst_id = first_burst_dir.name
         else:
             first_h5 = h5_files_in_root[0]
@@ -270,55 +293,45 @@ def prep_isce3(inps):
         inps.meta_file = str(xml_out)
         print(f'Generated meta file: {inps.meta_file}')
 
-    # Read common metadata from reference burst XML (now guaranteed to exist)
+    # common metadata from the reference burst XML (now guaranteed to exist)
     metadata = {}
     if inps.meta_file:
-        metadata = isce3_utils.extract_isce3_metadata(
-            inps.meta_file,
-            update_mode=inps.update_mode
-        )
+        metadata = isce3_utils.extract_isce3_metadata(inps.meta_file)
 
-    # Determine target shape from first interferogram if available
-    target_shape = None
+    # reference interferogram for the output grid
     ref_int = None
     if inps.obs_files:
-        int_list = glob.glob(inps.obs_files[0])
+        int_list = sorted(glob.glob(inps.obs_files[0]))
         if int_list:
             ref_int = int_list[0]
             int_atr = readfile.read_attribute(ref_int)
-            target_shape = (int(int_atr['LENGTH']), int(int_atr['WIDTH']))
-            print(f'Target shape from interferogram: {target_shape}')
+            print(f"Target shape from interferogram: ({int_atr['LENGTH']}, {int_atr['WIDTH']})")
 
-    # Prepare geometry (updates metadata with LENGTH/WIDTH)
+    # prepare the geometry (updates metadata with LENGTH/WIDTH)
     if inps.geom_dir:
         metadata = prepare_geometry_isce3(
             geom_dir=inps.geom_dir,
             out_dir=inps.out_dir,
             geom_files=inps.geom_files,
             metadata=metadata,
-            processor=inps.processor,
             update_mode=inps.update_mode,
             ref_int_file=ref_int,
-            target_shape=target_shape,
-            geom_dirs=getattr(inps, 'geom_dirs', None)
+            geom_dirs=getattr(inps, 'geom_dirs', None),
         )
 
-    # Read baseline info
+    # read the baseline time series
     baseline_dict = {}
     if inps.baseline_dir:
-        baseline_dict = isce3_utils.read_baseline_timeseries_isce3(
-            inps.baseline_dir,
-            processor=inps.processor
-        )
+        baseline_dict = isce3_utils.read_baseline_timeseries_isce3(inps.baseline_dir)
 
-    # Prepare metadata for interferogram stack(s)
+    # prepare metadata for the interferogram stack(s)
     if inps.obs_files:
         for obs_file in inps.obs_files:
             prepare_stack_isce3(
                 obs_file,
                 metadata=metadata,
                 baseline_dict=baseline_dict,
-                update_mode=inps.update_mode
+                update_mode=inps.update_mode,
             )
 
     print('Done.')

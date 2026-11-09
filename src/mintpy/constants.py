@@ -32,3 +32,14 @@ Moon = PlanetaryBody(name="Moon", radius=1710e3, surface_gravity=1.55)
 Mars = PlanetaryBody(name="Mars", radius=3395e3, surface_gravity=3.92)
 Jupiter = PlanetaryBody(name="Jupiter", radius=71500e3, surface_gravity=25.9)
 Saturn = PlanetaryBody(name="Saturn", radius=60000e3, surface_gravity=11.38)
+
+
+############################## ISCE-3/Dolphin ##############################
+# default geometry layers to extract from the ISCE3/Dolphin static_layers HDF5 file
+GEOMETRY_FILENAMES = [
+    'height.tif',
+    'los_east.tif',
+    'los_north.tif',
+    'layover_shadow_mask.tif',
+    'local_incidence_angle.tif',
+]

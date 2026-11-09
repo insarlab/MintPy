@@ -10,15 +10,15 @@ import glob
 import os
 import sys
 
+from mintpy.constants import GEOMETRY_FILENAMES
 from mintpy.utils.arg_utils import create_argument_parser
-from mintpy.utils.isce3_utils import GEOMETRY_FILENAMES
 
 #########################################################################
 # Default geometry files to extract from static_layers HDF5
-# (single source of truth defined in mintpy.utils.isce3_utils)
+# (single source of truth defined in mintpy.constants)
 
 EXAMPLE = """example:
-  ## Dolphin/ISCE-3 topsStack (auto‑generate metadata)
+  ## Dolphin/ISCE-3 topsStack (auto-generate metadata)
   prep_isce3.py -f "../../dolphin/unwrapped/*.unw.tif" -b ../baselines -g ../merged/geom/
 
   ## with existing metadata file
@@ -38,8 +38,9 @@ def create_parser(subparsers=None):
 
     # observations
     parser.add_argument('-f', dest='obs_files', type=str, nargs='+',
-                        default=['../../dolphin/unwrapped/*.unw.tif'],
-                        help='Wildcard path pattern(s) for observation files.\n'
+                        default=None,
+                        help='Wildcard path pattern(s) for observation files; if not given, '
+                             'only the geometry and common metadata are prepared.\n'
                              'E.g.: unwrapped phase:   ../../dolphin/unwrapped/*.unw.tif\n'
                              '      coherence:        ../../dolphin/interferograms/*.int.cor.tif\n'
                              '      wrapped phase:    ../../dolphin/interferograms/*.int.tif\n'
@@ -68,7 +69,7 @@ def create_parser(subparsers=None):
 
     parser.add_argument('--out-dir', dest='out_dir', type=str, default=None,
                         help='Output directory for merged geometry files. '
-                             'If not provided, defaults to (geometry_dir)/../merged_geom')
+                             'If not provided, defaults to <parent of geometry_dir>/merged_geom.')
 
     return parser
 
@@ -84,19 +85,19 @@ def cmd_line_parse(iargs=None):
         else:
             raise FileNotFoundError(inps.meta_file)
 
-    # Expand glob patterns in geometry directory (e.g. "../../t124*/20210104/")
+    # Expand glob patterns in the geometry directory (e.g. "../../t124*/20210104/")
     inps.geom_dirs = [inps.geom_dir]
     if inps.geom_dir and ('*' in inps.geom_dir or '?' in inps.geom_dir):
         matches = sorted(glob.glob(inps.geom_dir))
-        if matches:
-            inps.geom_dir = matches[0]
-            inps.geom_dirs = matches
+        if not matches:
+            raise FileNotFoundError(f'no directory matches geom_dir pattern: {inps.geom_dir}')
+        inps.geom_dir = matches[0]
+        inps.geom_dirs = matches
 
-    # Set default output directory if not provided
+    # default output directory: <parent of geometry_dir>/merged_geom
     if inps.out_dir is None:
-        inps.out_dir = os.path.join(os.path.dirname(inps.geom_dir), 'merged_geom')
+        inps.out_dir = os.path.join(os.path.dirname(os.path.abspath(inps.geom_dir)), 'merged_geom')
 
-    inps.processor = 'tops'
     return inps
 
 
