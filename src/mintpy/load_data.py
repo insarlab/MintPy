@@ -686,12 +686,13 @@ def prepare_metadata(iDict):
 
         # Geometry source directory (contains burst subdirs with HDF5)
         geom_src_dir = iDict.get('mintpy.load.geomSrcDir', None)
-        if geom_src_dir is None or geom_src_dir.lower() == 'auto':
+        if geom_src_dir is None or str(geom_src_dir).lower() in ['auto', 'none', 'no', '']:
             dem_path = iDict.get('mintpy.load.demFile', '')
-            if dem_path and dem_path.lower() != 'auto':
+            if dem_path and str(dem_path).lower() not in ['auto', 'none', 'no', '']:
                 geom_src_dir = os.path.dirname(dem_path)
             else:
-                geom_src_dir = os.path.abspath('.')
+                raise ValueError('mintpy.load.geomSrcDir is required for processor=isce3, '
+                                 'e.g. ../../t124*/20210104/')
         # NOTE: keep glob patterns (e.g. "../CSLC/t124*/20240611/") as-is,
         # prep_isce3.py expands them to support multiple burst directories.
         geom_src_dir = os.path.abspath(geom_src_dir)
@@ -704,9 +705,12 @@ def prepare_metadata(iDict):
             first_match = (sorted(glob.glob(geom_src_dir)) or [geom_src_dir])[0]
             out_dir = os.path.join(os.path.dirname(first_match), 'merged_geom')
 
+        # observations (same tolerant value handling as the isce processor branch)
         obs_keys = ['mintpy.load.unwFile', 'mintpy.load.corFile', 'mintpy.load.connCompFile']
-        obs_paths = [iDict[key] for key in obs_keys if iDict.get(key, 'auto').lower() != 'auto']
-        obs_paths = [x for x in obs_paths if glob.glob(x)]
+        obs_paths = [iDict[key] for key in obs_keys
+                     if iDict.get(key, 'auto') not in ['auto', 'None', 'no', None, False]]
+        obs_paths = [x for x in obs_paths if glob.glob(str(x))]
+
 
         iargs = ['-m', meta_file, '-g', geom_src_dir, '--out-dir', out_dir]
         if baseline_dir:
@@ -716,9 +720,12 @@ def prepare_metadata(iDict):
         if not iDict.get('updateMode', True):
             iargs.append('--force')
 
-        ut.print_command_line('prep_isce3.py', iargs)
-        prep_module = importlib.import_module('mintpy.cli.prep_isce3')
-        prep_module.main(iargs)
+        ut.print_command_line(script_name, iargs)
+        try:
+            prep_module.main(iargs)
+        except Exception as e:
+            warnings.warn(f'{script_name} failed ({type(e).__name__}: {e}). '
+                          'Assuming its result exists and continue...')
 
     elif processor == 'isce':
         from mintpy.utils import isce_utils, s1_utils
