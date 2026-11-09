@@ -1278,19 +1278,12 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             # Recognize ISCE3/Dolphin geocoded products by naming pattern.
             # Dolphin may name the files "fullres.unw.tif" with the date pair
             # in the parent directory name (e.g. ifgrams/20220105_20220117/).
-            if (fext in ['.tif', '.tiff']
-                    and (fbase.endswith('.unw') or fbase.endswith('.cor')
-                         or fbase.endswith('.int') or fbase.endswith('.unw.conncomp'))):
-                has_date_pair = bool(re.search(r'\d{8}_\d{8}', fbase))
-                if not has_date_pair:
-                    has_date_pair = bool(
-                        re.search(r'\d{8}_\d{8}', os.path.basename(os.path.dirname(fname))))
-                if has_date_pair:
-                    atr['PROCESSOR'] = 'isce3'
-                    # supplement with ISCE3-specific attributes (DATA_TYPE,
-                    # EPSG, DATE12, ...); any .rsc sidecar (read below) still
-                    # takes priority over these values.
-                    atr.update(read_isce3_geotiff(fname))
+            if fext in ['.tif', '.tiff'] and _is_isce3_geotiff(fname):
+                atr['PROCESSOR'] = 'isce3'
+                # supplement with ISCE3-specific attributes (DATA_TYPE, EPSG,
+                # DATE12, ...); any .rsc sidecar (read below) still takes
+                # priority over these values.
+                atr.update(read_isce3_geotiff(fname))
 
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'mintpy'
@@ -1408,6 +1401,40 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
     return atr
 
 
+def _parse_isce3_geotiff_name(fname):
+    """Return (FILE_TYPE, DATE12) parsed from an ISCE3/Dolphin GeoTIFF name.
+
+    Dolphin may put the date pair in the file name (YYYYMMDD_YYYYMMDD.unw.tif)
+    or in the parent directory name (ifgrams/YYYYMMDD_YYYYMMDD/fullres.unw.tif).
+    """
+    fbase = os.path.basename(fname).lower()
+
+    file_type = None
+    if fbase.endswith('.int.tif'):
+        file_type = '.int'
+    elif fbase.endswith('.cor.tif'):
+        file_type = '.cor'
+    elif fbase.endswith('.unw.conncomp.tif'):
+        file_type = '.unw.conncomp'
+    elif fbase.endswith('.unw.tif'):
+        file_type = '.unw'
+
+    date12 = None
+    match = re.search(r'(\d{8})_(\d{8})', fname)
+    if not match:
+        match = re.search(r'(\d{8})_(\d{8})', os.path.basename(os.path.dirname(fname)))
+    if match:
+        date12 = f'{match.group(1)[2:]}-{match.group(2)[2:]}'
+
+    return file_type, date12
+
+
+def _is_isce3_geotiff(fname):
+    """Check if a GeoTIFF is an ISCE3/Dolphin product, by name pattern."""
+    file_type, date12 = _parse_isce3_geotiff_name(fname)
+    return file_type is not None and date12 is not None
+
+
 def read_isce3_geotiff(fname):
     """Read attributes from ISCE3/Dolphin GeoTIFF file (e.g., .int.tif / .unw.tif).
 
@@ -1451,32 +1478,20 @@ def read_isce3_geotiff(fname):
     band = ds.GetRasterBand(1)
     data_type = DATA_TYPE_GDAL2NUMPY.get(band.DataType)
     if data_type:
-        meta['DATA_TYPE'] = data_type.replace('>', '').replace('<', '')
+        meta['DATA_TYPE'] = data_type
 
     # No-data value (skip when the band has none, instead of writing 'None')
     ndv = band.GetNoDataValue()
     if ndv is not None:
         meta['NO_DATA_VALUE'] = 'nan' if np.isnan(ndv) else str(float(ndv))
 
-    # File type and processor
-    fbase = os.path.basename(fname).lower()
-    if fbase.endswith('.int.tif'):
-        meta['FILE_TYPE'] = '.int'
-    elif fbase.endswith('.cor.tif'):
-        meta['FILE_TYPE'] = '.cor'
-    elif 'unw' in fbase:
-        meta['FILE_TYPE'] = '.unw'
+    # file type, date pair and processor
+    file_type, date12 = _parse_isce3_geotiff_name(fname)
+    if file_type:
+        meta['FILE_TYPE'] = file_type
+    if date12:
+        meta['DATE12'] = date12
     meta['PROCESSOR'] = 'isce3'
-
-    # Extract DATE12 from the file name (or its parent directory, e.g. Dolphin
-    # "ifgrams/20220105_20220117/fullres.unw.tif")
-    # Pattern: YYYYMMDD_YYYYMMDD.int.tif
-    match = re.search(r'(\d{8})_(\d{8})', fname)
-    if not match:
-        match = re.search(r'(\d{8})_(\d{8})', os.path.basename(os.path.dirname(fname)))
-    if match:
-        d1, d2 = match.groups()
-        meta['DATE12'] = f"{d1[2:]}-{d2[2:]}"
 
     ds = None
     return meta
