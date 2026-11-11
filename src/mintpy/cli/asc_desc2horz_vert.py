@@ -57,7 +57,7 @@ def create_parser(subparsers=None):
     parser.add_argument('file', nargs=2,
                         help='Ascending and descending files\n'
                              'Both files need to be geocoded in the same spatial resolution.')
-    parser.add_argument('-d', '--dset', dest='ds_name', type=str, help='dataset to use, default: 1st dataset')
+    parser.add_argument('-d', '--dset', dest='ds_name', type=str, nargs='+', help='dataset to use, default: 1st dataset')
     parser.add_argument('-g','--geom-file', dest='geom_file', nargs=2, help='Geometry files for the input data files.')
 
     # inputs - checking
