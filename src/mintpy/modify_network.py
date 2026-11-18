@@ -331,6 +331,7 @@ def get_date12_to_drop(inps):
     date_to_drop = sorted(list(set(dateList) - set(date_to_keep)))
     if len(date_to_drop) > 0:
         print(f'number of acquisitions to remove: {len(date_to_drop)}\n{date_to_drop}')
+        print(f'number of acquisitions to keep  : {len(date_to_keep)}\n{date_to_keep}')
 
     # checking:
     # 1) no new date12 to drop against existing file
