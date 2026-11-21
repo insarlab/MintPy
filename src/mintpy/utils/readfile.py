@@ -321,7 +321,7 @@ def gdal_to_numpy_dtype(gdal_dtype: Union[str, int]) -> np.dtype:
 
 #########################################################################
 def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, data_type=None,
-         no_data_values=None):
+         no_data_values=None, processor=None):
     """Read one dataset and its attributes from input file.
 
     Parameters: fname          - str, path of file to read
@@ -330,6 +330,8 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
                 x/ystep        - int, number of pixels to pick/multilook for each output pixel
                 data_type      - numpy data type, e.g. np.float32, np.bool_, etc. Change the output data type
                 no_data_values - list of 2 numbers, change the no-data-value in the output
+                processor      - str, processor from the configuration, if known; forwarded to
+                                 read_attribute() to decide on ISCE3/Dolphin GeoTIFF detection
     Returns:    data           - 2/3/4D matrix in numpy.array format, return None if failed
                 atr            - dictionary, attributes of data, return None if failed
     Examples:
@@ -351,7 +353,7 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
         dsname4atr = datasetName[0].split('-')[0]
     elif isinstance(datasetName, str):
         dsname4atr = datasetName.split('-')[0]
-    atr = read_attribute(fname, datasetName=dsname4atr)
+    atr = read_attribute(fname, datasetName=dsname4atr, processor=processor)
 
     # box
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
@@ -373,7 +375,7 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
         data = read_hdf5_file(fname, print_msg=print_msg, **kwargs)
 
     else:
-        data, atr = read_binary_file(fname, **kwargs)
+        data, atr = read_binary_file(fname, processor=processor, **kwargs)
 
     # customized output data type
     if data_type is not None and data_type != data.dtype:
@@ -560,13 +562,15 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
     return data
 
 
-def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
+def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1, processor=None):
     """Read data from binary file, such as .unw, .cor, etc.
     Parameters: fname       : str, path/name of binary file
                 datasetName : str, dataset name for file with multiple bands of data
                     e.g.: incidenceAngle, azimuthAngle, rangeCoord, azimuthCoord, ...
                 box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
                 x/ystep     : int, number of pixels to pick/multilook for each output pixel
+                processor   : str, processor from the configuration, if known; used only to
+                              decide on the ISCE3/Dolphin GeoTIFF detection
     Returns:    data        : 2D array in size of (length, width) in BYTE / int16 / float32 / complex64 / float64 etc.
                 atr         : dict, metadata of binary file
     """
@@ -574,7 +578,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     fext = os.path.splitext(os.path.basename(fname))[1].lower()
 
     # metadata
-    atr = read_attribute(fname, datasetName=datasetName)
+    atr = read_attribute(fname, datasetName=datasetName, processor=processor)
     processor = atr['PROCESSOR']
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
@@ -719,8 +723,8 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         if 'byte order' in atr.keys() and atr['byte order'] == '0':
             byte_order = 'little-endian'
 
-    # GDAL / GMTSAR / ASF HyP3
-    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr', 'uavsar']:
+    # GDAL / GMTSAR / ASF HyP3 / ISCE3 geo
+    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr', 'uavsar', 'isce3']:
         # try to recognize custom dataset names if specified and recognized.
         if datasetName:
             slice_list = get_slice_list(fname)
@@ -738,7 +742,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         xstep=xstep,
         ystep=ystep,
     )
-    if processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
+    if processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr', 'isce3']:
         data = read_gdal(fname, **kwargs)
 
     else:
@@ -1028,7 +1032,7 @@ def _get_file_base_and_ext(fname):
 
 
 #########################################################################
-def read_attribute(fname, datasetName=None, metafile_ext=None):
+def read_attribute(fname, datasetName=None, metafile_ext=None, processor=None):
     """Read attributes of input file into a dictionary
     Parameters: fname : str, path/name of data file
                 datasetName : str, name of dataset of interest, for file with multiple datasets
@@ -1037,6 +1041,10 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
                          height      in geometryRadar.h5
                          latitude    in geometryRadar.h5
                          ...
+                processor : str, processor from the configuration, if known. It is used only
+                    to decide whether a GeoTIFF should be read with the ISCE3/Dolphin reader:
+                    'isce3' trusts the configuration, other explicit processors disable the
+                    automatic detection, None/'auto' enables the conservative detection.
     Returns:    atr : dict, attributes dictionary
     """
     fname = os.fspath(fname)  # Convert from possible pathlib.Path
@@ -1256,6 +1264,9 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             raise FileNotFoundError(f'No metadata file found for data file: {fname}')
 
         atr = {}
+        # explicit processor from the configuration, if any
+        processor = None if processor is None else str(processor).lower()
+
         # PROCESSOR
         if fname.endswith('.img') and any(i.endswith('.hdr') for i in metafiles):
             atr['PROCESSOR'] = 'snap'
@@ -1275,6 +1286,18 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         elif fext in GDAL_FILE_EXTS:
             atr['PROCESSOR'] = 'gdal'
+            # Read ISCE3/Dolphin attributes only when the processor is explicitly
+            # configured as isce3; the configuration is authoritative (renamed
+            # products are accepted as well). Without that hint, GeoTIFFs keep
+            # the generic GDAL attributes, so that files from other processors
+            # are never re-labeled based on their name.
+            if fext in ['.tif', '.tiff'] and _is_explicit_isce3(processor):
+                atr['PROCESSOR'] = 'isce3'
+                # NOTE: when a .rsc sidecar exists, the .rsc branch above takes
+                # over and this branch is not reached at all: the .rsc values
+                # win by short-circuit, not by merging. The attributes below
+                # are used only for GeoTIFFs read without a sidecar.
+                atr.update(read_isce3_geotiff(fname))
 
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'mintpy'
@@ -1322,7 +1345,9 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         elif meta_ext in ['.vrt'] + GDAL_FILE_EXTS:
             atr.update(read_gdal_vrt(metafile))
-            atr['FILE_TYPE'] = fext
+            # keep the ISCE3-specific FILE_TYPE (e.g. '.unw' for *.unw.tif)
+            # set by read_isce3_geotiff() above
+            atr.setdefault('FILE_TYPE', fext)
 
         # DATA_TYPE for ISCE/ROI_PAC products
         data_type_dict = {
@@ -1375,7 +1400,152 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
     atr = standardize_metadata(atr)
 
+    # Fill in missing HEIGHT/EARTH_RADIUS for isce3 geocoded products
+    if atr.get('PROCESSOR', '').startswith('isce'):
+        # try altitude -> HEIGHT if standardization didn't catch it
+        if 'HEIGHT' not in atr or not atr['HEIGHT']:
+            for alt_key in ['altitude', 'SC_height']:
+                if alt_key in atr and atr[alt_key]:
+                    atr['HEIGHT'] = str(atr[alt_key])
+                    break
+        if ('EARTH_RADIUS' not in atr or not atr['EARTH_RADIUS']) and 'earthRadius' in atr:
+            if atr['earthRadius']:
+                atr['EARTH_RADIUS'] = str(atr['earthRadius'])
+
     return atr
+
+
+ISCE3_GEOTIFF_SUFFIXES = (
+    ('.unw.conncomp.tif', '.unw.conncomp'),
+    ('.int.tif', '.int'),
+    ('.cor.tif', '.cor'),
+    ('.unw.tif', '.unw'),
+)
+_DATE12_PATTERN = re.compile(r'(?<!\d)(\d{8})_(\d{8})(?!\d)')
+
+
+def _get_isce3_geotiff_file_type(fname):
+    """Return the MintPy FILE_TYPE of an ISCE3/Dolphin GeoTIFF, from its suffix."""
+    fbase = os.path.basename(fname).lower()
+    for suffix, file_type in ISCE3_GEOTIFF_SUFFIXES:
+        if fbase.endswith(suffix):
+            return file_type
+    return None
+
+
+def _get_date12_from_name(fname):
+    """Get DATE12 from the file name first, then from the parent dir name.
+
+    Dolphin writes the date pair in the file name, e.g.
+    ``interferograms/20220105_20220117.int.tif``. The supported per-pair-directory
+    layout instead keeps one directory per date pair, with a generic product
+    stem inside, e.g. ``ifgrams/20220105_20220117/fullres.unw.tif``; for those
+    files, the date pair is taken from the immediate parent directory.
+
+    Only these two levels are searched, so that a date pair in an ancestor
+    directory (e.g. a project folder) never overrides the interferogram pair.
+    Within one name, the last date pair is used, which is the one closest to
+    the file suffix for names that also contain a project date range.
+    """
+    for name in (os.path.basename(fname), os.path.basename(os.path.dirname(fname))):
+        matches = _DATE12_PATTERN.findall(name)
+        if matches:
+            date1, date2 = matches[-1]
+            return f'{date1[2:]}-{date2[2:]}'
+    return None
+
+
+def _parse_isce3_geotiff_name(fname):
+    """Return (FILE_TYPE, DATE12) parsed from an ISCE3/Dolphin GeoTIFF name.
+
+    Dolphin writes ``YYYYMMDD_YYYYMMDD.<type>.tif``; the date pair is taken from
+    the file name first, and from the immediate parent directory otherwise
+    (per-pair-directory layout, see _get_date12_from_name).
+    """
+    return _get_isce3_geotiff_file_type(fname), _get_date12_from_name(fname)
+
+
+def _is_explicit_isce3(processor):
+    """Check whether the configured processor explicitly requests isce3.
+
+    Parameters: processor - str or None, processor from the configuration
+    Returns:    is_isce3  - bool, True only for an explicit 'isce3' value
+
+    NOTE: the GeoTIFF attributes are read from the file itself, so the file
+    type is parsed from the name when possible (see _parse_isce3_geotiff_name).
+    Renamed products are still accepted, they simply keep the generic '.tif'
+    file type and no DATE12.
+    """
+    if processor is None:
+        return False
+    return str(processor).strip().lower() == 'isce3'
+
+
+def read_isce3_geotiff(fname):
+    """Read attributes from ISCE3/Dolphin GeoTIFF file (e.g., .int.tif / .unw.tif).
+
+    NOTE: called from read_attribute() only when the configuration explicitly
+    sets processor='isce3' (see _is_explicit_isce3); the GeoTIFF is then read
+    for the common attributes (DATA_TYPE, EPSG, DATE12, FILE_TYPE, ...). With a
+    .rsc sidecar the .rsc branch of read_attribute() takes over and this function
+    is not called, so the .rsc values win by short-circuit rather than merging.
+
+    NOTE: Y_STEP is stored as a positive pixel size here; read_attribute()
+    normalizes it through read_gdal_vrt() (north-up GeoTIFF => negative).
+    """
+    from osgeo import gdal, osr
+
+    ds = gdal.Open(fname, gdal.GA_ReadOnly)
+    if ds is None:
+        raise ValueError(f"Cannot open {fname} with GDAL")
+
+    meta = {}
+    # Image dimensions
+    meta['LENGTH'] = str(ds.RasterYSize)
+    meta['WIDTH'] = str(ds.RasterXSize)
+
+    # Geotransform
+    gt = ds.GetGeoTransform()
+    meta['X_FIRST'] = str(gt[0])
+    meta['Y_FIRST'] = str(gt[3])
+    meta['X_STEP'] = str(abs(gt[1]))
+    meta['Y_STEP'] = str(abs(gt[5]))
+    meta['X_UNIT'] = 'meters'
+    meta['Y_UNIT'] = 'meters'
+
+    # Projection
+    proj = ds.GetProjection()
+    if proj:
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(proj)
+        if srs.IsGeographic():
+            meta['X_UNIT'] = 'degrees'
+            meta['Y_UNIT'] = 'degrees'
+        epsg = srs.GetAuthorityCode(None)
+        if epsg:
+            meta['EPSG'] = epsg
+
+    # Data type (exact numpy-style mapping, e.g. float32/float64/int16/uint8)
+    band = ds.GetRasterBand(1)
+    data_type = DATA_TYPE_GDAL2NUMPY.get(band.DataType)
+    if data_type:
+        meta['DATA_TYPE'] = data_type
+
+    # No-data value (skip when the band has none, instead of writing 'None')
+    ndv = band.GetNoDataValue()
+    if ndv is not None:
+        meta['NO_DATA_VALUE'] = 'nan' if np.isnan(ndv) else str(float(ndv))
+
+    # file type, date pair and processor
+    file_type, date12 = _parse_isce3_geotiff_name(fname)
+    if file_type:
+        meta['FILE_TYPE'] = file_type
+    if date12:
+        meta['DATE12'] = date12
+    meta['PROCESSOR'] = 'isce3'
+
+    ds = None
+    return meta
 
 
 def auto_no_data_value(meta):
