@@ -10,6 +10,7 @@ import re
 
 import h5py
 import numpy as np
+from pyproj import Transformer
 from scipy.interpolate import RegularGridInterpolator
 from skimage.transform import resize
 
@@ -19,34 +20,120 @@ from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 ############################################################################
-def get_delay_geo(ztd_file, atr, cos_inc_angle):
+def _is_projected_geo(atr):
+    """Return True if geocoded attributes use projected (non-degree) coordinates."""
+    y_unit = str(atr.get('Y_UNIT', '')).lower()
+    if y_unit.startswith('deg'):
+        return False
+    if y_unit:
+        return True
+    if atr.get('UTM_ZONE'):
+        return True
+    epsg = atr.get('EPSG')
+    return bool(epsg and str(epsg) != '4326')
+
+
+def _get_lat_lon_projected(atr):
+    """Calculate pixel-wise lat/lon (in degrees) for projected geocoded data."""
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    x_step, y_step = float(atr['X_STEP']), float(atr['Y_STEP'])
+    x0 = float(atr['X_FIRST']) + 0.5 * x_step
+    y0 = float(atr['Y_FIRST']) + 0.5 * y_step
+    xs = x0 + x_step * np.arange(width, dtype=np.float64)
+    ys = y0 + y_step * np.arange(length, dtype=np.float64)
+    xx, yy = np.meshgrid(xs, ys)
+
+    epsg = atr.get('EPSG')
+    if epsg:
+        transformer = Transformer.from_crs(f'EPSG:{epsg}', 'EPSG:4326', always_xy=True)
+        lons, lats = transformer.transform(xx, yy)
+    elif atr.get('UTM_ZONE'):
+        lats, lons = ut.utm2latlon(atr, easting=xx, northing=yy)
+    else:
+        raise ValueError('No EPSG or UTM_ZONE metadata found for non-degree coordinates!')
+
+    return lats, lons
+
+
+def get_delay_geo(ztd_file, atr, cos_inc_angle, pts_new=None):
     """calc single path tropo delay in line-of-sight direction
+
+    For projected/UTM geocoded data (e.g., ASF HyP3), convert pixel centers to
+    WGS84 lat/lon, crop the ZTD grid to the bounding box, and interpolate with
+    RegularGridInterpolator to preserve grid convergence rotation.
 
     Parameters: ztd_file      - str, path of zenith delay file
                 atr           - dict, dictionary of attribute for output file
                 cos_inc_angle - 2D np.ndarray in float32, cos(inc_angle)
+                pts_new       - tuple of 2 2D np.ndarray (lats, lons) in degrees, optional
     Returns:    delay         - 2D np.ndarray in float32, LOS delay
     """
-
-    # get geo_box from ts_file attributes
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-    geo_box = ut.coordinate(atr).box_pixel2geo(pixel_box=(0, 0, width, length))
-
-    # geo_box --> pix_box in ztd file
     atr_ztd = readfile.read_attribute(ztd_file)
-    pix_box = ut.coordinate(atr_ztd).box_geo2pixel(geo_box)
 
-    # read ztd file
-    delay = readfile.read(ztd_file, box=pix_box)[0]
+    if _is_projected_geo(atr):
+        if pts_new is None:
+            lats, lons = _get_lat_lon_projected(atr)
+        else:
+            lats, lons = pts_new
 
-    # interpolate/resample into the same resolution as ts_file
-    delay = resize(
-        delay, (length, width),
-        order=1,
-        mode='constant',
-        anti_aliasing=True,
-        preserve_range=True,
-    )
+        # crop ztd file with a 2-pixel buffer for bilinear interpolation
+        geo_box = (
+            float(np.nanmin(lons)),
+            float(np.nanmax(lats)),
+            float(np.nanmax(lons)),
+            float(np.nanmin(lats)),
+        )
+        pix_box = ut.coordinate(atr_ztd).box_geo2pixel(geo_box)
+        ztd_len, ztd_wid = int(atr_ztd['LENGTH']), int(atr_ztd['WIDTH'])
+        x0 = max(0, min(pix_box[0], pix_box[2]) - 2)
+        x1 = min(ztd_wid, max(pix_box[0], pix_box[2]) + 2)
+        y0 = max(0, min(pix_box[1], pix_box[3]) - 2)
+        y1 = min(ztd_len, max(pix_box[1], pix_box[3]) + 2)
+        if x0 >= x1 or y0 >= y1:
+            ztd_box = ut.coordinate(atr_ztd).box_pixel2geo((0, 0, ztd_wid, ztd_len))
+            raise ValueError(
+                f'Input geo_box {geo_box} does NOT overlap with ZTD file {ztd_file} '
+                f'coverage {ztd_box}!'
+            )
+        pix_box = (x0, y0, x1, y1)
+
+        delay_ztd = readfile.read(ztd_file, box=pix_box)[0]
+        lats_ztd, lons_ztd = ut.get_lat_lon(atr_ztd, box=pix_box, dimension=1)
+        if lats_ztd[0] > lats_ztd[-1]:
+            lats_ztd = np.flipud(lats_ztd)
+            delay_ztd = np.flipud(delay_ztd)
+        if lons_ztd[0] > lons_ztd[-1]:
+            lons_ztd = np.flipud(lons_ztd)
+            delay_ztd = np.fliplr(delay_ztd)
+
+        interp_func = RegularGridInterpolator(
+            (lats_ztd, lons_ztd),
+            delay_ztd,
+            method='linear',
+            bounds_error=False,
+            fill_value=0,
+        )
+        delay = interp_func((lats, lons)).astype(np.float32)
+
+    else:
+        # get geo_box from ts_file attributes
+        geo_box = ut.coordinate(atr).box_pixel2geo(pixel_box=(0, 0, width, length))
+
+        # geo_box --> pix_box in ztd file
+        pix_box = ut.coordinate(atr_ztd).box_geo2pixel(geo_box)
+
+        # read ztd file
+        delay = readfile.read(ztd_file, box=pix_box)[0]
+
+        # interpolate/resample into the same resolution as ts_file
+        delay = resize(
+            delay, (length, width),
+            order=1,
+            mode='constant',
+            anti_aliasing=True,
+            preserve_range=True,
+        )
 
     # project from zenith to line-of-sight
     delay /= cos_inc_angle
@@ -205,8 +292,12 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
     cos_inc_angle = np.cos(inc_angle * np.pi / 180.0)
 
     if 'Y_FIRST' in atr.keys():
-        # No need for data in geo-coordinates
-        pts_new = None
+        if _is_projected_geo(atr):
+            print('projected coordinates detected, convert into lat/lon')
+            pts_new = _get_lat_lon_projected(atr)
+        else:
+            # No need for data in lat/lon geo-coordinates
+            pts_new = None
 
     else:
         # Get pixel lat/lon for data in radar-coordinates
@@ -223,7 +314,7 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
 
         # calc delay
         if 'Y_FIRST' in atr.keys():
-            delay = get_delay_geo(ztd_file, atr, cos_inc_angle)
+            delay = get_delay_geo(ztd_file, atr, cos_inc_angle, pts_new=pts_new)
 
         else:
             delay = get_delay_radar(ztd_file, cos_inc_angle, pts_new)
